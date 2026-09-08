@@ -1,0 +1,18 @@
+# my-claude-best
+
+My personal collection of engineering best practices: how I set up projects, write and review code, and work with AI coding agents. Everything here is Markdown. There is nothing to build or run.
+
+## Layout
+
+- `docs/engineering/` — engineering practices, one topic per file.
+
+## Conventions
+
+- All content is in English.
+- One topic per file, named by the topic (for example `code-review.md`).
+
+## License
+
+© 2026 a6m1n. This work is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [LICENSE](LICENSE). You can use, change, and share it, including commercially, as long as you credit the author.
+
+Please credit as: "a6m1n, my-claude-best, https://github.com/a6m1n/my-claude-best".
