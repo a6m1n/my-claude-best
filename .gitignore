@@ -1,0 +1,5 @@
+# Working artifacts (plans, reports, research runs) — session output, not content
+docs/artifacts/
+
+# macOS
+.DS_Store
