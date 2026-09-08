@@ -5,11 +5,15 @@ My personal collection of engineering best practices: how I set up projects, wri
 ## Layout
 
 - `docs/engineering/` — engineering practices, one topic per file.
+- `docs/claude-code/` — how I set up and instruct Claude Code. So far: [claude-md.md](docs/claude-code/claude-md.md), which says what belongs in a `CLAUDE.md` and what does not.
+- `docs/artifacts/` — working files a session writes (plans, reports, research runs). Git-ignored: not part of the library.
+- `CLAUDE.md` — the rules Claude Code applies on every change in this repo.
 
 ## Conventions
 
 - All content is in English.
 - One topic per file, named by the topic (for example `code-review.md`).
+- Every name in the examples is fictional: companies, people, tickets, domains.
 
 ## License
 
