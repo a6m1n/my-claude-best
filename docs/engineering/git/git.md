@@ -68,13 +68,25 @@ Three full messages are in [commit-example.md](commit-example.md).
 One ticket per pull request, and the base is `main`.
 
 - The title uses the commit title form, without the 50-character limit.
-- Sections: Summary, Ticket, What changed, Verification. Add Breaking changes only when the
-  change breaks something.
-- "What changed" is at feature level: what a user of the product notices, not a walk through
-  the diff.
-- Verification has two lists: what you ran here, with the result you saw, and what the
-  reviewer has to check. Only list a check you actually ran. An unrun check in the first list
-  is a false claim.
+- Sections, in this order: Summary, the ticket link, What's Changed, Verification. Add
+  ⚠️ Breaking Changes, Notes, and Risks only when the change gives them something real to say.
+- Summary says what, why, and the decisions or numbers a reviewer needs before opening a
+  file, with the key terms in bold. It may carry a table for short facts that
+  list well (renamed fields, before/after values), or one mermaid diagram when the change adds
+  or reroutes a flow through several components. Never diagram a one-file change, and never
+  add a second diagram.
+- What's Changed is at feature level: one bold entry per feature on what it does, why it
+  exists, and how it fits the existing flow. A reviewer should be able to
+  predict the diff from it. Not a walk through the files.
+- Verification has two lists: *Checked in this session*, the commands you ran and the result
+  you saw, and *For the reviewer*, the steps left with their expected result, a negative check
+  when the change has an error or permission path, and any gate you did not run. Only list a
+  check you actually ran. An unrun check in the first list is a false claim.
+- ⚠️ Breaking Changes names, for each item, what breaks, the blast radius, and the migration
+  step. Notes holds decisions a reader would not guess, behavior changes outside the headline
+  feature, and dependencies added, with their version; a contract change that breaks nothing
+  gets a `> ⚠️ **Contract change:** …` blockquote there. Risks says what could regress and
+  what tests do not cover.
 - One ticket per pull request is also the size rule: unrelated cleanup goes in its own pull
   request, because review quality falls as the diff grows.
 - Leave a section out when the change has nothing real to put in it. Verification is the
