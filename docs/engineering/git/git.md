@@ -258,16 +258,28 @@ Check: `git show --stat HEAD` after your commit lists only files you changed.
 
 ## 9. Project README, and what goes where
 
-`README.md` is for people, in this order:
+`README.md` is for people. It answers, in this order:
 
-1. What it does.
-2. Why it is useful.
-3. How to start.
-4. Layout.
-5. Where to get help.
-6. Who maintains it.
+1. The name, then one line under 120 characters saying what the thing is.
+2. What it does, and what it deliberately does not do.
+3. Why it is useful.
+4. Getting started: prerequisites, install, the first command, and the output it prints.
+5. How the parts fit together, when a reader must know that before anything runs.
+6. Project structure.
+7. Where to get help.
+8. Who maintains it, and whether pull requests are accepted.
+9. License, last, by its full name.
 
-A full example is in [readme-example.md](readme-example.md).
+Sections 5 and 6 are the two that rot. Add a diagram only when a reader has to know how the
+parts talk before running anything, and let it show what runs, not what a change reroutes.
+Generate the structure tree with `tree`, then cut it to the folders a newcomer opens: a tree
+that lists every file is wrong at the next rename. Badges go under the title, and only for a
+fact a reader acts on, such as build status or the supported version.
+
+Check: someone who has not seen the project clones it, follows only the README, and gets the
+output the README promises.
+
+A full example is in [readme-example.md](readme-example.md), with the reason behind each choice.
 
 The agent-facing file (`CLAUDE.md` or `AGENTS.md`) is a different document for a different
 reader. Read [claude-md.md](../../claude-code/claude-md.md) when you write or edit one.

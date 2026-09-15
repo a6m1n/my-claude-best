@@ -26,15 +26,16 @@ gives the reason, the bullets give what and why, and none of them names a file.
 
 ## Good: a fix with no ticket
 
-Branch: `fix/ingest-empty-page`
+Branch: `fix/csv-export-order`
 
 ```
-fix(ingest): keep page numbers when a page has no text
+fix(api): return CSV export rows in page order
 
-- A scanned page without a text layer produced no entry at all, so
-  every later page was reported one number too low.
-- The page is now kept with an empty body, and citations point at the
-  page the reader sees.
+- The CSV export wrote tables in the order extraction finished, so a
+  table from page 9 could come before one from page 4, and anyone
+  reading the file had to re-sort it by the page column.
+- Rows now come out in page order, then by position on the page, which
+  is the order a reader sees in the document itself.
 ```
 
 Why it works: no ticket existed, so the message uses the scope form instead of inventing a
