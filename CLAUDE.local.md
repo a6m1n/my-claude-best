@@ -12,8 +12,7 @@ bullet per practice folder you took.
 
 `docs/engineering/` holds the practices: how a kind of work should be done, in any repository.
 A practice describes the practice, never this repo. Where the repo and a practice disagree, the
-repo is what gets fixed: in the same change when the fix is small, otherwise name the follow-up
-in the closing summary and the commit body.
+repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` says.
 
 - Before you change anything in an area that has a folder under `docs/engineering/`, read that
   folder's rules file first and work by it. The check: the closing summary names the practice
@@ -30,6 +29,11 @@ in the closing summary and the commit body.
   `docs/engineering/python/explicit-constraints-example.md` when you place a constraint. The
   check: every constraint the change introduces is stated on the type or signature that carries
   it, and what enforces it is a runtime mechanism or a checker the CI runs and fails on.
+- Before a change edits code that already exists (a feature, a fix, a move to a practice, a
+  restructure), or turns on a new rule, read `docs/engineering/refactoring/refactoring.md`, and
+  `docs/engineering/refactoring/adoption-example.md` when a practice change has to reach old
+  code. The check: every hunk in the diff is new code or code the change had to edit, and no
+  `refactor` commit changes an expected value in a test.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - Every practice under `docs/engineering/` is a folder named by the topic, never a bare file.

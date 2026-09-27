@@ -9,9 +9,8 @@ are a folder's rules file and its example files.
 
 - **A practice is the source; the code is the consumer.** A doc here says how the work should
   be done, never how this repository does it today. This repository may be behind a practice,
-  or plain wrong. That is a defect in the code, never a reason to soften the doc: when the two
-  disagree, fix the code in the same change when the fix is small, otherwise name the follow-up
-  in the closing summary and the commit body, and leave the doc as it is.
+  or plain wrong. That is a gap in the code, never a reason to soften the doc: leave the doc as
+  it is. What the code does about the gap, and when, is in `refactoring/refactoring.md`.
 - **Reading a practice is mandatory before working in its area.** This file loads only when a
   file under this folder is read, so the mandate cannot fire from here: the project `CLAUDE.md`
   carries it, one routing line per practice — the moment it fires, the file to read, the check
@@ -30,6 +29,9 @@ are a folder's rules file and its example files.
   extend it; the diff then shows an edited file, not a second file on the same topic. A practice
   is one folder named by the topic, with a `README.md` map, a rules file and one ideal example
   per artifact type; never a bare file, even before the examples exist.
+- When you change a rule in a practice, write in the commit body how existing code responds,
+  using one of the answers `refactoring/refactoring.md` section 7 lists. The check: the commit
+  body names one of them.
 - Write a rule as one act, at one moment, with one way to tell that it happened.
   `docs/claude-code/claude-md.md` § "How to write a line an agent can follow" is the test, and
   it holds for a practice doc as much as for an instruction file.
