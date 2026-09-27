@@ -13,8 +13,6 @@ Files: [install.md](install.md) (how to set it up, by hand or with one paste) ·
 
 ![The status line under the Claude Code prompt: context, model and effort, 5-hour and weekly limits, cache, burn](img/statusline.svg)
 
-*Drawn from the script's own output on invented numbers, not a screenshot; the `auto mode on` line stands in for Claude Code's own footer.*
-
 It is one Python file and two keys in `settings.json`: no packages beyond the standard library, no network calls ([what it does on your machine](install.md#what-the-script-does-on-your-machine)). Set it up [by hand](install.md#set-it-up-by-hand) or [with one paste](install.md#install-with-one-paste); to remove it, see [Undo](install.md#undo).
 
 `5h`, `7d` and `burn` need a Pro or Max plan and appear only after the first answer in a session; the rest works with any account.
@@ -23,11 +21,13 @@ It is one Python file and two keys in `settings.json`: no packages beyond the st
 
 Claude Code has most of these numbers, but you see them only when you go and ask for them. The line keeps them in front of you on every message, and that changes how you work:
 
-- Use the whole 5-hour budget without hitting the limit an hour early. `burn` works like a speedometer: it shows how much of the budget you will have used by the reset if you keep the current pace. Aim for 100 to 120%.
-- Stop paying for a cold cache. After the cache goes cold, the cached part of a message costs 12.5 to 80 times more, because it is written again. The countdown tells you how long you can step away.
+- Use the whole 5-hour budget without hitting the limit an hour early. `burn` works like a speedometer: it shows how fast you are spending the budget and how much of it you will have used by the reset at this pace. Aim for 100 to 120%. It pays off most in long sessions and in dynamic workflows where many agents run at once.
+- Stop paying for a cold cache. After the cache goes cold, the cached part of a message costs 12.5 to 80 times more, because it is written again. The countdown tells you how long you can step away, and when a long session has gone cold, it is often cheaper to run `/compact` first.
 - Compact when you choose. `ctx` shows the window filling up, before Claude Code compacts by itself and may lose early details.
 - See the limit coming. `5h` and `7d` show how much of each limit you have used and when it resets.
-- Spot the stuck agent, the expensive one, and the one running out of room. Each agent row shows its model, its task, a chart that flags a pause, and how full its own context is.
+- Spot the stuck agent. Each agent row has a small chart of its token use; when it stays empty, the agent produces nothing and has most likely hung.
+- Watch each agent's size. An agent can be resumed or sent a follow-up, and then it starts from its whole history, so its context number tells you what that will cost.
+- Give each agent the right model. Claude Code's own row does not show the model; this one does, so you see which agents run on an expensive model and can set the model that fits the task in the agent's definition.
 - Know what you are paying for. The model and the effort level stay in view, so a quick question does not run at top effort on an expensive model by accident.
 
 ## What each segment shows
@@ -95,6 +95,7 @@ It resets less often, so a red `7d` with days left before the reset means: keep 
 | `cold` | The cache has expired: the next message writes it all again. |
 
 A read from the cache costs a tenth of the normal input price or less, and writing it again costs 1.25 or 2 times the normal price. So after the cache goes cold, the cached part of a message costs 12.5 to 20 times more on most models, 25 to 40 times on Opus 5.5, and up to 80 times only on Fable 5.1 and Mythos 5.1 with the 1-hour cache. If you step away, come back before `cold`.
+When a long session's cache has already gone cold, the next message pays for the whole history either way. That is a good moment to run `/compact`: after it, each message carries a short summary instead of the full history.
 A percentage that stays low for many calls means something keeps changing the start of the prompt: a model switch, an effort change (on most models), a compaction, many images. `/usage` shows the session's hit ratio and names the likely cause of the last miss (Claude Code 2.1.260 or later).
 
 ### `burn`: the speedometer for your 5-hour limit
@@ -170,6 +171,7 @@ Claude Code samples each agent's token count every few seconds. Each bar covers 
 - Tall bars: the agent is working, reading files and writing answers.
 - `▁` bars: no new tokens: the agent is thinking, or waiting on a tool call (a test run, a search, a web page).
 - A gap before a run of `▁` at the end, as in `█▁▂▅▁▂▇ ▁▁`: no new tokens since that point.
+- An empty chart, only `▁` or `⏸`: the agent is producing no tokens at all. For a short while that is thinking or a tool call; if it stays empty, the agent has most likely hung and is doing nothing.
 - A yellow `⏸1m35s`: no new tokens for 40 seconds or more, and the number is how long. `⏸` first replaces only the flat end of the chart; once the whole chart is flat, `⏸` stands alone. The number counts the whole pause, even past the chart's minute.
 
 Why it matters: a growing `⏸` may be long thinking, a slow command, or a stuck agent. If it grows well past what its task should take, run `/tasks` and open the agent to see what it waits on; stop it only if it is stuck.
@@ -182,7 +184,7 @@ Why it matters:
 
 - A red percentage on an agent that still has work to do means little room is left: next time, give it a narrower task, or a model with a larger window.
 - Every call the agent makes sends its whole context again, so a full window costs more per call, as in the main session. Split a long job across several agents with short briefs, so no single context grows large.
-- A follow-up to an agent starts from its full history: note its number while it runs, since its row goes when it finishes. A small number means a cheap follow-up; with a large one, a fresh agent with a short brief may cost less.
+- An agent can be resumed or sent a follow-up, and then it starts from its full history: note its number while it runs, since its row goes when it finishes. A small number means a cheap follow-up; with a large one, a fresh agent with a short brief may cost less.
 
 ## Sources
 
