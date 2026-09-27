@@ -4,7 +4,7 @@ My personal collection of engineering best practices: how I set up projects, wri
 
 ## Layout
 
-- `docs/engineering/` — engineering practices, one folder per topic, each with a `README.md` map, a rules file and examples; `docs/engineering/CLAUDE.md` is the contract for writing one. Start with [git/](docs/engineering/git/): branches, commits, pull requests, merging, and what never happens to shared history.
+- `docs/engineering/` — engineering practices, one folder per topic, each with a `README.md` map, a rules file and examples; `docs/engineering/CLAUDE.md` is the contract for writing one. Start with [git/](docs/engineering/git/): branches, commits, pull requests, merging, and what never happens to shared history. Then [python/](docs/engineering/python/): where a constraint belongs, and what in Python actually enforces one.
 - `docs/claude-code/` — how I set up and instruct Claude Code. So far: [claude-md.md](docs/claude-code/claude-md.md), which says what belongs in a `CLAUDE.md` and what does not.
 - `docs/artifacts/` — working files a session writes (plans, reports, research runs). Git-ignored: not part of the library.
 - `skills/` — Claude Code skills, kept here to read and copy. Nothing in this folder is loaded automatically.

@@ -25,6 +25,11 @@ in the closing summary and the commit body.
   `docs/engineering/git/readme-example.md`. The check: the branch name, the commit title and
   the pull request sections match the forms `git.md` gives for branches, commits and pull
   requests.
+- Before you write or change Python — a module, a type, a check on data coming in — read
+  `docs/engineering/python/python.md`, and
+  `docs/engineering/python/explicit-constraints-example.md` when you place a constraint. The
+  check: every constraint the change introduces is stated on the type or signature that carries
+  it, and what enforces it is a runtime mechanism or a checker the CI runs and fails on.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - Every practice under `docs/engineering/` is a folder named by the topic, never a bare file.
