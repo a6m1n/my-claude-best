@@ -33,8 +33,10 @@ are a folder's rules file and its example files.
 - Write a rule as one act, at one moment, with one way to tell that it happened.
   `docs/claude-code/claude-md.md` § "How to write a line an agent can follow" is the test, and
   it holds for a practice doc as much as for an instruction file.
-- Every name in an example is a placeholder: `Acme Corp`, `Jane Doe`, `PROJ-123`,
-  `example.com`. A real company appears only as a cited source, as the tool described, or as
-  its own public product.
+- Every name in an example is a placeholder (`Acme Corp`, `Jane Doe`, `PROJ-123`,
+  `example.com`) or a well-known name of the same kind standing in for a real client — a
+  well-known bank for a bank; it marks the role and claims nothing about that company. A real
+  company appears under its own name only as a cited source, as the tool described, or as its
+  own public product.
 - Before you stage, re-read the diff for two things: a rule justified by this repository's
   code, and a real name. Either one means the doc is not ready.
