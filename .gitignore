@@ -1,0 +1,11 @@
+# Working artifacts (plans, reports, research runs) — session output, not content
+docs/artifacts/
+
+# macOS
+.DS_Store
+
+# JetBrains IDE
+.idea/
+
+# Claude Code local settings — machine-specific, never shared
+.claude/settings.local.json

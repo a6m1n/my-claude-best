@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="453" height="84" viewBox="0 0 453 84" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="14">
+<rect x="0.5" y="0.5" width="452" height="83" rx="6" fill="#ffffff" stroke="#d0d7de"/>
+<text x="18" y="26.4" xml:space="preserve"><tspan fill="#4a4a4a">ctx: 120.4k</tspan><tspan fill="#4a4a4a" fill-opacity="0.38">/1M</tspan><tspan fill="#4a4a4a"> </tspan><tspan fill="#2e9e3e">12%</tspan><tspan fill="#4a4a4a">   </tspan><tspan fill="#8c8c8c">← plenty of room</tspan></text>
+<text x="18" y="46.4" xml:space="preserve"><tspan fill="#4a4a4a">ctx: 702.9k</tspan><tspan fill="#4a4a4a" fill-opacity="0.38">/1M</tspan><tspan fill="#4a4a4a"> </tspan><tspan fill="#a39a00">70%</tspan><tspan fill="#4a4a4a">   </tspan><tspan fill="#8c8c8c">← plan a /compact</tspan></text>
+<text x="18" y="66.4" xml:space="preserve"><tspan fill="#4a4a4a">ctx: 912.0k</tspan><tspan fill="#4a4a4a" fill-opacity="0.38">/1M</tspan><tspan fill="#4a4a4a"> </tspan><tspan fill="#c8322f">91%</tspan><tspan fill="#4a4a4a">   </tspan><tspan fill="#8c8c8c">← compact now or start fresh</tspan></text>
+</svg>

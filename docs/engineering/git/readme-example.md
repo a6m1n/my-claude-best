@@ -1,0 +1,177 @@
+# README example
+
+An ideal `README.md` for `docparse`, the same fictional service the commit and pull request
+examples use. It describes the project as it stands today, some releases after the change in
+[pr-example.md](pr-example.md). The sections and their order come from [git.md](git.md)
+section 9. Everything between the two rules is the example, as it renders in the repository
+root.
+
+---
+
+# docparse
+
+Self-hosted document ingestion: PDFs, Word files and scans in, page-aware text and tables out.
+
+![build](https://img.shields.io/badge/build-passing-brightgreen)
+![license](https://img.shields.io/badge/license-MIT-blue)
+![python](https://img.shields.io/badge/python-3.11%2B-blue)
+
+**Navigation**
+
+- [What it does](#what-it-does)
+- [Why it is useful](#why-it-is-useful)
+- [Getting started](#getting-started)
+- [How the parts fit together](#how-the-parts-fit-together)
+- [Project structure](#project-structure)
+- [Where to get help](#where-to-get-help)
+- [Maintainers and contributing](#maintainers-and-contributing)
+- [License](#license)
+
+## What it does
+
+`docparse` reads a document and returns its text, its tables and its page structure as JSON.
+Native PDFs, `.docx` files and scans through OCR all enter the same way: the upload form, the
+`docparse ingest` command, or `POST /documents`. Page numbers survive the whole way, so an
+extracted table can be traced back to the page a reader sees.
+
+It does not summarize, classify, or answer questions about a document. That is the job of
+whatever reads the JSON.
+
+## Why it is useful
+
+Most extraction tools return one long block of text, and the page a number came from is gone.
+That is fine for search and useless for anything a person has to check: an invoice total, a
+figure in a report, a clause in a contract. `docparse` keeps the structure, so the answer and
+its page travel together.
+
+It runs on your own machines. Documents never leave them, which is what makes it usable for
+material that cannot go to a hosted service.
+
+## Getting started
+
+Prerequisites: Python 3.11 or newer for the command line, Docker 24 or newer for the service.
+
+Try it on one file:
+
+```bash
+pip install docparse
+docparse ingest invoice.pdf --out invoice.json
+```
+
+```
+invoice.pdf: 3 pages, 2 tables, 0 pages without a text layer
+wrote invoice.json (14 KB)
+```
+
+Run the service:
+
+```bash
+git clone https://github.com/acme-corp/docparse.git
+cd docparse
+cp .env.example .env          # the defaults work for a local run
+make up                       # API on http://localhost:8080, plus the worker and Postgres
+curl -F file=@invoice.pdf http://localhost:8080/documents
+```
+
+Scans need an OCR engine on the host. `docs/guides/ocr.md` has the setup for each platform.
+
+### Configuration
+
+Every key is read from the environment, or from `docparse.toml` when that file exists.
+
+| Key | Default | What it changes |
+| --- | --- | --- |
+| `ingest.max_upload_mb` | `50` | Rejects an upload above this size, before anything is written. |
+| `ingest.ocr_engine` | `tesseract` | Engine used for pages with no text layer. `none` skips them. |
+| `store.dsn` | `postgresql://localhost/docparse` | Where documents and tables are stored. |
+
+## How the parts fit together
+
+```mermaid
+flowchart LR
+    F[Upload form] --> API
+    C[docparse CLI] --> API
+    X[API client] --> API
+    API[docparse-api<br/>:8080] --> Q[(Ingest queue)]
+    Q --> W[docparse-worker]
+    W -->|pages with no text layer| OCR[OCR engine<br/>on the host]
+    W --> DB[(Postgres<br/>documents, tables)]
+    API --> DB
+```
+
+The API accepts and validates, the worker does the reading. They are separate processes, so a
+300-page scan does not block an upload. Postgres holds all the state: stop everything, keep the
+volume, and nothing is lost.
+
+## Project structure
+
+```
+docparse/
+├── src/docparse/
+│   ├── core/         # settings, logging, the page-aware document and the tables both modules use,
+│   │                 # the Postgres and OCR clients
+│   ├── parsing/      # the modules that read a document
+│   │   ├── ingest/   # the upload size guard, the input formats
+│   │   └── extract/  # the text pipeline and the table extractor
+│   ├── api/          # the HTTP API on :8080, `POST /documents` among its routes
+│   ├── cli/          # the `docparse` command
+│   └── worker/       # the queue consumer that runs extraction
+├── tests/            # unit/ offline, integration/ against Postgres, support/ sample documents
+├── migrations/       # one file per schema change
+├── docs/
+│   ├── ARCHITECTURE.md  # the package map: what each kind of folder and file is for
+│   └── guides/       # JSON format reference, OCR setup, operations runbook
+├── Dockerfile
+├── compose.yaml
+├── .env.example
+├── Makefile          # up, check, test-integration, test-load
+└── pyproject.toml
+```
+
+Generated with `tree -a -L 4`, then cut to what a newcomer opens and put in reading order. Run
+`tree src/` for the rest. What each kind of folder and file is for is in `docs/ARCHITECTURE.md`.
+
+## Where to get help
+
+- Usage questions: the Discussions tab of the repository.
+- Bugs and feature requests: open an issue at https://github.com/acme-corp/docparse/issues.
+  Include the input format, the command you ran, and the version from `docparse --version`.
+- Security reports: security@example.com, not a public issue.
+
+## Maintainers and contributing
+
+Maintained by the document platform team at Acme Corp. Jane Doe (`@jane-doe`) reviews and
+lands changes.
+
+Pull requests are welcome. Read `CONTRIBUTING.md` first: it has the branch and commit
+conventions, and `make check` has to pass before review.
+
+## License
+
+MIT, © 2026 Acme Corp. See the `LICENSE` file in the repository root.
+
+---
+
+The example ends here. Three choices in it are worth naming.
+
+The diagram is a deployment view. It answers what a reader has to run and what talks to what,
+which is the question standing between a clone and a working service. The diagram in
+[pr-example.md](pr-example.md) answers a different one, what a single change reroutes, so
+neither replaces the other. A library with one entry point and no services gets neither.
+
+Below the root the tree lists folders and the one map file, and names no file under `src/`;
+listing files would make it wrong at the next rename. What each kind of folder and file is for
+is the package map in `docs/ARCHITECTURE.md`, which the section links instead of repeating
+([file-structure.md](../file-structure/file-structure.md) section 10).
+
+The **Navigation** block sits under the badges and links every `##` section, in order, so a
+reader clicks a line and lands there. GitHub draws an outline from the headings too, but only
+behind its Outline button; the block is in the text, where a reader sees it before scrolling, in
+a plain editor as much as on GitHub. The price is one more block to keep in sync: a renamed
+heading changes its line in the same edit, and markdownlint's MD051 catches a link whose heading
+is gone. `### Configuration` has no line, because the block goes one level deep. In a real
+repository the links to `CONTRIBUTING.md`, `LICENSE`, `docs/guides/ocr.md` and
+`docs/ARCHITECTURE.md` are relative links, not code spans: a relative link keeps working on
+every branch and every fork.
+
+Every name is a placeholder. `docparse`, Acme Corp and Jane Doe do not exist.
