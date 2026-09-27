@@ -46,6 +46,12 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   `docs/engineering/logging/agent-example.md` when an agent's runs should appear in the log. The
   check: the ruff rules in `logging.md` section 11 pass on the change, and no line it adds logs a
   prompt, an answer or a secret.
+- Before you write or change a function or a class, or review one, read
+  `docs/engineering/readability/readability.md`, and
+  `docs/engineering/readability/module-example.md` when you write a new module's use case, its
+  rule and its test. The check: no function or class the change writes or edits shows two or more
+  red flags from `readability.md` section 9's table, and the closing summary names each single red
+  flag left in place and why.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`

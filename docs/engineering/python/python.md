@@ -193,8 +193,8 @@ section costs more than it returns.
    before you add a doer, name what it does besides the call; before you add a layer, name the
    duplication it removes.
 
-A comment is not where a rule or a decision lives, and it is not banned: it says why a construct
-was chosen, never what the line does — `# Compensate for border`, not `# Increment x` (PEP 8).
+A comment is not where a rule or a decision lives; what a comment is for is
+[readability.md](../readability/readability.md) section 4.
 
 **Check.** Open the use case of one business operation and read it with the functions it calls.
 
@@ -220,7 +220,7 @@ Sources, by the name used above: PEP 20, "The Zen of Python" (Tim Peters, 2004) 
 Rossum, "Python's Design Philosophy" (2009); the Python design FAQ, "Why must 'self' be used
 explicitly"; Brett Cannon, "Why Python 3 exists" (2015); Aaron Turon, "Rust's language ergonomics
 initiative" (2017); Michał Nazarewicz, "Explicit isn't better than implicit" (2021); Alyssa
-Coghlan, PEP 642 (2020); PEP 8, on comparisons and on comments; Robert C. Martin, "The Single
+Coghlan, PEP 642 (2020); PEP 8, on comparisons; Robert C. Martin, "The Single
 Responsibility Principle" (2014), "The Clean Architecture" (2012) and "Clean Code Tip of the
 Week" #12 (2009), on boolean arguments; Mark Seemann, "Design Smell: Temporal Coupling" (2011) and
 "Refactoring registration flow to functional architecture" (2019); Alex Kladov, "Push ifs up and
