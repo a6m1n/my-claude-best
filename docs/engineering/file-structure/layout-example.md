@@ -24,7 +24,7 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 │   └── <app>/
 │       ├── core/                           # cross-cutting; imports no module and no adapter
 │       │   ├── config.py                   # settings, read from the environment once
-│       │   ├── consts.py                   # limits every module obeys: upload size, timeouts
+│       │   ├── consts.py                   # limits every module obeys, such as the upload size
 │       │   ├── errors.py                   # the base error every adapter maps
 │       │   ├── logging.py
 │       │   ├── schemas.py                  # types two or more modules use
@@ -32,25 +32,28 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 │       │   └── <system>_client.py          # one per external system: every call to it goes here
 │       ├── <domain>/                       # the modules of one business area, named for the area
 │       │   └── <module>/                   # one feature: the thing a caller asks the app to do
-│       │       ├── usecase.py              # the one entry point the adapters call; composition only
-│       │       ├── schemas.py              # the module's data: its input, its result
-│       │       ├── consts.py               # the module's named values: model names, trace names
+│       │       ├── usecase.py              # the entry point the adapters call:
+│       │       │                           # the business if and the calls; no rule, no query
+│       │       ├── schemas.py              # only when the module has data of its own: its input, its result
+│       │       ├── consts.py               # only when the module has named values: model names, trace names
 │       │       ├── errors.py               # only when the module raises an error of its own
 │       │       ├── validation.py           # only when raw input is checked before it is decoded
 │       │       ├── models.py               # only when the module stores data: its tables
-│       │       ├── repository.py           # only when the module stores data: one function per query
+│       │       ├── repository.py           # only when the module reads or writes stored data:
+│       │       │                           # one function per query
 │       │       ├── prompts.py              # only when it calls a model: its prompt texts
 │       │       ├── <role>.py               # any other role, named for what it holds — never utils.py
 │       │       └── services/               # the doers
-│       │           └── service_<name>.py   # one external call or one computation per file
+│       │           └── service_<name>.py   # one doer per file:
+│       │                                   # an external call with the code around it, or a computation
 │       ├── api/                            # one folder per way in; this one is HTTP
 │       │   ├── main.py                     # the process entry point
-│       │   ├── app.py                      # builds the app and wires every router
+│       │   ├── app.py                      # builds the app and the clients once; wires every router
 │       │   ├── routes_<module>.py          # one file per module the adapter offers
 │       │   ├── schemas.py                  # request bodies, the error envelope
 │       │   └── errors.py                   # module error → HTTP status
 │       └── cli/                            # the command-line adapter, same shape
-│           ├── main.py
+│           ├── main.py                     # the process entry point; builds the clients once
 │           ├── commands_<module>.py
 │           └── errors.py                   # module error → exit code
 ├── tests/
@@ -79,14 +82,16 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 
 What to notice:
 
-- **Every name says what the file holds before it says which one.** `routes_<module>.py`,
-  `commands_<module>.py`, `service_<name>.py`, `test_<unit>.py`: a file seen alone, in an editor
-  tab or a search result, still tells its kind.
-- **Modules share one shape, not one file list.** Every module has `usecase.py` and `schemas.py`.
-  A module that stores nothing has no `models.py`; a module that calls no model has no prompts. No
-  folder holds an empty file kept for symmetry.
+- **Every file in a role folder or an adapter says what it holds before which one.**
+  `routes_<module>.py`, `commands_<module>.py`, `service_<name>.py`, `test_<unit>.py`: a file seen
+  alone, in an editor tab or a search result, still tells its kind.
+- **Modules share one shape, not one file list.** Every module has `usecase.py`, and `schemas.py`
+  when it has data of its own. A module that stores nothing has no `models.py`; a module that calls
+  no model has no prompts. No folder holds an empty file kept for symmetry.
 - **`core/` has one file per external system.** Timeouts, retries, tracing and spend limits for that
-  system live there once, and every service that calls it gets them.
+  system live there once, and every call through it gets them. One instance of each client is built
+  once at startup by each adapter, in `api/app.py` and `cli/main.py`, and handed in as a parameter
+  ([python.md](../python/python.md) section 2).
 - **The adapters hold no business rule.** Each decodes a request, calls one `usecase.py`, encodes
   the result and maps errors to its own protocol. The CLI may offer fewer modules than the API.
 
@@ -103,25 +108,26 @@ own folder, next to nothing of the first module's. Nothing in the first module c
 not change either: it describes `<module>`, and a new module is one more of a kind it already
 describes.
 
-**A file becomes a folder.** A module's `prompts.py` held one prompt. A second prompt arrives, and
-then a third; now the file holds three things a reader looks for one at a time, and its name no
-longer tells which. The change that adds the third prompt first moves the file into a folder of
-the same name, in its own commit:
+**A file becomes a folder.** A module's `prompts.py` held one prompt, then two. With a third, the
+file would hold three things a reader looks for one at a time, and its name would no longer tell
+which. So the change that adds the third prompt first moves the file, with its two prompts, into
+`prompts/`, in its own commit:
 
 ```
 <module>/prompts.py            →   <module>/prompts/
                                    ├── __init__.py                      # empty
                                    ├── prompt_<first name>.py
-                                   ├── prompt_<second name>.py
-                                   └── prompt_<third name>.py
+                                   └── prompt_<second name>.py
 ```
+
+The feature commit that follows adds `prompt_<third name>.py`.
 
 Each new file starts with the role, in the singular, and ends with what this one holds. The
 imports change in the same commit; `__init__.py` stays empty, so each prompt has one import path.
 The same move turns a `schemas.py` that grew five unrelated models into `schemas/schema_<name>.py`.
 
 **A second module needs the same code.** A type or a helper that one module owns is needed by a
-second. If it carries no knowledge of either module — a `Money` type, a retry wrapper — it moves
+second. If it carries no knowledge of either module — a `Money` type, say — it moves
 to `core/`, in its own commit. If it is one module's knowledge, it stays there: the second
 module keeps its own copy of a small pure function, or calls the owner's `usecase.py`, never its
 `services/`. A table both modules use moves to `core/`, and each module keeps its own queries.

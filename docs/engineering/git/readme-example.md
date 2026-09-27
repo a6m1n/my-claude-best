@@ -68,12 +68,12 @@ Run the service:
 ```bash
 git clone https://github.com/acme-corp/docparse.git
 cd docparse
-cp deploy/.env.example .env   # the defaults work for a local run
+cp .env.example .env          # the defaults work for a local run
 make up                       # API on http://localhost:8080, plus the worker and Postgres
 curl -F file=@invoice.pdf http://localhost:8080/documents
 ```
 
-Scans need an OCR engine on the host. `docs/ocr.md` has the setup for each platform.
+Scans need an OCR engine on the host. `docs/guides/ocr.md` has the setup for each platform.
 
 ### Configuration
 
@@ -108,21 +108,28 @@ volume, and nothing is lost.
 ```
 docparse/
 ├── src/docparse/
-│   ├── api/          # HTTP routes and request schemas, no extraction logic
-│   ├── ingest/       # input formats, the upload size guard, the page-aware document
-│   ├── extract/      # text pipeline and the table extractor
-│   ├── store/        # Postgres models and migrations
-│   └── cli.py        # the `docparse` command
-├── deploy/           # Dockerfile, compose file, .env.example
-├── docs/             # JSON format reference, OCR setup, operations runbook
-├── tests/
-│   └── fixtures/     # one sample document per input format
+│   ├── core/         # settings, logging, the page-aware document and the tables both modules use,
+│   │                 # the Postgres and OCR clients
+│   ├── parsing/      # the modules that read a document
+│   │   ├── ingest/   # the upload size guard, the input formats
+│   │   └── extract/  # the text pipeline and the table extractor
+│   ├── api/          # the HTTP API on :8080, `POST /documents` among its routes
+│   ├── cli/          # the `docparse` command
+│   └── worker/       # the queue consumer that runs extraction
+├── tests/            # unit/ offline, integration/ against Postgres, support/ sample documents
+├── migrations/       # one file per schema change
+├── docs/
+│   ├── ARCHITECTURE.md  # the package map: what each kind of folder and file is for
+│   └── guides/       # JSON format reference, OCR setup, operations runbook
+├── Dockerfile
+├── compose.yaml
+├── .env.example
 ├── Makefile          # up, check, test-integration, test-load
 └── pyproject.toml
 ```
 
-Generated with `tree -L 2 --dirsfirst`, then cut to what a newcomer opens. Run `tree src/` for
-the rest.
+Generated with `tree -a -L 4`, then cut to what a newcomer opens and put in reading order. Run
+`tree src/` for the rest. What each kind of folder and file is for is in `docs/ARCHITECTURE.md`.
 
 ## Where to get help
 
@@ -152,9 +159,10 @@ which is the question standing between a clone and a working service. The diagra
 [pr-example.md](pr-example.md) answers a different one, what a single change reroutes, so
 neither replaces the other. A library with one entry point and no services gets neither.
 
-The structure tree stops at the folder level. A file appears only when the file itself is what
-a reader opens (`cli.py`). Listing every module would make the section wrong at the next
-rename, and `tree` prints that better anyway.
+Below the root the tree lists folders and the one map file, and names no file under `src/`;
+listing files would make it wrong at the next rename. What each kind of folder and file is for
+is the package map in `docs/ARCHITECTURE.md`, which the section links instead of repeating
+([file-structure.md](../file-structure/file-structure.md) section 10).
 
 The **Navigation** block sits under the badges and links every `##` section, in order, so a
 reader clicks a line and lands there. GitHub draws an outline from the headings too, but only
@@ -162,7 +170,8 @@ behind its Outline button; the block is in the text, where a reader sees it befo
 a plain editor as much as on GitHub. The price is one more block to keep in sync: a renamed
 heading changes its line in the same edit, and markdownlint's MD051 catches a link whose heading
 is gone. `### Configuration` has no line, because the block goes one level deep. In a real
-repository the links to `CONTRIBUTING.md`, `LICENSE` and `docs/ocr.md` are relative links, not
-code spans: a relative link keeps working on every branch and every fork.
+repository the links to `CONTRIBUTING.md`, `LICENSE`, `docs/guides/ocr.md` and
+`docs/ARCHITECTURE.md` are relative links, not code spans: a relative link keeps working on
+every branch and every fork.
 
 Every name is a placeholder. `docparse`, Acme Corp and Jane Doe do not exist.

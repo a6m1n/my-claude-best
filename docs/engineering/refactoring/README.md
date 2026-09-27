@@ -29,10 +29,11 @@ flowchart TD
   when a practice changes; follow-ups; rules for agents; Python; the sources. Read it before a
   change edits code that already exists (a feature, a fix, a move to a practice, a restructure),
   or turns on a new rule.
-- [adoption-example.md](adoption-example.md) — one repository and three practice changes, each
+- [adoption-example.md](adoption-example.md) — one repository and four practice changes, each
   reaching old code its own way: a formatter swept in one commit, a typing rule moved step by
-  step, an HTTP client replaced by a migration. Read it when you plan how a practice change
-  reaches old code.
+  step, an HTTP client replaced by a migration, and a file that mixes a constant, a query, a route
+  and its handler, split into modules when a change touches it. Read it when you plan how a
+  practice change reaches old code.
 
 ## How to adopt
 
