@@ -1,0 +1,345 @@
+# Example: logging an agent built with LangChain
+
+A worked example for [logging.md](logging.md), sections 8, 9 and 10. It continues the application of
+[setup-example.md](setup-example.md): the same `core/logging.py`, the same Filter. A support
+module, `support/chat/`, answers a customer's question with an agent made by LangChain's
+`create_agent`, traced in Langfuse. Every name is a placeholder.
+
+What each part does for the log:
+
+- the use case marks the run with its dialogue (`thread_id`), hands the request id to the trace,
+  and writes the one summary line;
+- the HTTP adapter opens the run's span around the use case, so every line the run writes carries
+  the trace id, and `core/langfuse_client.py` is the one place that knows Langfuse;
+- `core/openai_client.py`, the one client of the model provider, replaces a provider's error with
+  a safe one, so its text never reaches the log;
+- the optional middleware writes one line per model call and per tool call, and can be removed
+  without changing what the agent does;
+- the tool-failure handler, required when the model should recover from a tool failure, logs that
+  failure once, where it turns it into a message for the model. An expected outcome, such as an
+  unknown order, is a normal tool result and is not logged.
+
+The prompts, the answers and the tool results go to Langfuse and to no log line.
+
+## `support/chat/usecase.py`: the run, its ids and its summary line
+
+```python
+import logging
+import time
+
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.runnables import RunnableConfig
+from langgraph.graph.state import CompiledStateGraph
+
+from acme.core.logging import request_id, thread_id
+from acme.support.chat.schemas import Answer, Question
+
+logger = logging.getLogger(__name__)
+
+
+async def answer(question: Question, agent: CompiledStateGraph, tracing: BaseCallbackHandler) -> Answer:
+    thread_id.set(question.thread_id)  # every line of this run carries it, in nodes and tools too
+    config: RunnableConfig = {
+        "configurable": {"thread_id": question.thread_id},
+        "metadata": {"request_id": request_id.get()},  # the trace leads back to these log lines
+        "callbacks": [tracing],  # the prompt, the answer and the tool results go to Langfuse
+    }
+    started = time.perf_counter()
+    state = await agent.ainvoke({"messages": [HumanMessage(question.text)]}, config)
+    messages = state["messages"]
+    logger.info(
+        "Chat run finished",
+        extra={
+            # The final message's finish reason tells a normal stop from a run cut at the length limit.
+            "outcome": messages[-1].response_metadata.get("finish_reason", "-"),
+            "duration_ms": round((time.perf_counter() - started) * 1000),
+            "messages": len(messages),
+            "tool_calls": sum(len(m.tool_calls) for m in messages if isinstance(m, AIMessage)),
+        },
+    )
+    return Answer(thread_id=question.thread_id, text=messages[-1].text)
+```
+
+The use case catches nothing. A failure it cannot handle, a tool that crashed or a provider that
+is down, propagates to the HTTP adapter, and uvicorn logs it once with the traceback
+(logging.md section 5). A provider's error never reaches that traceback as its own text:
+`ProviderErrorMiddleware` in `core/openai_client.py` replaces it with `ModelUnavailable`, which
+names only the model and the status (logging.md section 10). The `ERROR` record and the summary
+line of a good run both carry the same `request_id` and `thread_id`, so one filter finds a
+dialogue's whole history.
+
+`thread_id`, not the run's `run_id`, is the key: the dialogue keeps its `thread_id` across runs,
+and LangGraph does not persist `run_id`. The `trace_id` field needs no code here: the HTTP
+adapter opens the run's span around this call (next section). Every line inside that span, the
+use case's summary line included, carries its trace id. Langfuse's handler nests its spans under
+the current span, and its trace id is the OpenTelemetry one, so the id on a line opens the run's
+trace.
+
+## `api/routes_chat.py`: the run's span around the use case
+
+```python
+from fastapi import APIRouter, Request
+
+from acme.api.schemas import ChatRequest, ChatResponse
+from acme.core.langfuse_client import callback_handler, run_span
+from acme.support.chat.schemas import Question
+from acme.support.chat.usecase import answer
+
+router = APIRouter()
+
+
+@router.post("/chat")
+async def chat(body: ChatRequest, request: Request) -> ChatResponse:
+    question = Question(thread_id=body.thread_id, text=body.text)
+    # The run's span: every line inside it, the use case's summary line included, carries its trace id.
+    with run_span("chat answer"):
+        reply = await answer(question, request.app.state.chat_agent, tracing=callback_handler())
+    return ChatResponse(thread_id=reply.thread_id, text=reply.text)
+```
+
+`chat_agent` is built once by `build_agent(chat_model())` in `create_app()` and kept on
+`app.state`; that wiring is not shown.
+
+## `core/langfuse_client.py`: the one client of Langfuse
+
+```python
+"""The one client of Langfuse: every other file reaches the trace store through these two functions."""
+
+from contextlib import AbstractContextManager
+
+from langchain_core.callbacks import BaseCallbackHandler
+from langfuse import get_client
+from langfuse.langchain import CallbackHandler
+
+
+def run_span(name: str) -> AbstractContextManager[object]:
+    return get_client().start_as_current_observation(name=name, as_type="span")
+
+
+def callback_handler() -> BaseCallbackHandler:
+    return CallbackHandler()
+```
+
+## `core/openai_client.py`: the one client of the model provider
+
+```python
+# core/openai_client.py
+"""The one client of the model provider: every model call's errors pass through here."""
+
+from collections.abc import Awaitable, Callable
+
+import openai
+from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResponse
+from langchain_openai import ChatOpenAI
+
+from acme.core.errors import ModelUnavailable
+
+MODEL = "gpt-4.1-mini"
+
+
+def chat_model() -> ChatOpenAI:
+    return ChatOpenAI(model=MODEL)
+
+
+class ProviderErrorMiddleware(AgentMiddleware):
+    """Replaces a provider error with ModelUnavailable, which names only the model and the status."""
+
+    async def awrap_model_call(
+        self, request: ModelRequest, handler: Callable[[ModelRequest], Awaitable[ModelResponse]]
+    ) -> ModelResponse:
+        try:
+            return await handler(request)
+        except openai.APIStatusError as exc:
+            # from None: the provider's message can quote the prompt; the model and the status say enough
+            raise ModelUnavailable(MODEL, exc.status_code) from None
+        except openai.APIError:
+            # every other provider error (connection, timeout, context overflow) has no status we need,
+            # only text we must not log
+            raise ModelUnavailable(MODEL, None) from None
+```
+
+```python
+# core/errors.py
+class ModelUnavailable(Exception):
+    """The model provider failed; the message names the model and the status, never the provider's text."""
+
+    def __init__(self, model: str, status: int | None) -> None:
+        super().__init__(f"model {model} unavailable (status {status})")
+        self.model = model
+        self.status = status
+```
+
+## `support/chat/graph.py` and `support/chat/services/service_orders.py`: the agent and a tool
+
+```python
+# support/chat/graph.py
+from langchain.agents import create_agent
+from langchain.agents.middleware import ToolErrorMiddleware
+from langchain_core.language_models import BaseChatModel
+from langgraph.graph.state import CompiledStateGraph
+
+from acme.core.openai_client import ProviderErrorMiddleware
+from acme.support.chat.call_logging import CallLoggingMiddleware
+from acme.support.chat.prompts import SYSTEM
+from acme.support.chat.services.service_orders import find_order
+from acme.support.chat.tool_errors import report_tool_failure
+
+
+def build_agent(model: BaseChatModel) -> CompiledStateGraph:
+    return create_agent(
+        model,
+        tools=[find_order],
+        system_prompt=SYSTEM,
+        middleware=[
+            ToolErrorMiddleware(on_error=report_tool_failure),
+            CallLoggingMiddleware(),
+            # Required. The last entry is the innermost, next to the model, so every other
+            # middleware sees ModelUnavailable, never the provider's error.
+            ProviderErrorMiddleware(),
+        ],
+    )
+```
+
+```python
+# support/chat/services/service_orders.py
+from langchain_core.tools import tool
+
+from acme.support.chat.errors import ToolFailure, ToolFailureReason
+
+
+@tool
+def find_order(order_id: str) -> str:
+    """Return the status of one order."""
+    try:
+        order = ORDERS.get(order_id)
+    except ConnectionError:
+        # from None: the store's error text could quote the order; the fixed code says enough
+        raise ToolFailure(ToolFailureReason.ORDER_STORE_UNAVAILABLE) from None
+    if order is None:
+        return "No order with this id."  # an expected outcome is a normal result, so no log line
+    return order.status
+```
+
+```python
+# support/chat/errors.py
+from enum import StrEnum, unique
+
+
+@unique
+class ToolFailureReason(StrEnum):
+    """The fixed codes a tool failure can carry, so no free text reaches the log."""
+
+    ORDER_STORE_UNAVAILABLE = "order_store_unavailable"
+
+
+class ToolFailure(Exception):
+    """A tool failure the model can read and work around."""
+
+    def __init__(self, reason: ToolFailureReason) -> None:
+        super().__init__(reason)
+        self.reason = reason
+```
+
+The tool raises and does not log. Whoever handles the failure logs it, and that is the
+tool-failure handler below.
+
+## `support/chat/tool_errors.py`: required when the model should recover
+
+```python
+"""The one place a tool failure the model can work around is handled, so the one place it is logged."""
+
+import logging
+
+from langchain.agents.middleware import ToolCallRequest
+
+from acme.support.chat.errors import ToolFailure
+
+logger = logging.getLogger(__name__)
+
+
+def report_tool_failure(exc: Exception, request: ToolCallRequest) -> str | None:
+    if not isinstance(exc, ToolFailure):
+        return None  # not ours: it propagates, and the caller that decides logs it once
+    logger.warning("Tool %s failed: %s", request.tool_call["name"], exc.reason)
+    return f"The tool failed: {exc.reason}"
+```
+
+`create_agent`'s tool node handles only a model's invalid tool arguments and re-raises everything
+else. So an agent whose model should recover from a `ToolFailure` needs this handler, passed to
+`ToolErrorMiddleware` in `graph.py`: it turns the failure into an error message the model reads,
+and it logs the one `WARNING`.
+
+## `support/chat/call_logging.py`: optional, one line per call
+
+```python
+"""Optional: one terminal line per model call and per tool call; the content stays in Langfuse."""
+
+import logging
+import time
+from collections.abc import Awaitable, Callable
+
+from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResponse, ToolCallRequest
+from langchain_core.messages import ToolMessage
+from langgraph.types import Command
+
+logger = logging.getLogger(__name__)
+
+
+def _ms_since(started: float) -> int:
+    return round((time.perf_counter() - started) * 1000)
+
+
+class CallLoggingMiddleware(AgentMiddleware):
+    async def awrap_model_call(
+        self, request: ModelRequest, handler: Callable[[ModelRequest], Awaitable[ModelResponse]]
+    ) -> ModelResponse:
+        started = time.perf_counter()
+        response = await handler(request)
+        # The key name differs by provider; a model that names it otherwise logs "-".
+        finish_reason = response.result[-1].response_metadata.get("finish_reason", "-")
+        logger.info(
+            "Model call finished", extra={"duration_ms": _ms_since(started), "finish_reason": finish_reason}
+        )
+        return response
+
+    async def awrap_tool_call(
+        self, request: ToolCallRequest, handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command]]
+    ) -> ToolMessage | Command:
+        name = request.tool_call["name"]
+        started = time.perf_counter()
+        result = await handler(request)
+        logger.info("Tool %s finished", name, extra={"duration_ms": _ms_since(started)})
+        return result
+```
+
+Leave this middleware out and the agent behaves the same and still logs correctly: the
+tool-failure handler, the summary line and any error stay. Add it when you want to watch an
+agent's pace in the terminal. It adds no token counts, because Langfuse keeps them, and no ids,
+because the Filter adds them to every line. A tool the agent calls many times per run can log at
+`DEBUG` instead.
+
+In a graph built by hand, the same two jobs sit in the one client of the model and in
+`ToolNode(tools, wrap_tool_call=...)`.
+
+## What a run prints
+
+With `LOG_FORMAT=console`, one question that needed one tool call, which failed because the order
+store was down (the ids are cut to eight characters here; the console line shows only the request
+id, and the JSON record carries all three):
+
+```
+2026-09-27 15:21:04,310 INFO     acme.support.chat.call_logging [7f3c9a1e] Model call finished duration_ms=812 finish_reason=tool_calls
+2026-09-27 15:21:04,322 WARNING  acme.support.chat.tool_errors [7f3c9a1e] Tool find_order failed: order_store_unavailable
+2026-09-27 15:21:05,104 INFO     acme.support.chat.call_logging [7f3c9a1e] Model call finished duration_ms=779 finish_reason=stop
+2026-09-27 15:21:05,106 INFO     acme.support.chat.usecase [7f3c9a1e] Chat run finished outcome=stop duration_ms=1631 messages=4 tool_calls=1
+2026-09-27 15:21:05,107 INFO     uvicorn.access [7f3c9a1e] 192.0.2.10:53211 - "POST /chat HTTP/1.1" 200
+```
+
+The same summary line with `LOG_FORMAT=json`:
+
+```json
+{"request_id": "7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12", "thread_id": "thread-42", "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736", "outcome": "stop", "duration_ms": 1631, "messages": 4, "tool_calls": 1, "ts": "2026-09-27T15:21:05.106+00:00", "level": "INFO", "logger": "acme.support.chat.usecase", "message": "Chat run finished", "template": "Chat run finished"}
+```
+
+To see what the model was asked and what it answered, open the trace: its id is on every line the run writes.

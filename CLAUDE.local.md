@@ -40,6 +40,12 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   module, `docs/engineering/file-structure/package-map-example.md` when you write a package map.
   The check: every file the diff adds sits where the practice's role table puts its kind, its name
   says what it holds (no `utils.py`), and every import in it is absolute.
+- Before you add a log call, set up logging for a process, or wire logging into a service or an
+  agent, read `docs/engineering/logging/logging.md`, and
+  `docs/engineering/logging/setup-example.md` when you set up logging for a process,
+  `docs/engineering/logging/agent-example.md` when an agent's runs should appear in the log. The
+  check: the ruff rules in `logging.md` section 11 pass on the change, and no line it adds logs a
+  prompt, an answer or a secret.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - Every practice under `docs/engineering/` is a folder named by the topic, never a bare file.
