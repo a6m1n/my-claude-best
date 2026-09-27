@@ -276,8 +276,25 @@ Generate the structure tree with `tree`, then cut it to the folders a newcomer o
 that lists every file is wrong at the next rename. Badges go under the title, and only for a
 fact a reader acts on, such as build status or the supported version.
 
+A navigation list sits under the one-line description and the badges, before the first
+section: one link per `##` heading, in the order the headings appear, as a plain list with no
+heading of its own. A reader clicks a line and lands on that section. `###` headings get no
+line. The link is the anchor GitHub builds from the heading: lower case, each space becomes a
+hyphen, and every other punctuation mark is dropped, so `## Getting started` links as
+`#getting-started` and `## Why use it?` as `#why-use-it`. GitHub also draws an outline from the
+headings, but only behind its Outline button. The list is in the text, where every reader sees
+it at once, in a plain editor as much as on GitHub.
+
+The list opens every `README.md` in the repository that has two or more `##` headings, a
+folder's `README.md` map as much as the project README. One with fewer has nothing to link to
+and gets none. When you add, rename or remove a `##` heading, change its line in the list in
+the same edit.
+
 Check: someone who has not seen the project clones it, follows only the README, and gets the
-output the README promises.
+output the README promises. For the list: every `##` heading has exactly one line in it, and
+every link lands on a heading. markdownlint's rule MD051 (`link-fragments`) fails on a link
+whose heading is gone, so run it in CI wherever the repository lints Markdown. A heading added
+without its line is caught only by a re-read of the diff.
 
 A full example is in [readme-example.md](readme-example.md), with the reason behind each choice.
 

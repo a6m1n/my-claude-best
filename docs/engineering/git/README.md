@@ -3,6 +3,10 @@
 One git model for a repository that people and AI agents both change: ticket-bound branches,
 merge commits, and no rewriting of history that has been pushed.
 
+- [What is here](#what-is-here)
+- [How to adopt](#how-to-adopt)
+- [The point to adapt](#the-point-to-adapt)
+
 ```mermaid
 flowchart TD
   B[Branch<br/>type/KEY-123-short-name] --> C[Commit<br/>one logical change]

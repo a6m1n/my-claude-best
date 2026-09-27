@@ -4,6 +4,10 @@ How to write Python in which the reader sees, at the line in front of them, what
 which path runs: the business decision is an `if` in the use case, the rule it asks is a named
 function in a module of its own, and the types live in a module that holds types only.
 
+- [What is here](#what-is-here)
+- [How to adopt](#how-to-adopt)
+- [The point to adapt](#the-point-to-adapt)
+
 An arrow reads "uses".
 
 ```mermaid
