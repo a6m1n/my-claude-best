@@ -1,5 +1,21 @@
 # File structure rules
 
+**Navigation**
+
+- [1. Purpose and the one rule](#1-purpose-and-the-one-rule)
+- [2. The shape: three kinds of folder, one direction](#2-the-shape-three-kinds-of-folder-one-direction)
+- [3. A module folder: one file per role](#3-a-module-folder-one-file-per-role)
+- [4. `core/`: code every module may use](#4-core-code-every-module-may-use)
+- [5. Adapters: one folder per way in](#5-adapters-one-folder-per-way-in)
+- [6. How the tree grows: six moves](#6-how-the-tree-grows-six-moves)
+- [7. Names: the file name says what it holds](#7-names-the-file-name-says-what-it-holds)
+- [8. Tests](#8-tests)
+- [9. The repository root](#9-the-repository-root)
+- [10. The map: kinds and rules, not a file list](#10-the-map-kinds-and-rules-not-a-file-list)
+- [11. Check the direction with a tool](#11-check-the-direction-with-a-tool)
+- [12. Where it stops holding](#12-where-it-stops-holding)
+- [13. Sources](#13-sources)
+
 ## 1. Purpose and the one rule
 
 This file is for everyone who adds a file or a folder to an application: people and AI agents

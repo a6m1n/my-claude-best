@@ -5,6 +5,13 @@ of about 40,000 lines with a test suite and mypy in CI. In one quarter its team 
 practice changes, and each one reaches the old code a different way. Names, tickets, dates and
 numbers are invented.
 
+**Navigation**
+
+- [1. A formatter: one sweep](#1-a-formatter-one-sweep)
+- [2. Named types instead of `dict`: step by step](#2-named-types-instead-of-dict-step-by-step)
+- [3. A new HTTP client: a migration](#3-a-new-http-client-a-migration)
+- [What the three have in common](#what-the-three-have-in-common)
+
 | Practice change | Kind (section 7) | How old code gets there |
 |---|---|---|
 | Format all code with `ruff format` | New and touched code, swept by a tool | One sweep commit, then a CI check |

@@ -1,5 +1,17 @@
 # Git rules
 
+**Navigation**
+
+- [1. Purpose and the one rule](#1-purpose-and-the-one-rule)
+- [2. Branches](#2-branches)
+- [3. Commits](#3-commits)
+- [4. Pull requests](#4-pull-requests)
+- [5. Merge, not rebase](#5-merge-not-rebase)
+- [6. Never force push](#6-never-force-push)
+- [7. Conflicts when syncing](#7-conflicts-when-syncing)
+- [8. Several agents or people in one repository](#8-several-agents-or-people-in-one-repository)
+- [9. Project README, and what goes where](#9-project-readme-and-what-goes-where)
+
 ## 1. Purpose and the one rule
 
 This file is for everyone who changes the repository: people and AI agents alike. Read it
@@ -276,22 +288,34 @@ Generate the structure tree with `tree`, then cut it to the folders a newcomer o
 that lists every file is wrong at the next rename. Badges go under the title, and only for a
 fact a reader acts on, such as build status or the supported version.
 
-A navigation list sits under the one-line description and the badges, before the first
-section: one link per `##` heading, in the order the headings appear, as a plain list with no
-heading of its own. A reader clicks a line and lands on that section. `###` headings get no
-line. The link is the anchor GitHub builds from the heading: lower case, each space becomes a
-hyphen, and every other punctuation mark is dropped, so `## Getting started` links as
-`#getting-started` and `## Why use it?` as `#why-use-it`. GitHub also draws an outline from the
-headings, but only behind its Outline button. The list is in the text, where every reader sees
-it at once, in a plain editor as much as on GitHub.
+A navigation block opens the README, so a reader clicks a line and lands on that section: a
+bold `**Navigation**` line, a blank line, then a plain list with one link per `##` heading, in
+the order the headings appear, with the heading text as the link text. `###` headings get no
+line. The block sits right after the first paragraph under the title, after the badges when
+there are any, or right under the title when a `##` heading follows it directly. The link is the
+anchor GitHub builds from the heading: lower case, each space becomes a hyphen, and every other
+punctuation mark is dropped, so `## Getting started` links as `#getting-started` and
+`## Why use it?` as `#why-use-it`. A heading with an emoji in it keeps characters that rule does
+not predict, so copy its anchor from the link icon GitHub shows beside the heading. GitHub also
+draws an outline from the headings, but only behind its Outline button. The block is in the
+text, where every reader sees it at once, in a plain editor as much as on GitHub.
 
-The list opens every `README.md` in the repository that has two or more `##` headings, a
-folder's `README.md` map as much as the project README. One with fewer has nothing to link to
-and gets none. When you add, rename or remove a `##` heading, change its line in the list in
-the same edit.
+The block goes where it saves a reader the scroll, and nowhere else. Every `README.md` with two
+or more `##` headings gets one, however short, a folder's `README.md` map as much as the project
+README: a reader opens a README to find one thing. So does a long rules file or guide that a
+reader opens to look up one section, such as this file, and a set of worked examples a reader
+picks one case from. An example or a template gets none when its `##` headings are the sections
+of the one document it shows, such as a pull request description; an example of a README is the
+exception and keeps that README's own block. Neither does a doc read straight through as one
+story, such as a before-and-after example, nor a short file a reader takes in at once, such as a
+page of good and bad commit messages, nor a file whose `##` headings are too few to save a
+scroll, however long. When unsure, ask whether a reader jumps to one section or reads from the
+top: only the first gets a block. Add the block when you write such a file or when an edit makes
+a file one, such as a rules file that gains its third section, and when you add, rename or
+remove a `##` heading in a file that has one, change its line in the same edit.
 
 Check: someone who has not seen the project clones it, follows only the README, and gets the
-output the README promises. For the list: every `##` heading has exactly one line in it, and
+output the README promises. For the block: every `##` heading has exactly one line in it, and
 every link lands on a heading. markdownlint's rule MD051 (`link-fragments`) fails on a link
 whose heading is gone, so run it in CI wherever the repository lints Markdown. A heading added
 without its line is caught only by a re-read of the diff.

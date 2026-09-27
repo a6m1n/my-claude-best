@@ -5,6 +5,8 @@ without being left half old and half new: new code follows the practice, old cod
 change touches it, and a practice that replaces one way with another becomes a migration with an
 end.
 
+**Navigation**
+
 - [What is here](#what-is-here)
 - [How to adopt](#how-to-adopt)
 - [The point to adapt](#the-point-to-adapt)

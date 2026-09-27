@@ -4,6 +4,8 @@ Where code lives in an application: three kinds of folder and the one import dir
 one shape for every feature folder, file names that say what the file holds, and a few fixed moves
 by which the tree grows. How the code inside a file works is out of scope.
 
+**Navigation**
+
 - [What is here](#what-is-here)
 - [How to adopt](#how-to-adopt)
 - [The point to adapt](#the-point-to-adapt)

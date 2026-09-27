@@ -1,5 +1,19 @@
 # Refactoring rules
 
+**Navigation**
+
+- [1. Purpose and the one rule](#1-purpose-and-the-one-rule)
+- [2. New, touched and untouched code](#2-new-touched-and-untouched-code)
+- [3. How to change old code safely](#3-how-to-change-old-code-safely)
+- [4. Sweep the repository, or move step by step](#4-sweep-the-repository-or-move-step-by-step)
+- [5. When a practice replaces one way with another: migrations](#5-when-a-practice-replaces-one-way-with-another-migrations)
+- [6. Rules about correctness and security](#6-rules-about-correctness-and-security)
+- [7. When a practice itself changes](#7-when-a-practice-itself-changes)
+- [8. Follow-ups: what you see but do not fix](#8-follow-ups-what-you-see-but-do-not-fix)
+- [9. Rules for AI agents](#9-rules-for-ai-agents)
+- [10. Python](#10-python)
+- [11. Where these rules come from](#11-where-these-rules-come-from)
+
 ## 1. Purpose and the one rule
 
 This file is for everyone who changes code that already exists: people and AI agents alike.

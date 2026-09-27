@@ -7,8 +7,11 @@ Names in angle brackets are placeholders: `<app>` is the package, `<domain>` a b
 because the shape is the point: it is the same for every module, and `ls` shows which modules a
 repository has.
 
-Section 1 is the tree. Section 2 is how a tree like it grows, one move at a time. Section 3 is the
-import rules as the contracts CI runs.
+**Navigation**
+
+- [1. The tree](#1-the-tree)
+- [2. How a tree grows](#2-how-a-tree-grows)
+- [3. The import rules, as CI runs them](#3-the-import-rules-as-ci-runs-them)
 
 ## 1. The tree
 

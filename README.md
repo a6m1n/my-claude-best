@@ -2,6 +2,8 @@
 
 My personal collection of engineering best practices: how I set up projects, write and review code, and work with AI coding agents. Everything here is Markdown. There is nothing to build or run.
 
+**Navigation**
+
 - [Layout](#layout)
 - [Conventions](#conventions)
 - [License](#license)
@@ -18,7 +20,7 @@ My personal collection of engineering best practices: how I set up projects, wri
 
 - All content is in English.
 - One topic per file, named by the topic (for example `code-review.md`). A topic with examples becomes a folder named by the topic, with a `README.md` map. Under `docs/engineering/` a practice is always a folder.
-- Every `README.md` with two or more sections opens with a list of links to them, so a reader clicks a line and lands on that section. [git.md](docs/engineering/git/git.md) section 9 has the rule.
+- Every `README.md` with two or more `##` sections, and every long rules file or guide a reader consults section by section, opens with a **Navigation** block of links to its sections. [git.md](docs/engineering/git/git.md) section 9 says which files get one and which do not.
 - Every name in the examples is fictional: companies, people, tickets, domains.
 
 ## License

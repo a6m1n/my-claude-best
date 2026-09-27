@@ -29,9 +29,9 @@ are a folder's rules file and its example files.
   extend it; the diff then shows an edited file, not a second file on the same topic. A practice
   is one folder named by the topic, with a `README.md` map, a rules file and one ideal example
   per artifact type; never a bare file, even before the examples exist.
-- A folder's `README.md` map opens with a navigation list under its first paragraph: one link
-  per `##` section, in order, in the form `git/git.md` section 9 gives. When you add, rename or
-  remove a section, change its line in the same edit; the diff shows both.
+- Before you write a practice file, or add, rename or remove one of its `##` headings, read
+  `git/git.md` section 9: it says which files open with a navigation block and how the block is
+  kept in step. In a file that has one, the diff shows each heading change next to its line.
 - When you change a rule in a practice, write in the commit body how existing code responds,
   using one of the answers `refactoring/refactoring.md` section 7 lists. The check: the commit
   body names one of them.
