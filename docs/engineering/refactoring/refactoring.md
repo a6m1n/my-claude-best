@@ -115,8 +115,8 @@ behavior.
 7. **Put each part where it can be reviewed and reverted.** A small cleanup in the lines you
    change, such as a local rename or an extracted variable, may go in the same pull request, as
    its own commit. A larger refactoring is its own pull request, merged before the change. A mixed
-   pull request cannot be reverted in parts, and review quality falls as the diff grows
-   ([git.md](../git/git.md) sections 3 and 4). Google's code review guide draws the same line:
+   pull request cannot be reverted in parts. Review quality also falls as the diff grows
+   ([git.md](../git/git.md) section 4). Google's code review guide draws the same line:
    refactorings go in a separate change, and a small cleanup "such as fixing a local variable
    name" may stay inside.
 
@@ -215,9 +215,9 @@ So a practice change of this kind starts a migration, and a migration has an end
    The owner moves the easy majority with a tool where one exists, then finishes the rest by
    hand.
 4. **Finish, or go back to one way.** A migration ends when the count is zero and the old way is
-   gone: its dependency, its adapter, and the practice text that allowed it. If it cannot finish,
-   roll it back. Never start a third way while the first one is still in the code (Jimmy
-   Bogard's "rule of 2").
+   gone: its dependency, any wrapper written around it, and the practice text that allowed it. If
+   it cannot finish, roll it back. Never start a third way while the first one is still in the
+   code (Jimmy Bogard's "rule of 2").
 
 The shape is expand, migrate, contract: add the new way next to the old one, move every caller,
 then remove the old one. The last step is part of the job. Danilo Sato's warning about it, on
@@ -288,7 +288,7 @@ consequences. So the rules for an agent are steps, each with a named target:
    follow-up (section 8), with the file and the practice it breaks.
 5. **Run a repository-wide change only as section 4 says:** a sweep when a tool makes every edit;
    otherwise a migration in batches, each batch its own pull request that a command proves and a
-   person reviews. An agent never merges its own pull request ([git.md](../git/git.md) section 5).
+   person reviews. Each one lands the way [git.md](../git/git.md) section 5 says.
 
 Check: the agent's diff edits only new code and the functions on its list, and its report names
 the follow-ups it did not fix.

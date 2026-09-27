@@ -41,9 +41,9 @@ flowchart LR
 3. Write your own package map into `docs/ARCHITECTURE.md`, starting from
    `package-map-example.md`, with your package and domain names and your adapters.
 4. Add the import-linter contracts and ruff's `TID252` rule to `pyproject.toml`, and run both in CI.
-   Old code that breaks a contract reaches the practice the way
-   [refactoring.md](../refactoring/refactoring.md) section 4 says: marks that only shrink, not a
-   rewrite.
+   Old code that breaks a contract or `TID252` reaches the practice the way
+   [refactoring.md](../refactoring/refactoring.md) sections 4 and 10 say, not by a rewrite; an old
+   relative import is marked `# noqa: TID252`.
 
 ## The point to adapt
 

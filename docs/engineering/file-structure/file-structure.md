@@ -52,11 +52,11 @@ the application to do. Its name is unique in the application. A Python `.py` fil
 file.
 
 **Cut modules by what the caller asks for, not by the nouns in the database.** "Approve an
-invoice" and "export the ledger" are modules; `invoices/` and `users/` as folders for everything
-that touches a table are not. Derek Comartin names the failure: "When you focus on entities, you
-risk creating unnecessary coupling" (*Screaming Architecture: Not Driven by Entities*, 2025). A
-module built around a table ends up holding every workflow that reads it, and those workflows
-change for different reasons.
+invoice" (`<domain>/approve_invoice/`) and "export the ledger" (`<domain>/export_ledger/`) are
+modules; `invoices/` and `users/` as folders for everything that touches a table are not. Derek
+Comartin names the failure: "When you focus on entities, you risk creating unnecessary coupling"
+(*Screaming Architecture: Not Driven by Entities*, 2025). A module built around a table ends up
+holding every workflow that reads it, and those workflows change for different reasons.
 
 ## 2. The shape: three kinds of folder, one direction
 
@@ -72,7 +72,7 @@ src/<app>/
 
 | Folder | Holds | Imports |
 |---|---|---|
-| `core/` | settings, logging, shared errors and types, the one client per external system | only libraries |
+| `core/` | settings, logging, shared errors and types, one client class per external system | only libraries |
 | `<domain>/<module>/` | one feature: its entry point, its data, its doers | `core/` and libraries; never another module, never an adapter |
 | an adapter (`api/`, `cli/`) | turns a request into a call to one `usecase.py` and the result back into a response | modules, `core/`, its own framework; never another adapter |
 
@@ -104,23 +104,25 @@ that kind; never an empty placeholder kept for symmetry.
 
 | File | Holds | Never holds |
 |---|---|---|
-| `usecase.py` | the one entry point the adapters call; composes the services and returns the module's result | a business rule, a query, prompt text, a framework type |
-| `schemas.py` | the module's data: its input, its result, the shapes its services pass | logic |
-| `consts.py` | the module's named values: model names, trace names, a limit only this module has | logic; a value one service tunes (that sits next to its logic) |
-| `services/` | the doers, one per file: one call to an external system, or one computation | a second doer |
+| `usecase.py` | the one entry point the adapters call: it holds the business `if` and the calls to the services, the repository and the clients it is handed, and returns the module's result ([python.md](../python/python.md) section 2) | a business rule, a query, prompt text, a framework type |
+| `schemas.py` | only when the module has data of its own: its input, its result, the shapes its services pass | logic |
+| `consts.py` | only when the module has named values: model names, trace names, a limit only this module has | logic; a value one service tunes or one rule reads (that sits next to its logic) |
+| `services/` | the doers, one per file: one call to an external system with the code that prepares it or reads its answer, or one computation; whether a call is worth a doer of its own is [python.md](../python/python.md) section 2, condition 5 | a second doer |
 | `errors.py` | only when the module raises an error of its own | anything else |
 | `validation.py` | only when raw input is checked before it is decoded | anything past that check |
 | `models.py` | only when the module stores data: its tables | queries |
-| `repository.py` | only when the module stores data: one function per query | a business rule |
+| `repository.py` | only when the module reads or writes stored data: one function per query | a business rule |
 | `prompts.py` | only when the module calls a language model: its prompt texts | code that sends it |
-| `<role>.py` | any other role, named for what it holds: `<name>_format.py`, `<name>_rules.py` | a second role |
+| `<role>.py` | any other role, named for what it holds: `<name>_format.py`, `<name>_rules.py`; a business rule sits in such a file with the threshold it reads | a second role |
 
 - **A file holds one kind of thing, even in a small module.** Constants, data models and logic never
-  share a file, also when the module has one caller today. The split costs one import. A mixed file
-  costs every reader the parts they did not come for.
-- **A constant lives next to the one thing that changes it.** A value one service tunes sits in that
-  service's file. A named value of the whole module sits in its `consts.py`. A limit every module
-  obeys sits in `core/consts.py`. A model name changes when the provider retires the model; a
+  share a file, also when the module has one caller today; the one exception is a value one service
+  tunes or one rule reads, which sits next to that logic (next bullet). The split costs one import.
+  A mixed file costs every reader the parts they did not come for.
+- **A constant lives next to the one thing that changes it.** A value one service tunes or one rule
+  reads sits in that file, next to its logic. A value the use case reads, and any other named value
+  of the whole module, sits in the module's `consts.py`. A limit every module obeys sits in
+  `core/consts.py`. A model name changes when the provider retires the model; a
   threshold changes when the business changes its rule. Different reasons to change, different
   files.
 - **A subfolder inside a module is for a different reason to change**, such as the wiring of a
@@ -134,7 +136,7 @@ Check: for every file, "this file holds only ___" has one answer, and the file n
 
 ## 4. `core/`: code every module may use
 
-`core/` holds what more than one module needs and no module owns:
+`core/` holds code that no module owns and every module may use:
 
 - settings, read from the environment once (`config.py`);
 - logging setup;
@@ -143,16 +145,19 @@ Check: for every file, "this file holds only ___" has one answer, and the file n
 - **data two or more modules share**: a table both modules read or write (`models.py`), named for
   what it holds and split by move 2 when it grows. The queries stay in each module's own
   `repository.py`.
-- **one client per external system** (`<system>_client.py`, `database.py`). Every call to that system
-  goes through that file, so timeouts, retries, tracing and spend limits are written once. A second
-  path to the same system is a bug waiting for the day the first one gains a limit.
+- **one client per external system** (`<system>_client.py`, `database.py`), from the first module
+  on: the class every call to that system goes through, so timeouts, retries, tracing and spend
+  limits are written once. A second path to the same system is a bug waiting for the day the first
+  one gains a limit. One instance is built at startup by the adapter (section 5) and handed in as a
+  parameter ([python.md](../python/python.md) section 2).
 
 Rules:
 
 - `core/` imports no module and no adapter.
 - **Code moves into `core/` when a second module needs it and no single module owns it**: it
   carries the knowledge of neither, or, like a shared table, of both alike. Not before: a type used
-  by one module lives in that module, even when it looks general.
+  by one module lives in that module, even when it looks general. The clients above are the
+  exception: each sits in `core/` from the first module on.
 - `core/` grows by the same moves as a module: a file that holds several clients becomes
   `core/clients/`, one file per client (section 6, move 2).
 
@@ -166,8 +171,9 @@ the right HTTP codes" (Percival and Gregory, *Architecture Patterns with Python*
 
 An adapter folder holds:
 
-- `main.py`, the process entry point, and the file that builds the app and wires its parts (`app.py`,
-  `server.py`);
+- `main.py`, the process entry point, and the file that builds the app and one instance of each
+  client, once, and wires its parts (`app.py`, `server.py`, or `main.py` itself in a command-line
+  adapter);
 - **one file per module it offers**, named for the role and the module: `routes_<module>.py`,
   `commands_<module>.py`, `handlers_<module>.py`;
 - its own `schemas.py` (request bodies, the error envelope) and `errors.py` (module error → status
@@ -193,8 +199,10 @@ Rules:
 ## 6. How the tree grows: six moves
 
 The tree is never drawn in one go. It starts with `core/`, one domain folder, one module and one
-adapter. Every change that needs more makes one of these moves, in its own commit, before the
-change that needed it.
+adapter. Every change that needs more makes one of these moves. Moves 2 and 3 change where
+existing code lives, so they land as a refactoring before the change that needed them
+([refactoring.md](../refactoring/refactoring.md) section 3); the other moves add new code and land
+with the change that needs them.
 
 1. **A new feature → a new module.** A new folder in the shape of section 3, one file in each
    adapter that offers it, and `tests/unit/<module>/` for its tests (section 8). Nothing in the other
@@ -240,7 +248,7 @@ change that needed it.
    first, and adapter files (`routes_<module>.py`) and test folders (`tests/unit/<module>/`) stay
    flat.
 
-Check: a structural move lands in its own commit, with no change in behavior
+Check: a structural move (2 or 3) lands in its own commit, with no change in behavior
 ([refactoring.md](../refactoring/refactoring.md) section 3). The diff of a new module adds files
 and touches no other module.
 
@@ -392,8 +400,8 @@ for, and what must hold for every one of that kind. Names in it are placeholders
 [package-map-example.md](package-map-example.md) is the map for the tree in
 [layout-example.md](layout-example.md).
 
-Check: after a change that adds a module or a file, `git diff --stat` does not list
-`docs/ARCHITECTURE.md`; after a change that adds a kind, it does.
+Check: `git show --stat <commit>` of a commit that adds a module or a file does not list
+`docs/ARCHITECTURE.md`; of a commit that adds a kind, it does.
 
 ## 11. Check the direction with a tool
 

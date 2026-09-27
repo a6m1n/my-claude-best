@@ -48,8 +48,9 @@ flowchart LR
 - **PDF as an input format.** `PdfSource` reads the file and hands each page to the
   existing text pipeline as a page-aware document, in reading order. The upload form, the
   `docparse ingest` command, and `POST /documents` accept `application/pdf` and route to it;
-  text and Markdown input keep their current path. A scanned PDF with no text layer ingests as
-  pages with empty bodies, so page counts stay right (OCR is out of scope, see Notes).
+  text and Markdown input keep their current path. A scanned PDF with no text layer ingests each
+  page with the status `no_text_layer` instead of `ok` and a body, so page counts stay right and
+  a blank page is not mistaken for a scan (OCR is out of scope, see Notes).
 - **Tables report the page they came from.** The page-aware document carries page breaks
   through extraction, so `TableExtractor` writes a `page` number on every table it finds.
   Before, a table from a converted text file had no page, and a reader had to search the
@@ -63,11 +64,12 @@ flowchart LR
 
 *Checked in this session*
 
-- `make check` (lint, types, fast tests): passed, 212 tests, 14 of them new in `tests/ingest/`.
+- `make check` (lint, types, fast tests): passed, 212 tests, 14 of them new in `tests/unit/ingest/`.
 - `make test-integration` against a local Postgres: passed, 31 tests.
 - A 12-page text PDF through the upload form: 12 pages ingested, numbered 1 to 12; the tables
   on pages 4 and 9 extracted with the right `page` number.
-- A scanned PDF with no text layer: 9 pages ingested with empty bodies, page count 9, no error.
+- A scanned PDF with no text layer: 9 pages ingested with status `no_text_layer`, page count 9,
+  no error.
 - Negative check: a 60 MB file against a 50 MB limit is rejected at upload with "50 MB" in the
   message, and nothing is written to storage.
 
@@ -75,6 +77,8 @@ flowchart LR
 
 - The limit is read from `ingest.max_upload_mb`. Expected: staging shows 50 MB, the number
   support tells customers; production shows 200 MB.
+- Start `docparse` with `ingest.max_text_mb` set. Expected: it does not start, and the error
+  names `ingest.max_upload_mb`.
 - Upload a `.docx`. Expected: rejected as an unsupported type, and nothing is written.
 - The upload form was checked in one browser. Expected in a second browser: the same 12-page
   PDF uploads and reports 12 pages.
@@ -84,11 +88,10 @@ flowchart LR
 ## ⚠️ Breaking Changes
 
 - **Configuration key renamed: `ingest.max_text_mb` → `ingest.max_upload_mb`.** What breaks:
-  a deployment that sets the old key. The old key is ignored, so the limit falls back to the
-  default of 20 MB instead of failing at startup; the startup log warns once while the old key
-  is present. Blast radius: every environment with a custom limit; staging (50 MB) and
-  production (200 MB) both set one today. Migration: rename the key before you deploy; the
-  value carries over unchanged.
+  a deployment that still sets the old key does not start, and the error names the new key.
+  Blast radius: every environment with a custom limit; staging (50 MB) and production (200 MB)
+  both set one today. Migration: rename the key before you deploy; the value carries over
+  unchanged.
 
 ## Notes
 
