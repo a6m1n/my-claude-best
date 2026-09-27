@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="369" height="84" viewBox="0 0 369 84" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="14">
 <rect x="0.5" y="0.5" width="368" height="83" rx="6" fill="#ffffff" stroke="#d0d7de"/>
-<text x="18" y="26.4" xml:space="preserve"><tspan fill="#4a4a4a">5h: </tspan><tspan fill="#2e9e3e">2%</tspan><tspan fill="#4a4a4a"> </tspan><tspan fill="#4a4a4a" fill-opacity="0.38">(in 4h 44m)</tspan><tspan fill="#4a4a4a">   </tspan><tspan fill="#8c8c8c">← a fresh window</tspan></text>
+<text x="18" y="26.4" xml:space="preserve"><tspan fill="#4a4a4a">5h: </tspan><tspan fill="#2e9e3e">2%</tspan><tspan fill="#4a4a4a"> </tspan><tspan fill="#4a4a4a" fill-opacity="0.38">(in 4h 44m)</tspan><tspan fill="#4a4a4a">   </tspan><tspan fill="#8c8c8c">← just reset</tspan></text>
 <text x="18" y="46.4" xml:space="preserve"><tspan fill="#4a4a4a">5h: </tspan><tspan fill="#a39a00">76%</tspan><tspan fill="#4a4a4a"> </tspan><tspan fill="#4a4a4a" fill-opacity="0.38">(in 1h 10m)</tspan><tspan fill="#4a4a4a">   </tspan><tspan fill="#8c8c8c">← watch the pace</tspan></text>
 <text x="18" y="66.4" xml:space="preserve"><tspan fill="#4a4a4a">5h: </tspan><tspan fill="#c8322f">94%</tspan><tspan fill="#4a4a4a"> </tspan><tspan fill="#4a4a4a" fill-opacity="0.38">(in 38m)</tspan><tspan fill="#4a4a4a">   </tspan><tspan fill="#8c8c8c">← close to the limit</tspan></text>
 </svg>

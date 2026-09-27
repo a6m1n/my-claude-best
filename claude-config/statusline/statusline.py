@@ -271,12 +271,10 @@ def format_cache(usages: list[dict]) -> str:
     ----------
       * ≥75% → green ("healthy"): stable prefix is being reused well.
       * 50-74% → yellow ("watch"): cache is helping, but something is
-        regularly invalidating part of the prefix (frequent CLAUDE.md edits,
-        tool registry churn, parallel requests).
+        regularly invalidating part of the prefix (a model or effort switch,
+        fast mode turned on, many images).
       * <50% → red ("regression"): prefix is churning. Common root causes:
-        edits to CLAUDE.md / MEMORY.md during the session, adding/removing
-        skills or MCP servers mid-session, frequent compactions, model
-        switching via /model.
+        model switching, effort changes, fast mode, compactions, many images.
 
     Warming state
     -------------

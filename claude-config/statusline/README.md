@@ -1,25 +1,34 @@
 # Status line
 
-A free Claude Code status line that keeps four things in view under the prompt: how full the context is, how much of your usage limits is left, whether the prompt cache is warm, and whether your pace fits the 5-hour limit. A second part redraws the agent panel, so every running subagent shows its model, what it is doing and how much it has used.
+A free status line for Claude Code. It helps you use the whole 5-hour budget without hitting the limit early, stop paying to write a cold cache again, and see which agent is stuck or running out of room.
+
+**Navigation**
+
+- [What it gives you](#what-it-gives-you)
+- [What each segment shows](#what-each-segment-shows)
+- [The agent panel](#the-agent-panel)
+- [Sources](#sources)
+
+Files: [install.md](install.md) (how to set it up, by hand or with one paste) · [statusline.py](statusline.py) (the script) · [img/](img/) (the pictures)
 
 ![The status line under the Claude Code prompt: context, model and effort, 5-hour and weekly limits, cache, burn](img/statusline.svg)
 
-The pictures on this page are drawn from the script's own output on invented numbers; none of them is a screenshot. The `auto mode on` line under the status line stands in for Claude Code's own footer.
+*Drawn from the script's own output on invented numbers, not a screenshot; the `auto mode on` line stands in for Claude Code's own footer.*
 
-It is one Python file, [statusline.py](statusline.py), and two keys in `settings.json`, with no packages beyond the standard library. Set it up [by hand in four steps](#set-it-up-by-hand), or [with one paste](#install-with-one-paste) into Claude Code.
+It is one Python file and two keys in `settings.json`: no packages beyond the standard library, no network calls ([what it does on your machine](install.md#what-the-script-does-on-your-machine)). Set it up [by hand](install.md#set-it-up-by-hand) or [with one paste](install.md#install-with-one-paste); to remove it, see [Undo](install.md#undo).
+
+`5h`, `7d` and `burn` need a Pro or Max plan and appear only after the first answer in a session; the rest works with any account.
 
 ## What it gives you
 
 Claude Code has most of these numbers, but you see them only when you go and ask for them. The line keeps them in front of you on every message, and that changes how you work:
 
-- Use the whole 5-hour budget without hitting the limit an hour early. `burn` works like a speedometer: it shows where your budget will be when the window resets, if you keep the current pace.
-- Stop paying for a cold cache. A message that reads the prompt from a warm cache costs a small fraction of one that has to write it again, and the countdown tells you how long you can step away.
+- Use the whole 5-hour budget without hitting the limit an hour early. `burn` works like a speedometer: it shows how much of the budget you will have used by the reset if you keep the current pace. Aim for 100 to 120%.
+- Stop paying for a cold cache. After the cache goes cold, the cached part of a message costs 12.5 to 80 times more, because it is written again. The countdown tells you how long you can step away.
 - Compact when you choose. `ctx` shows the window filling up, before Claude Code compacts by itself and may lose early details.
-- See a lockout coming. `5h` and `7d` show how much of each limit is gone and when it resets.
-- Spot the stuck agent and the expensive one. Each agent row shows its model, its task and a pause timer.
+- See the limit coming. `5h` and `7d` show how much of each limit you have used and when it resets.
+- Spot the stuck agent, the expensive one, and the one running out of room. Each agent row shows its model, its task, a chart that flags a pause, and how full its own context is.
 - Know what you are paying for. The model and the effort level stay in view, so a quick question does not run at top effort on an expensive model by accident.
-
-The script reads only local files and makes no network calls; see [what it does on your machine](#what-the-script-does-on-your-machine).
 
 ## What each segment shows
 
@@ -27,50 +36,78 @@ The script reads only local files and makes no network calls; see [what it does 
 
 ![ctx at 12%, 70% and 91%](img/segment-ctx.svg)
 
-`ctx: 333.3k/1M 33%` is the number of tokens in the context window now, the window size, and the share used. It turns yellow at 60% and red at 85%. Every message sends the whole context again, so a fuller window costs more per message. Near the limit, Claude Code compacts by itself: it clears old tool outputs, then summarizes the conversation, and details from early on may be lost. Yellow is a good moment to run `/compact` yourself, at a point you choose and with a focus (`/compact focus on the API changes`); red means compact now or start a new session.
+| Part | What it means |
+|---|---|
+| `ctx` | The session's context window. |
+| `120.4k` | Tokens in the window now. |
+| `/1M` | The window size: 1 million tokens. |
+| `12%` | The share used. Yellow from 60%, red from 85%. |
+
+Every message sends the whole context again, so a fuller window costs more per message.
+At yellow, run `/compact` yourself with a focus (`/compact focus on the API changes`); at red, compact now or start a new session. Otherwise Claude Code compacts by itself when the window is nearly full, and details from early on may be lost.
 
 ### Model and effort
 
 ![Opus at xhigh effort, Sonnet at medium, Haiku without an effort level](img/segment-model.svg)
 
-`Opus 5.5 ·xhigh` is the model the session runs on and its effort level: `low`, `medium`, `high`, `xhigh` or `max`. Effort is how much work the model puts into an answer: more effort helps on hard tasks and uses more tokens. With both in view you do not ask a quick question at top effort on an expensive model by accident. When Claude Code sends no effort level, the segment shows the model alone.
+| Part | What it means |
+|---|---|
+| `Opus 5.5` | The model the session runs on. |
+| `·xhigh` | The effort level: `low`, `medium`, `high`, `xhigh` or `max`. More effort helps on hard tasks and uses more tokens. Not shown when Claude Code sends no level. |
+
+Change the model or the effort between tasks, with `/model` and `/effort`: a model switch writes the whole cache again, and on most models so does an effort change.
 
 ### `5h`: the 5-hour usage limit
 
 ![5h at 2%, 76% and 94%](img/segment-5h.svg)
 
-`5h: 2% (in 4h 44m)` is the share of your 5-hour usage limit used so far, and the time until the window resets. It turns yellow at 70% and red at 90%. At 100% you are limited until the reset, so red means finish the current step and leave the rest for later. Cmd-click or Ctrl-click the segment to open the usage page, in terminals that support links.
+| Part | What it means |
+|---|---|
+| `5h` | Your 5-hour usage limit. |
+| `2%` | The share of it you have used. Yellow from 70%, red from 90%. |
+| `(in 4h 44m)` | Time until the reset. |
+
+At 100% you are blocked until the reset, so at red finish the current task and leave the rest for later.
+Cmd-click or Ctrl-click the segment to open the usage page, in terminals that support links.
 
 ### `7d`: the weekly limit
 
 ![7d at 27%, 81% and 96%](img/segment-7d.svg)
 
-`7d: 27% (in 4d 22h)` is the same for the weekly limit, with the same colors. It resets less often, so a red `7d` with days left before the reset means: keep the expensive model for the work that needs it.
+| Part | What it means |
+|---|---|
+| `7d` | Your weekly usage limit. |
+| `27%` | The share of it you have used. Same colors as `5h`. |
+| `(in 4d 22h)` | Time until the reset. |
+
+It resets less often, so a red `7d` with days left before the reset means: keep the expensive model for the work that needs it.
 
 ### `cache`: keep the cache warm
 
 ![cache warm, yellow, red, warming, about to expire, and cold](img/segment-cache.svg)
 
-Every message you send carries the whole conversation so far, plus the system prompt, your `CLAUDE.md` files and the tool definitions. Prompt caching lets the API keep that long start of the prompt for 5 minutes or 1 hour, and the next message that starts the same way reads it from the cache instead of processing it again.
+| Part | What it means |
+|---|---|
+| `cache` | The prompt cache: the API keeps the long start of every message for 1 hour on a Claude subscription within plan usage, and for 5 minutes with an API key, after usage credits start, and for subagents. |
+| `100%` | The share of cached tokens read rather than written again, over the main conversation's last 10 API calls. Green from 75%, yellow from 50%, red below. |
+| `warming` | Shown instead of a red number right after the cache was written again. Fine in a moment. |
+| `56m` | Time until the cache goes cold. Every call starts the clock again. It moves only when the line redraws, so take it as the most time you have. Yellow in the last minute. |
+| `cold` | The cache has expired: the next message writes it all again. |
 
-The price difference is large. On the API price list, a token read from the cache costs a tenth of a normal input token or less, while writing the cache costs 1.25 times the normal price (5-minute cache) or 2 times (1-hour cache). So for the cached part of the prompt, a message sent after the cache has gone cold costs 12.5 to 80 times more than the same message a minute earlier, depending on the model and the cache length. In a long session, the cached part is most of the prompt.
-
-`cache: 100% 56m` tells you how well the cache works and how long it keeps working:
-
-- The percentage is the share of cached tokens that were read rather than written again, over the last 10 API calls. It is green from 75%, yellow from 50%, red below. A number that stays low for many calls means something keeps changing the start of the prompt: an edited `CLAUDE.md`, a skill or MCP server added mid-session, a model switch. Right after a new session or a cold cache the number dips by itself and climbs back as the next calls read the cache. `warming` replaces a red number when the last call wrote at least as much cache as it read, as right after a rebuild.
-- The time is how long the cache stays warm. Every call starts the clock again, and the script reads from the transcript whether the session uses the 5-minute or the 1-hour cache. The time turns yellow in the last minute, and `cold` means the cache has expired: the next message pays to write the whole prefix again. If you step away, come back before it goes cold, or expect the first message back to cost more.
+A read from the cache costs a tenth of the normal input price or less, and writing it again costs 1.25 or 2 times the normal price. So after the cache goes cold, the cached part of a message costs 12.5 to 20 times more on most models, 25 to 40 times on Opus 5.5, and up to 80 times only on Fable 5.1 and Mythos 5.1 with the 1-hour cache. If you step away, come back before `cold`.
+A percentage that stays low for many calls means something keeps changing the start of the prompt: a model switch, an effort change (on most models), a compaction, many images. `/usage` shows the session's hit ratio and names the likely cause of the last miss (Claude Code 2.1.260 or later).
 
 ### `burn`: the speedometer for your 5-hour limit
 
 ![burn at five readings: below 100%, the sweet spot, too fast, far too fast, and collecting](img/segment-burn.svg)
 
-Claude Code tells the status line only how much of the 5-hour limit is used right now. It does not say whether your pace will run you into the limit before the window resets. `burn` answers that. The script keeps a short history of the used percentage for each session, fits a line through the last hour of it to get your pace, and projects that pace to the reset:
+Claude Code tells the status line only how much of the 5-hour limit is used right now. It does not say whether your pace will run you into the limit before the reset. `burn` answers that. The script keeps a short history of the used percentage for each session, fits a line through the last hour of it to get your pace, and projects that pace to the reset:
 
 ```text
 projected share at the reset = used now + pace × hours until the reset
 ```
 
-Take this reading, with 8% of the 5-hour limit used and the window resetting in 4h 35m:
+Take this reading, with 8% of the 5-hour limit used and the reset in 4h 35m:
 
 ```text
 burn: ▸104% ⚠100% in 4h 23m (~21%/h, 40.66M tok/h)
@@ -78,10 +115,10 @@ burn: ▸104% ⚠100% in 4h 23m (~21%/h, 40.66M tok/h)
 
 | Part | What it means |
 |---|---|
-| `▸104%` | At this pace the budget ends the window at 104%: 8% now, plus 21% per hour for the 4h 35m left (4.58 hours), gives 104.2%, shown as 104%. |
+| `▸104%` | At this pace you will have used 104% of the budget by the reset: 8% now, plus 21% per hour for the 4h 35m left (4.58 hours), gives 104.2%, shown as 104%. |
 | `⚠100% in 4h 23m` | At this pace you reach the limit in 4h 23m, about 12 minutes before the reset. It appears only when the projection is 100% or more. |
 | `~21%/h` | Your pace: the share of the 5-hour budget you use per hour. |
-| `40.66M tok/h` | The tokens this session processes per hour, cache reads included. It counts this session only; the percentages cover all your sessions. |
+| `40.66M tok/h` | The tokens the main conversation processes per hour, cache reads included. Subagents are not counted, while the percentages count everything: your agents and your other sessions. |
 
 How to read the number:
 
@@ -89,121 +126,69 @@ How to read the number:
 |---|---|---|
 | below 100% (green) | You will not use the whole budget before the reset. | There is room for more: a stronger model, higher effort, more agents at once. |
 | 100% to about 120% | The sweet spot: you use the whole budget, and the limit comes shortly before the reset. | Keep this pace. |
-| about 120% to 200% | The limit comes well before the reset, and you wait for the rest of the window. | Slow down: fewer agents at once, a cheaper model for simple steps. |
-| 200% and more (red) | More than twice the budget. | Slow down now, or plan for a long pause. |
-| `— (2m)` | Still collecting: the first reading needs three minutes of history, and `(2m)` is the time until it. | Wait. |
+| about 120% to 200% | The limit comes well before the reset, and you wait until the reset. | Slow down: fewer agents at once, a cheaper model for subagents. |
+| 200% and more (red) | More than twice the budget. | Slow down now, or plan for a long wait. |
+| `— (2m)` | Still collecting: the first reading needs three minutes of history, and `(2m)` is the time until it. It also returns for three minutes after each 5-hour reset. | Wait. |
 
 The script colors everything from 100% to 200% yellow. In the sweet spot, yellow means you are right on budget, not that something is wrong.
 
-`burn` is a straight-line forecast. A burst of parallel agents pushes it up and a quiet stretch pulls it down, so read it as a trend. The limit is shared by all your sessions, so the percentages include what other sessions spend.
+`burn` is a straight-line forecast. A burst of parallel agents pushes it up and a quiet stretch pulls it down, so read it as a trend. Each session shows the numbers from its own last answer: read `5h` and `burn` in the session you work in. `burn: ~21%/h` with no `▸` means Claude Code sent no reset time: pace only, no forecast.
 
-`5h`, `7d` and `burn` appear only on a Pro or Max plan: Claude Code sends usage limits to the status line for those plans only, and only after the first answer in a session. In a narrow terminal the line drops the `(in …)` times and the `burn` details.
+Below 110 columns the `(in …)` times and the `burn` details drop, and `⚠100% in 4h 23m` shortens to `⚠`.
 
 ## The agent panel
 
-The agent panel under the footer lists the subagents that are running. The script redraws each row, so you see at a glance which agents run on an expensive model, what each one is doing, and which one has stopped moving.
+When Claude Code runs subagents, it lists them in a panel under the footer. By default a row shows the agent's name or type, its description and a token count. The script redraws each row so you can compare agents at a glance.
 
-![Agent panel with five subagent rows; the last one has been paused for 1m35s](img/agent-panel.svg)
+![Agent panel with five agent rows; the last one has been paused for 1m35s](img/agent-panel.svg)
 
 The five agent rows are what the script prints for invented agents; the footer line, the `● main` row and the `○` marks stand in for Claude Code's own panel.
 
-Each row shows the model and its effort, what the agent is doing right now, how long it has run, a small chart of its token use, and how full its context is. The model color shows the cost: yellow for Opus and Fable, green for Sonnet, gray for Haiku. A flat stretch in the chart means the agent is not using tokens, usually during a tool call. When the pause lasts 40 seconds or more, the flat end of the chart turns into a yellow `⏸` with the pause length, which is how you spot an agent that is stuck.
-
-## What the script does on your machine
-
-It reads the JSON that Claude Code sends on stdin, and the last 2 MB of the session transcript to count cache hits and tokens per hour. It writes two small files per session to your temp folder, `claude_statusline_burn_<session>.json` and `claude_statusline_agents_<session>.json`, because `burn` and the pause timer need a history that Claude Code does not keep. It makes no network calls. It runs with your user's rights on every refresh, so read it before you install it: it is one file.
-
-## Set it up by hand
-
-You need Python 3.9 or newer (`python3 --version`) and a clone of this repository. Run the commands from the clone's root, all in one terminal. They are for macOS, Linux and Git Bash; on Windows, use the [one-paste route](#install-with-one-paste).
-
-1. **Run the script once from the clone.** Claude Code shows an empty line when a status line command fails, so first check that Python runs the file:
-
-   ```sh
-   echo '{"model": {"display_name": "Opus"}}' | python3 claude-config/statusline/statusline.py
-   ```
-
-   It prints `ctx: — │ Opus │ cache: —`, with colors. The dashes are fine: a real session fills them in.
-
-2. **Copy it to `~/.claude/statusline.py`.** `~/.claude/` holds your own Claude Code settings for every project, so the status line follows you everywhere. If you already have a file with that name, the second line keeps a dated copy of it.
-
-   ```sh
-   stamp=$(date +%Y%m%d-%H%M%S)
-   if [ -e ~/.claude/statusline.py ]; then cp ~/.claude/statusline.py ~/.claude/statusline.py.bak-$stamp; fi
-   cp claude-config/statusline/statusline.py ~/.claude/statusline.py
-   ```
-
-   Check it: run the command from step 1 on `~/.claude/statusline.py`. It prints the same line.
-
-3. **Add two keys to `~/.claude/settings.json`.** The file may already hold your permissions, hooks and model choice, so keep a dated copy first, then merge the keys into it; never replace the whole file.
-
-   ```sh
-   if [ -e ~/.claude/settings.json ]; then cp ~/.claude/settings.json ~/.claude/settings.json.bak-$stamp; fi
-   ```
-
-   Open `~/.claude/settings.json` in an editor and paste the two keys inside the outer `{ }`, with a comma after the key before them. If `statusLine` is already there, replace its value instead of adding a second one. If the file does not exist, create it with just this block. To use the status line in one project only, put the keys in that project's `.claude/settings.json` instead.
-
-   ```json
-   {
-     "statusLine": {
-       "type": "command",
-       "command": "python3 ~/.claude/statusline.py",
-       "refreshInterval": 300
-     },
-     "subagentStatusLine": {
-       "type": "command",
-       "command": "python3 ~/.claude/statusline.py --subagents"
-     }
-   }
-   ```
-
-   - `statusLine.command` runs in a shell after every message, so `~` works. The script prints one line, and Claude Code shows it under the prompt.
-   - `refreshInterval` is in seconds. Claude Code already redraws the line after each message; the extra redraw every 5 minutes keeps the reset times and the cache countdown current while you are away.
-   - `subagentStatusLine` runs the same file with `--subagents`. Claude Code sends the list of running agents, and the script returns one redrawn row per agent. A row it cannot redraw keeps the default look.
-
-   Then check that the file is still valid JSON. A broken file turns off every setting in it, not only the status line:
-
-   ```sh
-   python3 -m json.tool ~/.claude/settings.json > /dev/null && echo ok
-   ```
-
-   Anything but `ok` means the merge broke the file: fix it, or copy the dated backup back.
-
-4. **Send any message in Claude Code.** The line appears after the next answer. To see the agent rows, ask Claude to do a task with a subagent: each row now starts with the model. To remove it all, delete the two keys, or copy the dated backups back. If nothing appears, see [below](#if-nothing-appears).
-
-## Install with one paste
-
-Clone [this repository](../../) (the green Code button on its page gives the address), open a terminal in the clone, start `claude`, and paste the prompt below (the copy button sits in the corner of the block). No clone? Start `claude` anywhere and paste the prompt; when it asks for the script, give it the raw address of [statusline.py](statusline.py), which the Raw button on that file's page opens. Claude Code checks everything first, then backs up your files, copies the script, merges the two keys and shows you each change. It asks before it replaces anything you already have, and Claude Code itself asks you to approve each command and file edit: read them before you approve. When it is done, send one message and look under the prompt; if nothing appears, see [below](#if-nothing-appears). This route has not been tested on Windows.
+### One row, part by part
 
 ```text
-Install the status line from claude-config/statusline/ in this repository into my global Claude Code config. Change nothing in ~/.claude/ except ~/.claude/statusline.py, ~/.claude/settings.json and the backups named below: not CLAUDE.md, skills, agents, hooks or any other setting. CLAUDE.local.md in this repository is an example for other projects; ignore it for this task. Follow the steps in order, and stop to ask me when a step says so. If a step fails after you have changed a file, copy that file's backup back before you stop.
-
-1. Find the script: claude-config/statusline/statusline.py under the current directory. If it is not there, stop and ask me for the path to statusline.py or for its raw download URL. Download a URL with `curl -fsSL <url> -o <a temp file>`, never with a web-fetch tool, which returns a summary instead of the file; then show me its line count and its first and last lines.
-2. Read the whole script and tell me in two lines what it reads and writes on my machine.
-3. Check Python: run `python3 --version`. If it fails or prints no version, try `python --version`, then `py -3 --version`, and use the first one that works as PYTHON below. It must be 3.9 or newer; if not, stop and tell me.
-4. Test the script where it is: pipe '{"model": {"display_name": "Opus"}}' into `PYTHON <path from step 1>` and show me the output. It must print one line that starts with "ctx:". If it fails, stop and show me the error.
-5. Check the settings before you change anything: if ~/.claude/settings.json exists and does not parse as JSON, stop and show me the parse error. If statusLine or subagentStatusLine is already set, show me the current value and ask whether to replace it.
-6. Make a timestamp once, in the form YYYYMMDD-HHMMSS, and use it for every backup. Never overwrite an existing file with a backup; if a backup name is taken, add -2, -3 and so on.
-7. Copy the script to ~/.claude/statusline.py. If that file exists and is identical, skip the copy. If it exists and differs, show me the first lines of both files and ask before you replace it; if I agree, first copy the old one to ~/.claude/statusline.py.bak-<timestamp>. If it is a symlink, write through it to the file it points to and keep the link.
-8. If ~/.claude/settings.json exists, copy it to ~/.claude/settings.json.bak-<timestamp>. Then merge these two keys into it, or create it with just these keys, and keep every other key exactly as it is. If it is a symlink, edit the file it points to in place and keep the link.
-   "statusLine": {"type": "command", "command": "python3 ~/.claude/statusline.py", "refreshInterval": 300}
-   "subagentStatusLine": {"type": "command", "command": "python3 ~/.claude/statusline.py --subagents"}
-   If PYTHON from step 3 is not python3, use it in both commands instead of python3. Use forward slashes in paths.
-9. Parse the settings file again to prove it is valid JSON, and show me the diff against the backup.
-10. Finish with what changed, the exact paths of the backups you made, and how to undo it: delete the two keys, or copy the backups back. Then tell me to send one message and look for the line under the prompt, and to run a task with a subagent to see the agent rows.
+opus-5-5·high · Comparing two retry strategies · 6m · █▁▂▅▁▂▇ ▁▁ · ↓ 131.7k/1M 13%
 ```
 
-## If nothing appears
+| Part | What it means |
+|---|---|
+| `opus-5-5` | The model the agent runs on. The color shows the cost: yellow for Opus and Fable, green for Sonnet, gray for Haiku. A yellow model name on a simple task: set a cheaper model in that agent's definition. An agent Claude gave a name to shows that name first — Claude can reach it by that name later. |
+| `·high` | The agent's effort, set in its definition or in the call that started it. It can also be a number: a token budget. No effort shown: the agent uses the session's effort. |
+| `Comparing two retry strategies` | What the agent is doing right now. Claude Code updates this summary as the agent works; before the first update it is the task description. |
+| `6m` | How long the agent has run. Shown only while it runs. |
+| `█▁▂▅▁▂▇ ▁▁` | The token chart: how busy the agent was over roughly the last minute. See below. |
+| `↓ 131.7k` | The tokens in the agent's context now; `↓` marks tokens. |
+| `/1M` | The agent's window size. |
+| `13%` | The share used. Yellow from 60%, red from 85%. See below. |
 
-- Run `claude --debug`: it logs the script's errors and its exit code.
-- Accept the workspace trust prompt. Claude Code runs no status line in a folder you have not trusted.
-- The `disableAllHooks` setting turns the status line off, and so does `allowManagedHooksOnly` when your organization sets it.
-- Claude Code may find a different `python3` than your terminal does. Run `command -v python3` and put that full path in `command` in place of `python3`.
-- If the agent rows keep their default look, update Claude Code: older versions do not send the model of each agent.
+A row keeps the default look until Claude Code knows which model the agent runs on. A finished agent's row is removed at once; a failed or stopped one stays for 30 seconds, without its time and chart.
+
+### The token chart: is the agent working or stuck?
+
+Claude Code samples each agent's token count every few seconds. Each bar covers a few seconds and shows how much the count grew in them; the tallest bar in view is full height, and the chart covers about the last minute. It shows the shape of the work, not a rate.
+
+- Tall bars: the agent is working, reading files and writing answers.
+- `▁` bars: no new tokens: the agent is thinking, or waiting on a tool call (a test run, a search, a web page).
+- A gap before a run of `▁` at the end, as in `█▁▂▅▁▂▇ ▁▁`: no new tokens since that point.
+- A yellow `⏸1m35s`: no new tokens for 40 seconds or more, and the number is how long. `⏸` first replaces only the flat end of the chart; once the whole chart is flat, `⏸` stands alone. The number counts the whole pause, even past the chart's minute.
+
+Why it matters: a growing `⏸` may be long thinking, a slow command, or a stuck agent. If it grows well past what its task should take, run `/tasks` and open the agent to see what it waits on; stop it only if it is stuck.
+
+### The agent's context: how much room is left
+
+Every subagent has its own context window, sized by its own model, not by the main session: an agent on Haiku gets a smaller window than one on Opus.
+
+Why it matters:
+
+- A red percentage on an agent that still has work to do means little room is left: next time, give it a narrower task, or a model with a larger window.
+- Every call the agent makes sends its whole context again, so a full window costs more per call, as in the main session. Split a long job across several agents with short briefs, so no single context grows large.
+- A follow-up to an agent starts from its full history: note its number while it runs, since its row goes when it finishes. A small number means a cheap follow-up; with a large one, a fresh agent with a short brief may cost less.
 
 ## Sources
 
-- Anthropic, "Customize your status line": https://code.claude.com/docs/en/statusline (the stdin fields, `refreshInterval`, `subagentStatusLine` and its one-row-per-agent output, ANSI colors and OSC 8 links, the Windows shell, the troubleshooting list)
+- Anthropic, "Customize your status line": https://code.claude.com/docs/en/statusline (the stdin fields, `rate_limits` only on Pro and Max plans, `subagentStatusLine` and its per-agent fields, including an effort that can be a token budget or absent when the agent uses the session's, ANSI colors and OSC 8 links)
 - Anthropic, "How Claude Code works": https://code.claude.com/docs/en/how-claude-code-works (what happens when the context fills up, and `/compact` with a focus)
 - Anthropic, "Prompt caching": https://platform.claude.com/docs/en/build-with-claude/prompt-caching (the cache lifetimes, and the read and write prices against the normal input price)
+- Anthropic, "How Claude Code uses prompt caching": https://code.claude.com/docs/en/prompt-caching (what breaks the cache, the 1-hour and 5-minute cache lifetimes, the `/usage` cache line)
+- Anthropic, "Create custom subagents": https://code.claude.com/docs/en/sub-agents (a subagent's context window is sized by its own model; a named subagent can get a follow-up; a resumed subagent keeps its full history; a finished agent's row is removed at once, a failed or stopped one stays for 30 seconds)
 - Anthropic, "Plugins reference": https://code.claude.com/docs/en/plugins-reference (a plugin can set `subagentStatusLine` but not `statusLine`, which is why this is a file and two settings keys, not a plugin)

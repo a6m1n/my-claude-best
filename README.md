@@ -8,7 +8,7 @@ My personal collection of engineering best practices: how I set up projects, wri
 - `docs/claude-code/` — how I set up and instruct Claude Code. So far: [claude-md.md](docs/claude-code/claude-md.md), which says what belongs in a `CLAUDE.md` and what does not.
 - `docs/artifacts/` — working files a session writes (plans, reports, research runs). Git-ignored: not part of the library.
 - `skills/` — Claude Code skills, kept here to read and copy. Nothing in this folder is loaded automatically.
-- `claude-config/` — my global Claude Code configuration (`~/.claude/`), one folder per module; each module's `README.md` shows what it does and how to install it. So far: [statusline/](claude-config/statusline/), a status line for context, usage limits, the prompt cache and the agent panel.
+- `claude-config/` — my global Claude Code configuration (`~/.claude/`), one folder per module; each module's `README.md` shows what it does and links to its install guide. So far: [statusline/](claude-config/statusline/), a status line for context, usage limits, the prompt cache and the agent panel.
 - `CLAUDE.local.md` — an example of the practices section of a project `CLAUDE.md`, for a repository that copies `docs/engineering/` in. The rule file this repo itself runs on is local and not committed.
 
 ## Conventions
