@@ -33,17 +33,18 @@ check.
 
 ### A business decision is an `if` in the use case
 
-The use case is the function an entrypoint calls for one business operation: `place_order`,
-`renew_subscription`. When the operation can go two ways, the `if` that chooses stands in the use
-case, where the reader of the flow looks, and it asks a named rule. The branches below it are
-calls. Three roles, each in its own place:
+The use case is the function an adapter calls for one business operation, such as `place_order`
+or `renew_subscription`: the module's `usecase.py` in
+[file-structure.md](../file-structure/file-structure.md) sections 3 and 5. When the operation can
+go two ways, the `if` that chooses stands in the use case, where the reader of the flow looks, and
+it asks a named rule. The branches below it are calls. Three roles, each in its own place:
 
 - **The rule** is a pure function named for the question it answers, such as `needs_manual_review`.
-  It takes plain values and returns a value. It lives in its own module and reads its threshold or
-  rate from one named constant; it never sits in the module that defines the types: the types
-  change when the shape of the data changes, the rule when the business changes its mind, and
-  Robert C. Martin's single-responsibility rule is to separate things that change for different
-  reasons.
+  It takes plain values and returns a value, and reads its threshold or rate from one named
+  constant. It stays apart from the types: the types change when the shape of the data changes, the
+  rule when the business changes its mind, and Robert C. Martin's single-responsibility rule is to
+  separate things that change for different reasons. Where the rule, the types and the constant
+  live is [file-structure.md](../file-structure/file-structure.md) section 3.
 - **The use case** is the one function that has both a branch and side effects. It asks the rule,
   acts on the answer, and returns a value that says which path ran. It holds no threshold and no
   formula, only the branch, and it receives the clients it calls as parameters instead of reaching
@@ -93,9 +94,10 @@ that must hold, the rule is a construct the reader sees on the type: an enum for
 a non-optional field for the thing that always exists, a separate type for a state (a
 `PaidOrder` cannot be unpaid). The type is built once, where untrusted data first arrives, by a
 function whose every exit is the type or one named error; Alexis King calls the move "parse,
-don't validate". The module that defines the types holds types only. It names no sender and no
-format, the parser at the edge imports it, and a module that only uses the value never imports
-the parser.
+don't validate". The types sit in a file of their own
+([file-structure.md](../file-structure/file-structure.md) section 3). It names no sender and no
+format, the parser at the edge imports it, and a file that only uses the value never imports the
+parser.
 
 ### One decision, one home
 
@@ -181,14 +183,15 @@ section costs more than it returns.
    validation. A boundary is a place to state a constraint, not a reason to delete the assertions
    that protect memory, money or permissions. To tell: for each assertion you are about to
    delete, name what it protects; if the answer is memory, money or permissions, it stays.
-5. **Related code stays together, and a module is earned.** Splitting a function whose halves can
-   only be read together makes it harder to read, not easier (Ousterhout). A new module is earned
-   when it holds a whole kind of thing a reader can skip: the types, the constants, one rule,
-   one use case. A one-line wrapper around a single call is not one. A folder per layer, a
-   repository and a unit of work are added when orchestration starts to creep into the callers, not
-   on the first day; the authors who teach them say so, and count fifteen files touched to add one
-   field when they were added too early. To tell: before you add a module, name the reader who
-   could skip it; before you add a layer, name the duplication it removes.
+5. **Related code stays together, and a function or a layer is earned.** Splitting a function
+   whose halves can only be read together makes it harder to read, not easier (Ousterhout). A doer
+   that is one line around a single client call earns no function of its own: the use case makes
+   the call. A repository class and a unit of work are added when orchestration starts to creep
+   into the callers, not on the first day; the authors who teach them say so, and count fifteen
+   files touched to add one field when they were added too early. When code gets a file or a folder
+   of its own is [file-structure.md](../file-structure/file-structure.md) sections 3 and 6. To tell:
+   before you add a doer, name what it does besides the call; before you add a layer, name the
+   duplication it removes.
 
 A comment is not where a rule or a decision lives, and it is not banned: it says why a construct
 was chosen, never what the line does — `# Compensate for border`, not `# Increment x` (PEP 8).
@@ -199,18 +202,18 @@ was chosen, never what the line does — `# Compensate for border`, not `# Incre
   with a raise. Its branches are calls, and it returns a value that names the path it took.
 - No function it calls has an `if` on a business question, a boolean argument that switches what
   it does, a `return` that skips its job, or a client it imports instead of receiving.
-- The rule's module imports no client and no adapter. The module that defines the types imports
+- The rule's file imports no client and no adapter. The file that defines the types imports
   neither the rule nor any client: `grep -n "^from\|^import"` on it shows only the standard library
   and the library that builds the types (pydantic, attrs, msgspec), and `grep -n "json\|request"`
   shows nothing.
-- `grep -rln` the threshold's name in the source tree: it prints the file that defines it and the
-  rule's module. A third file is the rule stated again, unless it is a point-of-use assertion
-  condition 4 keeps.
+- `grep -rln` the threshold's name in the source tree prints one file, the rule's
+  ([file-structure.md](../file-structure/file-structure.md) section 3). A second file is the rule
+  stated again, unless it is a point-of-use assertion condition 4 keeps.
 - For a `match` on a closed set, count the arms: one per member plus the `assert_never` arm, and
   the checker's command is in CI.
 
 The same checkout, first with its decision hidden inside a doer, then with the business `if` in
-the use case and the rule in its own module:
+the use case and the rule in its own file:
 [explicit-constraints-example.md](explicit-constraints-example.md).
 
 Sources, by the name used above: PEP 20, "The Zen of Python" (Tim Peters, 2004) and Guido van

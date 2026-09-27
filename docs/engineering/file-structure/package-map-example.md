@@ -23,22 +23,26 @@ src/<app>/
 │                      # Imports no module and no adapter.
 ├── <domain>/          # one folder per module; imports no web or CLI framework. Every module:
 │   └── <module>/
-│       ├── usecase.py     # the one entry point the adapters call; composition only
-│       ├── schemas.py     # the module's data: its input, its result
-│       ├── consts.py      # model names, trace names — never a value one service tunes
+│       ├── usecase.py     # the entry point the adapters call:
+│       │                  # the business if and the calls; no rule, no query
+│       ├── schemas.py     # only when the module has data of its own: its input, its result
+│       ├── consts.py      # only when the module has named values: model names, trace names —
+│       │                  # never a value one service tunes or one rule reads
 │       ├── errors.py      # only when the module raises an error of its own
 │       ├── validation.py  # only when raw input is checked before it is decoded
 │       ├── models.py      # only when the module stores data: its tables
-│       ├── repository.py  # only when the module stores data: one function per query
+│       ├── repository.py  # only when the module reads or writes stored data: one function per query
 │       ├── prompts.py     # only when it calls a model: its prompt texts — or prompts/, one
 │       │                  # prompt_<name>.py per prompt, once the name no longer tells which
-│       ├── <role>.py      # any other role, named for what it holds — never utils.py
-│       └── services/      # the doers — one service_<name>.py per external call or computation;
-│                          # a value a service tunes lives in its file, next to the logic
-├── api/               # HTTP adapter: main · app (wires every router) · one routes_<module>.py per
-│                      # module · schemas (request bodies, the error envelope) · errors (the status map)
-└── cli/               # command-line adapter: main · one commands_<module>.py per module it offers ·
-                       # errors (the exit-code map)
+│       ├── <role>.py      # any other role, named for what it holds — never utils.py;
+│       │                  # a rule's file holds the threshold it reads
+│       └── services/      # one service_<name>.py per doer: an external call with the code around it,
+│                          # or a computation; a value a service tunes lives in its file, next to the logic
+├── api/               # HTTP adapter: main · app (builds the clients once, wires every router) · one
+│                      # routes_<module>.py per module · schemas (request bodies, the error envelope) ·
+│                      # errors (the status map)
+└── cli/               # command-line adapter: main (builds the clients once) · one commands_<module>.py
+                       # per module it offers · errors (the exit-code map)
 ```
 
 ## Rules
@@ -74,6 +78,6 @@ What to notice:
 
 - **No module is named.** The map would read the same with three modules or thirty.
   `ls src/<app>/<domain>` is the list of modules; nothing else keeps one.
-- **Every comment is a rule or a purpose, never a description of today's code.** "Composition only"
-  and "never utils.py" can be checked against any module; "calls the model twice" could not.
+- **Every comment is a rule or a purpose, never a description of today's code.** "No rule, no
+  query" and "never utils.py" can be checked against any module; "calls the model twice" could not.
 - **The "I want to…" lines name files by role**, so they stay true when modules come and go.
