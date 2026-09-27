@@ -42,6 +42,9 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   says what it holds (no `utils.py`), and every import in it is absolute.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
+- When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`
+  defines one), read the rules on examples in `docs/engineering/CLAUDE.md` and work by them. The
+  check: the closing summary has the lines that file's GOOD-example bullet asks for.
 - Every practice under `docs/engineering/` is a folder named by the topic, never a bare file.
   Before you stage a change that adds or removes one, run `ls -d docs/engineering/*/` and
   `ls docs/engineering/*.md`: every folder the first prints has a bullet that names it in this
