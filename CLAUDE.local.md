@@ -34,6 +34,12 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   `docs/engineering/refactoring/adoption-example.md` when a practice change has to reach old
   code. The check: every hunk in the diff is new code or code the change had to edit, and no
   `refactor` commit changes an expected value in a test.
+- Before you create a file, a folder or a module in an application, or move code from one folder
+  to another, read `docs/engineering/file-structure/file-structure.md`, and
+  `docs/engineering/file-structure/layout-example.md` when you lay out a repository or add a
+  module, `docs/engineering/file-structure/package-map-example.md` when you write a package map.
+  The check: every file the diff adds sits where the practice's role table puts its kind, its name
+  says what it holds (no `utils.py`), and every import in it is absolute.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - Every practice under `docs/engineering/` is a folder named by the topic, never a bare file.

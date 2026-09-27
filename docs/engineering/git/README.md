@@ -3,6 +3,12 @@
 One git model for a repository that people and AI agents both change: ticket-bound branches,
 merge commits, and no rewriting of history that has been pushed.
 
+**Navigation**
+
+- [What is here](#what-is-here)
+- [How to adopt](#how-to-adopt)
+- [The point to adapt](#the-point-to-adapt)
+
 ```mermaid
 flowchart TD
   B[Branch<br/>type/KEY-123-short-name] --> C[Commit<br/>one logical change]
@@ -15,7 +21,8 @@ flowchart TD
 ## What is here
 
 - [git.md](git.md) — the rules: branches, commits, pull requests, merging, force push,
-  conflicts, several agents, the project README. Read it before any git operation.
+  conflicts, several agents, the project README and the navigation block that opens a README
+  or a long rules file. Read it before any git operation.
 - [commit-example.md](commit-example.md) — three good commit messages and two bad ones, each
   with the reason. Read it when you write a commit message.
 - [pr-example.md](pr-example.md) — one complete pull request description, every section

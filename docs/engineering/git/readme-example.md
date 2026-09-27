@@ -16,6 +16,17 @@ Self-hosted document ingestion: PDFs, Word files and scans in, page-aware text a
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-3.11%2B-blue)
 
+**Navigation**
+
+- [What it does](#what-it-does)
+- [Why it is useful](#why-it-is-useful)
+- [Getting started](#getting-started)
+- [How the parts fit together](#how-the-parts-fit-together)
+- [Project structure](#project-structure)
+- [Where to get help](#where-to-get-help)
+- [Maintainers and contributing](#maintainers-and-contributing)
+- [License](#license)
+
 ## What it does
 
 `docparse` reads a document and returns its text, its tables and its page structure as JSON.
@@ -145,9 +156,13 @@ The structure tree stops at the folder level. A file appears only when the file 
 a reader opens (`cli.py`). Listing every module would make the section wrong at the next
 rename, and `tree` prints that better anyway.
 
-There is no table of contents. GitHub and GitLab build an outline from the headings, and a
-hand-written one is one more list to keep in sync. In a real repository the links to
-`CONTRIBUTING.md`, `LICENSE` and `docs/ocr.md` are relative links, not code spans: a relative
-link keeps working on every branch and every fork.
+The **Navigation** block sits under the badges and links every `##` section, in order, so a
+reader clicks a line and lands there. GitHub draws an outline from the headings too, but only
+behind its Outline button; the block is in the text, where a reader sees it before scrolling, in
+a plain editor as much as on GitHub. The price is one more block to keep in sync: a renamed
+heading changes its line in the same edit, and markdownlint's MD051 catches a link whose heading
+is gone. `### Configuration` has no line, because the block goes one level deep. In a real
+repository the links to `CONTRIBUTING.md`, `LICENSE` and `docs/ocr.md` are relative links, not
+code spans: a relative link keeps working on every branch and every fork.
 
 Every name is a placeholder. `docparse`, Acme Corp and Jane Doe do not exist.

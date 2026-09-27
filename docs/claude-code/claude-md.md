@@ -2,6 +2,18 @@
 
 Claude Code reads `CLAUDE.md` at the start of every session, and reads the project-root file again after every `/compact`. Every line in it sits in the context window during every task, whether the task needs it or not. That is the design constraint: the file is a rule sheet the agent always has in front of it, not a project description.
 
+**Navigation**
+
+- [The one test for every line](#the-one-test-for-every-line)
+- [What goes in](#what-goes-in)
+- [What stays out](#what-stays-out)
+- [README.md and CLAUDE.md are different documents](#readmemd-and-claudemd-are-different-documents)
+- [How to write a line an agent can follow](#how-to-write-a-line-an-agent-can-follow)
+- [When to add a line, and when to cut one](#when-to-add-a-line-and-when-to-cut-one)
+- [Where the files live](#where-the-files-live)
+- [Example: a small project CLAUDE.md](#example-a-small-project-claudemd)
+- [Sources](#sources)
+
 This doc says what earns a place in `CLAUDE.md`, what goes somewhere else, and how to write a line so an agent can follow it.
 
 ## The one test for every line
