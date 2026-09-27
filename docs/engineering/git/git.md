@@ -73,7 +73,7 @@ the first push, fixes from review are new commits. That is expected, not a viola
 
 Check: read the title alone. It tells a reader what changed, without the body.
 
-Three full messages are in [commit-example.md](commit-example.md).
+Good and bad messages are in [commit-example.md](commit-example.md).
 
 ## 4. Pull requests
 
@@ -285,8 +285,11 @@ Check: `git show --stat HEAD` after your commit lists only files you changed.
 Sections 5 and 6 are the two that rot. Add a diagram only when a reader has to know how the
 parts talk before running anything, and let it show what runs, not what a change reroutes.
 Generate the structure tree with `tree`, then cut it to the folders a newcomer opens: a tree
-that lists every file is wrong at the next rename. Badges go under the title, and only for a
-fact a reader acts on, such as build status or the supported version.
+that lists every file is wrong at the next rename. The tree names folders, and a file only where
+a newcomer opens that file itself; it is not the package map. When the repository has one
+([file-structure.md](../file-structure/file-structure.md) section 10), the section links it for
+what each kind of folder and file is for, and does not repeat it. Badges go under the title, and
+only for a fact a reader acts on, such as build status or the supported version.
 
 A navigation block opens the README, so a reader clicks a line and lands on that section: a
 bold `**Navigation**` line, a blank line, then a plain list with one link per `##` heading, in
