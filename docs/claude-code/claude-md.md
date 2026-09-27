@@ -59,14 +59,19 @@ The two do not repeat each other. If a line seems to belong in both, split it. T
 
 ## How to write a line an agent can follow
 
-A rule is one act, at one moment, with one way to tell that it happened. Before you save a line, check that it answers three questions:
+A rule is one act, at one moment. Before you save a line, check that it answers two questions, and decide whether it needs a third:
 
 - When does it fire? A moment in the working loop the agent can recognize: "before staging", "when you create a doc", "when a file passes 500 lines". "Always" and "be careful" are not moments.
 - What does the agent do? One concrete act. Someone who disagrees with the rule could still carry it out.
-- How does anyone tell? The act leaves a trace (a diff, a command in the transcript), or the rule names a check ("re-read the diff before you stage"; "`/context` shows the file loaded").
+- How does anyone tell? Ask this only where a miss matters. For most rules the act shows in the diff or the transcript, and review is enough.
+
+When to name a check. Anthropic's docs call `CLAUDE.md` "context, not enforced configuration": an agent follows a line most of the time, not every time, and its own "done" is not evidence. Name a check when a miss would be costly or silent (hard to undo, seen by others, a leaked secret, lost data), or when the rule tells the agent to stop, ask, refuse, or do what it would not do on its own. Then pick the cheapest check that fits: a tool that already runs and rarely cries wolf (a linter, a test, a CI step), or one specific question at a named moment ("before you stage, re-read the diff for a home path"), never "check carefully". Keep a gate the agent cannot switch off (CI, a required review) for the rare rule that must hold with no exceptions; a hook on the agent's own machine can be skipped or worked around. Two costs cap the number of checks: a check that fires often and gets ignored teaches everyone to ignore the next one, and an agent optimises for the check it can see, so a check confirms the outcome and never replaces it.
 
 Before: "Keep the docs current."
-After: "When you rename a flag, update its `--help` line in the same commit; the diff shows both files or it did not happen."
+After: "When you rename a flag, update its `--help` line in the same commit." The diff shows both files; no check is needed.
+
+Before: "Be careful with secrets."
+After: "Before you stage, read `git diff --cached` for a key or a token; a pushed secret cannot be taken back." A miss is costly and easy to overlook in review, so the rule names the check.
 
 Anthropic's page says the same thing in fewer words: "Use 2-space indentation" beats "Format code properly"; "Run `npm test` before committing" beats "Test your changes".
 

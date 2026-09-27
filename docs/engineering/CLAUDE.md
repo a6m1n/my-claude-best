@@ -35,9 +35,13 @@ are a folder's rules file and its example files.
 - When you change a rule in a practice, write in the commit body how existing code responds,
   using one of the answers `refactoring/refactoring.md` section 7 lists. The check: the commit
   body names one of them.
-- Write a rule as one act, at one moment, with one way to tell that it happened.
-  `docs/claude-code/claude-md.md` § "How to write a line an agent can follow" is the test, and
-  it holds for a practice doc as much as for an instruction file.
+- Write a rule as one act, at one moment. `docs/claude-code/claude-md.md` § "How to write a line
+  an agent can follow" is the test, and it holds for a practice doc as much as for an instruction
+  file. A `Check:` line is optional: most rules leave their act in the diff, and review is enough.
+  Add one where a miss would be costly or easy to overlook in review, and make it one specific
+  question at a named moment ("read the title alone") or a tool that already runs and rarely cries
+  wolf (`lint-imports` in CI) — never "review carefully", and never a gate people will have to
+  bypass. The check: each `Check:` line the diff adds is one question or one command.
 - Every name in an example is a placeholder (`Acme Corp`, `Jane Doe`, `PROJ-123`,
   `example.com`) or a well-known name of the same kind standing in for a real client — a
   well-known bank for a bank; it marks the role and claims nothing about that company. A real
