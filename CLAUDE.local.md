@@ -28,7 +28,9 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   `docs/engineering/python/python.md`, and
   `docs/engineering/python/explicit-constraints-example.md` when you place a constraint. The
   check: every constraint the change introduces is stated on the type or signature that carries
-  it, and what enforces it is a runtime mechanism or a checker the CI runs and fails on.
+  it, what enforces it is a runtime mechanism or a checker the CI runs and fails on, and no
+  parameter or field the change adds that carries a value of a closed set is a bare `str`
+  (`python.md` section 3).
 - Before a change edits code that already exists (a feature, a fix, a move to a practice, a
   restructure), or turns on a new rule, read `docs/engineering/refactoring/refactoring.md`, and
   `docs/engineering/refactoring/adoption-example.md` when a practice change has to reach old
@@ -52,6 +54,13 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   rule and its test. The check: no function or class the change writes or edits shows two or more
   red flags from `readability.md` section 9's table, and the closing summary names each single red
   flag left in place and why.
+- Before you add or change a static check (the formatter, the linter, the type checker or an import
+  contract), a pre-commit hook, the CI job that runs them, or a comment that silences one, read
+  `docs/engineering/static-checks/static-checks.md`, and
+  `docs/engineering/static-checks/setup-example.md` when you set the checks up in a repository.
+  The check: every check the change adds is one command, run from the one pinned version of its
+  tool in the hook file and in the required CI job, and every suppression it adds names its rule
+  and says why.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`

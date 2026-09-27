@@ -24,7 +24,9 @@ flowchart LR
 ## What is here
 
 - [python.md](python.md) — the principles, one per section: when each fires, what you do, and
-  how anyone tells. Read it before you add a module, a type, or a check.
+  how anyone tells. Section 2 is where a decision and a constraint live; section 3 is strict
+  types, including closed sets of values that are never a bare `str`. Read it before you add a
+  module, a type, or a check.
 - [explicit-constraints-example.md](explicit-constraints-example.md) — a checkout whose one
   business rule hides inside a doer, then the same checkout with the `if` in the use case and the
   rule in its own file. Read it when you apply section 2.
@@ -37,13 +39,14 @@ principle needs one.
 1. Copy this folder into your repository at `docs/engineering/python/`.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you add a Python module, a type, or
    a check, read `docs/engineering/python/python.md`." Without it an agent never opens the file.
-3. Put a type checker in CI and make the build fail on it. Section 2's table is half wishful
-   thinking in a repository where nothing runs one: `Literal`, `NewType` and the exhaustiveness
-   of a `match` are enforced by the checker and by nothing else before the code runs. In a
-   repository that already has code, the checker reaches old code the way
-   [refactoring.md](../refactoring/refactoring.md) section 10 says, not by a rewrite.
+3. Set up the type checker the way [static-checks.md](../static-checks/static-checks.md) says.
+   Section 2's table is half wishful thinking in a repository where nothing runs one: `Literal`,
+   `NewType` and the exhaustiveness of a `match` are enforced by the checker and by nothing else
+   before the code runs. In a repository that already has code, the checker reaches old code the
+   way [refactoring.md](../refactoring/refactoring.md) section 10 says, not by a rewrite.
 4. Re-check the lines that name a moving target: the minimum Python version in section 1, the
-   pydantic spellings in section 2's table, and the mypy and pyright flags named under it.
+   pydantic spellings in section 2's table, the mypy and pyright flags named under it, and the
+   library versions and `typing_extensions` backports named in section 3.
 
 ## The point to adapt
 
