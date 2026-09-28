@@ -204,7 +204,7 @@ PEP 8 draws the same line with one pair of examples: `x = x + 1  # Compensate fo
 # goes stale when the value changes.
 
 # Timeout for the provider, in seconds.
-PROVIDER_TIMEOUT_SECONDS = 25
+PROVIDER_TIMEOUT_SECONDS: Final = 25
 ```
 
 ```python
@@ -214,7 +214,7 @@ PROVIDER_TIMEOUT_SECONDS = 25
 
 # The provider's gateway drops a connection after 30 seconds; stopping at 25
 # lets us return our own error instead of a dropped connection.
-PROVIDER_TIMEOUT_SECONDS = 25
+PROVIDER_TIMEOUT_SECONDS: Final = 25
 ```
 
 ## 5. Blank lines between stages
@@ -294,10 +294,15 @@ When a unit reads the clock, a random number, an environment variable or a setti
 value as a parameter instead. Then its result depends only on what its signature shows, and a
 test calls it with plain values.
 
-- **Time.** The adapter reads the clock once per request and passes `today` to the use case,
-  which passes it to the rule. A rule always takes the value, never a clock
-  ([python.md](../python/python.md) section 2). A use case or a doer that needs the time more than
-  once in one call takes a clock, built once by the adapter and passed in like a client.
+- **Time.** The adapter reads the clock once per call and passes the value, `today` or `now`, to
+  the use case, which passes it to the rule. A rule always takes the value, never a clock
+  ([python.md](../python/python.md) section 2). A use case or a doer that reads the time again
+  during its work and acts on it or stores it, such as a deadline, a retry schedule, an expiry or
+  a finish time it saves, takes a clock: a function the adapter passes in and a test replaces, such
+  as `time.monotonic` for a deadline or a retry schedule, or one that returns `datetime.now(UTC)`
+  for a time it saves. A duration measured only for a log line or a metric is not an input: read
+  `time.perf_counter()` in place, before and after the work. Nothing the unit returns or saves
+  depends on it, and no test checks it ([logging.md](../logging/logging.md) section 11).
 - **Randomness.** Take the value, or a `random.Random` the caller seeds, so a test can fix it.
 - **Settings.** Read them once at startup
   ([file-structure.md](../file-structure/file-structure.md) section 4) and pass the values in.
@@ -412,7 +417,7 @@ demand to rewrite; when a unit the change wrote or edited shows two or more, tha
 | 3. Guard clauses | Does the main path run at the first indentation level? | The real work sits inside two or more nested `if`s, or in the last `else` |
 | 4. Comments say why | Does each comment give a reason the code cannot? | A comment repeats the line below; a tricky line has none |
 | 5. Blank lines | Can I see the stages before reading a line? | A multi-stage body with no blank line; a blank line inside a stage |
-| 6. Every input in the signature | Can a test call it with plain values? | The unit reads the clock, `os.environ` or a module-level client, or builds an object it calls |
+| 6. Every input in the signature | Can a test call it with plain values? | Below the adapter, the unit reads the clock for anything but a duration it only logs or reports as a metric; it reads `os.environ` or a module-level client, or builds an object it calls |
 | 7. Names from the business | Would someone who knows the business understand each name? | `data`, `record`, `manager`; two names for one concept |
 
 ## 10. Sources

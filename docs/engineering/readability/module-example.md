@@ -41,10 +41,11 @@ two objects `cli/main.py` built at startup.
 
 ```python
 from datetime import date, timedelta
+from typing import Final
 
 # One reminder a week: a daily email for the same invoice made customers
 # unsubscribe instead of paying.
-REMINDER_INTERVAL = timedelta(days=7)
+REMINDER_INTERVAL: Final = timedelta(days=7)
 
 
 def needs_reminder(due_on: date, last_reminded_on: date | None, today: date) -> bool:

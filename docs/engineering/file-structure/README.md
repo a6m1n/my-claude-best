@@ -40,10 +40,12 @@ flowchart LR
    Without it an agent never opens the file.
 3. Write your own package map into `docs/ARCHITECTURE.md`, starting from
    `package-map-example.md`, with your package and domain names and your adapters.
-4. Add the import-linter contracts and ruff's `TID252` rule to `pyproject.toml`, and run both in CI.
-   Old code that breaks a contract or `TID252` reaches the practice the way
+4. Add the import-linter contracts and ruff's `TID252` rule to `pyproject.toml`, and run both the
+   way [static-checks.md](../static-checks/static-checks.md) sections 2 and 5 say. Old code that
+   breaks a contract or `TID252` reaches the practice the way
    [refactoring.md](../refactoring/refactoring.md) sections 4 and 10 say, not by a rewrite; an old
-   relative import is marked `# noqa: TID252`.
+   relative import is marked
+   `# noqa: TID252  # legacy` ([static-checks.md](../static-checks/static-checks.md) section 6).
 
 ## The point to adapt
 

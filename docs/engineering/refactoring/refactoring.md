@@ -149,14 +149,17 @@ place, such as types, names, structure, or where a check belongs. Then:
 
 - turn the rule on for new code now;
 - mark each old violation where it sits, with the tool's own suppression comment or setting
-  (`# type: ignore[code]`, `# noqa: CODE`, a per-module override), not in a separate baseline
-  file that nobody reads;
+  (`# type: ignore[code]  # legacy`, `# noqa: CODE  # legacy`, a per-module override), not in a
+  separate baseline file that nobody reads; the `legacy` reason is the form
+  [static-checks.md](../static-checks/static-checks.md) section 6 gives such a mark;
 - make the marks shrink: remove a mark when a change touches the function that carries it
   (section 2), and a per-module override when the module passes the check without it; make the
-  tool fail on a mark that no longer suppresses anything;
-- count what is left with one command, for example `grep -rn "# noqa: CODE" src/ | wc -l`.
-  Write the command and its number where the team tracks the rule. Before you stage a change in
-  that area, run the command. The number only goes down.
+  tool fail on a mark that no longer suppresses anything
+  ([static-checks.md](../static-checks/static-checks.md) section 6);
+- count what is left with one command, for example
+  `grep -rn "# noqa: CODE  # legacy" src/ | wc -l`. Write the command and its number where the
+  team tracks the rule. Before you stage a change in that area, run the command. The number only
+  goes down.
 
 When no tool checks the rule, there are no marks. Review checks new code against the practice's
 own check, and a search for the old form counts the old uses, in the same way.
@@ -184,8 +187,8 @@ checks. Agents make such a migration much cheaper to finish than it used to be (
 
 Check: a sweep commit holds only the tool's edits, its hash is in `.git-blame-ignore-revs`, and
 the pull request that carries it also turns the check on. For a step-by-step rule, the counting
-command recorded with it, such as `grep -rn "# noqa: CODE" src/ | wc -l`, prints the recorded
-number or a lower one.
+command recorded with it, such as `grep -rn "# noqa: CODE  # legacy" src/ | wc -l`, prints the
+recorded number or a lower one.
 
 ## 5. When a practice replaces one way with another: migrations
 
@@ -311,14 +314,15 @@ attribute names, and pyright's rename can stop at the files that are open or inc
 - a LibCST codemod may sweep the repository only where the type checker and the tests cover every
   file it edits. Bowler, an older codemod tool, is archived; use LibCST.
 
-**Adding a type checker to old code.** [python.md](../python/python.md) asks for a type checker
-in CI. To get there without a rewrite:
+**Adding a type checker to old code.** [static-checks.md](../static-checks/static-checks.md)
+sections 2 and 5 ask for one type checker in strict mode in CI. To get there without a rewrite:
 
 - run it on every module, with strict settings as the default;
 - give each legacy module that does not pass yet a per-module override in the checker's config
-  (`[[tool.mypy.overrides]]` in `pyproject.toml`), or a `# type: ignore[code]` on the line;
-- turn on `warn_unused_ignores`, so a suppression that no longer suppresses anything fails the
-  build;
+  (`[[tool.mypy.overrides]]` in `pyproject.toml`), or a `# type: ignore[code]  # legacy` on the
+  line ([static-checks.md](../static-checks/static-checks.md) section 6);
+- make a suppression that no longer suppresses anything fail the build (`warn_unused_ignores`,
+  [static-checks.md](../static-checks/static-checks.md) section 6);
 - give each function a change touches full annotations in that change (section 2), and remove a
   module's override when the type checker passes on that module without it. The number of
   overrides is the count that only goes down.

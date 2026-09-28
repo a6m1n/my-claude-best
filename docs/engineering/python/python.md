@@ -143,11 +143,12 @@ by nobody unless you run a checker.
 | `isinstance(x, P)` on a `@runtime_checkable` Protocol | CPython, at runtime, by method names only | an object with the right method names and wrong signatures passes |
 | a docstring, a comment, a naming convention | nobody | nothing |
 
-The checker rows hold only where a checker runs; name the tool and the command in CI. For a `match`
-whose arms do not all return, mypy reports a non-exhaustive `match` only through the `assert_never`
-arm unless `--enable-error-code exhaustive-match` is on (mypy 1.17, opt-in); pyright reports it on
-its own only in strict mode (`reportMatchNotExhaustive` is off in basic and standard). Outside
-those settings the arm, not the checker's configuration, is the enforcement.
+The checker rows hold only where a checker runs in CI, set up as
+[static-checks.md](../static-checks/static-checks.md) sections 2 and 5 say. For a `match` whose
+arms do not all return, mypy reports a non-exhaustive `match` only through the `assert_never` arm
+unless `--enable-error-code exhaustive-match` is on (mypy 1.17, opt-in); pyright reports it on its
+own only in strict mode (`reportMatchNotExhaustive` is off in basic and standard). Outside those
+settings the arm, not the checker's configuration, is the enforcement.
 
 - **Give an enum its own members, and do not rely on aliasing.** Two members sharing a value
   makes the second a silent alias for the first rather than an error. `@enum.unique` turns that
@@ -220,7 +221,7 @@ A comment is not where a rule or a decision lives; what a comment is for is
   ([file-structure.md](../file-structure/file-structure.md) section 3). A second file is the rule
   stated again, unless it is a point-of-use assertion condition 4 keeps.
 - For a `match` on a closed set, count the arms: one per member plus the `assert_never` arm, and
-  the checker's command is in CI.
+  the checker runs in CI ([static-checks.md](../static-checks/static-checks.md) section 5).
 
 The same checkout, first with its decision hidden inside a doer, then with the business `if` in
 the use case and the rule in its own file:

@@ -26,39 +26,57 @@ The prompts, the answers and the tool results go to Langfuse and to no log line.
 ```python
 import logging
 import time
+from collections.abc import Sequence
 
 from langchain_core.callbacks import BaseCallbackHandler
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
-from langgraph.graph.state import CompiledStateGraph
 
 from acme.core.logging import request_id, thread_id
+from acme.support.chat.graph import ChatAgent
 from acme.support.chat.schemas import Answer, Question
 
 logger = logging.getLogger(__name__)
 
 
-async def answer(question: Question, agent: CompiledStateGraph, tracing: BaseCallbackHandler) -> Answer:
-    thread_id.set(question.thread_id)  # every line of this run carries it, in nodes and tools too
+async def answer(
+    question: Question, agent: ChatAgent, tracing: BaseCallbackHandler
+) -> Answer:
+    # Every line of this run carries it, in nodes and tools too.
+    thread_id.set(question.thread_id)
+
     config: RunnableConfig = {
         "configurable": {"thread_id": question.thread_id},
-        "metadata": {"request_id": request_id.get()},  # the trace leads back to these log lines
-        "callbacks": [tracing],  # the prompt, the answer and the tool results go to Langfuse
+        # The trace leads back to these log lines.
+        "metadata": {"request_id": request_id.get()},
+        # The prompt, the answer and the tool results go to Langfuse.
+        "callbacks": [tracing],
     }
+
     started = time.perf_counter()
     state = await agent.ainvoke({"messages": [HumanMessage(question.text)]}, config)
     messages = state["messages"]
-    logger.info(
-        "Chat run finished",
-        extra={
-            # The final message's finish reason tells a normal stop from a run cut at the length limit.
-            "outcome": messages[-1].response_metadata.get("finish_reason", "-"),
-            "duration_ms": round((time.perf_counter() - started) * 1000),
-            "messages": len(messages),
-            "tool_calls": sum(len(m.tool_calls) for m in messages if isinstance(m, AIMessage)),
-        },
-    )
+
+    duration_ms = round((time.perf_counter() - started) * 1000)
+    logger.info("Chat run finished", extra=_run_summary(messages, duration_ms))
+
     return Answer(thread_id=question.thread_id, text=messages[-1].text)
+
+
+def _run_summary(
+    messages: Sequence[BaseMessage], duration_ms: int
+) -> dict[str, object]:
+    return {
+        # The final message's finish reason tells a normal stop from a run cut at the length limit.
+        "outcome": messages[-1].response_metadata.get("finish_reason", "-"),
+        "duration_ms": duration_ms,
+        "messages": len(messages),
+        "tool_calls": sum(
+            len(message.tool_calls)
+            for message in messages
+            if isinstance(message, AIMessage)
+        ),
+    }
 ```
 
 The use case catches nothing. A failure it cannot handle, a tool that crashed or a provider that
@@ -76,13 +94,16 @@ use case's summary line included, carries its trace id. Langfuse's handler nests
 the current span, and its trace id is the OpenTelemetry one, so the id on a line opens the run's
 trace.
 
+`answer` times the run with `time.perf_counter()` in place: the duration feeds only the log line
+([readability.md](../readability/readability.md) section 6).
+
 ## `api/routes_chat.py`: the run's span around the use case
 
 ```python
 from fastapi import APIRouter, Request
 
 from acme.api.schemas import ChatRequest, ChatResponse
-from acme.core.langfuse_client import callback_handler, run_span
+from acme.core.langfuse_client import run_span
 from acme.support.chat.schemas import Question
 from acme.support.chat.usecase import answer
 
@@ -94,12 +115,16 @@ async def chat(body: ChatRequest, request: Request) -> ChatResponse:
     question = Question(thread_id=body.thread_id, text=body.text)
     # The run's span: every line inside it, the use case's summary line included, carries its trace id.
     with run_span("chat answer"):
-        reply = await answer(question, request.app.state.chat_agent, tracing=callback_handler())
+        reply = await answer(
+            question, request.app.state.chat_agent, tracing=request.app.state.tracing
+        )
+
     return ChatResponse(thread_id=reply.thread_id, text=reply.text)
 ```
 
-`chat_agent` is built once by `build_agent(chat_model())` in `create_app()` and kept on
-`app.state`; that wiring is not shown.
+`create_app()` builds the agent once with `build_agent(chat_model(), orders)`, where `orders` is
+the order store's client, builds the Langfuse handler once with `callback_handler()`, and keeps
+both on `app.state` as `chat_agent` and `tracing`; that wiring is not shown.
 
 ## `core/langfuse_client.py`: the one client of Langfuse
 
@@ -128,6 +153,7 @@ def callback_handler() -> BaseCallbackHandler:
 """The one client of the model provider: every model call's errors pass through here."""
 
 from collections.abc import Awaitable, Callable
+from typing import Final
 
 import openai
 from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResponse
@@ -135,7 +161,7 @@ from langchain_openai import ChatOpenAI
 
 from acme.core.errors import ModelUnavailable
 
-MODEL = "gpt-4.1-mini"
+MODEL: Final = "gpt-4.1-mini"
 
 
 def chat_model() -> ChatOpenAI:
@@ -146,7 +172,9 @@ class ProviderErrorMiddleware(AgentMiddleware):
     """Replaces a provider error with ModelUnavailable, which names only the model and the status."""
 
     async def awrap_model_call(
-        self, request: ModelRequest, handler: Callable[[ModelRequest], Awaitable[ModelResponse]]
+        self,
+        request: ModelRequest,
+        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
     ) -> ModelResponse:
         try:
             return await handler(request)
@@ -174,22 +202,30 @@ class ModelUnavailable(Exception):
 
 ```python
 # support/chat/graph.py
-from langchain.agents import create_agent
+from typing import TypeAlias
+
+from langchain.agents import AgentState, create_agent
 from langchain.agents.middleware import ToolErrorMiddleware
+from langchain.agents.middleware.types import InputAgentState, OutputAgentState
 from langchain_core.language_models import BaseChatModel
 from langgraph.graph.state import CompiledStateGraph
 
 from acme.core.openai_client import ProviderErrorMiddleware
+from acme.core.order_store_client import OrderStore
 from acme.support.chat.call_logging import CallLoggingMiddleware
 from acme.support.chat.prompts import SYSTEM
-from acme.support.chat.services.service_orders import find_order
+from acme.support.chat.services.service_orders import order_tools
 from acme.support.chat.tool_errors import report_tool_failure
 
+ChatAgent: TypeAlias = CompiledStateGraph[
+    AgentState, None, InputAgentState, OutputAgentState
+]
 
-def build_agent(model: BaseChatModel) -> CompiledStateGraph:
+
+def build_agent(model: BaseChatModel, orders: OrderStore) -> ChatAgent:
     return create_agent(
         model,
-        tools=[find_order],
+        tools=order_tools(orders),
         system_prompt=SYSTEM,
         middleware=[
             ToolErrorMiddleware(on_error=report_tool_failure),
@@ -201,24 +237,36 @@ def build_agent(model: BaseChatModel) -> CompiledStateGraph:
     )
 ```
 
+`OrderStore`, the one client of the order store in `core/`, is not shown. The tool gets the store
+from `order_tools`, which `build_agent` calls with the client `create_app()` builds once, so it
+reads no module-level client, and the model, which fills only `order_id`, never sees the store
+([readability.md](../readability/readability.md) section 6).
+
 ```python
 # support/chat/services/service_orders.py
-from langchain_core.tools import tool
+from langchain_core.tools import BaseTool, tool
 
+from acme.core.order_store_client import OrderStore
 from acme.support.chat.errors import ToolFailure, ToolFailureReason
 
 
-@tool
-def find_order(order_id: str) -> str:
-    """Return the status of one order."""
-    try:
-        order = ORDERS.get(order_id)
-    except ConnectionError:
-        # from None: the store's error text could quote the order; the fixed code says enough
-        raise ToolFailure(ToolFailureReason.ORDER_STORE_UNAVAILABLE) from None
-    if order is None:
-        return "No order with this id."  # an expected outcome is a normal result, so no log line
-    return order.status
+def order_tools(orders: OrderStore) -> list[BaseTool]:
+    @tool
+    def find_order(order_id: str) -> str:
+        """Return the status of one order."""
+        try:
+            order = orders.get(order_id)
+        except ConnectionError:
+            # from None: the store's error text could quote the order; the fixed code says enough
+            raise ToolFailure(ToolFailureReason.ORDER_STORE_UNAVAILABLE) from None
+
+        if order is None:
+            # An expected outcome is a normal result, so no log line.
+            return "No order with this id."
+
+        return order.status
+
+    return [find_order]
 ```
 
 ```python
@@ -261,7 +309,9 @@ logger = logging.getLogger(__name__)
 def report_tool_failure(exc: Exception, request: ToolCallRequest) -> str | None:
     if not isinstance(exc, ToolFailure):
         return None  # not ours: it propagates, and the caller that decides logs it once
+
     logger.warning("Tool %s failed: %s", request.tool_call["name"], exc.reason)
+
     return f"The tool failed: {exc.reason}"
 ```
 
@@ -279,7 +329,12 @@ import logging
 import time
 from collections.abc import Awaitable, Callable
 
-from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResponse, ToolCallRequest
+from langchain.agents.middleware import (
+    AgentMiddleware,
+    ModelRequest,
+    ModelResponse,
+    ToolCallRequest,
+)
 from langchain_core.messages import ToolMessage
 from langgraph.types import Command
 
@@ -292,24 +347,33 @@ def _ms_since(started: float) -> int:
 
 class CallLoggingMiddleware(AgentMiddleware):
     async def awrap_model_call(
-        self, request: ModelRequest, handler: Callable[[ModelRequest], Awaitable[ModelResponse]]
+        self,
+        request: ModelRequest,
+        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
     ) -> ModelResponse:
         started = time.perf_counter()
         response = await handler(request)
+
         # The key name differs by provider; a model that names it otherwise logs "-".
         finish_reason = response.result[-1].response_metadata.get("finish_reason", "-")
         logger.info(
-            "Model call finished", extra={"duration_ms": _ms_since(started), "finish_reason": finish_reason}
+            "Model call finished",
+            extra={"duration_ms": _ms_since(started), "finish_reason": finish_reason},
         )
+
         return response
 
     async def awrap_tool_call(
-        self, request: ToolCallRequest, handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command]]
-    ) -> ToolMessage | Command:
+        self,
+        request: ToolCallRequest,
+        handler: Callable[[ToolCallRequest], Awaitable[ToolMessage | Command[object]]],
+    ) -> ToolMessage | Command[object]:
         name = request.tool_call["name"]
         started = time.perf_counter()
         result = await handler(request)
+
         logger.info("Tool %s finished", name, extra={"duration_ms": _ms_since(started)})
+
         return result
 ```
 

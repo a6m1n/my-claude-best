@@ -4,7 +4,8 @@ A worked before-and-after for [python.md](python.md) section 2. A shop takes an 
 the card. One business rule changes the flow: a customer's first order above 1,000 is not charged
 at once, because the risk team checks it by hand first. Names are invented. The three clients
 (card payments, the review queue, email) stand for outside systems, and their bodies are not
-shown: each one is a single call to that system, and `charge` returns the payment's id.
+shown: each one is a single call to that system, and `charge` returns the payment's id as a
+`PaymentId`, a `NewType` the payments client declares.
 
 Both versions share the order type below and the same rule. What moves is the decision: from
 inside a doer to the first line of the use case. The threshold and its comment sit in the file of
@@ -17,16 +18,26 @@ module-level instances to parameters, so the second path shows in the signature 
 ```python
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import NewType
+
+OrderId = NewType("OrderId", str)
 
 
 @dataclass(frozen=True)
 class Order:
-    order_id: str
+    order_id: OrderId
     email: str
     card_token: str
     total: Decimal
     previous_orders: int
 ```
+
+`OrderId` and the client's `PaymentId` could be swapped silently, since both are strings, so each
+is a `NewType` ([python.md](python.md) section 3): the type checker rejects an order id where a
+parameter declares a payment id, as in `send_confirmation` in Before, and a payment id given to
+`Order`; at runtime nothing checks it. The clients in `core/` cannot import `OrderId`
+([file-structure.md](../file-structure/file-structure.md) section 2), so they take the order id as a
+plain `str`, and a payment id passed there is not caught.
 
 ## Before: the decision hides inside a doer
 
@@ -48,17 +59,18 @@ def place_order(order: Order) -> None:
 
 ```python
 from decimal import Decimal
+from typing import Final
 
-from shop.core.payments_client import payments
+from shop.core.payments_client import PaymentId, payments
 from shop.core.review_queue_client import review_queue
 from shop.sales.checkout.schemas import Order
 
 # Card fraud clusters in a new customer's first large order, so the risk
 # team checks those by hand before any money moves.
-MANUAL_REVIEW_THRESHOLD = Decimal("1000")
+MANUAL_REVIEW_THRESHOLD: Final = Decimal("1000")
 
 
-def charge_card(order: Order) -> str | None:
+def charge_card(order: Order) -> PaymentId | None:
     if order.previous_orders == 0 and order.total > MANUAL_REVIEW_THRESHOLD:
         review_queue.submit(order.order_id)
 
@@ -71,10 +83,11 @@ def charge_card(order: Order) -> str | None:
 
 ```python
 from shop.core.mail_client import mailer
+from shop.core.payments_client import PaymentId
 from shop.sales.checkout.schemas import Order
 
 
-def send_confirmation(order: Order, payment_id: str | None) -> None:
+def send_confirmation(order: Order, payment_id: PaymentId | None) -> None:
     if payment_id is None:
         return
 
@@ -91,8 +104,8 @@ function that runs the flow.
    function whose name promises a charge. To learn that a charge may not happen, the reader has
    to open it.
 2. **`None` carries the decision.** `charge_card` returns `None` to mean "sent to review", and
-   `send_confirmation` returns without a word when it gets one. `str | None` says a payment id may
-   be missing; it does not say why, and the reader has to find the `return None` inside
+   `send_confirmation` returns without a word when it gets one. `PaymentId | None` says a payment id
+   may be missing; it does not say why, and the reader has to find the `return None` inside
    `charge_card` to learn it.
 3. **The result says nothing.** `place_order` returns `None` on both paths, and `Order` holds no
    status, so the route that calls it cannot tell a confirmed order from one waiting for review,
@@ -111,7 +124,7 @@ things are: the flow is decided in a place the reader of the flow never looks.
 ```text
 src/shop/
 ├── core/
-│   ├── payments_client.py      PaymentGateway: every call to card payments
+│   ├── payments_client.py      PaymentGateway and PaymentId: every call to card payments
 │   ├── review_queue_client.py  ReviewQueue: every call to the risk team's queue
 │   ├── mail_client.py          Mailer: every call to email
 │   └── ...                     files not shown
@@ -176,15 +189,15 @@ def place_order(
 
 ```python
 from decimal import Decimal
+from typing import Final
 
 # Card fraud clusters in a new customer's first large order, so the risk
 # team checks those by hand before any money moves.
-MANUAL_REVIEW_THRESHOLD = Decimal("1000")
+MANUAL_REVIEW_THRESHOLD: Final = Decimal("1000")
 
 
 def needs_manual_review(total: Decimal, previous_orders: int) -> bool:
     is_first_order = previous_orders == 0
-
     return is_first_order and total > MANUAL_REVIEW_THRESHOLD
 ```
 
@@ -244,8 +257,9 @@ looks.
   fails at runtime with `AssertionError` if no checker ran.
 - **The dependencies are in the signature**, which answers point 4. The use case receives the
   three client objects as parameters. It imports only their classes, for the annotations, and
-  creates none. A reader sees everything it touches in one place, and a test passes stand-ins
-  without patching a module.
+  creates none. A reader sees everything it touches in one place, and a test passes a stand-in for
+  each client, such as `create_autospec(PaymentGateway, instance=True)`, without patching a module
+  ([readability.md](../readability/readability.md) section 6).
 
 Run on the same CPython 3.13 with the same stand-ins: a first order of 1,500 returns `IN_REVIEW`
 and reaches only the review queue; a first order of 500 and a returning customer's order of 1,500

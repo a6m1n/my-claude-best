@@ -54,8 +54,8 @@ The third turns the check on:
 ```
 chore(ci): check formatting with ruff
 
-- CI runs ruff format --check and fails on unformatted code, so the
-  old layout cannot come back.
+- CI runs the ruff format hook on all files and fails when it would
+  change one, so the old layout cannot come back.
 ```
 
 `.git-blame-ignore-revs` at the repository root:
@@ -205,13 +205,15 @@ of 50. The limit sits in `src/billing/invoices.py`.
 **Before: a constant, a query, a route and its handler in one file**
 
 ```python
+from typing import Final
+
 from fastapi import APIRouter, Request
 
 from billing.core.database import Database
 from billing.core.schemas import InvoiceRow
 
-MAX_OPEN_INVOICES = 50
-OPEN_INVOICES_SQL = """
+MAX_OPEN_INVOICES: Final = 50
+OPEN_INVOICES_SQL: Final = """
     SELECT id, number, total, due_date FROM invoices
     WHERE customer_id = :customer_id AND paid_at IS NULL
     ORDER BY due_date LIMIT :limit
@@ -226,7 +228,6 @@ def get_open_invoices(customer_id: str, request: Request) -> list[InvoiceRow]:
     rows = db.fetch_all(
         OPEN_INVOICES_SQL, customer_id=customer_id, limit=MAX_OPEN_INVOICES
     )
-
     return [InvoiceRow(**row) for row in rows]
 ```
 
@@ -310,7 +311,6 @@ router = APIRouter()
 @router.get("/customers/{customer_id}/invoices/open")
 def get_open_invoices(customer_id: str, request: Request) -> list[InvoiceRow]:
     db: Database = request.app.state.database
-
     return list_open_invoices(customer_id, db)
 ```
 

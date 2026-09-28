@@ -409,7 +409,8 @@ A rule about imports that nothing checks is a wish. Python has no package-privat
 folder boundary means nothing to the interpreter: any file can import any other. Simon Brown makes
 the same point about Java: "the packages become an irrelevant detail if all of the types are marked
 as public". Write the direction of section 2 as import-linter contracts in `pyproject.toml`, and run
-`lint-imports` in CI so the build fails on a broken contract:
+`lint-imports` as [static-checks.md](../static-checks/static-checks.md) section 5 says, so the
+build fails on a broken contract:
 
 - a **layers** contract: adapters, then the domain folder, then `core/`;
 - an **independence** contract over the modules, with each allowed cross-module import listed under
