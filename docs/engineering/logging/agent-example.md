@@ -11,8 +11,9 @@ What each part does for the log:
   and writes the one summary line;
 - the HTTP adapter opens the run's span around the use case, so every line the run writes carries
   the trace id, and `core/langfuse_client.py` is the one place that knows Langfuse;
-- `core/openai_client.py`, the one client of the model provider, replaces a provider's error with
-  a safe one, so its text never reaches the log;
+- `core/openai_client.py`, the one client of the model provider, replaces a provider's error and
+  an answer that does not parse with a safe error that names the model, so neither the provider's
+  text nor the answer's text reaches the log;
 - the optional middleware writes one line per model call and per tool call, and can be removed
   without changing what the agent does;
 - the tool-failure handler, required when the model should recover from a tool failure, logs that
@@ -20,6 +21,10 @@ What each part does for the log:
   unknown order, is a normal tool result and is not logged.
 
 The prompts, the answers and the tool results go to Langfuse and to no log line.
+
+The model call itself follows [prompt-engineering.md](../prompt-engineering/prompt-engineering.md):
+the model is a constant of the module, the reply comes back as JSON through a response schema, the
+one client carries the cache switch, and the tool's description says when to call it.
 
 ## `support/chat/usecase.py`: the run, its ids and its summary line
 
@@ -34,7 +39,7 @@ from langchain_core.runnables import RunnableConfig
 
 from acme.core.logging import request_id, thread_id
 from acme.support.chat.graph import ChatAgent
-from acme.support.chat.schemas import Answer, Question
+from acme.support.chat.schemas import Answer, ChatReply, Question
 
 logger = logging.getLogger(__name__)
 
@@ -56,11 +61,12 @@ async def answer(
     started = time.perf_counter()
     state = await agent.ainvoke({"messages": [HumanMessage(question.text)]}, config)
     messages = state["messages"]
+    reply: ChatReply = state["structured_response"]
 
     duration_ms = round((time.perf_counter() - started) * 1000)
     logger.info("Chat run finished", extra=_run_summary(messages, duration_ms))
 
-    return Answer(thread_id=question.thread_id, text=messages[-1].text)
+    return Answer(thread_id=question.thread_id, text=reply.text)
 
 
 def _run_summary(
@@ -122,9 +128,13 @@ async def chat(body: ChatRequest, request: Request) -> ChatResponse:
     return ChatResponse(thread_id=reply.thread_id, text=reply.text)
 ```
 
-`create_app()` builds the agent once with `build_agent(chat_model(), orders)`, where `orders` is
-the order store's client, builds the Langfuse handler once with `callback_handler()`, and keeps
-both on `app.state` as `chat_agent` and `tracing`; that wiring is not shown.
+`create_app()` builds the agent once with
+`build_agent(chat_model(SUPPORT_CHAT_LLM_MODEL), orders, disable_prompt_cache=settings.disable_prompt_cache)`,
+where `orders` is the order store's client and `settings` is the `Settings` of
+[setup-example.md](setup-example.md), which gains one field, `disable_prompt_cache: bool = False`
+([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 17). It builds the
+Langfuse handler once with `callback_handler()`, and keeps both on `app.state` as `chat_agent` and
+`tracing`; that wiring is not shown.
 
 ## `core/langfuse_client.py`: the one client of Langfuse
 
@@ -150,26 +160,60 @@ def callback_handler() -> BaseCallbackHandler:
 
 ```python
 # core/openai_client.py
-"""The one client of the model provider: every model call's errors pass through here."""
+"""The one client of the model provider: every model call passes through these middlewares."""
 
+import uuid
 from collections.abc import Awaitable, Callable
-from typing import Final
 
 import openai
 from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResponse
+from langchain.agents.structured_output import StructuredOutputValidationError
+from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
+from openai.types import ChatModel
 
-from acme.core.errors import ModelUnavailable
+from acme.core.errors import (
+    ModelAnswerInvalid,
+    ModelOutputCutOff,
+    ModelRefused,
+    ModelUnavailable,
+)
 
-MODEL: Final = "gpt-4.1-mini"
+
+def chat_model(model: ChatModel) -> ChatOpenAI:
+    return ChatOpenAI(model=model)
 
 
-def chat_model() -> ChatOpenAI:
-    return ChatOpenAI(model=MODEL)
+class PromptCacheSwitchMiddleware(AgentMiddleware):
+    """DISABLE_PROMPT_CACHE: a fresh first line on every call, so no cache serves the call."""
+
+    def __init__(self, *, disable_prompt_cache: bool) -> None:
+        super().__init__()
+        self._disable_prompt_cache = disable_prompt_cache
+
+    async def awrap_model_call(
+        self,
+        request: ModelRequest,
+        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
+    ) -> ModelResponse:
+        if not self._disable_prompt_cache:
+            return await handler(request)
+
+        system = (
+            request.system_message.text if request.system_message is not None else ""
+        )
+        # At the very start of the request: a cache matches from here, so nothing after it hits.
+        first_line = SystemMessage(f"Request UUID: {uuid.uuid4()}\n{system}")
+
+        return await handler(request.override(system_message=first_line))
 
 
 class ProviderErrorMiddleware(AgentMiddleware):
-    """Replaces a provider error with ModelUnavailable, which names only the model and the status."""
+    """Keeps the provider's text and the answer's text out of every error; each names the model."""
+
+    def __init__(self, model: ChatModel) -> None:
+        super().__init__()
+        self._model = model
 
     async def awrap_model_call(
         self,
@@ -180,15 +224,27 @@ class ProviderErrorMiddleware(AgentMiddleware):
             return await handler(request)
         except openai.APIStatusError as exc:
             # from None: the provider's message can quote the prompt; the model and the status say enough
-            raise ModelUnavailable(MODEL, exc.status_code) from None
+            raise ModelUnavailable(self._model, exc.status_code) from None
+        except openai.LengthFinishReasonError:
+            # from None: the SDK stops before parsing a reply cut at the output limit
+            raise ModelOutputCutOff(self._model) from None
         except openai.APIError:
             # every other provider error (connection, timeout, context overflow) has no status we need,
             # only text we must not log
-            raise ModelUnavailable(MODEL, None) from None
+            raise ModelUnavailable(self._model, None) from None
+        except StructuredOutputValidationError as exc:
+            if exc.ai_message.additional_kwargs.get("refusal"):
+                # from None: the parse error can quote the answer; the model's name says enough
+                raise ModelRefused(self._model) from None
+            # from None: the parse error can quote the answer that did not match the schema
+            raise ModelAnswerInvalid(self._model) from None
 ```
 
 ```python
 # core/errors.py
+from openai.types import ChatModel
+
+
 class ModelUnavailable(Exception):
     """The model provider failed; the message names the model and the status, never the provider's text."""
 
@@ -196,9 +252,54 @@ class ModelUnavailable(Exception):
         super().__init__(f"model {model} unavailable (status {status})")
         self.model = model
         self.status = status
+
+
+class ModelRefused(Exception):
+    """The model refused; the message names the model, never the answer's text."""
+
+    def __init__(self, model: ChatModel) -> None:
+        super().__init__(f"model {model} refused")
+        self.model = model
+
+
+class ModelOutputCutOff(Exception):
+    """The answer hit the output limit; the message names the model, never the answer's text."""
+
+    def __init__(self, model: ChatModel) -> None:
+        super().__init__(f"model {model} stopped at the output limit")
+        self.model = model
+
+
+class ModelAnswerInvalid(Exception):
+    """The answer did not match the schema; the message names the model, never the answer's text."""
+
+    def __init__(self, model: ChatModel) -> None:
+        super().__init__(f"model {model} gave an answer that does not match the schema")
+        self.model = model
 ```
 
 ## `support/chat/graph.py` and `support/chat/services/service_orders.py`: the agent and a tool
+
+```python
+# support/chat/consts.py
+from typing import Final
+
+from openai.types import ChatModel
+
+# gpt-4.1-mini has no reasoning effort to set (prompt-engineering.md section 15).
+SUPPORT_CHAT_LLM_MODEL: Final[ChatModel] = "gpt-4.1-mini"
+```
+
+```python
+# support/chat/schemas.py, next to Answer and Question
+from pydantic import BaseModel
+
+
+class ChatReply(BaseModel):
+    """The agent's final answer; the provider returns it as JSON in this shape."""
+
+    text: str  # the reply the customer reads
+```
 
 ```python
 # support/chat/graph.py
@@ -207,35 +308,55 @@ from typing import TypeAlias
 from langchain.agents import AgentState, create_agent
 from langchain.agents.middleware import ToolErrorMiddleware
 from langchain.agents.middleware.types import InputAgentState, OutputAgentState
+from langchain.agents.structured_output import ProviderStrategy
 from langchain_core.language_models import BaseChatModel
 from langgraph.graph.state import CompiledStateGraph
 
-from acme.core.openai_client import ProviderErrorMiddleware
+from acme.core.openai_client import PromptCacheSwitchMiddleware, ProviderErrorMiddleware
 from acme.core.order_store_client import OrderStore
 from acme.support.chat.call_logging import CallLoggingMiddleware
+from acme.support.chat.consts import SUPPORT_CHAT_LLM_MODEL
 from acme.support.chat.prompts import SYSTEM
+from acme.support.chat.schemas import ChatReply
 from acme.support.chat.services.service_orders import order_tools
 from acme.support.chat.tool_errors import report_tool_failure
 
 ChatAgent: TypeAlias = CompiledStateGraph[
-    AgentState, None, InputAgentState, OutputAgentState
+    AgentState[ChatReply], None, InputAgentState, OutputAgentState[ChatReply]
 ]
 
 
-def build_agent(model: BaseChatModel, orders: OrderStore) -> ChatAgent:
+def build_agent(
+    model: BaseChatModel, orders: OrderStore, *, disable_prompt_cache: bool
+) -> ChatAgent:
     return create_agent(
         model,
         tools=order_tools(orders),
         system_prompt=SYSTEM,
+        # The provider's own strict structured output: the provider enforces the schema,
+        # and the reply is the last AI message, with its finish reason.
+        response_format=ProviderStrategy(ChatReply, strict=True),
         middleware=[
             ToolErrorMiddleware(on_error=report_tool_failure),
             CallLoggingMiddleware(),
+            PromptCacheSwitchMiddleware(disable_prompt_cache=disable_prompt_cache),
             # Required. The last entry is the innermost, next to the model, so every other
             # middleware sees ModelUnavailable, never the provider's error.
-            ProviderErrorMiddleware(),
+            ProviderErrorMiddleware(SUPPORT_CHAT_LLM_MODEL),
         ],
     )
 ```
+
+`ProviderStrategy(ChatReply, strict=True)` asks for the provider's own strict structured output:
+the provider enforces the schema, and the final reply is the last AI message and keeps the finish
+reason the summary line reads. LangChain's other strategy, a tool call, would end the run on a tool
+message instead. The reply is parsed inside the agent, in the call `ProviderErrorMiddleware` wraps.
+When a reply stops at the output limit, the OpenAI SDK raises `openai.LengthFinishReasonError`
+before LangChain parses the reply, and the middleware replaces it with `ModelOutputCutOff`. A
+refusal or a reply that does not match the schema reaches LangChain's parse, whose
+`StructuredOutputValidationError` can quote the answer, so the middleware replaces it before any
+other code sees it: with `ModelRefused` when the model refused, and `ModelAnswerInvalid` otherwise.
+Each names only the model, and each propagates like any failure the use case cannot handle.
 
 `OrderStore`, the one client of the order store in `core/`, is not shown. The tool gets the store
 from `order_tools`, which `build_agent` calls with the client `create_app()` builds once, so it
@@ -253,7 +374,11 @@ from acme.support.chat.errors import ToolFailure, ToolFailureReason
 def order_tools(orders: OrderStore) -> list[BaseTool]:
     @tool
     def find_order(order_id: str) -> str:
-        """Return the status of one order."""
+        """Look up one order by its id, such as A-1042, and return its status.
+
+        Call it when the customer asks where an order is or what happened to it.
+        Reads only; changes nothing.
+        """
         try:
             order = orders.get(order_id)
         except ConnectionError:
@@ -262,7 +387,7 @@ def order_tools(orders: OrderStore) -> list[BaseTool]:
 
         if order is None:
             # An expected outcome is a normal result, so no log line.
-            return "No order with this id."
+            return "No order with this id. Ask the customer to check the id on their receipt."
 
         return order.status
 

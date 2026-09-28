@@ -61,6 +61,13 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   The check: every check the change adds is one command, run from the one pinned version of its
   tool in the hook file and in the required CI job, and every suppression it adds names its rule
   and says why.
+- Before you write or change a prompt, a tool definition the model reads, or a setting that
+  changes what the model receives (the model, its reasoning effort, the cache switch), read
+  `docs/engineering/prompt-engineering/prompt-engineering.md`, and
+  `docs/engineering/prompt-engineering/prompt-example.md` when you add a call to a model or change
+  the model a call site uses. The check: every model call the change adds or edits takes its model
+  and its reasoning effort from `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort`
+  constants (the effort where the model has one) and gets its answer through a response schema.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`
