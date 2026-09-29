@@ -111,26 +111,28 @@ class AcmeAiClient:
         user: str,
         answer_type: type[AnswerT],
     ) -> AnswerT:
-        if self._disable_prompt_cache:
-            # First in the system prompt: a cache matches from the request's start, so
-            # nothing from here on hits.
-            system = f"Request UUID: {self._new_request_uuid()}\n{system}"
-
-        reply = self._send(model, reasoning_effort, system, user, answer_type)
+        reply = self._send(
+            model, reasoning_effort, self._apply_cache_switch(system), user, answer_type
+        )
 
         match reply.stop_reason:
+            # An unknown reason may still end on a whole answer; the parse decides.
             case StopReason.END | StopReason.UNKNOWN:
-                try:
-                    return answer_type.model_validate_json(reply.text)
-                except ValidationError:
-                    # from None: pydantic's message can quote the answer
-                    raise ModelAnswerInvalid(model) from None
+                return _parse_answer(model, reply.text, answer_type)
             case StopReason.REFUSAL:
                 raise ModelRefused(model)
             case StopReason.OUTPUT_LIMIT:
                 raise ModelOutputCutOff(model)
             case _ as unreachable:
                 assert_never(unreachable)
+
+    def _apply_cache_switch(self, system: str) -> str:
+        if not self._disable_prompt_cache:
+            return system
+
+        # First in the system prompt: a cache matches from the request's start, so
+        # nothing from here on hits.
+        return f"Request UUID: {self._new_request_uuid()}\n{system}"
 
     def _send(
         self,
@@ -149,6 +151,14 @@ class AcmeAiClient:
         # ModelUnavailable(model, status), raised from None, because the vendor's message can
         # quote the prompt (logging.md section 10).
         ...
+
+
+def _parse_answer(model: LlmModel, text: str, answer_type: type[AnswerT]) -> AnswerT:
+    try:
+        return answer_type.model_validate_json(text)
+    except ValidationError:
+        # from None: pydantic's message can quote the answer
+        raise ModelAnswerInvalid(model) from None
 ```
 
 ```python
@@ -193,14 +203,18 @@ What it does for the rules:
 
 - **Every call passes the effort** (section 15); it is never left to the vendor's default. The
   client is the one place that knows the vendor's name for the effort.
-- **The cache switch is one `if`** at the very start of the system prompt, and the setting is read
-  once at startup and passed in (section 17). The UUID source, `uuid.uuid4`, is passed in the same
-  way, so a test can fix the UUID ([readability.md](../readability/readability.md) section 6).
-- **The answer is parsed into the type the caller asked for** (section 11). A refusal and a stop
-  at the model's output limit become named errors before the parser sees the text, a reply that does not
-  match the type becomes `ModelAnswerInvalid`, and an SDK error becomes `ModelUnavailable`. The
-  errors name the model, never the text, so they are safe in a log
-  ([logging.md](../logging/logging.md) section 10).
+- **The cache switch is one `if`**, in `_apply_cache_switch`: it puts a fresh line at the very
+  start of the system prompt. The setting is read once at startup and passed in (section 17), and
+  so is the UUID source, `uuid.uuid4`, so a test can fix the UUID
+  ([readability.md](../readability/readability.md) section 6).
+- **The answer is parsed into the type the caller asked for** (section 11). The stop reason is a
+  closed set, so `complete` branches on it in one `match` with an `assert_never` arm
+  ([python.md](../python/python.md) section 2). Each arm is one line, so `complete` reads at one
+  level of detail ([readability.md](../readability/readability.md) section 2). A refusal and a
+  stop at the model's output limit become named errors before the parser sees the text. The parse
+  sits in `_parse_answer`, where a reply that does not match the type becomes `ModelAnswerInvalid`.
+  An SDK error becomes `ModelUnavailable`. The errors name the model, never the text, so they are
+  safe in a log ([logging.md](../logging/logging.md) section 10).
 - **`AcmeAiSdk`**, the vendor's SDK object from its package `acme_ai`, is built once by the
   adapter at startup and handed in ([file-structure.md](../file-structure/file-structure.md)
   section 4); it is not shown.

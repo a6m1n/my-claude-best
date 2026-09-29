@@ -90,13 +90,14 @@ def _run_summary(
 
 The use case catches nothing. A failure it cannot handle, a tool that crashed or a provider that
 is down, propagates to the HTTP adapter, and uvicorn logs it once with the traceback
-(logging.md section 5). A provider's error never reaches that traceback as its own text:
-`ProviderErrorMiddleware` in `core/openai_client.py` replaces it with one of the errors in
-`core/errors.py`, which name only the model and, for `ModelUnavailable`, the status (logging.md
-section 10). The `ERROR` record and the summary line of a good run both carry the same
-`request_id` and `thread_id`, so one filter finds a dialogue's whole history. `answer` leaves out
-the value check [prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 11
-asks for after the parse, such as rejecting an empty `reply.text`.
+(logging.md section 5). Neither the provider's text nor the answer's text reaches that traceback:
+`ProviderErrorMiddleware` and `AnswerErrorMiddleware` in `core/openai_client.py` replace the errors
+that carry them with the errors in `core/errors.py`, which name only the model and, for
+`ModelUnavailable`, the status (logging.md section 10). The `ERROR` record and the summary line of
+a good run both carry the same `request_id` and `thread_id`, so one filter finds a dialogue's
+whole history. `answer` leaves out the value check
+[prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 11 asks for after the
+parse, such as rejecting an empty `reply.text`.
 
 `thread_id`, not the run's `run_id`, is the key: the dialogue keeps its `thread_id` across runs,
 and LangGraph does not persist `run_id`. The `trace_id` field needs no code here: the HTTP
@@ -177,7 +178,7 @@ from collections.abc import Awaitable, Callable
 import openai
 from langchain.agents.middleware import AgentMiddleware, ModelRequest, ModelResponse
 from langchain.agents.structured_output import StructuredOutputValidationError
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import AIMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from openai.types import ChatModel
 
@@ -224,7 +225,7 @@ class PromptCacheSwitchMiddleware(AgentMiddleware):
 
 
 class ProviderErrorMiddleware(AgentMiddleware):
-    """Keeps the provider's text and the answer's text out of every error; each names the model."""
+    """Replaces a provider error with ModelUnavailable, which names only the model and the status."""
 
     def __init__(self, model: ChatModel) -> None:
         super().__init__()
@@ -240,22 +241,42 @@ class ProviderErrorMiddleware(AgentMiddleware):
         except openai.APIStatusError as exc:
             # from None: the provider's message can quote the prompt; the model and the status say enough
             raise ModelUnavailable(self._model, exc.status_code) from None
-        except openai.LengthFinishReasonError:
-            # from None: the SDK error carries the cut-off completion, the answer's text included
-            raise ModelOutputCutOff(self._model) from None
-        except openai.ContentFilterFinishReasonError:
-            # To the caller, a stop by the provider's content filter is a refusal.
-            raise ModelRefused(self._model) from None
         except openai.APIError:
             # every other provider error (connection, timeout, context overflow) has no status we need,
             # only text we must not log
             raise ModelUnavailable(self._model, None) from None
+
+
+class AnswerErrorMiddleware(AgentMiddleware):
+    """Replaces an answer the agent cannot use with an error that names only the model."""
+
+    def __init__(self, model: ChatModel) -> None:
+        super().__init__()
+        self._model = model
+
+    async def awrap_model_call(
+        self,
+        request: ModelRequest,
+        handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
+    ) -> ModelResponse:
+        # from None in every raise: the SDK's error and the parse error can carry the answer's text
+        try:
+            return await handler(request)
+        except openai.LengthFinishReasonError:
+            raise ModelOutputCutOff(self._model) from None
+        except openai.ContentFilterFinishReasonError:
+            # To the caller, a stop by the provider's content filter is a refusal.
+            raise ModelRefused(self._model) from None
         except StructuredOutputValidationError as exc:
-            # from None, in both raises below: the parse error can quote the answer.
-            # A refusal has no JSON to parse, so it arrives here as a failed parse.
-            if exc.ai_message.additional_kwargs.get("refusal"):
+            if _is_refusal(exc.ai_message):
                 raise ModelRefused(self._model) from None
+
             raise ModelAnswerInvalid(self._model) from None
+
+
+def _is_refusal(reply: AIMessage) -> bool:
+    # A refusal has no JSON, so it fails the parse; langchain-openai keeps its text under this key.
+    return bool(reply.additional_kwargs.get("refusal"))
 ```
 
 ```python
@@ -342,6 +363,7 @@ from langgraph.graph.state import CompiledStateGraph
 from openai.types import ChatModel
 
 from acme.core.openai_client import (
+    AnswerErrorMiddleware,
     PromptCacheSwitchMiddleware,
     ProviderErrorMiddleware,
 )
@@ -380,9 +402,10 @@ def build_agent(
                 disable_prompt_cache=disable_prompt_cache,
                 new_request_uuid=new_request_uuid,
             ),
-            # Required. The last entry is the innermost, next to the model, so every other
-            # middleware sees this client's errors, never the provider's error or the
-            # answer's text.
+            # Required, and last: the last entries are the innermost, next to the model, so
+            # every other middleware sees this client's errors, never the provider's error
+            # or the answer's text.
+            AnswerErrorMiddleware(model),
             ProviderErrorMiddleware(model),
         ],
     )
@@ -390,15 +413,25 @@ def build_agent(
 
 `ProviderStrategy(ChatReply, strict=True)` asks for the provider's own strict structured output:
 the provider enforces the schema, and the final reply is the last AI message. LangChain's other
-strategy, a tool call, would end the run on a tool message instead. The reply is parsed inside the
-agent, in the call `ProviderErrorMiddleware` wraps. When a reply stops at the output limit, the
-OpenAI SDK raises `openai.LengthFinishReasonError` before LangChain parses the reply, and the
-middleware replaces it with `ModelOutputCutOff`. A stop by the provider's content filter raises
-`openai.ContentFilterFinishReasonError` at the same point, and the middleware replaces it with
-`ModelRefused`. A refusal or a reply that does not match the schema reaches LangChain's parse,
-whose `StructuredOutputValidationError` can quote the answer, so the middleware replaces it before
-any other code sees it: with `ModelRefused` when the model refused, and `ModelAnswerInvalid`
-otherwise. Each names only the model, and each propagates like any failure the use case cannot
+strategy, a tool call, would end the run on a tool message instead.
+
+The two error middlewares split the ways a call fails by what failed. `ProviderErrorMiddleware`
+handles the provider: a status error or any other API error becomes `ModelUnavailable`.
+`AnswerErrorMiddleware` handles the answer, which is parsed inside the agent, in the call both
+middlewares wrap:
+
+- When a reply stops at the model's output limit, the OpenAI SDK raises
+  `openai.LengthFinishReasonError` before LangChain parses the reply, and `AnswerErrorMiddleware`
+  replaces it with `ModelOutputCutOff`.
+- A stop by the provider's content filter raises `openai.ContentFilterFinishReasonError` at the
+  same point, and `AnswerErrorMiddleware` replaces it with `ModelRefused`.
+- A refusal or a reply that does not match the schema reaches LangChain's parse, whose
+  `StructuredOutputValidationError` can quote the answer, so `AnswerErrorMiddleware` replaces it
+  before any other code sees it: with `ModelRefused` when `_is_refusal` finds the refusal, and
+  `ModelAnswerInvalid` otherwise.
+
+The SDK's two errors are `OpenAIError`s but not `APIError`s, so `ProviderErrorMiddleware` lets them
+through. Each error names only the model, and each propagates like any failure the use case cannot
 handle.
 
 The refusal and cut-off mapping holds on LangChain's Chat Completions path, which this model uses;
