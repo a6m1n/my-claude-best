@@ -28,7 +28,9 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   `docs/engineering/python/python.md`, and
   `docs/engineering/python/explicit-constraints-example.md` when you place a constraint. The
   check: every constraint the change introduces is stated on the type or signature that carries
-  it, and what enforces it is a runtime mechanism or a checker the CI runs and fails on.
+  it, what enforces it is a runtime mechanism or a checker the CI runs and fails on, and no
+  parameter or field the change adds that carries a value of a closed set is a bare `str`
+  (`python.md` section 3).
 - Before a change edits code that already exists (a feature, a fix, a move to a practice, a
   restructure), or turns on a new rule, read `docs/engineering/refactoring/refactoring.md`, and
   `docs/engineering/refactoring/adoption-example.md` when a practice change has to reach old
@@ -46,6 +48,26 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   `docs/engineering/logging/agent-example.md` when an agent's runs should appear in the log. The
   check: the ruff rules in `logging.md` section 11 pass on the change, and no line it adds logs a
   prompt, an answer or a secret.
+- Before you write or change a function or a class, or review one, read
+  `docs/engineering/readability/readability.md`, and
+  `docs/engineering/readability/module-example.md` when you write a new module's use case, its
+  rule and its test. The check: no function or class the change writes or edits shows two or more
+  red flags from `readability.md` section 9's table, and the closing summary names each single red
+  flag left in place and why.
+- Before you add or change a static check (the formatter, the linter, the type checker or an import
+  contract), a pre-commit hook, the CI job that runs them, or a comment that silences one, read
+  `docs/engineering/static-checks/static-checks.md`, and
+  `docs/engineering/static-checks/setup-example.md` when you set the checks up in a repository.
+  The check: every check the change adds is one command, run from the one pinned version of its
+  tool in the hook file and in the required CI job, and every suppression it adds names its rule
+  and says why.
+- Before you write or change a prompt, a tool definition the model reads, or a setting that
+  changes what the model receives (the model, its reasoning effort, the cache switch), read
+  `docs/engineering/prompt-engineering/prompt-engineering.md`, and
+  `docs/engineering/prompt-engineering/prompt-example.md` when you add a call to a model or change
+  the model a call site uses. The check: every model call the change adds or edits takes its model
+  and its reasoning effort from `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort`
+  constants (the effort where the model has one) and gets its answer through a response schema.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`

@@ -1,5 +1,11 @@
 # Python rules
 
+**Navigation**
+
+- [1. Purpose](#1-purpose)
+- [2. Explicit is better than implicit: the reader sees what happens at the line they read](#2-explicit-is-better-than-implicit-the-reader-sees-what-happens-at-the-line-they-read)
+- [3. Strict types: the checker reads every signature](#3-strict-types-the-checker-reads-every-signature)
+
 ## 1. Purpose
 
 This file is for everyone who writes Python in the repository: people and AI agents alike.
@@ -9,7 +15,8 @@ Each section below is one principle. Each says when it fires, what you do, and h
 tells that it happened.
 
 The code here assumes Python 3.11 or newer (`python --version`); `typing.assert_never` and
-`enum.StrEnum` are the newest features used.
+`enum.StrEnum` are the newest features used. Section 3 takes `override` and `TypeIs` from
+`typing_extensions`, which backports them to 3.11.
 
 ## 2. Explicit is better than implicit: the reader sees what happens at the line they read
 
@@ -130,14 +137,18 @@ by nobody unless you run a checker.
 | `match` on an enum with a `case _: assert_never(x)` arm | a type checker before it runs; CPython at runtime | the checker reports the arm as reachable; at runtime the arm raises `AssertionError` |
 | `match` on an enum with no `case _` arm | nobody, unless every arm returns in a function with a declared return type: then mypy's default `[return]` check and pyright's `reportReturnType` report the missing member | an unmatched value runs no arm and the statement completes |
 | `typing.Literal["USD", "EUR"]` | a type checker only | nothing at runtime; any value is accepted |
-| `typing.NewType("Cents", int)` | a type checker only | nothing at runtime; it returns its argument unchanged |
+| `typing.NewType("OrderId", str)` | a type checker only | nothing at runtime; it returns its argument unchanged |
+| `NAME: Final = value` | a type checker only | nothing at runtime; a second assignment works, and a mutable value can still be changed |
+| a beartype or typeguard decorator | the library, at runtime, when the function is called | a bad item after the first in a container usually passes: typeguard checks the first item by default, beartype one sampled item |
+| `isinstance(x, P)` on a `@runtime_checkable` Protocol | CPython, at runtime, by method names only | an object with the right method names and wrong signatures passes |
 | a docstring, a comment, a naming convention | nobody | nothing |
 
-The checker rows hold only where a checker runs; name the tool and the command in CI. For a `match`
-whose arms do not all return, mypy reports a non-exhaustive `match` only through the `assert_never`
-arm unless `--enable-error-code exhaustive-match` is on (mypy 1.17, opt-in); pyright reports it on
-its own only in strict mode (`reportMatchNotExhaustive` is off in basic and standard). Outside
-those settings the arm, not the checker's configuration, is the enforcement.
+The checker rows hold only where a checker runs in CI, set up as
+[static-checks.md](../static-checks/static-checks.md) sections 2 and 5 say. For a `match` whose
+arms do not all return, mypy reports a non-exhaustive `match` only through the `assert_never` arm
+unless `--enable-error-code exhaustive-match` is on (mypy 1.17, opt-in); pyright reports it on its
+own only in strict mode (`reportMatchNotExhaustive` is off in basic and standard). Outside those
+settings the arm, not the checker's configuration, is the enforcement.
 
 - **Give an enum its own members, and do not rely on aliasing.** Two members sharing a value
   makes the second a silent alias for the first rather than an error. `@enum.unique` turns that
@@ -193,8 +204,8 @@ section costs more than it returns.
    before you add a doer, name what it does besides the call; before you add a layer, name the
    duplication it removes.
 
-A comment is not where a rule or a decision lives, and it is not banned: it says why a construct
-was chosen, never what the line does — `# Compensate for border`, not `# Increment x` (PEP 8).
+A comment is not where a rule or a decision lives; what a comment is for is
+[readability.md](../readability/readability.md) section 4.
 
 **Check.** Open the use case of one business operation and read it with the functions it calls.
 
@@ -210,7 +221,7 @@ was chosen, never what the line does — `# Compensate for border`, not `# Incre
   ([file-structure.md](../file-structure/file-structure.md) section 3). A second file is the rule
   stated again, unless it is a point-of-use assertion condition 4 keeps.
 - For a `match` on a closed set, count the arms: one per member plus the `assert_never` arm, and
-  the checker's command is in CI.
+  the checker runs in CI ([static-checks.md](../static-checks/static-checks.md) section 5).
 
 The same checkout, first with its decision hidden inside a doer, then with the business `if` in
 the use case and the rule in its own file:
@@ -220,7 +231,7 @@ Sources, by the name used above: PEP 20, "The Zen of Python" (Tim Peters, 2004) 
 Rossum, "Python's Design Philosophy" (2009); the Python design FAQ, "Why must 'self' be used
 explicitly"; Brett Cannon, "Why Python 3 exists" (2015); Aaron Turon, "Rust's language ergonomics
 initiative" (2017); Michał Nazarewicz, "Explicit isn't better than implicit" (2021); Alyssa
-Coghlan, PEP 642 (2020); PEP 8, on comparisons and on comments; Robert C. Martin, "The Single
+Coghlan, PEP 642 (2020); PEP 8, on comparisons; Robert C. Martin, "The Single
 Responsibility Principle" (2014), "The Clean Architecture" (2012) and "Clean Code Tip of the
 Week" #12 (2009), on boolean arguments; Mark Seemann, "Design Smell: Temporal Coupling" (2011) and
 "Refactoring registration flow to functional architecture" (2019); Alex Kladov, "Push ifs up and
@@ -236,3 +247,127 @@ Eiffel reference on Design by Contract; John Ousterhout, "A Philosophy of Softwa
 Code" (2024–2025); CrowdStrike, "External Technical Root Cause Analysis — Channel File 291" (2024);
 the CPython docs for `typing.assert_never`, the `match` statement, `re.match` and the `enum`
 module; the mypy and pyright documentation on exhaustiveness checking.
+
+## 3. Strict types: the checker reads every signature
+
+When you write a function or a class in application code, annotate its signature and its fields,
+so that the one type checker in strict mode that
+[static-checks.md](../static-checks/static-checks.md) section 2 sets up can read them. This section
+says what the code looks like; which checker runs, in which mode, and where, is static-checks; a
+setting a rule here relies on is named next to that rule.
+
+A checker finds real bugs: in a study of 210 Python projects, about 15% of the fixed defects were
+ones mypy would have caught, and the authors call that a lower bound (Khan et al., 2021). It also
+helps the agents that write code: Meta reported at PyCon US 2026 that coding agents succeeded more
+often on well-typed code and gained nothing on lightly typed code. Types in half the code check
+half the code.
+
+What enforces it: with mypy in strict mode, a function with a missing or partial annotation fails
+(`disallow_untyped_defs`, `disallow_incomplete_defs`), and a second assignment to a `Final` name
+fails in any mode. pyright's strict mode infers a missing return type instead, so with pyright turn
+on ruff's `ANN` rules as well. Everything else in this section is review.
+
+### Where annotations go
+
+- **Every signature, every field.** Annotate each parameter and return, and each class field.
+  Leave local variables and module-level names to inference, except an empty container
+  (`orders: list[Order] = []`) and a named constant (`Final`, below): the checker already knows the
+  rest, and the Typing Council's advice is to add types while they pay for themselves.
+- **A data parameter takes the widest type the body uses; a return gives the concrete type.** Take
+  `Iterable[Order]`, `Sequence`, `Mapping`, or `object` when any value will do; return
+  `list[Order]`. A union return makes every caller write an `isinstance` check, so a function
+  returns a union only for a documented "no result", `X | None` (section 2), or as a tagged union
+  whose members the caller tells apart by one literal field. Guido van Rossum named over-narrow
+  parameters, `list[str]` where `Sequence[str]` would do, as a common habit at PyCon US 2026. A
+  client the unit calls is annotated with its concrete class instead
+  ([readability.md](../readability/readability.md) section 6).
+
+### Closed sets and ids
+
+- **A value from a closed set is never a bare `str`.** A closed set is a fixed list of values a
+  field or parameter can hold, all declared in your code, whether the code branches on them or
+  only passes them on: a status, a kind, a mode, an event name, a provider. Declare it once;
+  section 2 picks `StrEnum` or `Literal`, and every signature and field that carries it uses that
+  type.
+- **Compare with a member of a set you own, never with a string**:
+  `order.status is OrderStatus.SHIPPED`, not `order.status == "shipped"`, and branch on the whole
+  set with one `match` (section 2). Do not count on a checker to catch a string compared with a
+  `StrEnum` member: mypy accepts it, since a `StrEnum` member is a `str`; pyright's strict mode
+  reports only some such comparisons; ruff's `PLR2004` skips strings by default, and set to check
+  them it catches `==` only, never `in` or a `match` case. A misspelled member name fails every
+  checker, so the member is what turns a typo into an error.
+- **A vocabulary another party owns stays that party's strings.** The `type` of an ASGI message
+  is the protocol's word, not a set you declare, and section 2 already picks `Literal` for it.
+  Type the value with the party's own types where a package ships them (`asgiref.typing` declares
+  `type: Literal["http.response.start"]`), and compare with that literal at the boundary: the
+  checker narrows a union of such types on `==`, which the mypy documentation calls a tagged union.
+- **A string from outside is parsed once, at the edge** (section 2): a JSON field, an environment
+  variable, a command-line argument. A value outside a set you own fails there, with a named error.
+  A set another party owns can grow, so its parser keeps a branch for a value it does not know yet
+  instead of failing.
+- **An open set is one named constant**: a header name, a key in a wire format, the name of an
+  environment variable. Every user imports it; which file holds it is
+  [file-structure.md](../file-structure/file-structure.md) section 3.
+- **An id passed between functions gets `NewType` when two kinds of id could be swapped
+  silently**: `OrderId = NewType("OrderId", str)`. Not for a quantity you compute with, where
+  arithmetic returns the base type and drops the label; not for a column an ORM maps, where
+  SQLAlchemy 2.1 rejects an implicit `NewType` in `Mapped[]`. There, use the library's own type.
+- **A named constant is `NAME: Final = value`**, such as the threshold or rate section 2 asks a
+  rule to read: the checker rejects a second assignment and an override in a subclass.
+
+### `Any`, narrowing and untyped libraries
+
+- **`Any` stays inside the parser.** A function that accepts any value takes `object` and narrows
+  it with `isinstance`. No recursive JSON alias: raw input is untyped only inside the parser that
+  returns the typed value (section 2).
+- **`TypeIs` only when `True` means exactly "is a T".** A narrowing function whose check is
+  stricter than the type, such as `is_positive_int`, returns `TypeGuard[int]`: `TypeIs` also
+  narrows the other branch, and there it would be wrong. On 3.11, `TypeIs` comes from
+  `typing_extensions`; `TypeGuard` is in `typing`.
+- **A library that ships no types**: upgrade it first, in case a newer release has types; then add
+  its stub package (`types-requests`) as a dev dependency; then write partial local stubs with
+  `stubgen`. When stubs would cost more than the few calls you make to it, silence that one module
+  the way [static-checks.md](../static-checks/static-checks.md) section 6 says.
+
+### Overrides, decorators, aliases and the future import
+
+- **`@override` on a method that replaces a method of a parent class your code defines**
+  (`typing_extensions` on 3.11): renaming or removing the parent's method then fails the check. A
+  framework's hook methods need none: the settings that force the decorator on every override,
+  mypy's `explicit-override` and pyright's `reportImplicitOverride`, stay off, since they flag every
+  method a framework subclass defines.
+- **A decorator keeps the signature it wraps**: type it with `ParamSpec`,
+  `def retry(func: Callable[P, R]) -> Callable[P, R]`, and use `functools.wraps`. Strict mode
+  rejects an untyped decorator.
+- **On a 3.11 floor an alias is `Money: TypeAlias = Decimal`.** When the floor reaches 3.12, an
+  alias that pydantic or FastAPI reads at runtime stays a plain assignment rather than
+  `type Money = Decimal`: FastAPI misread a `type` alias of an `Annotated` dependency until 0.128.2
+  (early 2026), and pydantic ignores field-specific metadata, such as `alias` or `default`, inside
+  one.
+- **No `from __future__ import annotations`.** On 3.11, `list[int]` and `int | None` already work
+  at runtime. The import turns every annotation into a string, so code that reads annotations
+  while it runs has to resolve them later, and that fails in some cases: a name imported only under
+  `TYPE_CHECKING`, a class defined inside a function, `typing_extensions.ClassVar` on a dataclass.
+  Quote a forward reference instead: `def parent(self) -> "Category":`. From 3.14 the language
+  defers annotations by itself.
+
+### Where it stops holding
+
+- **Code no change touches** reaches the checker the way
+  [refactoring.md](../refactoring/refactoring.md) section 10 says.
+
+**Check.** Open each function and class the change adds. Every parameter, return and field is
+annotated; no parameter or field that carries a value of a closed set is a bare `str`; `Any`
+appears only inside a parser.
+
+Sources: Khan et al., "An Empirical Study of Type-Related Defects in Python Projects", IEEE TSE
+(2021); the PyCon US 2026 Typing Summit (Guido van Rossum on parameter types; Meta on coding agents
+and typed code), as recapped by Bernát Gábor (bernat.tech); Talk Python #539 with the Typing Council
+(2026); typing.python.org: "Typing best practices", "Type narrowing",
+"Modernizing superseded typing features"; PEP 698 (`override`), PEP 742 (`TypeIs`), PEP 613
+(`TypeAlias`), PEP 612 (`ParamSpec`), PEP 749 (deferred annotations); mypy documentation:
+"The mypy command line", "Running mypy and managing imports", "Final names", "Literal types" (tagged
+unions); pyright `configuration.md` (strict mode, `reportImplicitOverride`); ruff's `ANN` rules; the
+`asgiref.typing` module; SQLAlchemy 2.1 documentation on `type_annotation_map`; FastAPI pull request
+#13920; the pydantic documentation on named type aliases; ruff's `PLR2004` settings; mypy pull
+request #20492 (narrowing a `StrEnum` compared with a `str`); pyright discussion #7230.

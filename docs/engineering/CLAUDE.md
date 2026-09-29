@@ -78,3 +78,14 @@ by its rule as the wrong form. Every other example is a GOOD example.
 - Before you stage, run every check the bullets above name for what your diff touches. Then
   re-read the diff for two things: a rule justified by this repository's code, and a real name.
   A failed check, or either of the two, means the doc is not ready.
+
+<!--
+FUTURE: rule levels (Must / Should) for every practice
+Trigger: a second practice needs rules that help on some tasks and hurt on others, or the library
+decides to give every rule a level.
+Fix location: this section.
+Approach: one bullet: every rule opens with its level, Must (always, when its condition holds) or
+Should (keep it when a test shows it helps). Existing practices adopt it when a change touches
+them (refactoring/refactoring.md section 7, "New and touched code").
+prompt-engineering/prompt-engineering.md section 1 is the first practice written this way.
+-->

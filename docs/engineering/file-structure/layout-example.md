@@ -198,7 +198,7 @@ Relative imports are banned by ruff in the same file:
 
 ```toml
 [tool.ruff.lint]
-extend-select = ["TID252"]
+extend-select = ["TID252"]  # file-structure section 7
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"

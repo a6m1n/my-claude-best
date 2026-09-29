@@ -39,8 +39,8 @@ between.
 When you create a process entry point (the `main()` of an HTTP service, a CLI or a worker), or
 change how logging is set up:
 
-- **Build the config in one function.** `build_logging_config(level, fmt)` in `core/logging.py`
-  returns the one config dict of the process. It imports no web framework
+- **Build the config in one function.** `build_logging_config(log_level, log_format)` in
+  `core/logging.py` returns the one config dict of the process. It imports no web framework
   (file-structure.md section 4).
 - **Apply it once, in `main()`, before anything else logs.** Never at import, never in an app
   factory such as `create_app()`, never in a lifespan hook. Lines logged before the config come
@@ -169,13 +169,17 @@ for attempt in range(1, MAX_ATTEMPTS + 1):
     except httpx.TimeoutException:
         if attempt == MAX_ATTEMPTS:
             raise SearchUnavailable(attempts=attempt) from None
-        logger.warning("Search API timed out, retry %d of %d", attempt, MAX_ATTEMPTS - 1)
+
+        logger.warning(
+            "Search API timed out, retry %d of %d", attempt, MAX_ATTEMPTS - 1
+        )
 
 # reports/report/usecase.py: this code decides (the report fails), so it logs, once
 try:
     sections = await search.find_sections(topic)
 except SearchUnavailable:
     logger.exception("Report %s failed: search unavailable", report_id)
+
     return ReportResult.failed(report_id)
 ```
 
@@ -329,9 +333,9 @@ than the logging system". OpenTelemetry's GenAI conventions make the same choice
 logger.info("Document %s indexed", doc_id, extra={"pages": 12, "sha256_8": digest[:8]})
 
 # bad, at any level
-logger.debug("Prompt: %s", prompt)          # user content
-logger.info("Fetched %s", presigned_url)    # a URL that is a credential
-logger.warning("Tool failed: %s", exc)      # a tool's error text can repeat its input
+logger.debug("Prompt: %s", prompt)  # user content
+logger.info("Fetched %s", presigned_url)  # a URL that is a credential
+logger.warning("Tool failed: %s", exc)  # a tool's error text can repeat its input
 ```
 
 ## 11. Checks: reasonable, not strict
