@@ -462,7 +462,7 @@ call and comes after it; the question is the last thing the model reads.
 lives in a string field. Pass the schema through the vendor's structured-output feature, not only
 as text in the prompt. Make every closed set an enum in the schema. Parse the response into a type
 where it arrives ([python.md](../python/python.md) section 2). Before you parse, check whether the
-model refused or stopped at the output limit: either can break the schema. After you parse, check
+model refused or stopped at its output limit: either can break the schema. After you parse, check
 the values in code. Write text fields as ordinary prose; the schema carries the structure. This
 holds when the model also has tools: the tool schema shapes a call, the response schema shapes the
 answer (section 14).
@@ -741,8 +741,6 @@ often sat inside the noise between reruns (ReasonBENCH, 2026), so a level is cho
 
 The mechanics, **Must**:
 
-- Raise the output limit (`max_tokens`) with the level. At high levels the reasoning can use up
-  the limit and cut the answer off.
 - Choose the level per task or per conversation, never per turn: a change of level in the middle
   of a conversation breaks the vendor's prompt cache.
 - Where a model has no `none`, use its lowest level. "None" may still reason: with thinking off,
@@ -768,9 +766,9 @@ accepts. [prompt-example.md](prompt-example.md) shows the constants and the enum
 
 **Should**, when a project uses more than one model or changes models. Keep one base prompt that
 holds the task, the rules and the schema, and a thin layer per model that holds only what depends
-on the model: the reasoning effort, the output limit, verbosity and sampling settings, and any
-instruction one model needs and another does not. On a model change, run the base prompt
-unchanged with the new model first (section 18), and only then change the layer.
+on the model: the reasoning effort, verbosity and sampling settings, and any instruction one model
+needs and another does not. On a model change, run the base prompt unchanged with the new model
+first (section 18), and only then change the layer.
 
 Why: the vendors publish a guide per model release that lists what changed. Base prompts mostly
 carry over; the settings do not, and some the new model rejects outright (newer Claude models
@@ -807,9 +805,8 @@ in the prompt would change the prompt itself on every call, which is why it goes
 The switch is also visible in the environment, off unless it says otherwise, so it cannot be left
 on by a forgotten edit.
 
-Both examples leave out what every call also passes, the model, its reasoning effort, the output
-limit and the response schema (sections 11 and 15); [prompt-example.md](prompt-example.md) shows a
-whole client.
+Both examples leave out what every call also passes, the model, its reasoning effort and the
+response schema (sections 11 and 15); [prompt-example.md](prompt-example.md) shows a whole client.
 
 Bad — a hand edit to the prompt is the cache switch:
 
@@ -946,7 +943,7 @@ was it tested?
 | 12. Reasoning field | Should, order Must | If there is a reasoning field, is it before the answer fields? |
 | 13. Chat roles | Should, two parts Must | Are the messages built with the SDK's types; does no request end on an assistant message; does the reasoning state go back unchanged in a tool loop? |
 | 14. Tools | Must, several parts Should | Must: is each tool change tested per model; are names unambiguous, schemas strict, fixable errors returned as results, third-party definitions untrusted and side effects gated? Should: does each description say what the tool is for, when and when not, what it returns and changes, with flat parameters and only the tools the step needs? |
-| 15. Reasoning effort | Must | Is the effort set on every call, from `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort` constants, with the output limit raised to match? |
+| 15. Reasoning effort | Must | Is the effort set on every call, from `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort` constants? |
 | 16. Base and layer | Should | Is the model-specific part in a thin layer, apart from the base prompt? |
 | 17. Cache switch | Must | Does `DISABLE_PROMPT_CACHE=true` put a fresh `Request UUID:` line at the very start of the system prompt, and is it off by default? |
 | 18. Test and experiment | Must, experiments Should | Did the change run old against new on the fixed case set (a new prompt: against a new set), with the pass criterion written first? |

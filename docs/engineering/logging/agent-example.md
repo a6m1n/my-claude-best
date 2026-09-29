@@ -75,8 +75,8 @@ def _run_summary(
     messages: Sequence[BaseMessage], duration_ms: int
 ) -> dict[str, object]:
     return {
-        # A run that returns ended on its reply, so this is normally "stop"; a reply cut
-        # at the output limit raised ModelOutputCutOff before this line (core/openai_client.py).
+        # A run that returns ended on its reply, so this is normally "stop"; a reply cut at the
+        # model's output limit raised ModelOutputCutOff before this line (core/openai_client.py).
         "outcome": messages[-1].response_metadata.get("finish_reason", "-"),
         "duration_ms": duration_ms,
         "messages": len(messages),
@@ -133,17 +133,17 @@ async def chat(body: ChatRequest, request: Request) -> ChatResponse:
     return ChatResponse(thread_id=reply.thread_id, text=reply.text)
 ```
 
-`create_app()` builds the chat model once with
-`llm = chat_model(SUPPORT_CHAT_LLM_MODEL, SUPPORT_CHAT_LLM_MAX_OUTPUT_TOKENS)` and the agent once
-with
+`create_app()` builds the chat model once with `llm = chat_model(SUPPORT_CHAT_LLM_MODEL)` and the
+agent once with
 `build_agent(llm, orders, model=SUPPORT_CHAT_LLM_MODEL, disable_prompt_cache=settings.disable_prompt_cache, new_request_uuid=uuid.uuid4)`,
 where `orders` is the order store's client and `settings` is the `Settings` of
 [setup-example.md](setup-example.md), which gains one field, `disable_prompt_cache: bool = False`
 ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 17). The adapter
-reads each constant in this one place and hands it on, so a test can pass a `ChatOpenAI` with an
-`httpx.MockTransport` inside and a fixed UUID ([readability.md](../readability/readability.md)
-section 6). It builds the Langfuse handler once with `callback_handler()`, and keeps the agent
-and the handler on `app.state` as `chat_agent` and `tracing`; that wiring is not shown.
+reads the model constant and the setting in this one place and hands them on, so a test can pass a
+`ChatOpenAI` with an `httpx.MockTransport` inside and a fixed UUID
+([readability.md](../readability/readability.md) section 6). It builds the Langfuse handler once
+with `callback_handler()`, and keeps the agent and the handler on `app.state` as `chat_agent` and
+`tracing`; that wiring is not shown.
 
 ## `core/langfuse_client.py`: the one client of Langfuse
 
@@ -189,8 +189,8 @@ from acme.core.errors import (
 )
 
 
-def chat_model(model: ChatModel, max_output_tokens: int) -> ChatOpenAI:
-    return ChatOpenAI(model=model, max_completion_tokens=max_output_tokens)
+def chat_model(model: ChatModel) -> ChatOpenAI:
+    return ChatOpenAI(model=model)
 
 
 class PromptCacheSwitchMiddleware(AgentMiddleware):
@@ -281,10 +281,10 @@ class ModelRefused(Exception):
 
 
 class ModelOutputCutOff(Exception):
-    """The answer hit the output limit; the message names the model, never the answer's text."""
+    """The answer hit the model's limit; the message names the model, never the answer's text."""
 
     def __init__(self, model: ChatModel) -> None:
-        super().__init__(f"model {model} stopped at the output limit")
+        super().__init__(f"model {model} stopped at its output limit")
         self.model = model
 
 
@@ -306,8 +306,6 @@ from openai.types import ChatModel
 
 # gpt-4.1-mini has no reasoning effort to set (prompt-engineering.md section 15).
 SUPPORT_CHAT_LLM_MODEL: Final[ChatModel] = "gpt-4.1-mini"
-# Room for a chat reply, which is a few short paragraphs.
-SUPPORT_CHAT_LLM_MAX_OUTPUT_TOKENS: Final = 1_000
 ```
 
 ```python

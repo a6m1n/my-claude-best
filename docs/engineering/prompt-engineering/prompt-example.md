@@ -8,8 +8,8 @@ vendor's.
 
 The example is also the template for a base prompt with a thin layer per model (section 16):
 
-- `consts.py` holds the settings of the current model: `TRIAGE_LLM_MODEL`,
-  `TRIAGE_LLM_REASONING_EFFORT` and the output limit;
+- `consts.py` holds the settings of the current model: `TRIAGE_LLM_MODEL` and
+  `TRIAGE_LLM_REASONING_EFFORT`;
 - `prompts.py` holds the base prompt, the same for every model, and `MODEL_NOTES`, the
   instructions only one model needs;
 - the service joins the base and the model's notes and hands the request to the one client of the
@@ -107,7 +107,6 @@ class AcmeAiClient:
         *,
         model: LlmModel,
         reasoning_effort: ReasoningEffort,
-        max_output_tokens: int,
         system: str,
         user: str,
         answer_type: type[AnswerT],
@@ -117,9 +116,7 @@ class AcmeAiClient:
             # nothing from here on hits.
             system = f"Request UUID: {self._new_request_uuid()}\n{system}"
 
-        reply = self._send(
-            model, reasoning_effort, max_output_tokens, system, user, answer_type
-        )
+        reply = self._send(model, reasoning_effort, system, user, answer_type)
 
         match reply.stop_reason:
             case StopReason.END | StopReason.UNKNOWN:
@@ -131,7 +128,7 @@ class AcmeAiClient:
             case StopReason.REFUSAL:
                 raise ModelRefused(model)
             case StopReason.OUTPUT_LIMIT:
-                raise ModelOutputCutOff(model, max_output_tokens)
+                raise ModelOutputCutOff(model)
             case _ as unreachable:
                 assert_never(unreachable)
 
@@ -139,13 +136,12 @@ class AcmeAiClient:
         self,
         model: LlmModel,
         reasoning_effort: ReasoningEffort,
-        max_output_tokens: int,
         system: str,
         user: str,
         answer_type: type[BaseModel],
     ) -> RawReply:
         # Left out: the SDK call. It passes the model; the effort under the vendor's own name and
-        # values; max_output_tokens; system as the system prompt and user as the one user message;
+        # values; system as the system prompt and user as the one user message;
         # answer_type.model_json_schema() through the vendor's structured-output feature; and the
         # vendor's no-cache switch, where one exists, when self._disable_prompt_cache is on. It maps
         # the vendor's stop reason to StopReason: a content-filter stop maps to REFUSAL, and a
@@ -178,14 +174,11 @@ class ModelRefused(Exception):
 
 
 class ModelOutputCutOff(Exception):
-    """The answer hit the output limit, so it may not match the schema."""
+    """The answer hit the model's output limit, so it may not match the schema."""
 
-    def __init__(self, model: LlmModel, max_output_tokens: int) -> None:
-        super().__init__(
-            f"model {model} stopped at the output limit of {max_output_tokens} tokens"
-        )
+    def __init__(self, model: LlmModel) -> None:
+        super().__init__(f"model {model} stopped at its output limit")
         self.model = model
-        self.max_output_tokens = max_output_tokens
 
 
 class ModelAnswerInvalid(Exception):
@@ -198,13 +191,13 @@ class ModelAnswerInvalid(Exception):
 
 What it does for the rules:
 
-- **Every call passes the effort and the output limit** (section 15); none is left to the vendor's
-  default. The client is the one place that knows the vendor's name for the effort.
+- **Every call passes the effort** (section 15); it is never left to the vendor's default. The
+  client is the one place that knows the vendor's name for the effort.
 - **The cache switch is one `if`** at the very start of the system prompt, and the setting is read
   once at startup and passed in (section 17). The UUID source, `uuid.uuid4`, is passed in the same
   way, so a test can fix the UUID ([readability.md](../readability/readability.md) section 6).
 - **The answer is parsed into the type the caller asked for** (section 11). A refusal and a stop
-  at the output limit become named errors before the parser sees the text, a reply that does not
+  at the model's output limit become named errors before the parser sees the text, a reply that does not
   match the type becomes `ModelAnswerInvalid`, and an SDK error becomes `ModelUnavailable`. The
   errors name the model, never the text, so they are safe in a log
   ([logging.md](../logging/logging.md) section 10).
@@ -212,7 +205,7 @@ What it does for the rules:
   adapter at startup and handed in ([file-structure.md](../file-structure/file-structure.md)
   section 4); it is not shown.
 
-## `support/triage/consts.py`: the model and its settings
+## `support/triage/consts.py`: the model and its effort
 
 ```python
 # support/triage/consts.py
@@ -226,12 +219,10 @@ TRIAGE_LLM_MODEL: Final[LlmModel] = "acme-small-3"
 # low, not none: the task reads a date (prompt-engineering.md section 15);
 # the sweep on the case set keeps or changes it.
 TRIAGE_LLM_REASONING_EFFORT: Final = ReasoningEffort.LOW
-TRIAGE_LLM_MAX_OUTPUT_TOKENS: Final = 2_000
 ```
 
 The names follow `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort`, so a search for
-`_LLM_MODEL` lists every call site and the model it uses. The output limit sits next to them,
-because a higher effort needs a higher limit.
+`_LLM_MODEL` lists every call site and the model it uses.
 
 ## `support/triage/schemas.py`: the answer's shape
 
@@ -320,9 +311,9 @@ Why it looks like this:
   no wrapper. It is untrusted all the same.
 - **The static part is first and the question last** (section 10). `SYSTEM` is the same on every
   call, so it is what the cache keeps; `USER` changes per ticket and ends on the question.
-- **The layer holds one line for one model.** The smaller model wrote long reasoning that hit the
-  output limit, so its entry asks for less; the larger one needs nothing. That line is the only
-  thing to revisit when that model goes.
+- **The layer holds one line for one model.** The smaller model's long reasoning drifted from the
+  steps and failed cases on the case set, so its entry asks for less; the larger one needs nothing.
+  That line is the only thing to revisit when that model goes.
 - **No "think step by step" and no role**: the depth is the effort setting (section 2), and code
   reads the answer (section 3).
 
@@ -342,7 +333,6 @@ def triage_ticket(
     *,
     model: LlmModel,
     reasoning_effort: ReasoningEffort,
-    max_output_tokens: int,
 ) -> TicketTriage:
     # Indexing, not .get(): a model never added to MODEL_NOTES fails instead of running with no layer.
     notes = MODEL_NOTES[model]
@@ -351,16 +341,15 @@ def triage_ticket(
     return client.complete(
         model=model,
         reasoning_effort=reasoning_effort,
-        max_output_tokens=max_output_tokens,
         system=system,
         user=USER.format(ticket_text=ticket_text),
         answer_type=TicketTriage,
     )
 ```
 
-The model and its settings are parameters, not read from `consts.py` here
+The model and its effort are parameters, not read from `consts.py` here
 ([readability.md](../readability/readability.md) section 6). The use case, not shown, passes the
-three constants; the case-set test of section 18 passes the old model and the new one, and runs
+two constants; the case-set test of section 18 passes the old model and the new one, and runs
 both through the same function. `MODEL_NOTES[model]` raises `KeyError` for a model that has no
 entry, so a model never added here fails on its first call instead of running with no layer.
 
@@ -382,6 +371,5 @@ into four steps, each one a small diff:
 3. **Tune only the layer.** Where the new model fails cases the old one passed, add a line to its
    entry in `MODEL_NOTES`, and run the set again. The base does not change unless every model
    needs the change; then it is a prompt change, tested as one.
-4. **Switch the constants.** One commit sets `TRIAGE_LLM_MODEL`, `TRIAGE_LLM_REASONING_EFFORT`
-   and `TRIAGE_LLM_MAX_OUTPUT_TOKENS` to what the case set chose. The old model's entry stays until
-   no call site uses it.
+4. **Switch the constants.** One commit sets `TRIAGE_LLM_MODEL` and `TRIAGE_LLM_REASONING_EFFORT`
+   to what the case set chose. The old model's entry stays until no call site uses it.
