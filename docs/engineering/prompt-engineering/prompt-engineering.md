@@ -539,7 +539,7 @@ Good — the same fields, the reasoning first:
 
 ```python
 class TicketTriage(BaseModel):
-    reasoning: str
+    reasoning: str  # first, so it leads to the kind
     kind: TicketKind
 ```
 
@@ -783,7 +783,7 @@ what to revisit on the next change. [prompt-example.md](prompt-example.md) has a
 
 **Must.** When you set up the code that sends prompts, add a boolean setting
 `DISABLE_PROMPT_CACHE`, off by default. When it is on, the line `Request UUID: <a fresh uuid4>`
-goes at the very start of the request, the start of the system prompt, followed by a newline;
+goes at the very start of the system prompt, followed by a newline;
 and where the vendor or a gateway in between has its own switch to skip a cache, the setting turns
 that on too. Apply it in the one client every model call goes through
 ([file-structure.md](../file-structure/file-structure.md) section 4). A request id for tracing
@@ -814,36 +814,57 @@ whole client.
 Bad — a hand edit to the prompt is the cache switch:
 
 ```python
-def complete(system: str, user: str, api: ProviderApi) -> ModelResponse:
-    # TODO remove before commit: forces a cache miss while I debug the empty summaries
-    system = f"debug 3 {system}"
+# core/<vendor>_client.py
+class ProviderClient:
+    def __init__(self, api: ProviderApi) -> None:
+        self._api = api
 
-    return api.complete(system=system, user=user)
+    def complete(self, system: str, user: str) -> ModelResponse:
+        # TODO remove before commit: forces a cache miss while I debug the empty summaries
+        system = f"debug 3 {system}"
+
+        return self._api.complete(system=system, user=user)
 ```
 
 The prefix changes on every attempt, it changes the text the model reads, and one day it is
 committed. Nothing tells the next reader which answers were produced with it.
 
-Good — the same function, with the switch as a setting:
+Good — the same client, with the switch as a setting:
 
 ```python
+# core/config.py
 class Settings(BaseSettings):
     # DISABLE_PROMPT_CACHE=true only while debugging or measuring
     disable_prompt_cache: bool = False
 
 
-def complete(
-    system: str, user: str, api: ProviderApi, *, disable_prompt_cache: bool
-) -> ModelResponse:
-    if disable_prompt_cache:
-        system = f"Request UUID: {uuid4()}\n{system}"
+# core/<vendor>_client.py
+class ProviderClient:
+    def __init__(
+        self,
+        api: ProviderApi,
+        *,
+        disable_prompt_cache: bool,
+        new_request_uuid: Callable[[], UUID],
+    ) -> None:
+        self._api = api
+        self._disable_prompt_cache = disable_prompt_cache
+        self._new_request_uuid = new_request_uuid
 
-    return api.complete(system=system, user=user)
+    def complete(self, system: str, user: str) -> ModelResponse:
+        if self._disable_prompt_cache:
+            # First in the system prompt: a cache matches from the request's start, so
+            # nothing from here on hits.
+            system = f"Request UUID: {self._new_request_uuid()}\n{system}"
+
+        return self._api.complete(system=system, user=user)
 ```
 
-The hand edit became a setting the startup code reads once and passes in. The UUID line is the
-only thing it changes, at the very start of the request, and the prompt text stays as it is. The
-vendor's own no-cache switch, where one exists, is left out too.
+The hand edit became a setting on the client: the startup code reads it once and builds the
+client once with it and with the UUID source, `uuid4`, so a test can fix the UUID
+([readability.md](../readability/readability.md) section 6). The UUID line is the only thing it
+changes, at the very start of the system prompt, and the prompt text stays as it is. The vendor's
+own no-cache switch, where one exists, is left out too.
 
 ## 18. Prompts in git: test and experiment
 
@@ -927,7 +948,7 @@ was it tested?
 | 14. Tools | Must, several parts Should | Must: is each tool change tested per model; are names unambiguous, schemas strict, fixable errors returned as results, third-party definitions untrusted and side effects gated? Should: does each description say what the tool is for, when and when not, what it returns and changes, with flat parameters and only the tools the step needs? |
 | 15. Reasoning effort | Must | Is the effort set on every call, from `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort` constants, with the output limit raised to match? |
 | 16. Base and layer | Should | Is the model-specific part in a thin layer, apart from the base prompt? |
-| 17. Cache switch | Must | Does `DISABLE_PROMPT_CACHE=true` put a fresh `Request UUID:` line at the very start of the request, and is it off by default? |
+| 17. Cache switch | Must | Does `DISABLE_PROMPT_CACHE=true` put a fresh `Request UUID:` line at the very start of the system prompt, and is it off by default? |
 | 18. Test and experiment | Must, experiments Should | Did the change run old against new on the fixed case set (a new prompt: against a new set), with the pass criterion written first? |
 
 ## 21. Sources
