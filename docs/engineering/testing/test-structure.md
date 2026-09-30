@@ -139,10 +139,14 @@ The methods below sit in `TestNeedsReminder`; its class line is left out.
 
 ```python
 # Bad: two guarantees under one name. When the first assertion fails, nobody
-# learns whether the weekly limit still holds.
-def test_a_first_reminder_goes_out_and_a_second_waits_a_week(self) -> None:
+# learns whether the interval limit still holds.
+def test_a_first_reminder_goes_out_and_a_second_waits_for_the_interval(self) -> None:
     assert needs_reminder(DUE_ON, last_reminded_on=None, today=date(2026, 9, 2))
-    assert not needs_reminder(DUE_ON, date(2026, 9, 2), today=date(2026, 9, 5))
+    assert not needs_reminder(
+        DUE_ON,
+        date(2026, 9, 2),
+        today=date(2026, 9, 2) + REMINDER_INTERVAL - timedelta(days=1),
+    )
 
 
 # Good: the split the name asked for. Each guarantee fails on its own line in the
@@ -154,7 +158,11 @@ def test_an_invoice_never_reminded_gets_its_first_reminder_after_the_due_date(
 
 
 def test_a_second_reminder_waits_for_the_interval(self) -> None:
-    assert not needs_reminder(DUE_ON, date(2026, 9, 2), today=date(2026, 9, 5))
+    assert not needs_reminder(
+        DUE_ON,
+        date(2026, 9, 2),
+        today=date(2026, 9, 2) + REMINDER_INTERVAL - timedelta(days=1),
+    )
 ```
 
 ## 5. Docstrings
@@ -182,7 +190,11 @@ class TestNeedsReminder:
     # Good: the docstring gives the consequence, which the name cannot.
     def test_a_second_reminder_waits_for_the_interval(self) -> None:
         """Daily reminders made customers unsubscribe instead of paying."""
-        assert not needs_reminder(DUE_ON, date(2026, 9, 2), today=date(2026, 9, 5))
+        assert not needs_reminder(
+            DUE_ON,
+            date(2026, 9, 2),
+            today=date(2026, 9, 2) + REMINDER_INTERVAL - timedelta(days=1),
+        )
 
     # Good: the bug in the past tense, then what holds now.
     def test_a_reminder_goes_out_on_the_day_the_interval_ends(self) -> None:
@@ -220,7 +232,7 @@ a list, the forms ruff's `PT006` and `PT007` check.
 class TestNeedsReminder:
     """An overdue invoice gets a reminder after its due date, at most once a week."""
 
-    # Good: one guarantee, three named rows. Adding a fourth case is one line.
+    # Good: one guarantee, three named rows. A fourth case is one more `pytest.param`.
     @pytest.mark.parametrize(
         ("last_reminded_on", "today"),
         [
@@ -230,7 +242,11 @@ class TestNeedsReminder:
                 date(2026, 9, 2) + REMINDER_INTERVAL,
                 id="reminded-one-interval-ago",
             ),
-            pytest.param(date(2026, 9, 2), date(2026, 9, 30), id="reminded-weeks-ago"),
+            pytest.param(
+                date(2026, 9, 2),
+                date(2026, 9, 2) + 4 * REMINDER_INTERVAL,
+                id="reminded-four-intervals-ago",
+            ),
         ],
     )
     def test_an_overdue_invoice_needs_a_reminder(

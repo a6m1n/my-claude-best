@@ -161,28 +161,27 @@ it. What must never be logged is [logging.md](../logging/logging.md) section 10;
 how a test holds the code to it.
 
 **Pair every negative `caplog` assertion with a positive one in the same test**, after
-`caplog.set_level(...)` for the level the code logs at. With nothing captured,
-`"key-for-tests" not in caplog.text` is true for the wrong reason. The positive line is there to
-prove that the log was captured, not to pin its wording, so it matches a fragment of the line,
-never the whole sentence.
+`caplog.set_level(logging.DEBUG)`, so the negative check reads every level
+[logging.md](../logging/logging.md) section 10 covers. With nothing captured,
+`"key-for-tests" not in caplog.text` is true for the wrong reason. The positive line checks that a
+record was captured at the level the code logs at, not its text.
 
 ```python
 # Bad: nothing positive is asserted, so a run that logged nothing passes the check.
-caplog.set_level(logging.WARNING)
+caplog.set_level(logging.DEBUG)
 
 with pytest.raises(PaymentUnavailable, match="status 503"):
     unavailable_gateway.charge(PaymentId("pay-1001"), Decimal("120.00"))
 
 assert "key-for-tests" not in caplog.text
 
-# Good: the level is set, a fragment of the retry line is found first, and then the
-# key is not.
-caplog.set_level(logging.WARNING)
+# Good: the level is set, a WARNING record is found first, and then the key is not.
+caplog.set_level(logging.DEBUG)
 
 with pytest.raises(PaymentUnavailable, match="status 503"):
     unavailable_gateway.charge(PaymentId("pay-1001"), Decimal("120.00"))
 
-assert "retry 1 of" in caplog.text
+assert any(record.levelno == logging.WARNING for record in caplog.records)
 assert "key-for-tests" not in caplog.text
 ```
 
@@ -193,6 +192,10 @@ section 3 with a transport that answers 503. Left out are `charge`, its retries 
 raises `PaymentUnavailable`, which names the status, as [logging.md](../logging/logging.md)
 section 5 asks of the one client of an external system.
 
+- **A check that a value is absent needs a check that the output could have held it**, as the
+  positive `caplog` line does for a log. pydantic's error text shows an input whose repr is over 50
+  bytes as its first 25 and last 24 bytes, so a long key is never there whole, and a `not in`
+  check on it passes whether the key leaked or not.
 - **Match a secret by a value only a leak could produce**: the test's own fake key, or the fixed
   prefix every key of that vendor has.
 - **No test, fixture or example holds a real key or a real customer's data.** A test's key is
@@ -201,6 +204,7 @@ section 5 asks of the one client of an external system.
 ## 7. Sources
 
 pytest documentation: "How to write and report assertions in tests" (assertion rewriting,
-`pytest.raises` and `match`), `pytest.approx` in the API reference and the 9.1 changelog
-(`datetime` support), "How to manage logging" (`caplog`, `set_level`). ruff rules `PT011` and
-`PT012` (flake8-pytest-style).
+`pytest.raises` and `match`), `pytest.approx` in the API reference, "How to manage logging"
+(`caplog`, `set_level`). ruff rules `PT011` and
+`PT012` (flake8-pytest-style). pydantic-core `src/tools.rs` at v2.41.5: how an error's text cuts
+an input's repr over 50 bytes.

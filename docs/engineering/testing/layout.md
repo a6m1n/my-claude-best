@@ -145,7 +145,8 @@ tests/unit/test_billing.py
 
 **When you write a test file, give it exactly one `Test<Unit>` class**, for the one unit its act
 steps call ([test-structure.md](test-structure.md) section 1). The file holds that class, its
-module-level fixtures and constants, and nothing else. A reader who opens the file reads one
+module-level fixtures and constants, and the builders and fakes only it uses (section 7), and
+nothing else. A reader who opens the file reads one
 subject from top to bottom, and the file name, the class name and the test name together say
 what failed.
 

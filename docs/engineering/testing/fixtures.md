@@ -269,6 +269,7 @@ def add_invoice(database: Database) -> Callable[[Invoice], InvoiceId]:
 
     def add(invoice: Invoice) -> InvoiceId:
         insert_invoice(database, invoice)
+
         return invoice.invoice_id
 
     return add
