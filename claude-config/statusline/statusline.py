@@ -3,12 +3,16 @@
 from __future__ import annotations  # lets `str | None` hints run on Python 3.9
 
 import json
+import math
 import os
 import re
+import stat
 import sys
 import tempfile
 import time
+from collections.abc import Iterable
 from datetime import datetime
+from typing import Final
 
 RESET = "\033[0m"
 DIM = "\033[2m"
@@ -56,6 +60,13 @@ BURN_MIN_SPAN_S = 180  # need >=3 min of history before the slope is trustworthy
 BURN_SLOPE_WINDOW_S = 3600  # slope over the last hour of samples
 BURN_RESET_JITTER_S = 120  # resets_at drift below this is the same 5h window
 BURN_PCT_DROP_RESET = 5.0  # pct drop larger than this means the window rolled over
+
+# State files live in a folder of their own inside the system temp folder, so
+# the OS still clears them. On Linux that temp folder is /tmp, shared by every
+# user: the folder name carries the user id, and the folder is used only while
+# this user owns it and nobody else can open it.
+STATE_DIR_PREFIX: Final = "claude-statusline"
+PRIVATE_DIR_MODE: Final = 0o700
 
 TOKEN_RATE_WINDOW_S = 1800  # tok/h measured over the last 30 min of transcript
 TOKEN_RATE_MIN_SPAN_S = 120
@@ -354,9 +365,41 @@ def format_cache_countdown(timed_usages: list[tuple[float, dict]], now: float) -
     return f"{DIM}{text}{RESET}"
 
 
-def burn_state_path(session_id: str) -> str:
+def private_state_dir(temp_dir: str) -> str | None:
+    """This user's folder for state files inside temp_dir, or None if it is not safe.
+
+    None means the path is not a private folder of this user (another user owns
+    it, it is a link, or others can open it), or it cannot be created. The
+    caller then keeps no history, which costs the burn and pause readings only.
+    """
+    uid = os.getuid() if hasattr(os, "getuid") else None  # no getuid on Windows
+    name = STATE_DIR_PREFIX if uid is None else f"{STATE_DIR_PREFIX}-{uid}"
+    state_dir = os.path.join(temp_dir, name)
+
+    try:
+        os.makedirs(state_dir, mode=PRIVATE_DIR_MODE, exist_ok=True)
+        info = os.lstat(state_dir)
+    except OSError:
+        return None
+
+    if uid is not None and not is_private_dir(info, uid):
+        return None
+
+    return state_dir
+
+
+def is_private_dir(info: os.stat_result, uid: int) -> bool:
+    """True for a real folder that uid owns and no other user can read or write."""
+    return (
+        stat.S_ISDIR(info.st_mode)
+        and info.st_uid == uid
+        and info.st_mode & 0o077 == 0
+    )
+
+
+def burn_state_path(state_dir: str, session_id: str) -> str:
     session_key = re.sub(r"[^A-Za-z0-9_-]", "", session_id) or "default"
-    return os.path.join(tempfile.gettempdir(), f"claude_statusline_burn_{session_key}.json")
+    return os.path.join(state_dir, f"claude_statusline_burn_{session_key}.json")
 
 
 def load_state_file(state_path: str) -> dict:
@@ -364,14 +407,21 @@ def load_state_file(state_path: str) -> dict:
         with open(state_path, "r", encoding="utf-8") as f:
             state = json.load(f)
         return state if isinstance(state, dict) else {}
-    except (OSError, json.JSONDecodeError):
+    # ValueError covers bad JSON and bad UTF-8; RecursionError, JSON nested too deep.
+    except (OSError, ValueError, RecursionError):
         return {}
 
 
 def save_state_file(state_path: str, state: dict) -> None:
-    tmp = f"{state_path}.{os.getpid()}.tmp"
+    # mkstemp creates the file 0600 and never opens one that already exists.
+    # A failed write only costs history, so it is dropped, not raised.
     try:
-        with open(tmp, "w", encoding="utf-8") as f:
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(state_path), suffix=".tmp")
+    except OSError:
+        return
+
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(state, f)
         os.replace(tmp, state_path)
     except OSError:
@@ -381,22 +431,46 @@ def save_state_file(state_path: str, state: dict) -> None:
             pass
 
 
-def update_burn_samples(five_h: dict, now: float, state_path: str) -> list[list[float]]:
+def is_burn_sample(value: object) -> bool:
+    """True for a [time, percent] pair of finite numbers, the shape update_burn_samples saves."""
+    return (
+        isinstance(value, list)
+        and len(value) == 2
+        and all(is_finite_number(number) for number in value)
+    )
+
+
+def is_finite_number(value: object) -> bool:
+    # bool is an int subclass, and NaN or infinity crash the burn projection.
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
+
+
+def update_burn_samples(
+    five_h: dict,
+    now: float,
+    state_path: str | None,
+) -> list[list[float]]:
     """Append the current (time, used_pct) sample and return the history.
 
     History resets ONLY on a genuine 5h-window rollover: resets_at moving by
     more than BURN_RESET_JITTER_S, or the percentage dropping sharply. Small
     resets_at drift between API responses and one-point pct wobble must NOT
     wipe the history — over-eager wiping is exactly what kept the old design
-    stuck in the "collecting" state forever.
+    stuck in the "collecting" state forever. With no state_path the history is
+    this one sample.
     """
     pct = float(five_h["used_percentage"])
     resets_at = parse_epoch(five_h.get("resets_at"))
-    state = load_state_file(state_path)
+    state = load_state_file(state_path) if state_path else {}
     samples = state.get("samples")
     if not isinstance(samples, list):
         samples = []
-    samples = [s for s in samples if isinstance(s, list) and len(s) == 2]
+    # A sample this script saved is never from the future.
+    samples = [s for s in samples if is_burn_sample(s) and s[0] <= now]
 
     prev_reset = state.get("resets_at")
     reset_moved = (
@@ -408,9 +482,12 @@ def update_burn_samples(five_h: dict, now: float, state_path: str) -> list[list[
     if reset_moved or pct_dropped:
         samples = []
 
-    if not samples or pct != samples[-1][1] or now - samples[-1][0] >= 60:
+    is_new_sample = not samples or pct != samples[-1][1] or now - samples[-1][0] >= 60
+    if is_new_sample:
         samples.append([now, pct])
         samples = samples[-BURN_MAX_SAMPLES:]
+
+    if is_new_sample and state_path:
         save_state_file(state_path, {"resets_at": resets_at, "samples": samples})
 
     return samples
@@ -462,10 +539,10 @@ def compute_token_rate(timed_usages: list[tuple[float, dict]], now: float) -> fl
 
 
 def format_burn(
-    five_h,
+    five_h: object,
     now: float,
     show_detail: bool,
-    session_id: str,
+    state_path: str | None,
     token_rate: float | None,
 ) -> str | None:
     """Render the burn speedometer: will this pace fit inside the 5h window?
@@ -494,7 +571,7 @@ def format_burn(
     ---------------------------
     Claude Code reports only the CURRENT used_percentage — no history. Every
     statusline invocation appends a (timestamp, pct) sample to a per-session
-    state file in the user tempdir (update_burn_samples), and the pace is a
+    state file in this user's state folder (update_burn_samples), and the pace is a
     least-squares slope over the last hour of samples (compute_burn). The
     dim detail shows that raw pace (~N%/h) plus the session's raw token
     throughput from the transcript (tok/h, compute_token_rate).
@@ -523,7 +600,7 @@ def format_burn(
     if not isinstance(five_h, dict) or five_h.get("used_percentage") is None:
         return None  # no rate-limit data (e.g. API billing) — hide the segment
 
-    samples = update_burn_samples(five_h, now, burn_state_path(session_id))
+    samples = update_burn_samples(five_h, now, state_path)
     rate = compute_burn(samples, now)
 
     if rate is None:
@@ -608,12 +685,16 @@ def format_task_elapsed(start_time, now: float) -> str | None:
     return f"{int(elapsed)}s" if elapsed < 60 else format_duration(elapsed)
 
 
-def task_state_path(session_id: str) -> str:
+def task_state_path(state_dir: str, session_id: str) -> str:
     session_key = re.sub(r"[^A-Za-z0-9_-]", "", session_id) or "default"
-    return os.path.join(tempfile.gettempdir(), f"claude_statusline_agents_{session_key}.json")
+    return os.path.join(state_dir, f"claude_statusline_agents_{session_key}.json")
 
 
-def update_task_activity(tasks, session_id: str, now: float) -> dict[str, float]:
+def update_task_activity(
+    tasks: Iterable[object],
+    state_path: str | None,
+    now: float,
+) -> dict[str, float]:
     """Seconds since each task's tokenCount last grew, keyed by task id.
 
     tokenSamples covers only ~80s of history, so a stall's true age must be
@@ -621,9 +702,10 @@ def update_task_activity(tasks, session_id: str, now: float) -> dict[str, float]
     last change) per task. Entries for tasks no longer in the payload are
     pruned, and the file is rewritten only when something changed — a fully
     stalled panel costs zero writes. Single writer per session (each session
-    renders its own panel), so 20 parallel sessions never contend.
+    renders its own panel), so 20 parallel sessions never contend. With no
+    state_path every task reads as just active.
     """
-    state = load_state_file(task_state_path(session_id))
+    state = load_state_file(state_path) if state_path else {}
     entries = state.get("tasks")
     if not isinstance(entries, dict):
         entries = {}
@@ -645,8 +727,8 @@ def update_task_activity(tasks, session_id: str, now: float) -> dict[str, float]
             fresh[task_id] = [count, now]
             stall_ages[task_id] = 0.0
 
-    if fresh != entries:
-        save_state_file(task_state_path(session_id), {"tasks": fresh})
+    if state_path and fresh != entries:
+        save_state_file(state_path, {"tasks": fresh})
 
     return stall_ages
 
@@ -778,8 +860,11 @@ def print_subagent_rows() -> None:
     if not isinstance(tasks, list):
         return
     now = time.time()
+    state_dir = private_state_dir(tempfile.gettempdir())
+    session_id = str(payload.get("session_id") or "")
+    state_path = task_state_path(state_dir, session_id) if state_dir else None
     try:
-        stall_ages = update_task_activity(tasks, str(payload.get("session_id") or ""), now)
+        stall_ages = update_task_activity(tasks, state_path, now)
     except Exception:
         stall_ages = {}
     for task in tasks:
@@ -805,10 +890,12 @@ def main() -> None:
     now = time.time()
     model = payload.get("model") or {}
     effort = (payload.get("effort") or {}).get("level")
-    session_id = payload.get("session_id") or ""
+    session_id = str(payload.get("session_id") or "")
     transcript_path = payload.get("transcript_path", "")
     rate_limits = payload.get("rate_limits") or {}
     show_detail = terminal_cols() >= NARROW_COLS
+    state_dir = private_state_dir(tempfile.gettempdir())
+    burn_path = burn_state_path(state_dir, session_id) if state_dir else None
 
     timed_usages = read_transcript_usages(transcript_path)
     usages = [usage for _, usage in timed_usages[-CACHE_WINDOW:]]
@@ -836,7 +923,7 @@ def main() -> None:
         rate_limits.get("five_hour"),
         now,
         show_detail,
-        session_id,
+        burn_path,
         compute_token_rate(timed_usages, now),
     )
     if burn:
