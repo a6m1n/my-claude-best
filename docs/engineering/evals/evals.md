@@ -186,10 +186,11 @@ verdicts the judge returned rather than by the items it was asked to judge (issu
 ## 7. Compare with the version before
 
 **Must.** Judge a change by running the old version and the new one on the same cases, and compare
-them case by case. Write the decision rule down before the run, for example: "no case of the
-regression set that passes today fails its pass rule, and the pass rate of each criterion does not
-fall below the baseline by more than the margin". Keep each run's results, so the next change has a
-baseline. How many cases and runs a comparison needs is
+them case by case. Write the decision rule down before the run, for example: "the pass rate of each
+criterion does not fall below the baseline by more than the margin, and every case that passed
+before and fails now is listed in the pull request for a person to read". The gate is the rate; a
+case's own pass rule is a report, not a gate ([repeated-runs.md](repeated-runs.md) section 4). Keep
+each run's results, so the next change has a baseline. How many cases and runs a comparison needs is
 [repeated-runs.md](repeated-runs.md) section 7; a change to a prompt or a model has its own rules in
 [prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 18.
 
