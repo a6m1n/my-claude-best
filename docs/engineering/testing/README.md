@@ -24,8 +24,9 @@ one part of that true.
 
 ## What is here
 
-- [what-to-test.md](what-to-test.md): which code earns a test, which gets none, and where the
-  rules for writing one live. Read it before you write a test, and when you review one.
+- [what-to-test.md](what-to-test.md): which code earns a test, which gets none, how to write one
+  test, step by step, and what to do when your change turns a test red. Read it before you write a
+  test, before you edit a test your change turned red, and when you review one.
 - [layout.md](layout.md): the `tests/` tree, which suite a test belongs to, the path and the name
   of a test file, one class per file, packages and imports, the shared `support/` harness, and the
   tree's own `README.md` and `CLAUDE.md`. Read it when you create a test file or decide where one
@@ -59,20 +60,30 @@ one part of that true.
    to for that work." Without it an agent never opens the folder.
 3. Copy `tests/README.md`, `tests/CLAUDE.md` and `tests/conftest.py` from
    [suite-example.md](suite-example.md), and the configuration block of
-   [running-tests.md](running-tests.md) section 1, and adjust the names.
-4. The practice links [readability.md](../readability/readability.md),
+   [running-tests.md](running-tests.md) section 1, and adjust the names. Give every folder under
+   `tests/` an empty `__init__.py` ([layout.md](layout.md) section 6). Add pytest 9.0 or newer and
+   each plugin in `required_plugins` as development dependencies, locked with the rest
+   ([running-tests.md](running-tests.md) section 1). Select ruff's `PT` rules and turn off `PT003`
+   ([running-tests.md](running-tests.md) section 11).
+4. Set up two CI jobs ([layout.md](layout.md) section 2): `pytest tests/unit` on every push and
+   before a merge, and `pytest tests/integration --timeout=120` in a job of its own
+   ([running-tests.md](running-tests.md) section 9).
+5. The practice links [readability.md](../readability/readability.md),
    [python.md](../python/python.md), [file-structure.md](../file-structure/file-structure.md),
    [static-checks.md](../static-checks/static-checks.md),
    [prompt-engineering.md](../prompt-engineering/prompt-engineering.md),
    [logging.md](../logging/logging.md), [refactoring.md](../refactoring/refactoring.md) and
    [git.md](../git/git.md) for the rules they own. Copy those folders too, or replace each link
    with your own rule for that topic.
-5. Existing tests follow the rules when a change touches them, the way
+6. Existing tests follow the rules when a change touches them, the way
    [refactoring.md](../refactoring/refactoring.md) sections 2 and 7 say for new and touched code.
    A file moved to the new layout moves in a commit of its own ([layout.md](layout.md) section 4).
-6. Re-check the lines that name a moving target: the pytest 9 configuration keys, the async
+7. Re-check the lines that name a moving target: the pytest 9 configuration keys, the async
    plugins' keys, and the libraries of [libraries.md](libraries.md), which were read in
    September 2026.
+
+When you review a test change, run the `Check:` lines of the files above that cover that work, and
+hold the change to the example `tests/CLAUDE.md` in [suite-example.md](suite-example.md).
 
 ## The points to adapt
 

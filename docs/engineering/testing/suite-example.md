@@ -201,6 +201,8 @@ at the section that owns the rule, in `docs/engineering/testing/`.
 - Never write the marks `unit`, `integration` or `enable_socket`; the hook sets them.
   → `running-tests.md` section 2, `fakes-and-boundaries.md` section 4
 - A test that calls a real model is marked `live_model`. → `running-tests.md` section 10
+- A test your change turned red: fix the code; no `skip` or `xfail`, and no new expected value
+  unless the change's purpose is that behavior. → `what-to-test.md` section 1
 ```
 
 It is good because each line is a rule whose break shows in a diff, and each points to its owner

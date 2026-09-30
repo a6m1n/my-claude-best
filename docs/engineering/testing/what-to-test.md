@@ -1,7 +1,7 @@
 # What to test
 
-Which code a test is written for, which code gets no test, and where the rules for writing one
-live. Where the test file goes and how it is built are [layout.md](layout.md) and
+Which code a test is written for, which code gets no test, and how to write one. Where the test
+file goes and how it is built are [layout.md](layout.md) and
 [test-structure.md](test-structure.md); how it stands in for the outside world is
 [fakes-and-boundaries.md](fakes-and-boundaries.md).
 
@@ -19,19 +19,16 @@ live. Where the test file goes and how it is built are [layout.md](layout.md) an
 **Before you write a test, name the edit to the team's own code that would turn it red, and check
 that the edit would break something a caller, a user or another system relies on.** If you cannot
 name one, or the only edits that turn it red change nothing anyone relies on (a refactor, a rename
-nothing outside the code reads, the variable name a setting is read under, a change inside a
-library), do not write it; section 5 names where this stops holding. Such a test is a change
-detector, and Google's verdict on those is plain: "Change detectors provide negative value, since
-the tests do not catch any defects, and the added maintenance cost slows down development. These
-tests should be re-written or deleted." A rename that something outside reads, such as a field
-another service parses, breaks that reader: its test is the last row of section 2.
+nothing outside the code reads, a change inside a library), do not write it; section 5 names where
+this stops holding. Such a test is a change detector, and Google's verdict on those is plain:
+"Change detectors provide negative value, since the tests do not catch any defects, and the added
+maintenance cost slows down development. These tests should be re-written or deleted." A rename
+that something outside reads, such as a field another service parses, breaks that reader: its test
+is the last row of section 2.
 
-Vladimir Khorikov names the trap: "It's easy to fall into the trap of writing unit tests for the
-sake of unit testing without a clear picture of whether it helps the project." A bigger suite is
-not a safer one either. In one 2026 study of LLM-written Java suites, the number of tests and their
-mutation score, the share of injected faults they caught, correlated weakly to negligibly (Pearson
-r 0.03 for the raw score), and a coverage figure only says which lines ran, not what a test
-checked.
+Check: before you stage, name, for each test the diff adds, the edit to the team's code that turns
+it red and the `FAILED` line it printed in section 4, step 5. Both go in the pull request's
+Verification section.
 
 **A test that reproduces a bug that reached users is always written**, whatever row of section 3
 the code falls in. Mark Seemann, who leaves code with one path untested, makes the same exceptions:
@@ -40,18 +37,26 @@ then reproduce that defect with one or more tests, even if the code in question 
 **When you cannot tell whether an edit would be a bug, write the test**; when this section names a
 bug edit in code a section 3 row lists, this section wins.
 
-**When your change touches a test already in the suite**
-([refactoring.md](../refactoring/refactoring.md) section 2) and the only edits that turn it red
+**When your change touches a test already in the suite, or turns it red**
+([refactoring.md](../refactoring/refactoring.md) section 2), and the only edits that turn it red
 change nothing anyone relies on, rewrite it around the behavior it meant to pin. Delete it only in
 a commit of its own whose body names those edits; never delete a test in the change that turns it
-red. A test your change does not touch is a follow-up
+red. A test your change neither edits nor turns red is a follow-up
 ([refactoring.md](../refactoring/refactoring.md) section 8).
 
-When you are unsure whether a test can fail, make the edit it names, run the test, see it fail on
-its assertion, and undo the edit.
+**When your change turns a test red, the code is wrong until shown otherwise.** Change the test's
+expected value only when the change's stated purpose is to change the behavior that test pins, and
+name that value in the commit body. Its setup and its call may follow a changed signature or name;
+its expected value and what it compares may not. A test that pins structure is the paragraph
+above's case. Never add `skip` or `xfail`, or loosen an assertion, to turn it green. A `skip` is
+for a test that can run only under a condition, such as a platform or a service; an `xfail` is for
+a bug not fixed yet, named with `raises=` and its issue. Neither mark fails the suite while the
+test is still broken. A test red only in some orders is [running-tests.md](running-tests.md)
+section 9's case. When tests conflicted with the task, coding agents often edited the tests instead
+of the code (ImpossibleBench).
 
-Check: before you stage, name, for each test the diff adds, the edit to the team's code that turns
-it red.
+Check: before you commit, the diff adds no `skip` or `xfail` mark to a test the change turned red,
+and the commit body names every expected value the change edits.
 
 ## 2. What earns a test
 
@@ -90,7 +95,7 @@ then takes the first row and the rest the second.
 
 | What | Why it earns none | Test this instead |
 |---|---|---|
-| A library's own mechanics: pydantic-settings reading a variable into a field or JSON into a list, an ORM mapping a column | the library's own suite tests it: pydantic-settings' `tests/test_settings.py` covers reading a variable, what `env_ignore_empty` does once it is on, and JSON parsing. A red test means the library changed. A setting's variable name gets no test either: a required one already stops the start (the missing-value table), and review keeps a defaulted one ([python/settings-example.md](../python/settings-example.md), "What this example does not claim") | the team's code that uses the value; whether your class turns such a switch on is section 2's third row |
+| A library's own mechanics: pydantic-settings reading a variable into a field or JSON into a list, an ORM mapping a column | the library's own suite tests it: pydantic-settings' `tests/test_settings.py` covers reading a variable, what `env_ignore_empty` does once it is on, and JSON parsing. A red test means the library changed. A setting's variable name gets no test either: [python.md](../python/python.md) section 5 gives a default only to a value safe in every environment, so a wrong name leaves a safe value in place, and on a required value it stops the start | the team's code that uses the value; whether your class turns such a switch on is section 2's third row |
 | Trivial code: a field, a property that returns a field, a dataclass, a call that only forwards | "You won't gain anything from testing simple getters or setters or other trivial implementations (e.g. without any conditional logic)" (Ham Vocke, *The Practical Test Pyramid*) | the code that uses it. It earns a test the day it gains a branch |
 | A value that is a choice: `MAX_RETRIES = 5`, a model name, a timeout | changing it is a decision, not a bug, so a test that asserts it turns red only on a deliberate change: a change detector | the behavior around it, never the number: a failing call is retried, and the retries stop |
 | A log line | [logging.md](../logging/logging.md) section 11 owns it and rules out tests of log output | nothing; a check that a secret stays out of the log is [assertions.md](assertions.md) section 6 |
@@ -100,21 +105,51 @@ then takes the first row and the rest the second.
 The line between this table's third row and section 2's third row: deleting a guard is a bug
 nobody chose, so it earns a test; changing a number is a choice, so it does not.
 
-Mark Seemann once argued for testing trivial code, because it may not stay trivial; in 2018 he
-asked of code with one path through it: "Should you test code that has a cyclomatic complexity of
-1? What would be the point of that?"
-
 The settings tests in [python/settings-example.md](../python/settings-example.md) show both
 tables at work: they test that the required values have no default, the placeholder validator and
 the two flags, and nothing that pydantic-settings reads or parses.
 
 ## 4. How to test what earns a test
 
-**When you write the test, take each part from the file that owns it.** Drive the unit by
-[fakes-and-boundaries.md](fakes-and-boundaries.md) section 5, pick what to assert by its section 2
-and the stand-in by its section 1, write the line that decides pass or fail by
-[assertions.md](assertions.md), and keep one behavior per test
-([test-structure.md](test-structure.md) section 4).
+**When you write a test for code that earns one, take these steps in order.**
+
+1. **Before you write the test**, name the guarantee in one sentence and the edit to the code that
+   breaks it (section 1): a plausible bug, such as a flipped comparison or a dropped branch, not the
+   removal of the whole body.
+2. **Before the first test body, list the cases from the guarantee**, not from the code's branches:
+   one case per outcome the guarantee names and one per error the unit catches, and for each
+   boundary the guarantee draws, the boundary value and its closest neighbor on the other side
+   (2-value boundary analysis). Each case is one test, or one row of a table
+   ([test-structure.md](test-structure.md) sections 4 and 6). Where one property holds for every
+   input, such as a round trip or agreement with a simpler implementation, add a Hypothesis
+   property to the list ([libraries.md](libraries.md)); the boundary and error cases stay on it.
+3. **In the act step, drive the public entry the caller uses**
+   ([fakes-and-boundaries.md](fakes-and-boundaries.md) section 5). The test sits in the
+   `Test<Unit>` class of the file [layout.md](layout.md) section 3 names; which collaborator is cut
+   and the stand-in that replaces it follow [fakes-and-boundaries.md](fakes-and-boundaries.md)
+   sections 3 and 1.
+4. **When you write the assertion, take the expected value from the guarantee**, never from what
+   the code returned; a characterization test ([test-structure.md](test-structure.md) section 8) is
+   the one exception. LLM-written assertions tend to capture what the code did, not what it should
+   do (Konstantinou et al.). The line that decides pass or fail follows
+   [assertions.md](assertions.md), and [fakes-and-boundaries.md](fakes-and-boundaries.md) section 2
+   when a fake records the result.
+5. **Before you trust the test, run it and see it fail once, on its own assertion**: for new code,
+   while the code does not yet do what the guarantee says (write only enough of it for the test to
+   run); for existing code, with the step-1 edit applied, then undo the edit. Red is exit code 1
+   and, under `pytest -vv`, a `FAILED` line whose message is your assertion (`- assert …` or the
+   assertion's own message). For a `pytest.raises` block, red is `- Failed: DID NOT RAISE <type>`
+   when nothing is raised, or `- AssertionError: Regex pattern did not match.` when the message
+   does not match. An `ERROR` line, a message that starts with the type of an exception the code
+   raised, such as `TypeError:`, or exit code 2 (a collection error), 4 (no such test) or 5
+   (nothing selected) is not red: fix the test until it fails on its assertion.
+6. **Once it is red for the right reason, make it pass**, then run the module's tests
+   ([running-tests.md](running-tests.md) section 3).
+
+A test nobody saw fail may be unable to fail: in 21 Java projects, 9% of the methods the study
+analyzed could lose their whole body with no test turning red (Vera-Pérez et al., pooled; 1-46% per
+project). The guard is seeing the test fail (Freeman and Pryce; Seemann); Fucci et al. found that
+test-first order itself had no important effect.
 
 ## 5. Where it stops holding
 
@@ -131,15 +166,33 @@ and the stand-in by its section 1, write the line that decides pass or fail by
 ## 6. Sources
 
 Alex Eagle, "Testing on the Toilet: Change-Detector Tests Considered Harmful", Google Testing Blog
-(2015). Vladimir Khorikov, *Unit Testing Principles, Practices, and Patterns* (Manning, 2020), ch. 1
-excerpt, and "Unit tests value proposition" (2016). Zhao et al., arXiv 2607.22880 (2026, a
-preprint): suite size and mutation score in LLM-written Java suites. Laura Inozemtseva and Reid
-Holmes, "Coverage Is Not Strongly Correlated with Test Suite Effectiveness" (ICSE 2014). HackSoft
-Django Styleguide, "Testing". Harry Percival and Bob Gregory, *Architecture Patterns with Python*,
-ch. 5. langflow pull request #15147 (September 2026), on a password leaked through a settings
-`ValidationError`. Ding Yuan et al., "Simple Testing Can Prevent Most Critical Failures" (OSDI
-2014). Martin Fowler, "HumbleObject" (bliki). pydantic-settings `tests/test_settings.py` at 2.15.0.
-Ham Vocke, "The Practical Test Pyramid", martinfowler.com (2018). Mark Seemann, "Test trivial code"
-(2013) and "What to test and not to test" (2018). Robert C. Martin, *Clean Code* (2008), ch. 8,
-"Learning Tests Are Better Than Free". Joseph Hejderup and Georgios Gousios, "Can We Trust Tests To
-Automate Dependency Updates?" (JSS 2022).
+(2015). HackSoft Django Styleguide, "Testing". Harry Percival and Bob Gregory, *Architecture
+Patterns with Python*, ch. 5. langflow pull request #15147 (September 2026), on a password leaked
+through a settings `ValidationError`. pydantic-core `src/tools.rs` at v2.41.5: how an error's text
+cuts an input's repr over 50 bytes. Ding Yuan et al., "Simple Testing Can Prevent Most Critical
+Failures" (OSDI 2014). Martin Fowler, "HumbleObject" (bliki). pydantic-settings
+`tests/test_settings.py` at 2.15.0. Ham Vocke, "The Practical Test Pyramid", martinfowler.com
+(2018). Mark Seemann, "What to test and not to test" (2018). Robert C. Martin, *Clean Code*
+(2008), ch. 8, "Learning Tests Are Better Than Free". Joseph Hejderup and Georgios Gousios, "Can We
+Trust Tests To Automate Dependency Updates?" (JSS 2022).
+
+The red-test rule of section 1: Titus Winters, Tom Manshreck and Hyrum Wright (eds.), *Software
+Engineering at Google* (2020), ch. 12, "Strive for Unchanging Tests". Google Testing on the Toilet,
+"Test Behavior, Not Implementation" (2013). pytest documentation, "How to use skip and xfail to
+deal with tests that cannot succeed". Zhong et al., ImpossibleBench, arXiv 2510.20270 (2025, a
+preprint): coding agents editing tests that conflict with the task.
+
+The steps of section 4: Steve Freeman and Nat Pryce, *Growing Object-Oriented Software, Guided by
+Tests* (2009), ch. 5, "Watch the Test Fail". Mark Seemann, "A red-green-refactor checklist" (2019).
+ISTQB Certified Tester Foundation Level syllabus v4.0.1 (2024), section 4.2.2, boundary value
+analysis. Hypothesis 6.168.3 documentation, the tutorial's introduction: property-based testing is
+an addition to unit testing, "not always a replacement". Brian Marick, "Faults of Omission" (2000).
+Kent Beck, "Canon TDD" (2023). Arquimedes Canedo, "Oracles That Cannot Fail", arXiv 2608.17214
+(2026, a preprint): an expected value taken from the code under test cannot fail. Konstantinou, Degiovanni and Papadakis, arXiv 2410.21136 (2024, a
+preprint): LLM-generated test oracles tend to capture what the code did rather than what it should
+do.
+Vera-Pérez et al., arXiv 1807.05030 (2018): pseudo-tested methods in 21 Java projects.
+Fucci et al., arXiv 1611.05994 (2016): test-first against test-after order. pytest 9.1.1
+documentation, "Managing pytest's output" and the exit codes reference, and its source,
+`src/_pytest/runner.py` and `src/_pytest/main.py`: which outcome reads `FAILED` or `ERROR`, and
+each exit code.

@@ -62,6 +62,7 @@ team may weigh differently.
 | factory-boy | factories for ORM models | built around ORM models, and its last release was in early 2025; polyfactory builds typed models. A Django project that already uses it keeps it |
 | vcrpy, pytest-recording | record real HTTP traffic to a file and replay it | a recording can keep request headers, keys included, and replays whatever the partner said on the day it was made; pytest-recording has not been released since May 2025 |
 | dirty-equals | matchers such as `IsNow` and `IsPartialDict` for `==` | it changes how every assertion reads; a team choice, not a default. [assertions.md](assertions.md) section 1 asks for the exact value |
+| mutmut, cosmic-ray | changes the code in many small ways, reruns the tests on each change, and lists every change no test caught | steps 1 and 5 of [what-to-test.md](what-to-test.md) section 4 already name one breaking edit for each new test and watch the test fail on it. mutmut starts pytest with `-p no:randomly`, which the `required_plugins` of [running-tests.md](running-tests.md) section 1 rejects with exit code 4. cosmic-ray reruns the whole test command for each change: by its own docs, a 10-second suite with 1,000 changes takes about 2.7 hours |
 
 ## 4. Sources
 
@@ -70,4 +71,5 @@ pytest-randomly, pytest-asyncio, anyio ("Testing with AnyIO" and its version his
 pytest-xdist, testcontainers-python, pytest-timeout, pytest-rerunfailures, time-machine,
 Hypothesis, syrupy, polyfactory, pytest-cov and coverage.py, httpx ("Transports"), pytest's 9.0
 changelog (`subtests`), pytest-mock, respx, pytest-httpx, pytest-env, inline-snapshot,
-factory-boy, vcrpy, pytest-recording, dirty-equals.
+factory-boy, vcrpy, pytest-recording, dirty-equals, mutmut (README and source), cosmic-ray
+(documentation).
