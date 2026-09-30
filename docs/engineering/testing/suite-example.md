@@ -197,7 +197,7 @@ at the section that owns the rule, in `docs/engineering/testing/`.
   → `layout.md` sections 1 and 5
 - One `Test<Unit>` class per file. → `layout.md` section 4
 - Every fixture states `scope=`; never `autouse`. → `fixtures.md` sections 1 and 2
-- No bare `Mock()` and no `mock.patch`. → `fakes-and-boundaries.md` section 1, `fixtures.md` section 6
+- No bare `Mock()`, no `mock.patch` and no `mocker`. → `fakes-and-boundaries.md` section 1, `fixtures.md` section 6
 - Never write the marks `unit`, `integration` or `enable_socket`; the hook sets them.
   → `running-tests.md` section 2, `fakes-and-boundaries.md` section 4
 - A test that calls a real model is marked `live_model`. → `running-tests.md` section 10

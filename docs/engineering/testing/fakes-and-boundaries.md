@@ -22,19 +22,39 @@ accepts for a parameter annotated with a concrete class: the real class with a f
 calls. **When you need one, take the first that fits, in this order:**
 
 1. **The real class with a fake inside**, when a cheap fake of what it wraps exists: an
-   `httpx.Client` with an `httpx.MockTransport` for a client class, `tmp_path` for a file store.
-   The test then covers the class's own code too: its headers, its parsing, its error mapping.
+   `httpx.Client` with an `httpx.MockTransport` in the tests of the client class itself,
+   `tmp_path` for a file store. The test then covers the class's own code too: its headers, its
+   parsing, its error mapping. A use case that calls the client takes step 2: its test is about
+   the use case, not about the HTTP the client sends.
 2. **A hand-written fake**, a subclass that overrides the methods the unit calls and keeps what it
    received in a public attribute, when the class's own code is not the subject. It is ordinary
    code: `@override` on each method makes the type checker fail the day the parent renames it
-   ([python.md](../python/python.md) section 3).
+   ([python.md](../python/python.md) section 3). `@override` checks names and signatures, not
+   what the methods do: when the real class can run in a test, as a store on `tmp_path` can, run
+   the same tests over the fake and the real class ([fixtures.md](fixtures.md) section 8).
 3. **`create_autospec(<Class>, instance=True)`**, when the class is wide and the test needs one or
    two of its methods. It raises `AttributeError` for an attribute the class does not have and
-   checks the arguments of each call; it does not check what a method returns.
+   checks the arguments of each call. It does not check what a method returns, and it reads the
+   class, not an instance, so an attribute that `__init__` sets is missing too; the `unittest.mock`
+   docs call that "a more serious problem".
+
+**Why this order.** No source ranks these three steps as such. The order applies the rule for test
+doubles in *Software Engineering at Google*, chapter 13: "our first choice for tests is to use the
+real implementations of the system under test's dependencies"; "If using a real implementation is
+not feasible within a test, the best option is often to use a fake in its place"; stubbing and
+interaction testing, the two things a mock does, come last, and interaction testing "should be
+avoided when possible because overuse can easily result in brittle tests". Each step down gives up
+realism for cost: step 1 runs the class's own code, step 2 behaves like the class without being
+it, step 3 only checks that the calls fit the signatures. Hynek Schlawack uses "verified fakes" for
+anything beyond a simple stub, and Itamar Turner-Trauring warns that a fake nobody checks assumes
+it behaves like the real class "without any evidence". No study measures the difference in defects
+or in cost: the order rests on this practice, not on a number.
 
 **Never a bare `Mock()` or `MagicMock()`.** typeshed declares `NonCallableMock` a subclass of
 `Any`, so the type checker accepts a bare mock for any parameter, and the mock accepts any
-attribute: rename `send` to `deliver` on the real class, and the test still passes.
+attribute: rename `send` to `deliver` on the real class, and the test still passes. Anthony
+Sottile, a pytest maintainer, on `MagicMock`: it is "all too easy to leak those into apis that
+*should* `TypeError` / `AttributeError` but magically succeed".
 
 ```python
 # Good: tests/support/fake_mailer.py — the fake keeps each email as data a test
@@ -158,8 +178,13 @@ defines for itself.
 
 ## 6. Sources
 
-Harry Percival and Bob Gregory, *Architecture Patterns with Python* (O'Reilly, 2020), chapter 3,
-"A Brief Interlude: On Coupling and Abstractions", free at cosmicpython.com. Python documentation,
+Titus Winters, Tom Manshreck and Hyrum Wright (eds.), *Software Engineering at Google* (O'Reilly,
+2020), chapter 13, "Test Doubles", free at abseil.io. Harry Percival and Bob Gregory, *Architecture
+Patterns with Python* (O'Reilly, 2020), chapter 3, "A Brief Interlude: On Coupling and
+Abstractions", free at cosmicpython.com. Hynek Schlawack, "'Don't Mock What You Don't Own' in 5
+Minutes" (2022). Itamar Turner-Trauring, "Fast tests for slow services: why you should use
+verified fakes" (pythonspeed.com, 2021). pytest issue #4576 (Anthony Sottile's comment,
+2020-06-30). Python documentation,
 `unittest.mock`, "Autospeccing" (`create_autospec`, `instance=True`). typeshed,
 `stdlib/unittest/mock.pyi` (`NonCallableMock` subclasses `Any`). httpx documentation, "Transports"
 (`MockTransport`). pytest-socket README (`--disable-socket`, `--allow-unix-socket`,

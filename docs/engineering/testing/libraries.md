@@ -55,7 +55,7 @@ team may weigh differently.
 
 | Library | What it offers | Why it is not in the default set |
 |---|---|---|
-| pytest-mock | a `mocker` fixture over `unittest.mock` | `monkeypatch` and the stand-ins of [fakes-and-boundaries.md](fakes-and-boundaries.md) section 1 cover it; one way to patch is easier to read than two |
+| pytest-mock | a `mocker` fixture over `unittest.mock` | `monkeypatch` and the stand-ins of [fakes-and-boundaries.md](fakes-and-boundaries.md) section 1 cover it; two patchers keep two undo lists that do not know about each other ([fixtures.md](fixtures.md) section 6) |
 | respx, pytest-httpx | intercept every httpx request by route, without passing a client | the interception is global and unseen by the code under test; an injected `MockTransport` does the same explicitly. pytest-httpx also pins one minor version of httpx |
 | pytest-env | environment variables set from the configuration for every test | every test gets them without asking for them, the implicit setup [fixtures.md](fixtures.md) section 2 rules out; a test builds the values it needs ([python.md](../python/python.md) section 5) |
 | inline-snapshot | snapshots written into the test's own source | still before 1.0 and marked beta, and it rewrites test files; syrupy covers snapshots |
