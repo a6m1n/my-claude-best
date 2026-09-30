@@ -220,8 +220,9 @@ What it does for the rules:
   An SDK error becomes `ModelUnavailable`. The errors name the model, never the text, so they are
   safe in a log ([logging.md](../logging/logging.md) section 10).
 - **`AcmeAiSdk`**, the vendor's SDK object from its package `acme_ai`, is built once by the
-  adapter at startup and handed in ([file-structure.md](../file-structure/file-structure.md)
-  section 4); it is not shown.
+  adapter at startup, with the vendor's key from `Settings` as a `SecretStr`
+  ([python.md](../python/python.md) section 5), and handed in
+  ([file-structure.md](../file-structure/file-structure.md) section 4); it is not shown.
 
 ## `support/triage/consts.py`: the model and its effort
 
@@ -270,7 +271,8 @@ class TicketTriage(BaseModel):
 ```
 
 `reasoning` comes before `kind` (section 12). Strict mode is safe here because `_parse_answer`
-parses the raw text with `model_validate_json`. `kind` accepts two values and nothing else, and
+parses the raw text with `model_validate_json`. It also rejects a date sent as a number or as a
+date and time, which lax mode would quietly turn into a date. `kind` accepts two values and nothing else, and
 the model config rejects a key the schema does not name
 ([python.md](../python/python.md) section 4). `problem_first_occurred_on` has no default, so the
 model has to fill it, and `None` is a value the schema allows: the way out of section 8, with its

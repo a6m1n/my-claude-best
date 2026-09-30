@@ -215,6 +215,9 @@ def main() -> None:
     sys.exit(run(sys.argv[1:]))
 ```
 
+`run` gets only the arguments because this CLI's commands call no client; a command that does gets
+it from `main()`, built from `settings`, as `build_app` does for routes.
+
 No other file calls `dictConfig`, and no test does: pytest's `caplog` keeps working.
 
 ## `api/middleware_request_id.py` and `api/app.py`: the request id
@@ -264,8 +267,11 @@ class RequestIdMiddleware:
         await self.app(scope, receive, send_with_id)
 ```
 
-`create_app()` below also builds the search client once and keeps it on `app.state`; that wiring
-is not shown.
+`create_app()` below passes `Settings()` to `build_app()`, so a test builds the app from its own,
+as in [python/settings-example.md](../python/settings-example.md). `build_app()` also builds the
+search client once from `settings` and keeps it on `app.state`, and registers the handlers for
+`RequestValidationError` and `ResponseValidationError` that [python.md](../python/python.md)
+section 4 asks for; that wiring is not shown.
 
 ```python
 # api/app.py
@@ -274,6 +280,7 @@ from fastapi.responses import JSONResponse
 
 from acme.api.middleware_request_id import RequestIdMiddleware
 from acme.api.routes_report import router as report_router
+from acme.core.config import Settings
 
 
 async def internal_error(request: Request, exc: Exception) -> JSONResponse:
@@ -282,13 +289,17 @@ async def internal_error(request: Request, exc: Exception) -> JSONResponse:
 
 
 def create_app() -> RequestIdMiddleware:
+    # Outside FastAPI's own error middleware, so the id is set first and its header reaches a 500 too.
+    return RequestIdMiddleware(build_app(Settings()))
+
+
+def build_app(settings: Settings) -> FastAPI:
     app = FastAPI()
 
     app.add_exception_handler(Exception, internal_error)
     app.include_router(report_router)
 
-    # Outside FastAPI's own error middleware, so the id is set first and its header reaches a 500 too.
-    return RequestIdMiddleware(app)
+    return app
 ```
 
 `app.add_middleware(RequestIdMiddleware)` would put it inside that error middleware: the id would
@@ -320,7 +331,7 @@ class SearchClient:
                 response = await self._http.post(
                     "/sections", json={"topic": topic}, timeout=TIMEOUT_SECONDS
                 )
-                return parse_sections(response.json())
+                return parse_sections(response.content)
             except httpx.TimeoutException:
                 if attempt == MAX_ATTEMPTS:
                     # from None: the error text could repeat the request; the attempts say enough
@@ -332,6 +343,10 @@ class SearchClient:
 
                 attempt += 1
 ```
+
+`parse_sections`, not shown, validates the bytes once with a module-level `TypeAdapter`'s
+`validate_json` and replaces a `ValidationError` with the client's own error, from None
+([python.md](../python/python.md) section 4).
 
 ```python
 # reports/report/usecase.py: this code decides what a failed search means, so it logs it, once
