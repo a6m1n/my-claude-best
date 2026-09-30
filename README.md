@@ -1,22 +1,44 @@
 # my-claude-best
 
-My personal collection of engineering best practices: how I set up projects, write and review code, and work with AI coding agents. Almost everything here is Markdown. The exception is `claude-config/`: my Claude Code configuration, as files you copy to your own machine. There is nothing to build.
+Engineering practices for teams that code with AI agents, plus a Claude Code status line.
 
 **Navigation**
 
+- [What it is](#what-it-is)
+- [Start here](#start-here)
 - [Layout](#layout)
 - [Conventions](#conventions)
 - [Where to get help](#where-to-get-help)
 - [Maintainers and contributing](#maintainers-and-contributing)
 - [License](#license)
 
+## What it is
+
+My personal collection of engineering best practices: how I set up projects, write and review code, and work with AI coding agents. Each practice is a folder of rules and examples that you copy into your own repository, and that your coding agent reads before it works there. Almost everything here is Markdown. The exception is `claude-config/`: my Claude Code configuration, as files you copy to your own machine. There is nothing to build. The code examples are in Python.
+
+This is an unofficial project, not affiliated with or endorsed by Anthropic.
+
+## Start here
+
+- To adopt a practice, open [docs/engineering/git/](docs/engineering/git/). Its `README.md` has a "How to adopt" section: the steps that copy the folder into your repository and point your agent at it.
+- To try something in five minutes, install the [status line](claude-config/statusline/): context, usage limits, the prompt cache and the agent panel, under the Claude Code prompt.
+- To write instructions for Claude Code, read [claude-md.md](docs/claude-code/claude-md.md): what belongs in a `CLAUDE.md` and what does not.
+
 ## Layout
 
-- `docs/engineering/` — engineering practices, one folder per topic, each with a `README.md` map, a rules file and examples; `docs/engineering/CLAUDE.md` is the contract for writing one. Start with [git/](docs/engineering/git/): branches, commits, pull requests, merging, and what never happens to shared history. Then [python/](docs/engineering/python/): where a constraint belongs, what in Python actually enforces one, and strict types a checker can read, with no closed set of values left a bare string. Then [refactoring/](docs/engineering/refactoring/): how old code reaches a practice — new, touched and untouched code, a sweep or step by step, and a migration that has an end. Then [file-structure/](docs/engineering/file-structure/): where code lives in an application — adapters, modules and `core/` with one import direction, one shape for every module, file names that say what the file holds, and the moves by which the tree grows. Then [logging/](docs/engineering/logging/): how a Python application logs through the standard logger — one config per process, a constant message with fields, five levels with narrow meanings, each exception logged once, request, dialogue and trace ids on every line, and no prompts or secrets in the log, with FastAPI and LangChain cases. Then [readability/](docs/engineering/readability/): how one function or class reads — one job and a name that says it, the main path flat under guard clauses, comments that give reasons, blank lines between stages, every input and every object it calls in the signature, and names from the business. Then [static-checks/](docs/engineering/static-checks/): how a Python repository runs its formatter, linter, strict type checker and import contracts — one locked version per tool, light pre-commit hooks, and CI as the gate.
-- `docs/claude-code/` — how I set up and instruct Claude Code. So far: [claude-md.md](docs/claude-code/claude-md.md), which says what belongs in a `CLAUDE.md` and what does not.
+- `docs/engineering/` — engineering practices, one folder per topic, each with a `README.md` map, a rules file and examples. [docs/engineering/CLAUDE.md](docs/engineering/CLAUDE.md) is the contract for writing one. In the order to read them:
+  - [git/](docs/engineering/git/) — branches, commits, pull requests, merging, and no rewriting of pushed history.
+  - [python/](docs/engineering/python/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
+  - [refactoring/](docs/engineering/refactoring/) — how old code reaches a practice without a rewrite of the repository.
+  - [file-structure/](docs/engineering/file-structure/) — where code lives in an application, and file names that say what a file holds.
+  - [logging/](docs/engineering/logging/) — how a Python application logs through the standard logger.
+  - [readability/](docs/engineering/readability/) — how one function or class reads.
+  - [static-checks/](docs/engineering/static-checks/) — the formatter, the linter, a strict type checker and import contracts, run the same way in hooks and in CI.
+  - [prompt-engineering/](docs/engineering/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
+- `docs/claude-code/` — how I set up and instruct Claude Code. So far: [claude-md.md](docs/claude-code/claude-md.md).
 - `docs/artifacts/` — working files a session writes (plans, reports, research runs). Git-ignored: not part of the library.
-- `skills/` — Claude Code skills, kept here to read and copy. Nothing in this folder is loaded automatically.
-- `claude-config/` — my global Claude Code configuration (`~/.claude/`), one folder per module; each module's `README.md` shows what it does and links to its install guide. So far: [statusline/](claude-config/statusline/), a status line for context, usage limits, the prompt cache and the agent panel.
+- `skills/` — Claude Code skills to read and copy. None yet: `pr/` and `commit/` are planned. Nothing in this folder is loaded automatically.
+- `claude-config/` — my global Claude Code configuration (`~/.claude/`), one folder per module; each module's `README.md` shows what it does and links to its install guide. So far: [statusline/](claude-config/statusline/).
 - `CLAUDE.local.md` — an example of the practices section of a project `CLAUDE.md`, for a repository that copies `docs/engineering/` in. The rule file this repo itself runs on is local and not committed.
 
 ## Conventions
