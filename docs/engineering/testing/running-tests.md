@@ -34,11 +34,11 @@ floor inside it could never fire.
 ```toml
 [tool.pytest]
 testpaths = ["tests"]
-addopts = ["-ra", "--disable-socket", "--allow-unix-socket", "-m", "not real_model"]
+addopts = ["-ra", "--disable-socket", "--allow-unix-socket", "-m", "not live_model"]
 markers = [
-    "unit: added by tests/conftest.py to every test under tests/unit",
-    "integration: added by tests/conftest.py to every test under tests/integration",
-    "real_model: calls a real language model; costs money; run by hand",
+    "unit: the offline suite; the collection hook sets it from the folder",
+    "integration: the suite that needs a service; set from the folder too",
+    "live_model: sends each call to a paid model API; select it on purpose",
 ]
 strict_config = true
 strict_markers = true
@@ -59,7 +59,7 @@ With no async code, drop the three `asyncio_*` keys and `pytest-asyncio`; on any
 | `testpaths` | a bare `pytest` collects `tests/` and nothing else; a path on the command line still wins |
 | `-ra` | the summary lists every test that did not pass, so a skip or an xfail is on the last screen, not hidden in a count |
 | `--disable-socket`, `--allow-unix-socket` | the network is blocked for every test; `tests/conftest.py` opens it for `integration/` ([fakes-and-boundaries.md](fakes-and-boundaries.md) section 4) |
-| `-m "not real_model"` | no default run calls a real model (section 10); a `-m` on the command line replaces it |
+| `-m "not live_model"` | no default run calls a real model (section 10); a `-m` on the command line replaces it |
 | `markers` | every mark this project uses, with what it means or costs (section 2) |
 | `strict_config` | a key pytest does not know, such as a plugin's key whose plugin is missing, is an error |
 | `strict_markers` | a mark not in `markers` is an error, so a typo in a mark does not silently select nothing |
@@ -85,11 +85,11 @@ A marker is pytest's tag: a name on a test that `-m` selects by. Two kinds exist
   `tests/unit` holds, and a moved file cannot keep a stale mark. Check:
   `grep -rnE "mark\.(unit|integration)\b" tests/` prints nothing.
 - **A `-m` on the command line replaces the one in `addopts`, so a selection by suite mark repeats
-  the exclusion**, `-m "integration and not real_model"`; `-m integration` alone also runs the
+  the exclusion**, `-m "integration and not live_model"`; `-m integration` alone also runs the
   paid tests of section 10.
 - **A mark of your own is added only with a selector that reads it**: a CI job, a make target, or
   the exclusion in `addopts`. Declare it in `markers` with what it costs, in the edit that first
-  uses it. A mark nothing selects by is a label; delete it. `real_model` is the one such mark in
+  uses it. A mark nothing selects by is a label; delete it. `live_model` is the one such mark in
   this practice (section 10).
 
 Never declare a mark that pytest or a plugin registers, such as `parametrize` or `enable_socket`:
@@ -222,8 +222,9 @@ backend it finds.
 pytest-xdist splits the tests over worker processes. Each worker is a full pytest run: it reads
 the same configuration and collects the whole tree.
 
-- **Pass `-n` only where the whole suite runs**, such as CI or `make test`, never in `addopts`.
-  Otherwise a run of one test pays for several worker startups and full collections.
+- **Pass `-n` only where the whole suite runs**, such as the CI job or the one command that runs the
+  full suite, never in `addopts`. Otherwise a run of one test pays for several worker startups and
+  full collections.
 - **`-n auto` counts physical cores only when `psutil` is installed**, and logical cores otherwise.
 - **A session fixture runs once per worker, not once per run**: "tests in different processes
   requesting a high-level scoped fixture (for example `session`) will execute the fixture code more
@@ -247,7 +248,7 @@ has a cause: an order (section 5), a clock (section 6), or a path or a port two 
 call a real model as the defect itself.
 
 - **pytest-rerunfailures is for the tests that ask a real model** (section 10), and only on the
-  command line of that run, `pytest -m real_model --reruns 2 -raR tests/integration/triage`: never
+  command line of that run, `pytest -m live_model --reruns 2 -raR tests/integration/triage`: never
   `reruns` in the configuration and never `@pytest.mark.flaky` on a test, which would give the
   tests that do not call a real model retries too. `-raR` prints a `RERUN` line for each retry,
   which `-ra` does not; section 10 reads each one as a wrong answer. A rerun repeats the test
@@ -265,8 +266,8 @@ every run and does not give the same result twice. Evaluating a prompt, a model 
 against a case set is [prompt-engineering.md](../prompt-engineering/prompt-engineering.md)
 section 18; this section is how such a test runs under pytest.
 
-- **Mark it `real_model` and put it in `integration/`.** The exclusion in `addopts` keeps it out
-  of every default run; a person runs it on purpose: `pytest -m real_model tests/integration/triage`.
+- **Mark it `live_model` and put it in `integration/`.** The exclusion in `addopts` keeps it out of
+  every default run; a person runs it on purpose: `pytest -m live_model tests/integration/triage`.
 - **Turn the cache switch on in the fixture that builds the client.** The switch belongs to
   [prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 17: with it on, the
   one model client puts a fresh request UUID at the start of every system prompt, so no cache
@@ -278,8 +279,8 @@ section 18; this section is how such a test runs under pytest.
   section 5 makes, under "Where it stops holding", for a test marked to call a real model.
 - **Retries are a temporary measure, and each one is a paid call.** A model answers the same input
   differently from call to call, so while a prompt is still changing, a run may add retries:
-  `pytest -m real_model --reruns 2 -raR tests/integration/triage`. The price is what green means:
-  a prompt right one time in three still passes about seven runs in ten with three attempts. Each
+  `pytest -m live_model --reruns 2 -raR tests/integration/triage`. The price is what green means:
+  a prompt right one time in two still passes nearly nine runs in ten with three attempts. Each
   `RERUN` line under `-raR` is a wrong answer; `-ra` prints none. Take the retries away when the
   prompt stops changing.
 
@@ -288,9 +289,8 @@ section 18; this section is how such a test runs under pytest.
 @pytest.fixture(scope="session")
 def uncached_model_client() -> AcmeAiClient:
     """The one model client with the cache switch on: every call reaches the model."""
-    # The run is by hand with the key of the person who runs it; only real_model tests
-    # ask for
-    # this fixture, so no default run reads the environment.
+    # The run is by hand with the key of the person who runs it; only live_model tests
+    # ask for this fixture, so no default run reads the environment.
     settings = Settings()
     return AcmeAiClient(
         AcmeAiSdk(api_key=settings.acme_ai_api_key.get_secret_value()),
@@ -305,7 +305,7 @@ CRASH_ON_EXPORT: Final = "Since yesterday the CSV export crashes with error 500.
 DARK_MODE_WISH: Final = "Please add a dark mode to the dashboard."
 
 
-@pytest.mark.real_model
+@pytest.mark.live_model
 class TestTriageTicket:
     """The triage call files a ticket under its kind."""
 

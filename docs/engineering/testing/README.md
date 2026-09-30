@@ -1,8 +1,8 @@
 # Testing practices
 
-How a pytest suite is laid out and written: where a test file goes, how its class and names are
-built, where its setup comes from, how it stands in for the outside world, what it asserts, how
-the suite runs, and which libraries help.
+How a pytest suite is laid out and written: which code earns a test, where a test file goes, how
+its class and names are built, where its setup comes from, how it stands in for the outside world,
+what it asserts, how the suite runs, and which libraries help.
 
 **Navigation**
 
@@ -18,10 +18,14 @@ guarantee turns it red.** The id,
 `tests/unit/remind_overdue_invoice/test_reminder_rules.py::TestNeedsReminder::test_a_second_reminder_waits_for_the_interval`,
 names the module, the source file, the unit and the promise. The test fails when that promise
 breaks, and not because of the order it ran in, the network, a renamed argument or a setting it
-never asked for. Each file below keeps one part of that true.
+never asked for. The guarantee is one someone relies on: a test that no bug in the team's own code
+can turn red is not written ([what-to-test.md](what-to-test.md) section 1). Each file below keeps
+one part of that true.
 
 ## What is here
 
+- [what-to-test.md](what-to-test.md): which code earns a test, which gets none, and where the
+  rules for writing one live. Read it before you write a test, and when you review one.
 - [layout.md](layout.md): the `tests/` tree, which suite a test belongs to, the path and the name
   of a test file, one class per file, packages and imports, the shared `support/` harness, and the
   tree's own `README.md` and `CLAUDE.md`. Read it when you create a test file or decide where one
@@ -73,7 +77,9 @@ never asked for. Each file below keeps one part of that true.
 ## The points to adapt
 
 - **Which stand-in comes first.** This practice prefers the real class with a fake inside, then a
-  hand-written fake, then `create_autospec`. A team that prefers `create_autospec` for every
+  hand-written fake, then `create_autospec`, for the reasons in
+  [fakes-and-boundaries.md](fakes-and-boundaries.md) section 1, "Why this order", which also names
+  the one measurement that points the other way. A team that prefers `create_autospec` for every
   collaborator keeps section 2 of [fakes-and-boundaries.md](fakes-and-boundaries.md), which is
   about what a test asserts, whatever the stand-in.
 - **The async plugin** is pytest-asyncio or anyio's own, by what the code runs on

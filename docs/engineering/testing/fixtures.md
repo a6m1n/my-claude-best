@@ -154,7 +154,9 @@ def postgres_url() -> Iterator[str]:
 - **Use the resource's own context manager** inside the fixture when it has one, as above: its
   exit path is the tested one.
 - **One resource per fixture.** When one fixture opens two things and the first cleanup fails, the
-  second never runs; two fixtures clean up independently.
+  second never runs; two fixtures clean up independently. pytest's docs call this the safest
+  structure: "limiting fixtures to only making one state-changing action each, and then bundling
+  them together with their teardown code".
 - **A generator fixture is annotated `Iterator[<the type it yields>]`** (section 9).
 
 ## 6. Patch and undo
@@ -164,15 +166,19 @@ There are two ways, and the first is better whenever it is open.
 
 **Pass the stand-in in.** When the code under test takes the object as a parameter, as
 [readability.md](../readability/readability.md) section 6 asks, the fixture builds the stand-in
-and the test passes it. Nothing global changes, so there is nothing to undo. Which stand-in to
-build is [fakes-and-boundaries.md](fakes-and-boundaries.md) section 1.
+and the test passes it. Nothing global changes, so there is nothing to undo. pytest's own page on
+patching puts this first: "For code that you control, a safer long-term pattern is to make
+dependencies explicit so they can be passed into the code under test instead of patched
+globally." Which stand-in to build is [fakes-and-boundaries.md](fakes-and-boundaries.md)
+section 1.
 
 **Patch in a fixture, with `monkeypatch`, when the code reads a name you cannot pass**: an
 environment variable, or an attribute of a library you do not own. `monkeypatch` records each
 change and reverts it: "All modifications will be undone after the requesting test function or
-fixture has finished." The one test of the settings class does this
-([python/settings-example.md](../python/settings-example.md)): its fixture removes the machine's
-own `ACME_` variables and sets the valid ones, and the test changes one variable more.
+fixture has finished." The tests of the settings class do this
+([python/settings-example.md](../python/settings-example.md)): their fixture removes the
+machine's own `ACME_` variables and sets the valid ones, and each test removes or changes the
+variables its case needs.
 
 A patch more than one test needs goes in a fixture; a test that needs one change once may call
 `monkeypatch` itself. Check: every `monkeypatch` or `MonkeyPatch.context` line sits inside a
@@ -189,22 +195,65 @@ fixture or a test, never at module level.
 
 
   @pytest.mark.usefixtures("sdk_without_retries")
-  class TestSearchClient: ...
+  class TestSearchClient:
+      """A failed search raises the first error the SDK returns."""
+
+      ...
   ```
 
-  A patch that must last for a module or the session uses `pytest.MonkeyPatch.context()`, which
-  returns a new patcher that "undoes any patching done inside the `with` block upon exit".
+- **A patch that must last for a module or the session is a `yield` fixture around
+  `pytest.MonkeyPatch.context()`.** pytest's reference gives this form for a place with no
+  `monkeypatch` fixture: "use with MonkeyPatch.context() as mp: or remember to call undo()
+  explicitly". The `with` block puts the value back when the scope ends, and also when a line
+  between the patch and `yield` raises:
 
+  ```python
+  @pytest.fixture(scope="module")
+  def sdk_without_retries_for_module() -> Iterator[None]:
+      """No retries for the module's shared client; monkeypatch cannot reach this scope."""
+      with pytest.MonkeyPatch.context() as patch:
+          patch.setattr("acme_sdk.DEFAULT_RETRIES", 0)
+          yield
+  ```
+
+- **`with mock.patch(...): yield` and `with mock.patch.dict(os.environ, ...): yield` are the same
+  form with `unittest.mock`**, the one Adam Johnson shows in "How to Mock Environment Variables in
+  pytest" (2020). Its undo is as safe as the `MonkeyPatch.context()` form, because the `with`
+  block's exit runs either way. It is out here only for the reasons of the bullet "Never
+  `unittest.mock.patch` or pytest-mock's `mocker`" below.
+- **Never undo by hand after `yield`**: no saved value put back, and no `undo()` or `stop()` on
+  the line after it. pytest skips that line when the fixture fails before it: "if a yield fixture
+  raises an exception before yielding, pytest won't try to run the teardown code after that yield
+  fixture's yield statement." A plain assignment has one more gap: with the name misspelt it
+  creates a new attribute, where `setattr` raises `AttributeError`.
 - **Patch the name where the code looks it up.** `from acme_sdk import DEFAULT_RETRIES` copies
   the value into the importing module, so patching `acme_sdk` does not reach it; patch each module
   that holds its own reference, and say in one comment why the lines differ.
+- **Set a stand-in, never a bare `MagicMock()`.** What `setattr` puts in is one of the stand-ins
+  of [fakes-and-boundaries.md](fakes-and-boundaries.md) section 1: a fake, or
+  `create_autospec(...)`. A rule against `unittest.mock.patch` followed by
+  `monkeypatch.setattr(target, "name", MagicMock())` keeps the mock and loses its spec.
 - **Never patch the application's settings.** A test takes what
   [python.md](../python/python.md) section 5 names: the plain values the unit takes, or the
   `Settings` a whole-app test passes to the function that builds the app.
-- **Never `unittest.mock.patch`, in a test or in a fixture.** `monkeypatch` is the one way to
-  patch, because one way is easier to read than two, and a fixture puts the patch, its reason and
-  its undo in one named place a class asks for. Check: `grep -rn "mock.patch\|@patch(" --include='*.py' tests/` prints
-  nothing.
+- **Never `unittest.mock.patch` or pytest-mock's `mocker`, in a test or in a fixture.** `patch`
+  with no replacement puts in a `MagicMock` (an `AsyncMock` for an async function), where
+  `setattr` always names its value. `setenv`, `delenv` and `setitem` cover the environment and
+  dicts without `patch.dict`. Every patcher object also keeps its own list of what to undo: the
+  `monkeypatch` fixture, each `MonkeyPatch.context()`, `mocker`, each `mock.patch`. A name patched
+  through two of them can be put back in the wrong order and leak into later tests. pytest-mock's
+  maintainer, on such a leak: "`mocker` is provided by `pytest-mock`, and they don't talk to each
+  other". So a suite uses one patcher library, and in one test one patcher object per name: never
+  the `monkeypatch` fixture and a `MonkeyPatch.context()` block on the same name. Against
+  pytest-mock there is one more reason: `monkeypatch` ships with pytest, and `mocker` is one more
+  dependency. pytest itself takes no side: Anthony Sottile, a maintainer, answered that "there's
+  no official recommendation because it's really about opinions and trade offs". He prefers the
+  `with` form of `unittest.mock` because of what he calls the "unknown scope duration" of
+  `monkeypatch`; here the fixture that asks for `monkeypatch` states its scope (section 1), so how
+  long a patch lasts is written down. A project that takes `unittest.mock` instead uses it alone:
+  one patcher library per suite. Check:
+  `grep -rnE "unittest\.mock import .*\bpatch\b|from mock import|mock\.patch|mocker\b" --include='*.py' tests/`
+  prints nothing.
 
 ## 7. Factories
 
@@ -300,10 +349,13 @@ A fixture is code, so [python.md](../python/python.md) section 3 annotates it li
 ## 11. Sources
 
 The Zen of Python (PEP 20). pytest documentation: "How to use fixtures" (scopes, teardown with
-`yield`, `usefixtures`, "Fixtures can be parametrized"), "How to monkeypatch/mock modules and
-environments" and the `monkeypatch` reference (undo semantics, `MonkeyPatch.context`), "How to use
-temporary directories and files in tests" (`tmp_path_factory`), "How to parametrize fixtures and
-test functions" (`indirect`), the 9.0 and 9.1 changelogs (marks on fixtures fail; class-scoped
-instance-method fixtures deprecated); pytest source at 9.1.1, `src/_pytest/fixtures.py` (the type
-of `request.param`). ruff rules `PT003` and `PT025`. testcontainers-python documentation
-(`PostgresContainer`).
+`yield`, `usefixtures`, "Fixtures can be parametrized", safe teardowns), "How to monkeypatch/mock
+modules and environments" ("a safer long-term pattern") and the `MonkeyPatch` reference (undo
+semantics, `MonkeyPatch.context()` outside the fixture since 6.2), "How to use temporary directories
+and files in tests" (`tmp_path_factory`), "How to parametrize fixtures and test functions"
+(`indirect`), the 9.0 and 9.1 changelogs (marks on fixtures fail; class-scoped instance-method
+fixtures deprecated); pytest source at 9.1.1, `src/_pytest/fixtures.py` (the type of
+`request.param`). ruff rules `PT003` and `PT025`. pytest issue #4576 (Anthony Sottile, 2020, on
+`monkeypatch` and `unittest.mock`); pytest-mock issue #289 (2022, a patch leaked between the two).
+Adam Johnson, "How to Mock Environment Variables in pytest" (adamj.eu, 2020). testcontainers-python
+documentation (`PostgresContainer`).

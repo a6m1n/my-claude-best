@@ -19,8 +19,9 @@ the reminder module of [readability/module-example.md](../readability/module-exa
 ## 1. The guarantee, not a proxy
 
 **Compare with the exact value the guarantee promises**, never with a check a wrong answer would
-also pass: `is not None`, `len(...) > 0`, a bare truth test, or `in` where the whole value is
-known. A proxy passes for the right reason once and for the wrong reason ever after.
+also pass: `is not None`, `len(...) > 0`, a bare truth test on a value that is not a `bool`, or `in`
+where the whole value is known. A proxy passes for the right reason once and for the wrong reason
+ever after.
 
 ```python
 # Bad: any email to anyone passes, and so does a result of NOT_NEEDED that still sent
@@ -34,11 +35,16 @@ assert [email.to for email in mailer.sent] == ["jane.doe@example.com"]
 ```
 
 A member of a set you own is compared with `is` ([python.md](../python/python.md) section 3).
+A function annotated `-> bool` is asserted bare, `assert needs_reminder(...)` or
+`assert not needs_reminder(...)`: the type checker lets only `True` or `False` out of it, so the
+bare test is the exact value, and PEP 8 advises against comparing a boolean to `True`.
 
-One exception covers the two capture fixtures. A log line (`caplog`) and printed output (`capsys`)
-carry a level, a time or a layout the test does not own, so a substring is the exact form of that
-guarantee. It still names the subject and the outcome, never only that something was written:
-`assert "reminder sent" in caplog.text`, not `assert caplog.text`.
+One exception covers printed output. Output a person reads (`capsys`) carries a layout the test
+does not own, so a substring is the exact form of that guarantee. It still names the subject and
+the outcome, never only that something was written:
+`assert "1 reminder sent" in capsys.readouterr().out`, not `assert capsys.readouterr().out`. A log
+line is not a guarantee ([logging.md](../logging/logging.md) section 11); a test reads `caplog`
+only to check that a secret stays out of it (section 6).
 
 ## 2. A record is compared whole
 
@@ -120,11 +126,12 @@ the whole invoice. A message on a plain comparison adds a sentence and no inform
 
 **Add a message when the failed line reads a value by key or index**, such as
 `row["reminded_on"]` inside a loop: the report shows only that value, not the row it came from.
-**Make the message the data a reader needs to find the failure**: the whole row, the input that
-produced it, the id of the item.
+**Make the message the data a reader needs to find the failure**: the whole row, or the input that
+produced it; the id of the item when the row holds a secret or a customer's text.
 
 ```python
 reminded_rows = [row for row in exported_rows if row["reminded_on"] is not None]
+assert [row["invoice_id"] for row in reminded_rows] == ["inv-1001", "inv-1002"]
 
 # Bad: the message is a sentence with no data, so the report cannot say which row failed.
 for row in reminded_rows:
@@ -143,6 +150,8 @@ With the Bad message the report reads "reminded too early" over
 - **The message is data, not prose.** An f-string with the value, never "check failed".
 - **A message never holds a secret or a customer's text** (section 6): it is printed in the
   report, and CI keeps the report.
+- **A loop of asserts passes when it runs zero times.** When the list comes out of a filter, as
+  `reminded_rows` does, pin it first, as the line above the two loops does.
 - **Prefer a comparison that shows everything over a loop with a message.** A loop whose check is
   an equality can often be one equality over a dict,
   `{i.invoice_id: i.last_reminded_on for i in ...} == {...}`, which needs no message at all.
@@ -157,7 +166,9 @@ how a test holds the code to it.
 
 **Pair every negative `caplog` assertion with a positive one in the same test**, after
 `caplog.set_level(...)` for the level the code logs at. With nothing captured,
-`"key-for-tests" not in caplog.text` is true for the wrong reason.
+`"key-for-tests" not in caplog.text` is true for the wrong reason. The positive line is there to
+prove that the log was captured, not to pin its wording, so it matches a fragment of the line,
+never the whole sentence.
 
 ```python
 # Bad: nothing positive is asserted, so a run that logged nothing passes the check.
@@ -168,14 +179,14 @@ with pytest.raises(PaymentUnavailable, match="status 503"):
 
 assert "key-for-tests" not in caplog.text
 
-# Good: the level is set, the retry line the client writes is found first, and then
-# the key is not.
+# Good: the level is set, a fragment of the retry line is found first, and then the
+# key is not.
 caplog.set_level(logging.WARNING)
 
 with pytest.raises(PaymentUnavailable, match="status 503"):
     unavailable_gateway.charge(PaymentId("pay-1001"), Decimal("120.00"))
 
-assert "Payments API answered 503, retry 1 of 2" in caplog.text
+assert "retry 1 of" in caplog.text
 assert "key-for-tests" not in caplog.text
 ```
 

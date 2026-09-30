@@ -33,7 +33,8 @@ flowchart LR
   rule in its own file. Read it when you apply section 2.
 - [settings-example.md](settings-example.md) — clients that each read the environment with their
   own defaults, then one settings class built at startup, the clients that take its values, and
-  the one test of the class. Read it when you add or change the application's settings.
+  the tests of what the class itself decides. Read it when you add or change the application's
+  settings.
 
 More principles land as sections of `python.md`, each with its own example file when the
 principle needs one.

@@ -46,16 +46,18 @@ module is a feature folder, `src/<app>/<domain>/<module>/`, and a source file is
 inside it. pytest's `module` scope and the words "test module" mean something else: one test file.
 Each module has one folder in each suite that tests it, and its adapter tests carry its name, so
 one command runs every test of one module, `pytest tests/*/<module> tests/*/*/*_<module>*`
-([running-tests.md](running-tests.md) section 3). Home Assistant's developer docs make this the
-rule for thousands of test files: "Tests for each integration are stored inside a directory named
-after the integration domain"; PyPI's Warehouse mirrors its packages the same way in a
-`tests/unit/` of about two hundred files.
+([running-tests.md](running-tests.md) section 3). Home Assistant's developer docs make a folder per
+module their rule: "Tests for each integration are stored inside a directory named after the
+integration domain", where an integration is a plugin, and its repository keeps about 5,800 test
+files that way. PyPI's Warehouse mirrors its packages the same way in a `tests/unit/` of about two
+hundred files. Neither splits its suites by what a test needs, as section 2 does: they back the
+folder per module, not the split.
 
 - **Tests live in `tests/` at the repository root, outside the application package**, grouped by
   suite and not placed inside the modules, so CI picks a suite by its folder and a module folder
   holds only code that ships. Keeping tests next to the code is a respected alternative (the
-  HackSoft Django Styleguide puts `tests/` in each app); a framework that expects it, as Django's
-  `startapp` does, keeps it (section 9).
+  HackSoft Django Styleguide puts `tests/` in each app); a framework that starts it there, as
+  Django's `startapp` does, keeps it (section 9).
 - **A test file never sits directly under `tests/`**, and never directly in a suite folder,
   except the guarantee files of section 5. The hook in `tests/conftest.py` stops the run on a test
   outside a suite folder ([suite-example.md](suite-example.md) shows it).
@@ -78,9 +80,13 @@ section 5: every other test file sits at least one folder below its suite.
 
 ## 2. Which suite a test belongs to
 
-The line between the suites is what a test needs to run, not how fast it is. Martin Fowler calls
-the words "unit" and "integration" "rather murky" (*On the Diverse And Fantastical Shapes of
-Testing*, 2021), so this practice does not define them; it defines the folders.
+The line between the suites is what a test needs to run; speed follows from that. Martin Fowler
+calls the words "unit" and "integration" "rather murky" (*On the Diverse And Fantastical Shapes of
+Testing*, 2021), so this practice does not define them; it defines the folders. Google draws the
+same line with its test sizes: size is "the resources that are required to run a test case", kept
+apart from the code a test checks, and a small test runs in one process with no network or disk
+(*Software Engineering at Google*, ch. 11). The `unit/` suite here is close to Google's small
+tests, not the same: it may use the disk through `tmp_path`.
 
 | Suite | What its tests need | When it runs |
 |---|---|---|
@@ -229,16 +235,18 @@ from tests.support.fake_mailer import FakeMailer
 
 Why `prepend` and not `importlib`:
 
-- pytest's own reference keeps `prepend` the default "for the foreseeable future", because
-  `importlib` "has its own set of drawbacks", and it recommends `__init__.py` packages for
-  `prepend` ("pytest import mechanisms and sys.path/PYTHONPATH").
-- Under `importlib`, the same page says, helper modules in the test folders "are not importable".
-  A test that annotates a fixture with the fake's type has to import that type for the type
-  checker, so the harness must be importable. pytest 9.1 does import `tests.support` under
-  `importlib` when every folder has an `__init__.py`, but only as a side effect nobody documents,
-  and a release could change it without warning.
-- pytest's "Good Integration Practices" recommends `importlib` for new projects. Its advantage
-  there, same-named test files that do not collide, comes from the packages here too.
+- pytest keeps `prepend` the default "for the foreseeable future", because `importlib` "has its
+  own set of drawbacks", and it recommends `__init__.py` packages for `prepend` ("pytest import
+  mechanisms and sys.path/PYTHONPATH"). The default stays, its maintainers say, because changing
+  it "would severely impact a lot of test suites"; its "Good Integration Practices" calls
+  `prepend` the default "for historical reasons" and recommends `importlib` for new projects.
+- Under `importlib`, the same reference says, helper modules in the test folders "are not
+  importable". A test that annotates a fixture with the fake's type has to import that type for
+  the type checker, so the harness must be importable. pytest 9.1 does import `tests.support`
+  under `importlib` when every folder has an `__init__.py`, but its reference still says it does
+  not, no test of pytest's own pins it, and a release could change it without warning.
+- `importlib`'s advantage for a new project, same-named test files that do not collide, comes
+  from the packages here too.
 
 Rules that follow from it:
 
@@ -308,11 +316,15 @@ Two short files open the tree, one per reader.
 
 pytest documentation: "pytest import mechanisms and sys.path/PYTHONPATH" (`prepend`, `importlib`,
 and the drawbacks of each) and "Good Integration Practices" (test layout, `importlib` for new
-projects), both for pytest 9.1; pytest source at 9.1.1, `src/_pytest/pathlib.py`, and a
-maintainer's comment in pytest discussion #12714 on the `tests` package name clashing across
-trees. Martin Fowler, *On the Diverse And Fantastical Shapes of Testing* (2021). The HackSoft
-Django Styleguide on tests inside each app. Home Assistant developer docs, "Integration tests file
-structure"; the `tests/unit/` tree of PyPI's Warehouse. Measured on pytest 9.1.1 with Python 3.13
-(September 2026): with an `__init__.py` in every test folder, `from tests.support... import` worked
-under `prepend` from the `pytest` command, from `python -m pytest`, from a subfolder and under
-`pytest -n 2`; with `tests/__init__.py` removed, collection failed.
+projects, "Choosing an import mode"), both for pytest 9.1; pytest source at 9.1.1,
+`src/_pytest/pathlib.py`, a maintainer's comment in pytest discussion #12714 on the `tests` package
+name clashing across trees, and the closing comment of pytest issue #7245 (2022) on why the
+default stays. Martin Fowler, *On the Diverse And Fantastical Shapes of Testing* (2021). Titus
+Winters, Tom Manshreck and Hyrum Wright, *Software Engineering at Google* (2020), ch. 11, "Test
+Size". The HackSoft Django Styleguide on tests inside each app. Home Assistant developer docs,
+"Integration tests file structure", and its repository's `tests/components/` (5,842 test files in
+1,198 folders, September 2026); the `tests/unit/` tree of PyPI's Warehouse (212 test files).
+Measured on pytest 9.1.1 (September 2026): with an `__init__.py` in every test folder,
+`from tests.support... import` worked from the `pytest` command, from `python -m pytest`, from a
+subfolder and under `pytest -n 2`, under `prepend` on Python 3.13 and under both modes on Python
+3.12; with `tests/__init__.py` removed, collection failed.

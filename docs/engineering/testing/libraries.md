@@ -34,7 +34,7 @@ it, not before.
 | a faster run | pytest-xdist | runs the tests in several worker processes, `-n auto` | the whole suite takes longer than people are willing to wait before a push | a session fixture runs once per worker ([running-tests.md](running-tests.md) section 8) |
 | a real database or broker in `integration/` | testcontainers | starts Postgres, Redis and others in Docker from a fixture, and removes them after | the first test that needs the real thing | needs a Docker daemon; the database driver is not included, add it yourself |
 | a hung test fails instead of stalling | pytest-timeout | ends a test after a set time | the integration suite, from its first test that calls something outside | the time covers fixture setup too; the `signal` method clashes with code that uses `SIGALRM` |
-| retries for a test that asks a real model | pytest-rerunfailures | reruns a failed test, `--reruns N` | the first `real_model` test ([running-tests.md](running-tests.md) section 10) | never on a test that does not call a real model; a rerun keeps the wider fixtures |
+| retries for a test that asks a real model | pytest-rerunfailures | reruns a failed test, `--reruns N` | the first `live_model` test ([running-tests.md](running-tests.md) section 10) | never on a test that does not call a real model; a rerun keeps the wider fixtures |
 | code you do not own reads the clock | time-machine | moves the process clock for the length of a block | a library reads `datetime.now()` itself; your own code takes the time as a value | does not move `time.monotonic()` since 3.0 |
 | a rule over a large space of inputs | Hypothesis | generates inputs from a description of them, and shrinks a failing one to the smallest | parsing, money, dates, anything with edge cases you cannot list | slower than a table; name the test for the property it checks |
 | a large output checked by eye | syrupy | stores the output in a file next to the test and compares later runs with it | a rendered email, an API response of many fields | a snapshot passes whatever it first recorded: review each update like code. Its `__snapshots__/` folders hold no `__init__.py`, so the two `find` checks of [layout.md](layout.md) sections 4 and 6 skip them |
@@ -55,7 +55,7 @@ team may weigh differently.
 
 | Library | What it offers | Why it is not in the default set |
 |---|---|---|
-| pytest-mock | a `mocker` fixture over `unittest.mock` | `monkeypatch` and the stand-ins of [fakes-and-boundaries.md](fakes-and-boundaries.md) section 1 cover it; one way to patch is easier to read than two |
+| pytest-mock | a `mocker` fixture over `unittest.mock` | `monkeypatch` ships with pytest and, with the stand-ins of [fakes-and-boundaries.md](fakes-and-boundaries.md) section 1, covers it; each patcher object keeps its own undo list, so a suite keeps one patcher library ([fixtures.md](fixtures.md) section 6) |
 | respx, pytest-httpx | intercept every httpx request by route, without passing a client | the interception is global and unseen by the code under test; an injected `MockTransport` does the same explicitly. pytest-httpx also pins one minor version of httpx |
 | pytest-env | environment variables set from the configuration for every test | every test gets them without asking for them, the implicit setup [fixtures.md](fixtures.md) section 2 rules out; a test builds the values it needs ([python.md](../python/python.md) section 5) |
 | inline-snapshot | snapshots written into the test's own source | still before 1.0 and marked beta, and it rewrites test files; syrupy covers snapshots |
