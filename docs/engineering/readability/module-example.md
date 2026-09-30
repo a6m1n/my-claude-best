@@ -131,29 +131,32 @@ from shop.billing.remind_overdue_invoice.reminder_rules import (
 )
 
 
-def test_invoice_not_past_its_due_date_needs_no_reminder() -> None:
-    due_on = date(2026, 9, 1)
+class TestNeedsReminder:
+    """An overdue invoice gets a reminder after its due date, at most once a week."""
 
-    assert not needs_reminder(due_on, last_reminded_on=None, today=due_on)
+    def test_invoice_not_past_its_due_date_needs_no_reminder(self) -> None:
+        due_on = date(2026, 9, 1)
 
+        assert not needs_reminder(due_on, last_reminded_on=None, today=due_on)
 
-def test_reminder_repeats_once_the_interval_has_passed() -> None:
-    due_on = date(2026, 9, 1)
-    last_reminded_on = date(2026, 9, 10)
-    today = last_reminded_on + REMINDER_INTERVAL
+    def test_reminder_repeats_once_the_interval_has_passed(self) -> None:
+        due_on = date(2026, 9, 1)
+        last_reminded_on = date(2026, 9, 10)
+        today = last_reminded_on + REMINDER_INTERVAL
 
-    assert needs_reminder(due_on, last_reminded_on, today)
+        assert needs_reminder(due_on, last_reminded_on, today)
 ```
 
-The flow, the use case run with a test database and `create_autospec(Mailer, instance=True)`, is
-covered by `tests/integration/remind_overdue_invoice/test_usecase.py`, not shown: many fast unit
-tests for the rule and a few integration tests for the flow, which is Gary Bernhardt's split that
-section 6 cites.
+The flow, the use case run with a test database and a fake mailer, is covered by
+`tests/integration/remind_overdue_invoice/test_usecase.py`, shown in
+[testing/suite-example.md](../testing/suite-example.md). Many fast unit tests for the rule and a
+few integration tests for the flow is Gary Bernhardt's split that section 6 cites.
 
 Why it is good:
 
 - **No patch, no clock, no network for the rule** (section 6). The tests pass plain dates, and the
   rule answers from them alone.
-- **Each test's name says the behavior it pins** (section 7).
+- **Each test's name says the behavior it pins** (section 7), inside one class for the one unit
+  the tests call ([testing/test-structure.md](../testing/test-structure.md) section 1).
 - **Arrange is one stage, and the assert holds the act** (section 5): the rule only returns the
   value the assert checks, so one blank line splits the setup from the check.

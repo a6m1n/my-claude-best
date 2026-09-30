@@ -38,7 +38,10 @@ extend-select = [
     "G", "LOG", "TRY400", "TRY401", "BLE001", "T201",  # logging section 11
     "RET505", "RET506", "ERA001",                      # readability sections 3 and 4
     "PGH003", "PGH004", "RUF100",                      # static-checks section 6
+    "PT",                                              # testing: running-tests section 11
 ]
+# testing: fixtures section 1 asks for scope="function" in writing, which PT003 reports
+ignore = ["PT003"]
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
@@ -65,13 +68,14 @@ init_typed = true
 |---|---|
 | `[dependency-groups] dev` | every checking tool is a dev dependency; `uv lock` pins the exact versions in `uv.lock`, the one pin (section 3) |
 | `[tool.uv] required-version` | the lowest uv the project accepts: an older local uv stops with a clear error, and `setup-uv` reads it and installs the newest uv that matches. It is a floor, not a pin, so CI's uv moves with each uv release |
-| `extend-select` | turns on each rule a practice relies on, with the section it serves; ruff's default set covers none of them |
+| `extend-select` | turns on each rule a practice relies on, with the section it serves; ruff's default set covers few of them |
+| `ignore` | the one rule of a selected group that a practice contradicts, with the section that says why |
 | `ban-relative-imports` | the setting `TID252` needs to fail on every relative import |
 | `python_version = "3.11"` | checks against the oldest Python the project supports ([python.md](../python/python.md) section 1), whatever interpreter runs mypy |
 | `strict = true` | the strict mode [static-checks.md](static-checks.md) section 2 asks for; it includes `warn_unused_ignores` |
 | `enable_error_code` | two checks outside `--strict`: a bare `# type: ignore`, and a `match` that misses a member |
 | `plugins = ["pydantic.mypy"]` | lets mypy read pydantic models the way pydantic builds them, so a settings class whose fields have no default type-checks when `main()` builds it with no arguments ([python.md](../python/python.md) section 5); only in a repository that depends on pydantic, since mypy imports the plugin from it |
-| `files`, `mypy_path`, `explicit_package_bases` | what to check, and how to name the modules: the package under `src/`, and test files that share a name in different folders ([file-structure.md](../file-structure/file-structure.md) section 8) without a clash; `tests/` must hold at least one `.py` file, or mypy stops with an error |
+| `files`, `mypy_path`, `explicit_package_bases` | what to check, and how to name the modules: the package under `src/`, and test files that share a name in different folders ([testing/layout.md](../testing/layout.md) section 6) without a clash; `tests/` must hold at least one `.py` file, or mypy stops with an error |
 | `[[tool.mypy.overrides]]` | the one untyped library, silenced by name; every other missing import still fails |
 | `[tool.pydantic-mypy]` | `init_typed` types the arguments of the `__init__` the plugin writes, so a wrong type passed to a model fails the check; `init_forbid_extra` stays off, because it rejects the aliases third-party models accept, such as `ChatOpenAI(model=...)` |
 

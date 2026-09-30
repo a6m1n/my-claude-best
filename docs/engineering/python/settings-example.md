@@ -89,8 +89,8 @@ tests/unit/core/
 ```
 
 Where each file sits is [file-structure.md](../file-structure/file-structure.md) sections 4
-and 5. Section 8 gives each module its own test folder; the test of `core/` mirrors its folder
-the same way.
+and 5. [testing/layout.md](../testing/layout.md) section 3 gives each module its own test folder;
+the test of `core/` mirrors its folder the same way.
 
 `src/acme/core/config.py`
 
@@ -270,7 +270,7 @@ checker sees missing arguments".
 import os
 
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from acme.core.config import Settings
 
@@ -283,7 +283,7 @@ VALID_ENVIRONMENT = {
 }
 
 
-@pytest.fixture
+@pytest.fixture(scope="function")
 def environment(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     """The valid environment and nothing else: the machine's own ACME_ variables go."""
     for name in list(os.environ):
@@ -297,62 +297,80 @@ def environment(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     return monkeypatch
 
 
-def test_reads_the_required_values_from_the_environment(
-    environment: pytest.MonkeyPatch,
-) -> None:
-    settings = Settings(_env_file=None)
+class TestSettings:
+    """Settings builds only from a valid environment, with no secret in its errors."""
 
-    assert settings.database_host == "db.example.com"
-    assert settings.payments_api_key.get_secret_value() == "payments-key-for-tests"
+    def test_reads_the_required_values_from_the_environment(
+        self,
+        environment: pytest.MonkeyPatch,
+    ) -> None:
+        required = {
+            "database_host": "db.example.com",
+            "database_name": "shop",
+            "database_user": "shop",
+            "database_password": SecretStr("db-password-for-tests"),
+            "payments_api_key": SecretStr("payments-key-for-tests"),
+        }
 
+        settings = Settings(_env_file=None)
 
-def test_a_missing_value_stops_the_start(environment: pytest.MonkeyPatch) -> None:
-    environment.delenv("ACME_DATABASE_HOST")
+        assert settings.model_dump(include=set(required)) == required
 
-    with pytest.raises(ValidationError) as caught:
-        Settings(_env_file=None)
+    def test_a_missing_value_stops_the_start(
+        self, environment: pytest.MonkeyPatch
+    ) -> None:
+        environment.delenv("ACME_DATABASE_HOST")
 
-    errors = caught.value.errors(include_input=False)
-    assert [error["loc"] for error in errors] == [("database_host",)]
+        with pytest.raises(ValidationError) as caught:
+            Settings(_env_file=None)
 
+        errors = caught.value.errors(include_input=False)
+        assert [error["loc"] for error in errors] == [("database_host",)]
 
-def test_an_empty_value_stops_the_start(environment: pytest.MonkeyPatch) -> None:
-    environment.setenv("ACME_PAYMENTS_API_KEY", "")
+    def test_an_empty_value_stops_the_start(
+        self, environment: pytest.MonkeyPatch
+    ) -> None:
+        environment.setenv("ACME_PAYMENTS_API_KEY", "")
 
-    with pytest.raises(ValidationError) as caught:
-        Settings(_env_file=None)
+        with pytest.raises(ValidationError) as caught:
+            Settings(_env_file=None)
 
-    errors = caught.value.errors(include_input=False)
-    assert [error["loc"] for error in errors] == [("payments_api_key",)]
+        errors = caught.value.errors(include_input=False)
+        assert [error["loc"] for error in errors] == [("payments_api_key",)]
 
+    def test_a_failed_start_prints_no_secret(
+        self, environment: pytest.MonkeyPatch
+    ) -> None:
+        environment.delenv("ACME_DATABASE_HOST")
 
-def test_a_failed_start_prints_no_secret(environment: pytest.MonkeyPatch) -> None:
-    environment.delenv("ACME_DATABASE_HOST")
+        with pytest.raises(ValidationError, match="database_host") as caught:
+            Settings(_env_file=None)
 
-    with pytest.raises(ValidationError) as caught:
-        Settings(_env_file=None)
+        # A missing-field error carries every value the class read as its input.
+        assert "payments-key-for-tests" not in str(caught.value)
 
-    # A missing-field error carries every value the class read as its input.
-    assert "payments-key-for-tests" not in str(caught.value)
+    def test_a_placeholder_secret_stops_the_start(
+        self, environment: pytest.MonkeyPatch
+    ) -> None:
+        environment.setenv("ACME_PAYMENTS_API_KEY", "changethis")
 
+        with pytest.raises(ValidationError, match="placeholder"):
+            Settings(_env_file=None)
 
-def test_a_placeholder_secret_stops_the_start(environment: pytest.MonkeyPatch) -> None:
-    environment.setenv("ACME_PAYMENTS_API_KEY", "changethis")
+    def test_allowed_origins_come_as_a_json_array(
+        self, environment: pytest.MonkeyPatch
+    ) -> None:
+        environment.setenv("ACME_ALLOWED_ORIGINS", '["https://shop.example.com"]')
 
-    with pytest.raises(ValidationError, match="placeholder"):
-        Settings(_env_file=None)
-
-
-def test_allowed_origins_come_as_a_json_array(environment: pytest.MonkeyPatch) -> None:
-    environment.setenv("ACME_ALLOWED_ORIGINS", '["https://shop.example.com"]')
-
-    assert Settings(_env_file=None).allowed_origins == ("https://shop.example.com",)
+        assert Settings(_env_file=None).allowed_origins == ("https://shop.example.com",)
 ```
 
 It is good because it closes both sources the class reads: `_env_file=None` keeps a developer's
 `.env` out, and the fixture removes every `ACME_` variable of the machine before it sets the
-valid ones. Each test then changes one variable and names the rule it pins. Which tests build
-`Settings` at all is [python.md](python.md) section 5.
+valid ones. Each test then changes one variable and names the rule it pins. The tests share one
+`TestSettings` class, and the fixture states its scope
+([testing/fixtures.md](../testing/fixtures.md) section 1): a fresh environment for every test.
+Which tests build `Settings` at all is [python.md](python.md) section 5.
 
 ### What changed
 

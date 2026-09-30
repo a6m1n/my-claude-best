@@ -70,6 +70,12 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   the model a call site uses. The check: every model call the change adds or edits takes its model
   and its reasoning effort from `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort`
   constants (the effort where the model has one) and gets its answer through a response schema.
+- Before you write or change a test, a fixture, a `conftest.py` or the pytest configuration, read
+  `docs/engineering/testing/README.md` and the file it routes to for that work, and
+  `docs/engineering/testing/suite-example.md` when you set up a suite or add a module's first
+  tests. The check: every test file the change adds sits at the path `layout.md` section 3 gives
+  it and holds one `Test<Unit>` class, every fixture it adds states `scope=`, and
+  `grep -rn autouse --include='*.py' tests/` prints nothing.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`

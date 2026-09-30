@@ -345,10 +345,13 @@ def needs_card_update(card_expires_on: date, today: date) -> bool:
     return card_expires_on <= today + CARD_NOTICE_PERIOD
 
 
-def test_card_expiring_within_notice_needs_update() -> None:
-    today = date(2026, 10, 1)
+class TestNeedsCardUpdate:
+    """A card needs an update when it expires within the notice period."""
 
-    assert needs_card_update(today + CARD_NOTICE_PERIOD, today=today)
+    def test_card_expiring_within_notice_needs_update(self) -> None:
+        today = date(2026, 10, 1)
+
+        assert needs_card_update(today + CARD_NOTICE_PERIOD, today=today)
 ```
 
 ## 7. Names from the business
@@ -366,7 +369,8 @@ and one word for one thing across the codebase.
 - **A function name says the intent, not the mechanism**: `cancel_booking`, not
   `update_status_and_notify`.
 - **A test's name says the behavior it pins**: `test_card_expiring_within_notice_needs_update`, not
-  `test_needs_card_update_2`.
+  `test_needs_card_update_2`. How a test is named and grouped is
+  [testing/test-structure.md](../testing/test-structure.md) section 3.
 - **Generic words say nothing on their own**: `data`, `info`, `item`, `record`, `obj`, `value`,
   `manager`, `processor`, `handler`. File names follow the same rule in
   [file-structure.md](../file-structure/file-structure.md) section 7.

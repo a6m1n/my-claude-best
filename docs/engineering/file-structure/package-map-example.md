@@ -58,7 +58,7 @@ src/<app>/
 ## I want to…
 
 - **Add a module** → a new `<domain>/<module>/` in the shape above; `api/routes_<module>.py`, wired
-  into `api/app.py`; `cli/commands_<module>.py` only if the CLI offers it; `tests/unit/<module>/`
+  into `api/app.py`; `cli/commands_<module>.py` only if the CLI offers it; `tests/<suite>/<module>/`
   for its tests.
 - **Split a file whose name no longer tells which part a reader wants** → turn it into a folder of
   the same name, one `<role>_<name>.py` per part, empty `__init__.py`, imports changed in the same

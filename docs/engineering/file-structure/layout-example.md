@@ -56,15 +56,18 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 │           ├── main.py                     # the process entry point; builds the clients once
 │           ├── commands_<module>.py
 │           └── errors.py                   # module error → exit code
-├── tests/
+├── tests/                                  # the tree of testing/layout.md
+│   ├── README.md                           # for people: how to run the suites, where a test goes
+│   ├── CLAUDE.md                           # for agents: the rules a test change must not break
+│   ├── __init__.py                         # empty, as in every test folder (testing/layout.md section 6)
 │   ├── conftest.py                         # marks every test by the suite folder it sits in
-│   ├── unit/                               # offline; the default run and CI
-│   │   └── <module>/                       # one folder per module, added with the module
-│   │       └── test_<unit>.py
-│   ├── integration/                        # real database, real provider; run on demand
-│   │   ├── test_<flow>.py
-│   │   └── <subject>/                      # a subject with its own harness gets a folder
-│   └── support/                            # fakes and builders; tests reach them through fixtures
+│   ├── unit/                               # offline; runs on every push
+│   │   └── <module>/                       # one folder per module, with its first test
+│   │       └── test_<source file>.py       # one Test<Unit> class
+│   ├── integration/                        # real database, real provider
+│   │   └── <module>/
+│   │       └── test_usecase.py
+│   └── support/                            # fakes and builders that tests import
 │       └── fake_<system>.py
 ├── migrations/                             # only with a database: one file per schema change
 ├── scripts/                                # run by hand; the app never imports them
@@ -83,8 +86,8 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 What to notice:
 
 - **Every file in a role folder or an adapter says what it holds before which one.**
-  `routes_<module>.py`, `commands_<module>.py`, `service_<name>.py`, `test_<unit>.py`: a file seen
-  alone, in an editor tab or a search result, still tells its kind.
+  `routes_<module>.py`, `commands_<module>.py`, `service_<name>.py`, `test_<source file>.py`: a
+  file seen alone, in an editor tab or a search result, still tells its kind.
 - **Modules share one shape, not one file list.** Every module has `usecase.py`, and `schemas.py`
   when it has data of its own. A module that stores nothing has no `models.py`; a module that calls
   no model has no prompts. No folder holds an empty file kept for symmetry.
@@ -103,7 +106,7 @@ module and one adapter, and each change that needs more makes one of the moves i
 usually meets them.
 
 **A second module.** A new folder next to the first, in the same shape, one `routes_<module>.py` in
-`api/`, and `tests/unit/<module>/` for its tests. The second module's `test_usecase.py` sits in its
+`api/`, and `tests/<suite>/<module>/` for its tests. The second module's `test_usecase.py` sits in its
 own folder, next to nothing of the first module's. Nothing in the first module changes. `docs/ARCHITECTURE.md` does
 not change either: it describes `<module>`, and a new module is one more of a kind it already
 describes.
@@ -142,7 +145,7 @@ its own error map. `<domain>/` does not change: the new adapter calls the same `
 
 **A second business area.** When the app starts doing a second kind of thing, with its own words
 and its own rules, the new modules get their own folder next to the first `<domain>/`, and its
-module names do not repeat those of the first area, so adapter files and `tests/unit/<module>/`
+module names do not repeat those of the first area, so adapter files and `tests/<suite>/<module>/`
 stay as they are. Until then there is one area and one folder.
 
 ## 3. The import rules, as CI runs them

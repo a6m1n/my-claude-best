@@ -599,8 +599,9 @@ A complete settings class, the entry point that builds it and the test of the cl
 - **The type checker sees missing arguments.** With no default, `Settings()` lacks required
   arguments for the checker. mypy with the pydantic plugin accepts it
   ([static-checks/setup-example.md](../static-checks/setup-example.md) turns the plugin on).
-  pyright has no plugin: each call, in `main()`, in the app factory and in the settings test,
-  carries `# pyright: ignore[reportCallIssue]  # values come from the environment`, a suppression in
+  pyright has no plugin: each call, in `main()`, in the app factory, in the settings test and in
+  the fixture of a test marked to call a real model, carries
+  `# pyright: ignore[reportCallIssue]  # values come from the environment`, a suppression in
   the form [static-checks.md](../static-checks/static-checks.md) section 6 asks for. Never add a
   default to quiet the checker: it removes the fail-fast path.
 - **A test of a client or a use case never builds `Settings`.** It passes the unit the plain
@@ -621,6 +622,8 @@ once per process. Only a short-lived command-line tool notices.
 2. **A tool that must run on the standard library alone** keeps the rule with a frozen dataclass
    that one function in `core/config.py` fills from `os.environ`, called from `main()`: each secret
    field takes `field(repr=False)`, and the function collects every missing name before it raises.
+3. **A test marked to call a real model** builds `Settings()` from the environment of the person
+   who runs it: it needs their key, and no default run selects it.
 
 **Check.** Open `core/config.py` and the entry points.
 
