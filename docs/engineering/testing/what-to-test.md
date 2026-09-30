@@ -77,7 +77,8 @@ and the commit body names every expected value the change edits.
   tests against the service layer."
 - **Decisions like these** fail silently when someone deletes the line, and nothing else notices:
   without `hide_input_in_errors=True`, a failed pydantic-settings start writes what it read into
-  the error text, each input cut to 50 characters, so a secret can show whole
+  the error text. An input whose repr is over 50 bytes shows as its first 25 and last 24 bytes, so
+  a short secret shows whole and a long one shows both ends
   ([python.md](../python/python.md) section 5 owns the flag). A 2026 open-source project leaked a
   database password this way and fixed it with the flag, a sanitizer change and tests.
 - **Error paths** are where the worst failures start. Yuan et al. studied 198 failures in five

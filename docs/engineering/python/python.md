@@ -558,8 +558,9 @@ A complete settings class, the entry point that builds it and the test of the cl
   option to hide it. Keep the password in its own field and let the client build the URL.
 - **`hide_input_in_errors=True`.** When the class fails, the `ValidationError` carries every value
   it read, secrets included, because no `SecretStr` exists yet at that point: `errors()` and
-  `json()` hold each one whole, and its text shows each input cut to 50 characters, which can
-  show a secret whole. The setting removes the values from the error's text. It does not reach
+  `json()` hold each one whole, and its text shows each input's repr, cut to its first 25 and
+  last 24 bytes when it is over 50: a short secret shows whole, a long one shows both ends. The
+  setting removes the values from the error's text. It does not reach
   `errors()` or `json()`, so let the error end the process and log neither.
 - **`frozen=True`.** Nothing changes a setting after startup.
 - **A list or a dict comes as JSON**: `ACME_ALLOWED_ORIGINS='["https://shop.example.com"]'`. A
