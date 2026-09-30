@@ -61,7 +61,7 @@ There are two kinds of check with real calls, and they answer different question
 |---|---|---|
 | The question | Does this case meet its contract? | How often does the system get it right over a set of cases, and did a change make it worse? |
 | The result | pass or fail for one case | a pass rate per criterion, compared with a baseline |
-| Where it lives | `tests/integration/<module>/`, under the `real_model` mark ([running-tests.md](../testing/running-tests.md) section 10) | `evals/<module>/` (section 4) |
+| Where it lives | `tests/integration/<module>/`, under the `live_model` mark ([running-tests.md](../testing/running-tests.md) section 10) | `evals/<module>/` (section 4) |
 | How it runs | pytest | an eval runner, such as a Langfuse experiment ([tools.md](tools.md) section 2) |
 
 A pytest run returns pass or fail, and a rate over a hundred cases is not a pass or a fail. So a

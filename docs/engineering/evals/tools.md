@@ -103,7 +103,7 @@ RUNS_PER_CASE: Final = 3
 
 @pytest.fixture(scope="function")
 def keeps_to_order_status() -> GEval:
-    """The reply's judge; only real_model tests ask for it, so no default run reads a key."""
+    """The reply's judge; only live_model tests ask for it, so no default run reads a key."""
     settings = Settings()
     return GEval(
         name="Keeps to the order status",
@@ -119,7 +119,7 @@ def keeps_to_order_status() -> GEval:
     )
 
 
-@pytest.mark.real_model
+@pytest.mark.live_model
 class TestBuildAgent:
     """The support agent's replies keep to what the order store says."""
 
@@ -156,7 +156,7 @@ follow the method:
   writes its score, result and error onto the metric, and a metric that keeps an error reads as
   failed in every later test ([testing/fixtures.md](../testing/fixtures.md) section 3). Not at module
   level: a `GEval` given a model builds its client when it is created, so a module-level metric fails
-  collection without a key, even in a default run that leaves the test out. Only `real_model` tests
+  collection without a key, even in a default run that leaves the test out. Only `live_model` tests
   ask for the fixture, which reads the key through `Settings()`
   ([running-tests.md](../testing/running-tests.md) section 10).
 - **Should. Three runs, and the passes counted** ([repeated-runs.md](repeated-runs.md) section 5):

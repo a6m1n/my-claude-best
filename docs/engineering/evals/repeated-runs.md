@@ -101,7 +101,7 @@ with async tests and with every other plugin, and shows every answer when it fai
 
 ```python
 # tests/integration/triage/test_service_triage.py
-@pytest.mark.real_model
+@pytest.mark.live_model
 class TestTriageTicket:
     """The triage call files a ticket under its kind."""
 
