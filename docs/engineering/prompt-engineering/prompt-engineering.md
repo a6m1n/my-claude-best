@@ -785,8 +785,9 @@ what to revisit on the next change. [prompt-example.md](prompt-example.md) has a
 
 ## 17. The cache switch
 
-**Must.** When you set up the code that sends prompts, add a boolean setting
-`DISABLE_PROMPT_CACHE`, off by default. When it is on, the line `Request UUID: <a fresh uuid4>`
+**Must.** When you set up the code that sends prompts, add a boolean setting,
+`disable_prompt_cache` (its variable carries the prefix, [python.md](../python/python.md)
+section 5), off by default. When it is on, the line `Request UUID: <a fresh uuid4>`
 goes at the very start of the system prompt, followed by a newline;
 and where the vendor or a gateway in between has its own switch to skip a cache, the setting turns
 that on too. Apply it in the one client every model call goes through
@@ -952,7 +953,7 @@ was it tested?
 | 14. Tools | Must, several parts Should | Must: is each tool change tested per model; are names unambiguous, schemas strict, fixable errors returned as results, third-party definitions untrusted and side effects gated? Should: does each description say what the tool is for, when and when not, what it returns and changes, with flat parameters and only the tools the step needs? |
 | 15. Reasoning effort | Must | Is the effort set on every call, from `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort` constants? |
 | 16. Base and layer | Should | Is the model-specific part in a thin layer, apart from the base prompt? |
-| 17. Cache switch | Must | Does `DISABLE_PROMPT_CACHE=true` put a fresh `Request UUID:` line at the very start of the system prompt, and is it off by default? |
+| 17. Cache switch | Must | Does turning `disable_prompt_cache` on (`<PREFIX>_DISABLE_PROMPT_CACHE=true`) put a fresh `Request UUID:` line at the very start of the system prompt, and is it off by default? |
 | 18. Test and experiment | Must, experiments Should | Did the change run old against new on the fixed case set (a new prompt: against a new set), with the pass criterion written first? |
 
 ## 21. Sources

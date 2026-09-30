@@ -134,30 +134,42 @@ async def chat(body: ChatRequest, request: Request) -> ChatResponse:
     return ChatResponse(thread_id=reply.thread_id, text=reply.text)
 ```
 
-`create_app()` builds `Settings()` once, the chat model once with
+`create_app()` passes `Settings()` to `build_app(settings)`, as in
+[setup-example.md](setup-example.md), and `build_app` builds the chat model once with
 `llm = chat_model(SUPPORT_CHAT_LLM_MODEL, api_key=settings.openai_api_key)` and the agent once with
 `build_agent(llm, orders, model=SUPPORT_CHAT_LLM_MODEL, disable_prompt_cache=settings.disable_prompt_cache, new_request_uuid=uuid.uuid4)`,
 where `orders` is the order store's client and `settings` is the `Settings` of
 [setup-example.md](setup-example.md), which gains `openai_api_key: SecretStr`, the Langfuse keys
-(not shown) and `disable_prompt_cache: bool = False`
+and URL (not shown; the secret key is a `SecretStr` with no default) and
+`disable_prompt_cache: bool = False`
 ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 17). The adapter
 reads the model constant and the setting in this one place and hands them on, so a test can pass a
 `ChatOpenAI` with an `httpx.MockTransport` inside and a fixed UUID
-([readability.md](../readability/readability.md) section 6). It builds the Langfuse handler once
-with `callback_handler()`, after it starts the Langfuse client with the keys from `Settings`, and
-keeps the agent and the handler on `app.state` as `chat_agent` and `tracing`; that wiring is not
-shown.
+([readability.md](../readability/readability.md) section 6). `build_app` also calls
+`start_tracing` with the Langfuse keys and URL from `settings`, then builds the Langfuse handler
+once with `callback_handler()`, and keeps the agent and the handler on `app.state` as `chat_agent`
+and `tracing`; that wiring is not shown.
 
 ## `core/langfuse_client.py`: the one client of Langfuse
 
 ```python
-"""The one client of Langfuse: every other file reaches the trace store through these two functions."""
+"""The one client of Langfuse: every other file reaches the trace store through these three functions."""
 
 from contextlib import AbstractContextManager
 
 from langchain_core.callbacks import BaseCallbackHandler
-from langfuse import get_client
+from langfuse import Langfuse, get_client
 from langfuse.langchain import CallbackHandler
+from pydantic import SecretStr
+
+
+def start_tracing(public_key: str, secret_key: SecretStr, base_url: str) -> None:
+    # get_client() and CallbackHandler() reuse this client; without it the SDK reads its own variables.
+    Langfuse(
+        public_key=public_key,
+        secret_key=secret_key.get_secret_value(),
+        base_url=base_url,
+    )
 
 
 def run_span(name: str) -> AbstractContextManager[object]:
@@ -198,7 +210,7 @@ def chat_model(model: ChatModel, api_key: SecretStr) -> ChatOpenAI:
 
 
 class PromptCacheSwitchMiddleware(AgentMiddleware):
-    """DISABLE_PROMPT_CACHE: a fresh first line of the system prompt on every call, so nothing from there on hits a cache."""
+    """disable_prompt_cache: a fresh first line of the system prompt on every call, so nothing from there on hits a cache."""
 
     def __init__(
         self, *, disable_prompt_cache: bool, new_request_uuid: Callable[[], uuid.UUID]
@@ -402,7 +414,7 @@ def build_agent(
         middleware=[
             ToolErrorMiddleware(on_error=report_tool_failure),
             CallLoggingMiddleware(),
-            # Required: DISABLE_PROMPT_CACHE reaches the model only through this entry.
+            # Required: disable_prompt_cache reaches the model only through this entry.
             PromptCacheSwitchMiddleware(
                 disable_prompt_cache=disable_prompt_cache,
                 new_request_uuid=new_request_uuid,

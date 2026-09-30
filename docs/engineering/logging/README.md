@@ -63,5 +63,5 @@ pick: one config, one Filter, the same ids, the same levels, and no content in t
 
 For the trace store, this folder strongly recommends Langfuse (`logging.md` section 8) and shows
 it in `agent-example.md`. A team already on another trace store, such as LangSmith or plain
-OpenTelemetry with any backend, changes the Filter's one trace-id function and the two functions
-of `core/langfuse_client.py`, nothing else.
+OpenTelemetry with any backend, changes the Filter's one trace-id function and
+`core/langfuse_client.py`, nothing else.
