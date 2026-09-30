@@ -453,14 +453,15 @@ def load_state_file(state_path: str) -> dict:
         return {}
 
 
-def save_state_file(state_path: str, state: dict) -> None:
+def save_state_file(state_path: str, state: dict) -> bool:
     # mkstemp creates the file 0600 and never opens one that already exists.
-    # A failed write only costs history, so it is reported on stderr, not raised.
+    # A failed write only costs history, so it is reported on stderr, not raised,
+    # and the caller gets False.
     try:
         fd, tmp = tempfile.mkstemp(dir=os.path.dirname(state_path), suffix=".tmp")
     except OSError as error:
         print(f"statusline: history not saved: {error}", file=sys.stderr)
-        return
+        return False
 
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -472,6 +473,9 @@ def save_state_file(state_path: str, state: dict) -> None:
             os.remove(tmp)
         except OSError:
             pass
+        return False
+
+    return True
 
 
 def is_plausible_epoch(value: object, now: float) -> bool:
@@ -503,8 +507,10 @@ def is_burn_sample(value: object, now: float) -> bool:
     )
 
 
-def update_burn_samples(five_h: dict, now: float, state_path: str) -> list[list[float]]:
+def update_burn_samples(five_h: dict, now: float, state_path: str) -> list[list[float]] | None:
     """Append the current (time, used_pct) sample and return the history.
+
+    Returns None when the new sample could not be saved.
 
     History resets ONLY on a genuine 5h-window rollover: resets_at moving by
     more than BURN_RESET_JITTER_S, or the percentage dropping sharply. Small
@@ -534,7 +540,8 @@ def update_burn_samples(five_h: dict, now: float, state_path: str) -> list[list[
     if is_new_sample:
         samples.append([now, pct])
         samples = samples[-BURN_MAX_SAMPLES:]
-        save_state_file(state_path, {"resets_at": resets_at, "samples": samples})
+        if not save_state_file(state_path, {"resets_at": resets_at, "samples": samples}):
+            return None
 
     return samples
 
@@ -627,6 +634,9 @@ def format_burn(
       * "burn: — (2m)" (gray)  — collecting: fewer than 3 minutes of history
                                  (session start or a window rollover); the
                                  countdown shows time until the first reading.
+      * "burn: — (no history)" (gray)
+                               — no state folder, or the new sample could not
+                                 be saved; install.md says why.
       * "burn: ▸N% (…)"        — the speedometer, colored green/yellow/red at
                                  the 100 / 200 thresholds; detail is dropped on
                                  narrow terminals, "⚠100% in X" collapses to "⚠".
@@ -646,12 +656,13 @@ def format_burn(
     if not isinstance(five_h, dict) or five_h.get("used_percentage") is None:
         return None  # no rate-limit data (e.g. API billing) — hide the segment
 
-    if state_path is None:
-        # Without a state folder no history builds up: say so, instead of a
-        # "collecting" countdown that never ends.
+    samples = None if state_path is None else update_burn_samples(five_h, now, state_path)
+
+    if samples is None:
+        # No state folder, or the new sample could not be saved: no history
+        # builds up, so say so instead of a "collecting" countdown that never ends.
         return f"burn: {GRAY}— (no history){RESET}"
 
-    samples = update_burn_samples(five_h, now, state_path)
     rate = compute_burn(samples, now)
 
     if rate is None:
