@@ -130,6 +130,7 @@ How to read the number:
 | about 120% to 200% | The limit comes well before the reset, and you wait until the reset. | Slow down: fewer agents at once, a cheaper model for subagents. |
 | 200% and more (red) | More than twice the budget. | Slow down now, or plan for a long wait. |
 | `— (2m)` | Still collecting: the first reading needs three minutes of history, and `(2m)` is the time until it. It also returns for three minutes after each 5-hour reset. | Wait. |
+| `— (no history)` | The script keeps no readings: it could not create or write its [state folder](install.md#what-the-script-does-on-your-machine). | Run `claude --debug` to see why. |
 
 The script colors everything from 100% to 200% yellow. In the sweet spot, yellow means you are right on budget, not that something is wrong.
 

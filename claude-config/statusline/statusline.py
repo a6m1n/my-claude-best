@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 The my-claude-best authors
 """Claude Code status line: ctx | model+effort | 5h | 7d | cache | burn speedometer."""
 from __future__ import annotations  # lets `str | None` hints run on Python 3.9
 
@@ -8,7 +10,10 @@ import re
 import sys
 import tempfile
 import time
+import traceback
+from collections.abc import Iterable, Mapping
 from datetime import datetime
+from typing import Final
 
 RESET = "\033[0m"
 DIM = "\033[2m"
@@ -56,6 +61,22 @@ BURN_MIN_SPAN_S = 180  # need >=3 min of history before the slope is trustworthy
 BURN_SLOPE_WINDOW_S = 3600  # slope over the last hour of samples
 BURN_RESET_JITTER_S = 120  # resets_at drift below this is the same 5h window
 BURN_PCT_DROP_RESET = 5.0  # pct drop larger than this means the window rolled over
+# An unchanged pct is still sampled this often, so idle time flattens the slope.
+BURN_SAMPLE_EVERY_S: Final = 60
+
+# State files live in a folder of their own inside Claude Code's config folder
+# (~/.claude, or an absolute CLAUDE_CONFIG_DIR): Claude Code writes its
+# transcripts there, so the folder exists and is writable on every OS the
+# status line runs on. What keeps other users out is this script, not the home
+# folder (often 0755 on Linux): it creates the folder 0700 and each file 0600
+# through mkstemp. The shared temp folder is avoided: on Linux it is /tmp.
+STATE_DIR_NAME: Final = "statusline-state"
+STATE_DIR_MODE: Final = 0o700  # POSIX only; on Windows the profile's ACL applies
+# A state file older than this belongs to a closed session or a past 5h window.
+STATE_MAX_AGE_S: Final = 24 * 3600
+# Well above any real used_percentage; it only keeps a stored value from
+# breaking the burn arithmetic.
+SAMPLE_MAX_PCT: Final = 1000.0
 
 TOKEN_RATE_WINDOW_S = 1800  # tok/h measured over the last 30 min of transcript
 TOKEN_RATE_MIN_SPAN_S = 120
@@ -354,9 +375,74 @@ def format_cache_countdown(timed_usages: list[tuple[float, dict]], now: float) -
     return f"{DIM}{text}{RESET}"
 
 
-def burn_state_path(session_id: str) -> str:
+def claude_config_dir(environ: Mapping[str, str]) -> str | None:
+    """Claude Code's config folder: CLAUDE_CONFIG_DIR when absolute, else ~/.claude.
+
+    None when neither gives an absolute path (no home folder, as under
+    `docker --user`): a relative path would put state files in the current folder.
+    Claude Code itself resolves a relative value against the folder it started
+    in, which this script cannot know in every mode; the status line ignores it,
+    so state never lands in a project folder.
+    """
+    configured = os.path.expanduser(environ.get("CLAUDE_CONFIG_DIR", ""))
+    default = os.path.join(os.path.expanduser("~"), ".claude")
+    for path in (configured, default):
+        if path and os.path.isabs(path):
+            return path
+
+    return None
+
+
+def open_state_dir(config_dir: str | None) -> str | None:
+    """Create the state folder in config_dir and return it, or None after one stderr line.
+
+    None costs the burn and pause readings only; the stderr line is what
+    `claude --debug` shows, so a user can find out why.
+    """
+    if config_dir is None:
+        print("statusline: no history kept: no home folder to write to", file=sys.stderr)
+        return None
+
+    state_dir = os.path.join(config_dir, STATE_DIR_NAME)
+    try:
+        os.makedirs(state_dir, mode=STATE_DIR_MODE, exist_ok=True)
+    except OSError as error:
+        print(f"statusline: no history kept: {error}", file=sys.stderr)
+        return None
+
+    if os.path.islink(state_dir) or not os.access(state_dir, os.W_OK | os.X_OK):
+        # A link could point anywhere, and a folder this user cannot write would
+        # drop every save without a trace. os.access ignores Windows ACLs; there
+        # save_state_file reports the failure instead.
+        print(f"statusline: no history kept: cannot use {state_dir}", file=sys.stderr)
+        return None
+
+    return state_dir
+
+
+def prune_stale_state(state_dir: str, now: float) -> None:
+    """Delete files in state_dir not written for STATE_MAX_AGE_S.
+
+    That includes the .tmp file a run leaves when Claude Code cancels it between
+    the write and the rename.
+    """
+    try:
+        names = os.listdir(state_dir)
+    except OSError:
+        return
+
+    for name in names:
+        path = os.path.join(state_dir, name)
+        try:
+            if now - os.path.getmtime(path) > STATE_MAX_AGE_S:
+                os.remove(path)
+        except OSError:  # gone already, or open in another run on Windows
+            continue
+
+
+def burn_state_path(state_dir: str, session_id: str) -> str:
     session_key = re.sub(r"[^A-Za-z0-9_-]", "", session_id) or "default"
-    return os.path.join(tempfile.gettempdir(), f"claude_statusline_burn_{session_key}.json")
+    return os.path.join(state_dir, f"burn_{session_key}.json")
 
 
 def load_state_file(state_path: str) -> dict:
@@ -364,25 +450,69 @@ def load_state_file(state_path: str) -> dict:
         with open(state_path, "r", encoding="utf-8") as f:
             state = json.load(f)
         return state if isinstance(state, dict) else {}
-    except (OSError, json.JSONDecodeError):
+    # ValueError covers bad JSON and bad UTF-8; RecursionError, JSON nested too deep.
+    except (OSError, ValueError, RecursionError):
         return {}
 
 
-def save_state_file(state_path: str, state: dict) -> None:
-    tmp = f"{state_path}.{os.getpid()}.tmp"
+def save_state_file(state_path: str, state: dict) -> bool:
+    # mkstemp creates the file 0600 and never opens one that already exists.
+    # A failed write only costs history, so it is reported on stderr, not raised,
+    # and the caller gets False.
     try:
-        with open(tmp, "w", encoding="utf-8") as f:
+        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(state_path), suffix=".tmp")
+    except OSError as error:
+        print(f"statusline: history not saved: {error}", file=sys.stderr)
+        return False
+
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(state, f)
         os.replace(tmp, state_path)
-    except OSError:
+    except OSError as error:
+        print(f"statusline: history not saved: {error}", file=sys.stderr)
         try:
             os.remove(tmp)
         except OSError:
             pass
+        return False
+
+    return True
 
 
-def update_burn_samples(five_h: dict, now: float, state_path: str) -> list[list[float]]:
+def is_plausible_epoch(value: object, now: float) -> bool:
+    """True for a number within STATE_MAX_AGE_S of now, the only times a state file holds.
+
+    A state file is read back as untrusted input. Comparing against a range also
+    rejects NaN, infinity, bool and an integer too large to turn into a float,
+    each of which would crash the arithmetic that follows.
+    """
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and now - STATE_MAX_AGE_S <= value <= now + STATE_MAX_AGE_S
+    )
+
+
+def is_burn_sample(value: object, now: float) -> bool:
+    """True for a [time, percent] pair update_burn_samples could have saved."""
+    if not isinstance(value, list) or len(value) != 2:
+        return False
+
+    time_s, pct = value
+    return (
+        is_plausible_epoch(time_s, now)
+        and time_s <= now
+        and isinstance(pct, (int, float))
+        and not isinstance(pct, bool)
+        and 0 <= pct <= SAMPLE_MAX_PCT
+    )
+
+
+def update_burn_samples(five_h: dict, now: float, state_path: str) -> list[list[float]] | None:
     """Append the current (time, used_pct) sample and return the history.
+
+    Returns None when the new sample could not be saved.
 
     History resets ONLY on a genuine 5h-window rollover: resets_at moving by
     more than BURN_RESET_JITTER_S, or the percentage dropping sharply. Small
@@ -396,11 +526,11 @@ def update_burn_samples(five_h: dict, now: float, state_path: str) -> list[list[
     samples = state.get("samples")
     if not isinstance(samples, list):
         samples = []
-    samples = [s for s in samples if isinstance(s, list) and len(s) == 2]
+    samples = [s for s in samples if is_burn_sample(s, now)]
 
     prev_reset = state.get("resets_at")
     reset_moved = (
-        isinstance(prev_reset, (int, float))
+        is_plausible_epoch(prev_reset, now)
         and resets_at is not None
         and abs(resets_at - prev_reset) > BURN_RESET_JITTER_S
     )
@@ -408,10 +538,15 @@ def update_burn_samples(five_h: dict, now: float, state_path: str) -> list[list[
     if reset_moved or pct_dropped:
         samples = []
 
-    if not samples or pct != samples[-1][1] or now - samples[-1][0] >= 60:
+    is_new_sample = (
+        not samples or pct != samples[-1][1] or now - samples[-1][0] >= BURN_SAMPLE_EVERY_S
+    )
+    if is_new_sample:
         samples.append([now, pct])
         samples = samples[-BURN_MAX_SAMPLES:]
-        save_state_file(state_path, {"resets_at": resets_at, "samples": samples})
+
+        if not save_state_file(state_path, {"resets_at": resets_at, "samples": samples}):
+            return None
 
     return samples
 
@@ -462,10 +597,10 @@ def compute_token_rate(timed_usages: list[tuple[float, dict]], now: float) -> fl
 
 
 def format_burn(
-    five_h,
+    five_h: object,
     now: float,
     show_detail: bool,
-    session_id: str,
+    state_path: str | None,
     token_rate: float | None,
 ) -> str | None:
     """Render the burn speedometer: will this pace fit inside the 5h window?
@@ -494,7 +629,7 @@ def format_burn(
     ---------------------------
     Claude Code reports only the CURRENT used_percentage — no history. Every
     statusline invocation appends a (timestamp, pct) sample to a per-session
-    state file in the user tempdir (update_burn_samples), and the pace is a
+    state file in this user's state folder (update_burn_samples), and the pace is a
     least-squares slope over the last hour of samples (compute_burn). The
     dim detail shows that raw pace (~N%/h) plus the session's raw token
     throughput from the transcript (tok/h, compute_token_rate).
@@ -504,6 +639,9 @@ def format_burn(
       * "burn: — (2m)" (gray)  — collecting: fewer than 3 minutes of history
                                  (session start or a window rollover); the
                                  countdown shows time until the first reading.
+      * "burn: — (no history)" (gray)
+                               — no state folder, or the new sample could not
+                                 be saved; install.md says why.
       * "burn: ▸N% (…)"        — the speedometer, colored green/yellow/red at
                                  the 100 / 200 thresholds; detail is dropped on
                                  narrow terminals, "⚠100% in X" collapses to "⚠".
@@ -523,7 +661,13 @@ def format_burn(
     if not isinstance(five_h, dict) or five_h.get("used_percentage") is None:
         return None  # no rate-limit data (e.g. API billing) — hide the segment
 
-    samples = update_burn_samples(five_h, now, burn_state_path(session_id))
+    samples = None if state_path is None else update_burn_samples(five_h, now, state_path)
+
+    if samples is None:
+        # No state folder, or the new sample could not be saved: no history
+        # builds up, so say so instead of a "collecting" countdown that never ends.
+        return f"burn: {GRAY}— (no history){RESET}"
+
     rate = compute_burn(samples, now)
 
     if rate is None:
@@ -538,6 +682,7 @@ def format_burn(
 
     pct = float(five_h["used_percentage"])
     reset_ts = parse_epoch(five_h.get("resets_at"))
+
     if reset_ts is None:
         return f"burn: {detail_bits[0]}"  # can't project without a reset time
 
@@ -560,6 +705,7 @@ def format_burn(
         text += f" {color}⚠100% in {eta}{RESET}" if show_detail else f" {color}⚠{RESET}"
     if show_detail:
         text += detail
+
     return text
 
 
@@ -606,12 +752,16 @@ def format_task_elapsed(start_time, now: float) -> str | None:
     return f"{int(elapsed)}s" if elapsed < 60 else format_duration(elapsed)
 
 
-def task_state_path(session_id: str) -> str:
+def task_state_path(state_dir: str, session_id: str) -> str:
     session_key = re.sub(r"[^A-Za-z0-9_-]", "", session_id) or "default"
-    return os.path.join(tempfile.gettempdir(), f"claude_statusline_agents_{session_key}.json")
+    return os.path.join(state_dir, f"agents_{session_key}.json")
 
 
-def update_task_activity(tasks, session_id: str, now: float) -> dict[str, float]:
+def update_task_activity(
+    tasks: Iterable[object],
+    state_path: str,
+    now: float,
+) -> dict[str, float]:
     """Seconds since each task's tokenCount last grew, keyed by task id.
 
     tokenSamples covers only ~80s of history, so a stall's true age must be
@@ -621,28 +771,41 @@ def update_task_activity(tasks, session_id: str, now: float) -> dict[str, float]
     stalled panel costs zero writes. Single writer per session (each session
     renders its own panel), so 20 parallel sessions never contend.
     """
-    state = load_state_file(task_state_path(session_id))
+    state = load_state_file(state_path)
     entries = state.get("tasks")
     if not isinstance(entries, dict):
         entries = {}
+
     fresh: dict[str, list[float]] = {}
     stall_ages: dict[str, float] = {}
     for task in tasks:
         if not isinstance(task, dict) or not task.get("id"):
             continue
+
         count = task.get("tokenCount")
+
         if not isinstance(count, (int, float)):
             continue
+
         task_id = str(task["id"])
         prev = entries.get(task_id)
-        if isinstance(prev, list) and len(prev) == 2 and prev[0] == count:
+        is_unchanged = (
+            isinstance(prev, list)
+            and len(prev) == 2
+            and prev[0] == count
+            and is_plausible_epoch(prev[1], now)
+        )
+
+        if is_unchanged:
             fresh[task_id] = prev
             stall_ages[task_id] = max(now - float(prev[1]), 0.0)
         else:
             fresh[task_id] = [count, now]
             stall_ages[task_id] = 0.0
+
     if fresh != entries:
-        save_state_file(task_state_path(session_id), {"tasks": fresh})
+        save_state_file(state_path, {"tasks": fresh})
+
     return stall_ages
 
 
@@ -769,14 +932,28 @@ def print_subagent_rows() -> None:
         payload = json.load(sys.stdin)
     except json.JSONDecodeError:
         return
+
     tasks = payload.get("tasks")
+
     if not isinstance(tasks, list):
         return
+
     now = time.time()
+
+    state_dir = open_state_dir(claude_config_dir(os.environ))
+
+    session_id = str(payload.get("session_id") or "")
     try:
-        stall_ages = update_task_activity(tasks, str(payload.get("session_id") or ""), now)
+        if state_dir:
+            stall_ages = update_task_activity(tasks, task_state_path(state_dir, session_id), now)
+        else:
+            stall_ages = {}
     except Exception:
+        # The barrier in __main__ prints nothing in this mode, so an error here
+        # would cost every row its decoration; without stall ages the rows
+        # still render, and only the ⏸ timer is missing.
         stall_ages = {}
+
     for task in tasks:
         # One malformed task must never cost the whole tick: a nonzero exit
         # (or an uncaught exception) makes Claude Code drop EVERY row's
@@ -787,6 +964,7 @@ def print_subagent_rows() -> None:
             )
         except Exception:
             continue
+
         if row:
             print(json.dumps(row, ensure_ascii=False))
 
@@ -800,16 +978,26 @@ def main() -> None:
     now = time.time()
     model = payload.get("model") or {}
     effort = (payload.get("effort") or {}).get("level")
-    session_id = payload.get("session_id") or ""
+    session_id = str(payload.get("session_id") or "")
     transcript_path = payload.get("transcript_path", "")
     rate_limits = payload.get("rate_limits") or {}
     show_detail = terminal_cols() >= NARROW_COLS
+
+    state_dir = open_state_dir(claude_config_dir(os.environ))
+    burn_path = burn_state_path(state_dir, session_id) if state_dir else None
+
+    # A folder listing on every refresh costs time, so prune only while this
+    # session has no burn file: its first run, or every run while no 5h data
+    # arrives or saves fail.
+    if state_dir and not os.path.exists(burn_path):
+        prune_stale_state(state_dir, now)
 
     timed_usages = read_transcript_usages(transcript_path)
     usages = [usage for _, usage in timed_usages[-CACHE_WINDOW:]]
 
     ctx_str, has_window = format_context(payload, usages)
     parts = [ctx_str, format_model(model, effort, has_window)]
+
     rate_segments = []
     for key, label in (("five_hour", "5h"), ("seven_day", "7d")):
         seg = format_rate_limit(rate_limits.get(key), label, show_detail, now)
@@ -819,20 +1007,23 @@ def main() -> None:
         # One clickable link spanning the whole "5h … │ 7d …" run (separator
         # included), so clicking anywhere on it opens the usage page.
         parts.append(osc8_link(USAGE_URL, SEP.join(rate_segments)))
+
     cache_seg = format_cache(usages)
     countdown = format_cache_countdown(timed_usages, now)
     if countdown:
         cache_seg += f" {countdown}"
     parts.append(cache_seg)
+
     burn = format_burn(
         rate_limits.get("five_hour"),
         now,
         show_detail,
-        session_id,
+        burn_path,
         compute_token_rate(timed_usages, now),
     )
     if burn:
         parts.append(burn)
+
     print(SEP.join(parts))
 
 
@@ -842,7 +1033,15 @@ if __name__ == "__main__":
     # line). Claude Code talks UTF-8 both ways, so use it on both streams.
     sys.stdin.reconfigure(encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")
-    if "--subagents" in sys.argv:
-        print_subagent_rows()
-    else:
-        main()
+    # A crash or a non-zero exit blanks the whole line, so no error may leave
+    # here: the trace goes to stderr, which `claude --debug` shows. The agent
+    # panel prints nothing, so Claude Code keeps its default rows.
+    try:
+        if "--subagents" in sys.argv:
+            print_subagent_rows()
+        else:
+            main()
+    except Exception:
+        traceback.print_exc()
+        if "--subagents" not in sys.argv:
+            print("statusline: error, see claude --debug")
