@@ -369,20 +369,21 @@ cases; on live traffic its verdict chooses which traces a person reads
 
 ## Where each choice comes from
 
-Each choice above follows a rule of [judges.md](judges.md); the rule's section gives the
-measurement behind it, and [judges.md](judges.md) section 12 lists every source.
+Each choice above follows a rule of [judges.md](judges.md). The rule's section gives the
+measurement behind it, and section 12 there lists every source; the table names the sources, so a
+reader can open them without searching.
 
-| Choice in this example | Rule | What the rule rests on |
+| Choice in this example | Rule | Source |
 |---|---|---|
-| a judge for the promise, code for the rest | section 2 | judges that graded without a reference agreed with experts only where they could answer themselves ("Reference answers and judge agreement", arXiv:2503.05061) |
-| one criterion, pass or fail | section 4 | one criterion per call agreed with people more than a batched rubric ("Rubric mechanics", arXiv:2605.06283); yes-or-no checks reached α 0.67 against 0.05 for scores (CheckEval, arXiv:2403.18771) |
-| the evidence quoted before the verdict | section 4 | a planted label changed 5 to 22% of verdicts, against 75 to 85% with free reasoning ("Proof before preference", arXiv:2605.23970) |
-| no agent reasoning in the prompt | section 4 | fluent visible reasoning raised a weak judge's pass rate from 57.8% to 88.0% ("Visible reasoning inflates judges", arXiv:2604.06756) |
-| a judge of another family | section 4 | judges favoured their own family by 3.4 to 8.4 points (arXiv:2609.17857) |
+| a judge for the promise, code for the rest | section 2 | "Reference answers and judge agreement", arXiv:2503.05061 |
+| one criterion, pass or fail | section 4 | "Rubric mechanics", arXiv:2605.06283; CheckEval, arXiv:2403.18771 |
+| the evidence quoted before the verdict | section 4 | "Proof before preference", arXiv:2605.23970 |
+| no agent reasoning in the prompt | section 4 | "Visible reasoning inflates judges", arXiv:2604.06756 |
+| a judge of another family | section 4 | "Family-conditioned judge preference", arXiv:2609.17857 |
 | one labeller, about 100 labels, split into examples, dev and test | section 6 | Hamel Husain, "Using LLM-as-a-Judge", and the evals FAQ with Shreya Shankar |
-| TPR and TNR on the held-back split, not raw agreement | section 6 | raw agreement overstated chance-corrected agreement by 34 to 41 points across 21 judges ("Reliability without validity", arXiv:2606.19544) |
-| the cheapest model that holds the bar | section 8 | Husain and Shankar; on hard cases a small model reached a kappa of 0.04 where a mid-size one reached 0.72 (arXiv:2609.30290) |
-| 0.9 and 20 labels per verdict | none | the team's own choice: section 6 asks for TPR and TNR and sets no number |
+| TPR and TNR on the held-back split, not raw agreement | section 6 | "Reliability without validity", arXiv:2606.19544 |
+| the cheapest model that holds the bar | section 8 | Husain and Shankar; text-to-SQL faithfulness judges, arXiv:2609.30290 |
+| 0.9 and 20 labels per verdict | section 6 sets no number | the team's own choice |
 
 ## What this example does not claim
 

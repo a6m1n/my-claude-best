@@ -87,13 +87,14 @@ the test counts the passes:
 
 ```python
 # tests/integration/chat/test_graph.py
+from collections.abc import Iterable
 from typing import Final
 
 import pytest
 from deepeval.metrics import GEval
 from deepeval.models import OpenAIModel
 from deepeval.test_case import LLMTestCase, SingleTurnParams
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AnyMessage, HumanMessage, ToolMessage
 
 from acme.core.config import Settings
 from acme.support.chat.graph import ChatAgent
@@ -121,6 +122,11 @@ def keeps_to_order_status() -> GEval:
     )
 
 
+def tool_results(messages: Iterable[AnyMessage]) -> list[str]:
+    """What the run's tools returned: the facts the reply must keep to."""
+    return [message.text for message in messages if isinstance(message, ToolMessage)]
+
+
 @pytest.mark.live_model
 class TestBuildAgent:
     """The support agent's replies keep to what the order store says."""
@@ -136,7 +142,7 @@ class TestBuildAgent:
             test_case = LLMTestCase(
                 input=QUESTION,
                 actual_output=output.value["structured_response"].text,
-                context=["order A-1042: processing"],
+                context=tool_results(output.value["messages"]),
             )
             await keeps_to_order_status.a_measure(test_case)
             verdicts.append(keeps_to_order_status.is_successful())
@@ -148,7 +154,9 @@ The names are those of DeepEval 4.2.7; the agent, its fixture and `REPLY_JUDGE_L
 here, [agent-eval-example.md](agent-eval-example.md) builds the agent, and `openai_api_key` is the
 settings field of [logging/agent-example.md](../logging/agent-example.md). The test is async
 because the agent is ([agent-eval-example.md](agent-eval-example.md) says why), so it awaits the
-agent and DeepEval's `a_measure`. The judge's model here has no reasoning effort to set; one that
+agent and DeepEval's `a_measure`. The judge's context is what the run's tools returned, not a copy
+of the fixture's data, so the reply is judged against the facts the agent saw
+([agents.md](agents.md) section 2). The judge's model here has no reasoning effort to set; one that
 has one gets it from its `<purpose>_llm_reasoning_effort` constant through `OpenAIModel`'s
 `generation_kwargs` ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md)
 section 15). What makes this snippet

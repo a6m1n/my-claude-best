@@ -242,17 +242,20 @@ Why it looks like this:
 ## `evals/chat/cases_chat.jsonl`: the cases
 
 ```json
-{"case_id": "shipped-order", "question": "Where is my order A-1042?", "order_statuses": {"A-1042": "shipped"}, "required_tools": ["find_order"], "allowed_tools": ["find_order"], "status_in_reply": "shipped"}
-{"case_id": "unknown-order", "question": "What happened to order B-9?", "order_statuses": {}, "required_tools": ["find_order"], "allowed_tools": ["find_order"], "status_in_reply": null}
-{"case_id": "no-order-id", "question": "Can I change my delivery address?", "order_statuses": {}, "required_tools": [], "allowed_tools": [], "status_in_reply": null}
+{"case_id": "shipped-order", "question": "Where is my order A-1042?", "order_statuses": {"A-1042": "shipped"}, "required_tools": ["find_order"], "allowed_tools": ["find_order"], "status_in_reply": "shipped", "budget": {"model_calls": 2, "tool_calls": 1, "seconds": 8}}
+{"case_id": "unknown-order", "question": "What happened to order B-9?", "order_statuses": {}, "required_tools": ["find_order"], "allowed_tools": ["find_order"], "status_in_reply": null, "budget": {"model_calls": 2, "tool_calls": 1, "seconds": 8}}
+{"case_id": "no-order-id", "question": "Can I change my delivery address?", "order_statuses": {}, "required_tools": [], "allowed_tools": [], "status_in_reply": null, "budget": {"model_calls": 1, "tool_calls": 0, "seconds": 4}}
 ```
 
-Each case names the tools the agent must call and the tools it may call, and the store it runs
-against ([agents.md](agents.md) section 2). The last case has no order id: the right action is to ask
-for one, so no tool may run.
+Each case names the tools the agent must call and the tools it may call, the store it runs
+against, and its budget ([agents.md](agents.md) section 2). The last case has no order id: the right
+action is to ask for one, so no tool may run. The budget is the shortest successful run known for
+the case: one model call that asks for the tool, one tool call, and one model call that writes the
+reply; a new best run lowers it in the pull request that shows it.
 
 ```python
-# evals/chat/schemas.py, next to Verdict, Split, PromiseVerdict and LabelledReply
+# evals/chat/schemas.py, next to Verdict, Split, PromiseVerdict and LabelledReply,
+# with PositiveInt, NonNegativeInt and PositiveFloat imported from pydantic
 @unique
 class ToolName(StrEnum):
     FIND_ORDER = "find_order"
@@ -262,13 +265,30 @@ class ToolName(StrEnum):
 class Criterion(StrEnum):
     """What the agent's eval grades; each has one grader and one rate."""
 
-    TASK_SUCCEEDED = (
-        "task_succeeded"  # the headline: the run passed every other criterion
-    )
+    # The headline: the run passed every other criterion.
+    TASK_SUCCEEDED = "task_succeeded"
     REQUIRED_TOOLS_CALLED = "required_tools_called"
     ONLY_ALLOWED_TOOLS_CALLED = "only_allowed_tools_called"
     REPLY_STATES_THE_STATUS = "reply_states_the_status"
     REPLY_KEEPS_TO_THE_STATUS = "reply_keeps_to_the_status"
+
+
+@unique
+class RunMeasure(StrEnum):
+    """What the eval reports over the whole run, next to the rates, without gating on it."""
+
+    WITHIN_BUDGET = "within_budget"
+    TOKENS_PER_SUCCESS = "tokens_per_success"
+
+
+class Budget(BaseModel):
+    """The most a successful run of one case may use: the shortest successful run known."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    model_calls: PositiveInt
+    tool_calls: NonNegativeInt
+    seconds: PositiveFloat
 
 
 class ChatCase(BaseModel):
@@ -281,13 +301,24 @@ class ChatCase(BaseModel):
     order_statuses: dict[str, str]
     required_tools: frozenset[ToolName]
     allowed_tools: frozenset[ToolName]
-    status_in_reply: (
-        str | None
-    )  # the status word the reply must state, when the order exists
+    # The status word the reply must state, when the order exists.
+    status_in_reply: str | None
+    budget: Budget
+
+
+class RunUsage(BaseModel):
+    """What one run of the agent used."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    model_calls: int
+    tool_calls: int
+    tokens: int
+    seconds: float
 
 
 class ChatRun(BaseModel):
-    """What one run of the agent did: its reply and the tools it called."""
+    """What one run of the agent did: its reply, the tools it called and what it used."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -295,6 +326,8 @@ class ChatRun(BaseModel):
     # The names the model asked for, which can include a tool that does not exist: not ToolName.
     tools_called: frozenset[str]
     order_status_seen: str | None
+    usage: RunUsage
+    within_budget: bool
 ```
 
 ## `evals/chat/experiment_chat.py`: the agent's eval
@@ -304,9 +337,10 @@ class ChatRun(BaseModel):
 """The support agent's eval: each case three times against the real model, graded on what the agent did."""
 
 import logging.config
+import time
 import uuid
 from collections import Counter
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import Final
 
@@ -315,7 +349,11 @@ from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from langfuse import Evaluation, RunnerContext, get_client
-from langfuse.experiment import ExperimentResult, LocalExperimentItem
+from langfuse.experiment import (
+    ExperimentItemResult,
+    ExperimentResult,
+    LocalExperimentItem,
+)
 
 from acme.core.acme_ai_client import AcmeAiClient
 from acme.core.config import Settings
@@ -329,7 +367,15 @@ from evals.chat.consts import (
     UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT,
 )
 from evals.chat.judge_unsupported_promise import judge_unsupported_promise
-from evals.chat.schemas import ChatCase, ChatRun, Criterion, Verdict
+from evals.chat.schemas import (
+    Budget,
+    ChatCase,
+    ChatRun,
+    Criterion,
+    RunMeasure,
+    RunUsage,
+    Verdict,
+)
 from evals.rate_gate import check_rates
 from tests.support.fake_order_store import FakeOrderStore
 
@@ -345,6 +391,8 @@ BASELINE: Final[Mapping[Criterion, float]] = {
     Criterion.REPLY_KEEPS_TO_THE_STATUS: 0.90,
 }
 MARGIN: Final = 0.05
+# Tokens per successful run of the version on main, read next to the pass rate, not gated.
+TOKENS_PER_SUCCESS_BEFORE: Final = 1_900
 
 
 def experiment(context: RunnerContext) -> ExperimentResult:
@@ -369,7 +417,7 @@ def run_chat_eval(context: RunnerContext, settings: Settings) -> ExperimentResul
         name="support-chat",
         data=[_item(case) for case in cases for _ in range(RUNS_PER_CASE)],
         task=lambda *, item, **kwargs: _run_agent(
-            item["expected_output"], llm, tracing
+            item["expected_output"], llm, tracing, clock=time.perf_counter
         ),
         evaluators=[
             required_tools_called,
@@ -380,6 +428,7 @@ def run_chat_eval(context: RunnerContext, settings: Settings) -> ExperimentResul
             ),
         ],
         composite_evaluator=task_succeeded,
+        run_evaluators=[within_budget, tokens_per_success],
         # The prompts are in git, so the commit is their version (evals.md section 9).
         metadata={
             "model": SUPPORT_CHAT_LLM_MODEL,
@@ -402,7 +451,11 @@ def run_chat_eval(context: RunnerContext, settings: Settings) -> ExperimentResul
 
 
 async def _run_agent(
-    case: ChatCase, llm: ChatOpenAI, tracing: BaseCallbackHandler
+    case: ChatCase,
+    llm: ChatOpenAI,
+    tracing: BaseCallbackHandler,
+    *,
+    clock: Callable[[], float],
 ) -> ChatRun:
     # A new store and a new agent for every run: nothing carries over (agents.md section 6).
     orders = FakeOrderStore(case.order_statuses)
@@ -414,16 +467,42 @@ async def _run_agent(
         new_request_uuid=uuid.uuid4,
     )
 
+    started = clock()
     output = await agent.ainvoke(
         {"messages": [HumanMessage(case.question)]},
         {"callbacks": [tracing]},
         version="v2",
     )
+    usage = _usage(output.value["messages"], seconds=clock() - started)
 
     return ChatRun(
         reply=output.value["structured_response"].text,
         tools_called=_tools_called(output.value["messages"]),
         order_status_seen=_first_status_seen(orders.asked, case.order_statuses),
+        usage=usage,
+        within_budget=_within(usage, case.budget),
+    )
+
+
+def _usage(messages: Iterable[AnyMessage], *, seconds: float) -> RunUsage:
+    replies = [message for message in messages if isinstance(message, AIMessage)]
+    return RunUsage(
+        model_calls=len(replies),
+        tool_calls=sum(len(reply.tool_calls) for reply in replies),
+        tokens=sum(
+            reply.usage_metadata["total_tokens"]
+            for reply in replies
+            if reply.usage_metadata
+        ),
+        seconds=seconds,
+    )
+
+
+def _within(usage: RunUsage, budget: Budget) -> bool:
+    return (
+        usage.model_calls <= budget.model_calls
+        and usage.tool_calls <= budget.tool_calls
+        and usage.seconds <= budget.seconds
     )
 
 
@@ -492,6 +571,53 @@ def task_succeeded(*, evaluations: list[Evaluation], **kwargs: object) -> Evalua
     return Evaluation(name=Criterion.TASK_SUCCEEDED, value=succeeded)
 
 
+def within_budget(
+    *, item_results: list[ExperimentItemResult], **kwargs: object
+) -> Evaluation:
+    """Of the runs that succeeded, the share that stayed inside its case's budget."""
+    succeeded = _successful_runs(item_results)
+    within = sum(run.within_budget for run in succeeded)
+    share = within / len(succeeded) if succeeded else 0.0
+    return Evaluation(
+        name=RunMeasure.WITHIN_BUDGET,
+        value=share,
+        comment=f"{within} of {len(succeeded)}",
+    )
+
+
+def tokens_per_success(
+    *, item_results: list[ExperimentItemResult], **kwargs: object
+) -> Evaluation:
+    """The tokens of every run, divided by the runs that succeeded."""
+    runs = [run.output for run in item_results if isinstance(run.output, ChatRun)]
+    tokens = sum(run.usage.tokens for run in runs)
+    successes = len(_successful_runs(item_results))
+    if not successes:
+        return Evaluation(
+            name=RunMeasure.TOKENS_PER_SUCCESS,
+            value=float(tokens),
+            comment=f"no run succeeded: all {tokens} tokens bought nothing",
+        )
+
+    return Evaluation(
+        name=RunMeasure.TOKENS_PER_SUCCESS,
+        value=tokens / successes,
+        comment=f"{successes} successful runs; {TOKENS_PER_SUCCESS_BEFORE} on main",
+    )
+
+
+def _successful_runs(item_results: Iterable[ExperimentItemResult]) -> list[ChatRun]:
+    return [
+        run.output
+        for run in item_results
+        if isinstance(run.output, ChatRun)
+        and any(
+            evaluation.name == Criterion.TASK_SUCCEEDED and evaluation.value is True
+            for evaluation in run.evaluations
+        )
+    ]
+
+
 def _item(case: ChatCase) -> LocalExperimentItem:
     return LocalExperimentItem(
         input=case.question, expected_output=case, metadata={"case_id": case.case_id}
@@ -527,6 +653,15 @@ Why it looks like this:
   evaluator, which Langfuse runs after the item evaluators with their results. A run succeeds when
   every criterion was graded and passed, and its rate leads the baseline. The other rates show where
   a failed run went wrong.
+- **Budget and cost, read under the headline** ([agents.md](agents.md) section 2): each case carries
+  the budget of its shortest successful run, and `_run_agent` counts the model calls, tool calls,
+  tokens and seconds from the run's messages and the clock it is given; the duration is part of what
+  it returns, so the clock is a parameter ([readability.md](../readability/readability.md)
+  section 6). Two run evaluators, which Langfuse runs once over all the results, report the share of
+  successful runs inside their budget and the tokens per successful run against main's figure.
+  They are reported, not gated, and they stay out of `Criterion`, so they never enter the headline
+  or the count `check_rates` makes. Tokens stand in for money: multiply by the model's price for
+  the cost per successful case.
 - **The task returns what the agent did**, not only its reply ([agents.md](agents.md) section 9): an
   item evaluator in Langfuse sees the task's output and never the trace, so the tool calls travel in
   `ChatRun`.
