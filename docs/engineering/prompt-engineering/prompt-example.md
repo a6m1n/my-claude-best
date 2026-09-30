@@ -57,13 +57,17 @@ class RawReply:
     text: str
 ```
 
+`core/config.py` holds the one setting this client needs. The settings class's `model_config` and
+its other fields are left out; they are
+[python/settings-example.md](../python/settings-example.md)'s.
+
 ```python
 # core/config.py
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # DISABLE_PROMPT_CACHE=true only while debugging or measuring
+    # ACME_DISABLE_PROMPT_CACHE=true only while debugging or measuring
     disable_prompt_cache: bool = False
 ```
 
@@ -245,7 +249,7 @@ The names follow `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort`, so 
 from datetime import date
 from enum import StrEnum, unique
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 @unique
@@ -257,15 +261,20 @@ class TicketKind(StrEnum):
 class TicketTriage(BaseModel):
     """The answer of the triage call; the client sends its JSON schema as the response format."""
 
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
     reasoning: str  # first: the model writes top to bottom, so this leads to the kind
     kind: TicketKind
     # None is the way out: the ticket gives no date
     problem_first_occurred_on: date | None
 ```
 
-`reasoning` comes before `kind` (section 12). `kind` accepts two values and nothing else.
-`problem_first_occurred_on` has no default, so the model has to fill it, and `None` is a value
-the schema allows: the way out of section 8, with its condition in the prompt below.
+`reasoning` comes before `kind` (section 12). Strict mode is safe here because `_parse_answer`
+parses the raw text with `model_validate_json`. `kind` accepts two values and nothing else, and
+the model config rejects a key the schema does not name
+([python.md](../python/python.md) section 4). `problem_first_occurred_on` has no default, so the
+model has to fill it, and `None` is a value the schema allows: the way out of section 8, with its
+condition in the prompt below.
 
 ## `support/triage/prompts.py`: the base prompt and the layer per model
 

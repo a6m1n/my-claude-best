@@ -153,10 +153,14 @@ def build_logging_config(
 ```
 
 The console formatter is the default, because a person reads the log while the code is written.
-`JsonFormatter` is switched on by `LOG_FORMAT=json` once the logs go to a store searched by field
-(logging.md section 6). Both read the same Filter, so a line has the same ids in either format.
+`JsonFormatter` is switched on by `ACME_LOG_FORMAT=json` once the logs go to a store searched by
+field (logging.md section 6). Both read the same Filter, so a line has the same ids in either
+format.
 
 ## `core/config.py`: the two settings
+
+The two logging fields of the application's settings class. Its `model_config` and its other
+fields are left out; they are [python/settings-example.md](../python/settings-example.md)'s.
 
 ```python
 from pydantic_settings import BaseSettings
@@ -166,7 +170,7 @@ from acme.core.logging import LogFormat, LogLevel
 
 class Settings(BaseSettings):
     log_level: LogLevel = "INFO"
-    log_format: LogFormat = "console"  # LOG_FORMAT=json in deployed environments
+    log_format: LogFormat = "console"  # ACME_LOG_FORMAT=json in deployed environments
 ```
 
 The types reject a misspelt level or format when the process starts, not at the first log call.
@@ -184,7 +188,8 @@ from acme.core.logging import build_logging_config
 def main() -> None:
     settings = Settings()
     uvicorn.run(
-        "acme.api.app:app",
+        "acme.api.app:create_app",
+        factory=True,
         host="0.0.0.0",
         port=8000,
         log_config=build_logging_config(settings.log_level, settings.log_format),
@@ -276,17 +281,14 @@ async def internal_error(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse({"detail": "Internal server error"}, status_code=500)
 
 
-def create_app() -> FastAPI:
+def create_app() -> RequestIdMiddleware:
     app = FastAPI()
 
     app.add_exception_handler(Exception, internal_error)
     app.include_router(report_router)
 
-    return app
-
-
-# Outside FastAPI's own error middleware, so the id is set first and its header reaches a 500 too.
-app = RequestIdMiddleware(create_app())
+    # Outside FastAPI's own error middleware, so the id is set first and its header reaches a 500 too.
+    return RequestIdMiddleware(app)
 ```
 
 `app.add_middleware(RequestIdMiddleware)` would put it inside that error middleware: the id would
@@ -357,7 +359,7 @@ the one `ERROR` with the traceback. The topic, which is user text, appears in no
 
 ## What it prints
 
-With `LOG_FORMAT=console`, one request that needed a retry:
+With `ACME_LOG_FORMAT=console`, one request that needed a retry:
 
 ```
 2026-09-27 14:03:11,482 INFO     uvicorn.error [-] Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
@@ -366,7 +368,7 @@ With `LOG_FORMAT=console`, one request that needed a retry:
 2026-09-27 14:03:16,021 INFO     uvicorn.access [7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12] 192.0.2.10:53211 - "POST /reports HTTP/1.1" 200
 ```
 
-The same `Report 81 generated` line with `LOG_FORMAT=json`:
+The same `Report 81 generated` line with `ACME_LOG_FORMAT=json`:
 
 ```json
 {"request_id": "7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12", "thread_id": "-", "trace_id": "-", "sections": 6, "ts": "2026-09-27T14:03:16.020+00:00", "level": "INFO", "logger": "acme.reports.report.usecase", "message": "Report 81 generated", "template": "Report %s generated"}

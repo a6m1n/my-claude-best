@@ -26,11 +26,13 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   requests.
 - Before you write or change Python — a module, a type, a check on data coming in — read
   `docs/engineering/python/python.md`, and
-  `docs/engineering/python/explicit-constraints-example.md` when you place a constraint. The
-  check: every constraint the change introduces is stated on the type or signature that carries
-  it, what enforces it is a runtime mechanism or a checker the CI runs and fails on, and no
-  parameter or field the change adds that carries a value of a closed set is a bare `str`
-  (`python.md` section 3).
+  `docs/engineering/python/explicit-constraints-example.md` when you place a constraint,
+  `docs/engineering/python/settings-example.md` when you add or change the application's
+  settings. The check: every constraint the change introduces is stated on the type or signature
+  that carries it, what enforces it is a runtime mechanism or a checker the CI runs and fails on,
+  no parameter or field the change adds that carries a value of a closed set is a bare `str`
+  (`python.md` section 3), and nothing the change adds reads the environment outside the
+  settings class (`python.md` section 5).
 - Before a change edits code that already exists (a feature, a fix, a move to a practice, a
   restructure), or turns on a new rule, read `docs/engineering/refactoring/refactoring.md`, and
   `docs/engineering/refactoring/adoption-example.md` when a practice change has to reach old

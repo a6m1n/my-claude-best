@@ -134,17 +134,19 @@ async def chat(body: ChatRequest, request: Request) -> ChatResponse:
     return ChatResponse(thread_id=reply.thread_id, text=reply.text)
 ```
 
-`create_app()` builds the chat model once with `llm = chat_model(SUPPORT_CHAT_LLM_MODEL)` and the
-agent once with
+`create_app()` builds `Settings()` once, the chat model once with
+`llm = chat_model(SUPPORT_CHAT_LLM_MODEL, api_key=settings.openai_api_key)` and the agent once with
 `build_agent(llm, orders, model=SUPPORT_CHAT_LLM_MODEL, disable_prompt_cache=settings.disable_prompt_cache, new_request_uuid=uuid.uuid4)`,
 where `orders` is the order store's client and `settings` is the `Settings` of
-[setup-example.md](setup-example.md), which gains one field, `disable_prompt_cache: bool = False`
+[setup-example.md](setup-example.md), which gains `openai_api_key: SecretStr`, the Langfuse keys
+(not shown) and `disable_prompt_cache: bool = False`
 ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 17). The adapter
 reads the model constant and the setting in this one place and hands them on, so a test can pass a
 `ChatOpenAI` with an `httpx.MockTransport` inside and a fixed UUID
 ([readability.md](../readability/readability.md) section 6). It builds the Langfuse handler once
-with `callback_handler()`, and keeps the agent and the handler on `app.state` as `chat_agent` and
-`tracing`; that wiring is not shown.
+with `callback_handler()`, after it starts the Langfuse client with the keys from `Settings`, and
+keeps the agent and the handler on `app.state` as `chat_agent` and `tracing`; that wiring is not
+shown.
 
 ## `core/langfuse_client.py`: the one client of Langfuse
 
@@ -181,6 +183,7 @@ from langchain.agents.structured_output import StructuredOutputValidationError
 from langchain_core.messages import AIMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from openai.types import ChatModel
+from pydantic import SecretStr
 
 from acme.core.errors import (
     ModelAnswerInvalid,
@@ -190,8 +193,8 @@ from acme.core.errors import (
 )
 
 
-def chat_model(model: ChatModel) -> ChatOpenAI:
-    return ChatOpenAI(model=model)
+def chat_model(model: ChatModel, api_key: SecretStr) -> ChatOpenAI:
+    return ChatOpenAI(model=model, api_key=api_key)
 
 
 class PromptCacheSwitchMiddleware(AgentMiddleware):
@@ -331,11 +334,13 @@ SUPPORT_CHAT_LLM_MODEL: Final[ChatModel] = "gpt-4.1-mini"
 
 ```python
 # support/chat/schemas.py, next to Answer and Question
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ChatReply(BaseModel):
     """The agent's final reply, the text the customer reads; the provider returns it as JSON in this shape."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     text: str
 ```
@@ -592,7 +597,7 @@ In a graph built by hand, the same two jobs sit in the one client of the model a
 
 ## What a run prints
 
-With `LOG_FORMAT=console`, one question that needed one tool call, which failed because the order
+With `ACME_LOG_FORMAT=console`, one question that needed one tool call, which failed because the order
 store was down (the ids are cut to eight characters here; the console line shows only the request
 id, and the JSON record carries all three):
 
@@ -604,7 +609,7 @@ id, and the JSON record carries all three):
 2026-09-27 15:21:05,107 INFO     uvicorn.access [7f3c9a1e] 192.0.2.10:53211 - "POST /chat HTTP/1.1" 200
 ```
 
-The same summary line with `LOG_FORMAT=json`:
+The same summary line with `ACME_LOG_FORMAT=json`:
 
 ```json
 {"request_id": "7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12", "thread_id": "thread-42", "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736", "outcome": "stop", "duration_ms": 1631, "messages": 4, "tool_calls": 1, "ts": "2026-09-27T15:21:05.106+00:00", "level": "INFO", "logger": "acme.support.chat.usecase", "message": "Chat run finished", "template": "Chat run finished"}

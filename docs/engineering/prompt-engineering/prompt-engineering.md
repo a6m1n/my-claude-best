@@ -497,6 +497,8 @@ class TicketKind(StrEnum):
 
 
 class TicketTriage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
     reasoning: str  # first, so it leads to the kind: section 12
     kind: TicketKind
 ```
@@ -528,6 +530,8 @@ Bad — the reasoning after the answer:
 
 ```python
 class TicketTriage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
     kind: TicketKind
     reasoning: str
 ```
@@ -539,6 +543,8 @@ Good — the same fields, the reasoning first:
 
 ```python
 class TicketTriage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
     reasoning: str  # first, so it leads to the kind
     kind: TicketKind
 ```
@@ -826,12 +832,13 @@ class ProviderClient:
 The prefix changes on every attempt, it changes the text the model reads, and one day it is
 committed. Nothing tells the next reader which answers were produced with it.
 
-Good — the same client, with the switch as a setting:
+Good — the same client, with the switch as a setting. The settings class's `model_config` and its
+other fields are left out; they are [python.md](../python/python.md) section 5:
 
 ```python
 # core/config.py
 class Settings(BaseSettings):
-    # DISABLE_PROMPT_CACHE=true only while debugging or measuring
+    # true only while debugging or measuring
     disable_prompt_cache: bool = False
 
 

@@ -214,7 +214,8 @@ class CheckoutResult(StrEnum):
 ```
 
 `src/shop/api/routes_checkout.py`, the part that turns the result into a response. The rest of the
-route parses the request body into an `Order`, rejecting a field of the wrong type, passes
+route parses the request body with its Pydantic request model, rejecting a field of the wrong type
+([python.md](python.md) section 4), builds the `Order` from it, passes
 `place_order` the three clients `api/app.py` builds once at startup
 ([file-structure.md](../file-structure/file-structure.md) sections 4 and 5), and answers with
 `status_for(result)` and `result.value` in the response body.
