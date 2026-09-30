@@ -13,14 +13,14 @@ What each part of the line means is in [README.md](README.md).
 
 ## What the script does on your machine
 
-It reads the JSON that Claude Code sends on stdin, and the last 2 MB of the session transcript to count cache hits and tokens per hour. It writes two small files per session to your temp folder, `claude_statusline_burn_<session>.json` and `claude_statusline_agents_<session>.json`, because `burn` and the pause timer need a history that Claude Code does not keep. It makes no network calls. It runs with your user's rights on every refresh, so read it before you install it: it is one file.
+It reads the JSON that Claude Code sends on stdin, and the last 2 MB of the session transcript to count cache hits and tokens per hour. It writes two small files per session, `burn_<session>.json` and `agents_<session>.json`, because `burn` and the pause timer need a history that Claude Code does not keep. They go to `statusline-state/` inside Claude Code's config folder: `~/.claude` (on Windows `%USERPROFILE%\.claude`), or the folder an absolute `CLAUDE_CONFIG_DIR` names; with a relative one the script uses `~/.claude`. The script creates that folder readable only by you (mode 0700) and each file readable only by you (0600), so other users cannot read or list them; on Windows the folder takes your profile's permissions, and Windows is not tested yet. If `CLAUDE_CONFIG_DIR` points at a folder other users can write to, they can already change your Claude Code settings there, so keep that folder private. When a new session starts, the script deletes the files in `statusline-state/` that were not written for a day. If the folder cannot be created or written, the script keeps no history: `burn` shows `— (no history)`, the agent rows show no `⏸` pause timer, and `claude --debug` shows why. Versions before this one wrote the same files into the temp folder; on Linux, where that is usually the shared `/tmp`, other users could read them. You can delete those old `claude_statusline_*.json` files and any `claude-statusline-<number>` folder in your temp folder. It makes no network calls. It runs with your user's rights on every refresh, so read it before you install it: it is one file.
 
 ## Set it up by hand
 
 You need:
 
 - Python 3.9 or newer (`python3 --version`).
-- A clone of [this repository](../../README.md#license) (its License section shows the full address to clone), or only the file: open [statusline.py](statusline.py) on GitHub, click Raw, copy the raw URL, and download it into a new empty folder, never into `~/.claude`: `cd "$(mktemp -d)" && curl -fsSL <raw URL> -o statusline.py`.
+- A clone of [this repository](../../) (the green Code button on the repository page copies its address: `git clone <address>`), or only the file: open [statusline.py](statusline.py) on GitHub, click Raw, copy the raw URL, and download it into a new empty folder, never into `~/.claude`: `cd "$(mktemp -d)" && curl -fsSL <raw URL> -o statusline.py`.
 - One terminal for all the commands, in the clone's root or in that new folder.
 
 The commands are for macOS and Linux. On Windows, use the [one-paste route](#install-with-one-paste), which finds `python3`, `python` or `py -3`; it is not tested on Windows yet.
@@ -83,7 +83,7 @@ The commands are for macOS and Linux. On Windows, use the [one-paste route](#ins
 
 Two routes:
 
-- With a clone: clone [this repository](../../README.md#license) (its License section shows the full address to clone), open a terminal in the clone, start `claude`, and paste the prompt below (the copy button sits in the corner of the block).
+- With a clone: clone [this repository](../../) (the green Code button on the repository page copies its address: `git clone <address>`), open a terminal in the clone, start `claude`, and paste the prompt below (the copy button sits in the corner of the block).
 - Without a clone: start `claude` anywhere and paste the prompt. When it asks for the script, give it the raw URL of statusline.py: open [statusline.py](statusline.py) on GitHub, click Raw, and copy the address.
 
 Claude Code checks everything first, then backs up your files, copies the script, merges the two keys and shows you each change. It asks before it replaces anything you already have. In Manual mode Claude Code asks before most commands and every file edit; in auto mode a classifier reviews them instead. Press Shift+Tab to switch to Manual first if you want to approve each change yourself. When it is done, send one message and look under the prompt; if nothing appears, see [below](#if-nothing-appears). This route has not been tested on Windows.
@@ -118,6 +118,7 @@ Install the status line from claude-config/statusline/statusline.py in a clone o
 
 - Delete the keys you added (from `~/.claude/settings.json`, or the project's `.claude/settings.local.json`); where you replaced a value, put back the old one from your first settings backup.
 - Delete `~/.claude/statusline.py` if you had none before; otherwise copy `statusline.py.bak-<stamp>` back.
+- Delete the `~/.claude/statusline-state/` folder: it holds only the script's history.
 
 Copying the whole settings backup back is exact only right after the install; later it also undoes your `/model` and `/config` changes.
 
