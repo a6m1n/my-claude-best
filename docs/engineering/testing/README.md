@@ -18,14 +18,14 @@ guarantee turns it red.** The id,
 `tests/unit/remind_overdue_invoice/test_reminder_rules.py::TestNeedsReminder::test_a_second_reminder_waits_for_the_interval`,
 names the module, the source file, the unit and the promise. The test fails when that promise
 breaks, and not because of the order it ran in, the network, a renamed argument or a setting it
-never asked for. The guarantee is one the team's own code makes: a test that only a library change
-or a deliberate edit can turn red is not written ([what-to-test.md](what-to-test.md)). Each file
-below keeps one part of that true.
+never asked for. The guarantee is one someone relies on: a test that no bug in the team's own code
+can turn red is not written ([what-to-test.md](what-to-test.md) section 1). Each file below keeps
+one part of that true.
 
 ## What is here
 
-- [what-to-test.md](what-to-test.md): which code earns a test, which gets none, and what a test
-  asserts. Read it before you write a test, and when you review one.
+- [what-to-test.md](what-to-test.md): which code earns a test, which gets none, and where the
+  rules for writing one live. Read it before you write a test, and when you review one.
 - [layout.md](layout.md): the `tests/` tree, which suite a test belongs to, the path and the name
   of a test file, one class per file, packages and imports, the shared `support/` harness, and the
   tree's own `README.md` and `CLAUDE.md`. Read it when you create a test file or decide where one

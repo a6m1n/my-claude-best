@@ -556,10 +556,11 @@ A complete settings class, the entry point that builds it and the test of the cl
   is built. Its `repr`, `str` and JSON dump print `**********`. A secret never sits inside a URL:
   a `PostgresDsn` prints its password in `repr` and in `model_dump_json()`, and Pydantic has no
   option to hide it. Keep the password in its own field and let the client build the URL.
-- **`hide_input_in_errors=True`.** When the class fails, the `ValidationError` lists every value it
-  read, secrets included, because no `SecretStr` exists yet at that point. The setting removes the
-  values from the error's text. It does not reach `errors()` or `json()`, so let the error end the
-  process and log neither.
+- **`hide_input_in_errors=True`.** When the class fails, the `ValidationError` carries every value
+  it read, secrets included, because no `SecretStr` exists yet at that point: `errors()` and
+  `json()` hold each one whole, and its text shows each input cut to 50 characters, which can
+  show a secret whole. The setting removes the values from the error's text. It does not reach
+  `errors()` or `json()`, so let the error end the process and log neither.
 - **`frozen=True`.** Nothing changes a setting after startup.
 - **A list or a dict comes as JSON**: `ACME_ALLOWED_ORIGINS='["https://shop.example.com"]'`. A
   comma-separated value stops the start with a `SettingsError`. For another format, mark the field
@@ -607,12 +608,12 @@ A complete settings class, the entry point that builds it and the test of the cl
 - **A test of a client or a use case never builds `Settings`.** It passes the unit the plain
   values it takes ([readability.md](../readability/readability.md) section 6); a test of the whole
   app passes its own `Settings` to the function that builds the app. The tests of the settings
-  class cover only what the class decides, its validators and the flags that stop a bad start or
-  keep a secret out of the error, never that pydantic-settings reads a value
-  ([testing/what-to-test.md](../testing/what-to-test.md) section 3). They close both sources:
-  `Settings(_env_file=None, ...)` stops the `.env` file, and a fixture removes the machine's own
-  prefixed variables before `monkeypatch` sets the ones the case needs. Either one alone lets the
-  machine's own configuration into the test.
+  class cover only what the class decides: its validators, that its required values have no
+  default, and the flags that stop a bad start or keep a secret out of the error; never that
+  pydantic-settings reads a value ([testing/what-to-test.md](../testing/what-to-test.md) sections
+  2 and 3). They close both sources: `Settings(_env_file=None, ...)` stops the `.env` file, and a
+  fixture removes the machine's own prefixed variables before `monkeypatch` sets the ones the case
+  needs. Either one alone lets the machine's own configuration into the test.
 
 Importing pydantic and pydantic-settings takes about 50 ms, and building the class about 50 µs,
 once per process. Only a short-lived command-line tool notices.

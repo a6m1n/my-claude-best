@@ -172,7 +172,8 @@ environment variable, or an attribute of a library you do not own. `monkeypatch`
 change and reverts it: "All modifications will be undone after the requesting test function or
 fixture has finished." The tests of the settings class do this
 ([python/settings-example.md](../python/settings-example.md)): their fixture removes the
-machine's own `ACME_` variables and sets the valid ones, and each test changes one variable more.
+machine's own `ACME_` variables and sets the valid ones, and each test removes or changes the
+variables its case needs.
 
 A patch more than one test needs goes in a fixture; a test that needs one change once may call
 `monkeypatch` itself. Check: every `monkeypatch` or `MonkeyPatch.context` line sits inside a

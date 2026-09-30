@@ -35,10 +35,12 @@ assert [email.to for email in mailer.sent] == ["jane.doe@example.com"]
 
 A member of a set you own is compared with `is` ([python.md](../python/python.md) section 3).
 
-One exception covers the two capture fixtures. A log line (`caplog`) and printed output (`capsys`)
-carry a level, a time or a layout the test does not own, so a substring is the exact form of that
-guarantee. It still names the subject and the outcome, never only that something was written:
-`assert "reminder sent" in caplog.text`, not `assert caplog.text`.
+One exception covers printed output. Output a person reads (`capsys`) carries a layout the test
+does not own, so a substring is the exact form of that guarantee. It still names the subject and
+the outcome, never only that something was written:
+`assert "1 reminder sent" in capsys.readouterr().out`, not `assert capsys.readouterr().out`. A log
+line is not a guarantee ([logging.md](../logging/logging.md) section 11); a test reads `caplog`
+only to check that a secret stays out of it (section 6).
 
 ## 2. A record is compared whole
 
@@ -157,7 +159,8 @@ how a test holds the code to it.
 
 **Pair every negative `caplog` assertion with a positive one in the same test**, after
 `caplog.set_level(...)` for the level the code logs at. With nothing captured,
-`"key-for-tests" not in caplog.text` is true for the wrong reason.
+`"key-for-tests" not in caplog.text` is true for the wrong reason. The positive line is there to
+prove that the log was captured, not to pin its wording.
 
 ```python
 # Bad: nothing positive is asserted, so a run that logged nothing passes the check.

@@ -85,7 +85,7 @@ src/acme/
     ├── app.py               create_app(): builds Settings and each client once, wires the routes
     └── ...                  files not shown
 tests/unit/core/
-└── test_config.py           the test of the settings class
+└── test_config.py           the tests of the settings class
 ```
 
 Where each file sits is [file-structure.md](../file-structure/file-structure.md) sections 4
@@ -114,7 +114,7 @@ class Settings(BaseSettings):
         env_file=".env",  # local runs only; a deployment sets real variables
         env_ignore_empty=True,  # Compose and CI pass an unset secret as ""
         frozen=True,
-        # A failed start lists every value it read; this keeps them out of the error text.
+        # A failed start shows what it read in the error text; this keeps it out.
         hide_input_in_errors=True,
     )
 
@@ -298,7 +298,21 @@ def environment(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
 
 
 class TestSettings:
-    """An empty or placeholder secret stops the start, and the error shows no secret."""
+    """A bad environment stops the start with an error that shows no secret."""
+
+    @pytest.mark.parametrize(
+        "name", [pytest.param(name, id=name) for name in VALID_ENVIRONMENT]
+    )
+    def test_a_missing_required_value_stops_the_start(
+        self, environment: pytest.MonkeyPatch, name: str
+    ) -> None:
+        environment.delenv(name)
+
+        with pytest.raises(ValidationError) as caught:
+            Settings(_env_file=None)
+
+        errors = caught.value.errors(include_input=False)
+        assert [error["type"] for error in errors] == ["missing"]
 
     def test_an_empty_value_stops_the_start(
         self, environment: pytest.MonkeyPatch
@@ -314,12 +328,14 @@ class TestSettings:
     def test_a_failed_start_prints_no_secret(
         self, environment: pytest.MonkeyPatch
     ) -> None:
-        environment.delenv("ACME_DATABASE_HOST")
+        # The error text shows each input cut to 50 characters. With the key as the
+        # only value set, the input is short enough to show whole without the flag.
+        for name in VALID_ENVIRONMENT.keys() - {"ACME_PAYMENTS_API_KEY"}:
+            environment.delenv(name)
 
-        with pytest.raises(ValidationError, match="database_host") as caught:
+        with pytest.raises(ValidationError, match="Field required") as caught:
             Settings(_env_file=None)
 
-        # A missing-field error carries every value the class read as its input.
         assert "payments-key-for-tests" not in str(caught.value)
 
     def test_a_placeholder_secret_stops_the_start(
@@ -331,19 +347,24 @@ class TestSettings:
             Settings(_env_file=None)
 ```
 
-It is good because each test pins one thing this class decides and an edit could undo without a
-sound: `env_ignore_empty=True`, which pydantic-settings leaves off, `hide_input_in_errors=True`,
-and the placeholder validator. Delete any one of them and exactly its test turns red. No test
-checks that pydantic-settings reads a variable into its field or a JSON list into a tuple: the
-library's own tests cover that, and such a test here would turn red only when the library changes
-or a field is renamed on purpose ([testing/what-to-test.md](../testing/what-to-test.md) section 3).
-A missing value is shown once, in the test that removes `ACME_DATABASE_HOST`; that no required
-field gains a default is [python.md](python.md) section 5's rule, kept in review.
+It is good because each test is named for one thing this class decides and an edit could undo
+without a sound: that the five required values have no default, `env_ignore_empty=True`, which
+pydantic-settings leaves off, `hide_input_in_errors=True`, and the placeholder validator. Delete any
+one of them and exactly its test, or its row, turns red. The one overlap: a default on
+`payments_api_key` also turns the empty-value test red, because the ignored empty value then falls
+back to it. No test checks that pydantic-settings reads a variable into its field or a JSON list
+into a tuple: the library's own tests cover that, and such a test here would turn red only when the
+library changes or a field is renamed or retyped on purpose
+([testing/what-to-test.md](../testing/what-to-test.md) section 3). The missing-value test takes its
+rows from `VALID_ENVIRONMENT`, so a required variable gets its row when it joins the valid
+environment. The no-secret test sets the key alone: pydantic cuts each input in the error text to 50
+characters, and a longer input could hide the key even without the flag.
 
-The fixture closes both sources the class reads: `_env_file=None` keeps a developer's `.env` out,
-and the fixture removes every `ACME_` variable of the machine before it sets the valid ones. It
-states its scope ([testing/fixtures.md](../testing/fixtures.md) section 1): a fresh environment
-for every test. Which tests build `Settings` at all is [python.md](python.md) section 5.
+The tests close both sources the class reads: each passes `_env_file=None`, which keeps a
+developer's `.env` out, and the fixture removes every `ACME_` variable of the machine before it
+sets the valid ones. The fixture states its scope ([testing/fixtures.md](../testing/fixtures.md)
+section 1): a fresh environment for every test. Which tests build `Settings` at all is
+[python.md](python.md) section 5.
 
 ### What changed
 
@@ -361,10 +382,11 @@ Each thing that went wrong in Before now fails, or shows, where the reader looks
   clients and hands the values on.
 
 Run with the test file above on CPython 3.12 (pydantic 2.12.5, pydantic-settings 2.14.2) and
-CPython 3.13 (pydantic 2.13.4, pydantic-settings 2.14.2): the three tests pass; with the machine's
-own `ACME_DATABASE_HOST` exported, they still pass, because the fixture removes it; with
-`hide_input_in_errors=True`, `env_ignore_empty=True` or the placeholder check deleted, exactly the
-test that pins it fails; `repr(Settings(...))` prints both secrets as `**********`.
+CPython 3.13 (pydantic 2.13.4, pydantic-settings 2.14.2): the eight test ids pass; with the
+machine's own `ACME_DATABASE_HOST` exported, they still pass, because the fixture removes it; with
+`hide_input_in_errors=True`, `env_ignore_empty=True` or the placeholder check deleted, or a default
+given to a required field, the test or the row that pins it fails, and for `payments_api_key` the
+empty-value test too; `repr(Settings(...))` prints both secrets as `**********`.
 
 ### What this example does not claim
 
@@ -376,6 +398,9 @@ test that pins it fails; `repr(Settings(...))` prints both secrets as `*********
   `.env.example` file that holds the placeholder is not shown. The `.gitignore` and `.dockerignore`
   that list `.env` are not shown either.
 - **That the error never carries a secret.** `hide_input_in_errors=True` keeps the values out of
-  the error's text only; `errors()` and `json()` still carry them, which is why the test reads
+  the error's text only; `errors()` and `json()` still carry them, which is why the tests read
   `errors(include_input=False)` and why [python.md](python.md) section 5 lets the error end the
   process and logs neither.
+- **The names of the values with a default.** A misspelt or renamed `ACME_LOG_LEVEL`,
+  `ACME_LOG_FORMAT` or `ACME_ALLOWED_ORIGINS` leaves the default in place and fails no test; those
+  names are a contract with the deployment that review keeps.
