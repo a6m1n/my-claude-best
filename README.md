@@ -6,6 +6,8 @@ My personal collection of engineering best practices: how I set up projects, wri
 
 - [Layout](#layout)
 - [Conventions](#conventions)
+- [Where to get help](#where-to-get-help)
+- [Maintainers and contributing](#maintainers-and-contributing)
 - [License](#license)
 
 ## Layout
@@ -24,6 +26,15 @@ My personal collection of engineering best practices: how I set up projects, wri
 - Every `README.md` with two or more `##` sections, and every long rules file or guide a reader consults section by section, opens with a **Navigation** block of links to its sections. [git.md](docs/engineering/git/git.md) section 9 says which files get one and which do not.
 - Every name in the examples is fictional: companies, people, tickets, domains.
 - A good example follows every practice that governs what it shows. [docs/engineering/CLAUDE.md](docs/engineering/CLAUDE.md) holds the rules for good and bad examples.
+
+## Where to get help
+
+- A question, or a mistake in a practice: open an issue. Name the file and the section, and quote the line.
+- A security problem in `claude-config/`: never describe it in an issue. See [SECURITY.md](SECURITY.md).
+
+## Maintainers and contributing
+
+I maintain this library alone, and the practices say how I work. Issues are welcome. Pull requests are open to collaborators only: when I agree with an issue, I change the text myself, in the library's style. [CONTRIBUTING.md](CONTRIBUTING.md) says what a useful issue holds.
 
 ## License
 
