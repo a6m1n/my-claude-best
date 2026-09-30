@@ -170,9 +170,9 @@ build is [fakes-and-boundaries.md](fakes-and-boundaries.md) section 1.
 **Patch in a fixture, with `monkeypatch`, when the code reads a name you cannot pass**: an
 environment variable, or an attribute of a library you do not own. `monkeypatch` records each
 change and reverts it: "All modifications will be undone after the requesting test function or
-fixture has finished." The one test of the settings class does this
-([python/settings-example.md](../python/settings-example.md)): its fixture removes the machine's
-own `ACME_` variables and sets the valid ones, and the test changes one variable more.
+fixture has finished." The tests of the settings class do this
+([python/settings-example.md](../python/settings-example.md)): their fixture removes the
+machine's own `ACME_` variables and sets the valid ones, and each test changes one variable more.
 
 A patch more than one test needs goes in a fixture; a test that needs one change once may call
 `monkeypatch` itself. Check: every `monkeypatch` or `MonkeyPatch.context` line sits inside a

@@ -270,7 +270,7 @@ checker sees missing arguments".
 import os
 
 import pytest
-from pydantic import SecretStr, ValidationError
+from pydantic import ValidationError
 
 from acme.core.config import Settings
 
@@ -298,34 +298,7 @@ def environment(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
 
 
 class TestSettings:
-    """Settings builds only from a valid environment, with no secret in its errors."""
-
-    def test_reads_the_required_values_from_the_environment(
-        self,
-        environment: pytest.MonkeyPatch,
-    ) -> None:
-        required = {
-            "database_host": "db.example.com",
-            "database_name": "shop",
-            "database_user": "shop",
-            "database_password": SecretStr("db-password-for-tests"),
-            "payments_api_key": SecretStr("payments-key-for-tests"),
-        }
-
-        settings = Settings(_env_file=None)
-
-        assert settings.model_dump(include=set(required)) == required
-
-    def test_a_missing_value_stops_the_start(
-        self, environment: pytest.MonkeyPatch
-    ) -> None:
-        environment.delenv("ACME_DATABASE_HOST")
-
-        with pytest.raises(ValidationError) as caught:
-            Settings(_env_file=None)
-
-        errors = caught.value.errors(include_input=False)
-        assert [error["loc"] for error in errors] == [("database_host",)]
+    """An empty or placeholder secret stops the start, and the error shows no secret."""
 
     def test_an_empty_value_stops_the_start(
         self, environment: pytest.MonkeyPatch
@@ -356,21 +329,21 @@ class TestSettings:
 
         with pytest.raises(ValidationError, match="placeholder"):
             Settings(_env_file=None)
-
-    def test_allowed_origins_come_as_a_json_array(
-        self, environment: pytest.MonkeyPatch
-    ) -> None:
-        environment.setenv("ACME_ALLOWED_ORIGINS", '["https://shop.example.com"]')
-
-        assert Settings(_env_file=None).allowed_origins == ("https://shop.example.com",)
 ```
 
-It is good because it closes both sources the class reads: `_env_file=None` keeps a developer's
-`.env` out, and the fixture removes every `ACME_` variable of the machine before it sets the
-valid ones. Each test then changes one variable and names the rule it pins. The tests share one
-`TestSettings` class, and the fixture states its scope
-([testing/fixtures.md](../testing/fixtures.md) section 1): a fresh environment for every test.
-Which tests build `Settings` at all is [python.md](python.md) section 5.
+It is good because each test pins one thing this class decides and an edit could undo without a
+sound: `env_ignore_empty=True`, which pydantic-settings leaves off, `hide_input_in_errors=True`,
+and the placeholder validator. Delete any one of them and exactly its test turns red. No test
+checks that pydantic-settings reads a variable into its field or a JSON list into a tuple: the
+library's own tests cover that, and such a test here would turn red only when the library changes
+or a field is renamed on purpose ([testing/what-to-test.md](../testing/what-to-test.md) section 3).
+A missing value is shown once, in the test that removes `ACME_DATABASE_HOST`; that no required
+field gains a default is [python.md](python.md) section 5's rule, kept in review.
+
+The fixture closes both sources the class reads: `_env_file=None` keeps a developer's `.env` out,
+and the fixture removes every `ACME_` variable of the machine before it sets the valid ones. It
+states its scope ([testing/fixtures.md](../testing/fixtures.md) section 1): a fresh environment
+for every test. Which tests build `Settings` at all is [python.md](python.md) section 5.
 
 ### What changed
 
@@ -387,9 +360,11 @@ Each thing that went wrong in Before now fails, or shows, where the reader looks
   `PaymentGateway` take what they use; `build_app` is the one function that turns `Settings` into
   clients and hands the values on.
 
-Run on CPython 3.12 with pydantic 2.13.5, pydantic-settings 2.15.0 and the test file above: the
-six tests pass; with the machine's own `ACME_DATABASE_HOST` exported, they still pass, because
-the fixture removes it; `repr(Settings(...))` prints both secrets as `**********`.
+Run with the test file above on CPython 3.12 (pydantic 2.12.5, pydantic-settings 2.14.2) and
+CPython 3.13 (pydantic 2.13.4, pydantic-settings 2.14.2): the three tests pass; with the machine's
+own `ACME_DATABASE_HOST` exported, they still pass, because the fixture removes it; with
+`hide_input_in_errors=True`, `env_ignore_empty=True` or the placeholder check deleted, exactly the
+test that pins it fails; `repr(Settings(...))` prints both secrets as `**********`.
 
 ### What this example does not claim
 
@@ -400,3 +375,7 @@ the fixture removes it; `repr(Settings(...))` prints both secrets as `**********
   that keeps its secrets there adds that source to the class, and nothing else changes. The
   `.env.example` file that holds the placeholder is not shown. The `.gitignore` and `.dockerignore`
   that list `.env` are not shown either.
+- **That the error never carries a secret.** `hide_input_in_errors=True` keeps the values out of
+  the error's text only; `errors()` and `json()` still carry them, which is why the test reads
+  `errors(include_input=False)` and why [python.md](python.md) section 5 lets the error end the
+  process and logs neither.

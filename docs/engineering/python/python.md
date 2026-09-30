@@ -606,9 +606,12 @@ A complete settings class, the entry point that builds it and the test of the cl
   default to quiet the checker: it removes the fail-fast path.
 - **A test of a client or a use case never builds `Settings`.** It passes the unit the plain
   values it takes ([readability.md](../readability/readability.md) section 6); a test of the whole
-  app passes its own `Settings` to the function that builds the app. The one test of the settings
-  class closes both sources: `Settings(_env_file=None, ...)` stops the `.env` file, and
-  `monkeypatch` sets or deletes each variable the case depends on. Either one alone lets the
+  app passes its own `Settings` to the function that builds the app. The tests of the settings
+  class cover only what the class decides, its validators and the flags that stop a bad start or
+  keep a secret out of the error, never that pydantic-settings reads a value
+  ([testing/what-to-test.md](../testing/what-to-test.md) section 3). They close both sources:
+  `Settings(_env_file=None, ...)` stops the `.env` file, and a fixture removes the machine's own
+  prefixed variables before `monkeypatch` sets the ones the case needs. Either one alone lets the
   machine's own configuration into the test.
 
 Importing pydantic and pydantic-settings takes about 50 ms, and building the class about 50 µs,
