@@ -65,9 +65,8 @@ passes for a reason nobody wrote down.
 module-level constant.
 
 ```python
-# Bad: the second test reads what the first one set. Each test gets its own instance, so
-# the
-# attribute is not there, and pytest never promised the order anyway.
+# Bad: the second test reads what the first one set. Each test gets its own instance,
+# so the attribute is not there, and pytest never promised the order anyway.
 class TestNeedsReminder:
     """An overdue invoice gets a reminder after its due date, at most once a week."""
 
@@ -111,9 +110,9 @@ of it (`-k remind` also picks up `reminder`).
 class TestNeedsReminder:
     """An overdue invoice gets a reminder after its due date, at most once a week."""
 
-    # Bad: the name says which function ran. A red line in CI says nothing until someone
-    # opens
-    # the file, and a second test of the same function needs a number to tell it apart.
+    # Bad: the name says which function ran. A red line in CI says nothing until
+    # someone opens the file, and a second test of the same function needs a number
+    # to tell it apart.
     def test_needs_reminder(self) -> None:
         assert not needs_reminder(DUE_ON, last_reminded_on=None, today=DUE_ON)
 
@@ -139,9 +138,8 @@ whole value is also one assertion ([assertions.md](assertions.md) section 2).
 The methods below sit in `TestNeedsReminder`; its class line is left out.
 
 ```python
-# Bad: two guarantees under one name. When the first assertion fails, nobody learns
-# whether
-# the weekly limit still holds.
+# Bad: two guarantees under one name. When the first assertion fails, nobody
+# learns whether the weekly limit still holds.
 def test_a_first_reminder_goes_out_and_a_second_waits_a_week(self) -> None:
     assert needs_reminder(DUE_ON, last_reminded_on=None, today=date(2026, 9, 2))
     assert not needs_reminder(DUE_ON, date(2026, 9, 2), today=date(2026, 9, 5))
@@ -187,14 +185,16 @@ class TestNeedsReminder:
         assert not needs_reminder(DUE_ON, date(2026, 9, 2), today=date(2026, 9, 5))
 
     # Good: the bug in the past tense, then what holds now.
-    def test_a_reminder_sent_on_the_due_date_counts_toward_the_interval(self) -> None:
-        """Regression (PROJ-123): a reminder sent on the due date was not counted,
-        so the customer got a second one the next day.
+    def test_a_reminder_goes_out_on_the_day_the_interval_ends(self) -> None:
+        """Regression (PROJ-123): the check used > where it meant >=, so each repeat
+        reminder went out one day late.
 
-        A reminder on any day starts the interval, the due date included.
+        A reminder is due again on the day the interval ends.
         """
-        assert not needs_reminder(
-            DUE_ON, last_reminded_on=DUE_ON, today=date(2026, 9, 2)
+        last_reminded_on = date(2026, 9, 2)
+
+        assert needs_reminder(
+            DUE_ON, last_reminded_on, today=last_reminded_on + REMINDER_INTERVAL
         )
 
     # Bad: the docstring narrates the body and names the function. It adds nothing to
@@ -215,9 +215,9 @@ them drifts from the others at the next edit; a table shows every input at once.
 
 **When one guarantee has several inputs, write one parametrized test and name every row** with
 `pytest.param(..., id="...")`. The id is a few words that say what the row is, so a failing row
-reads as `test_an_overdue_invoice_needs_a_reminder[reminded-exactly-a-week-ago]`, not
-`[last_reminded_on1-today1]`. Argument names are a tuple and rows a list, the forms ruff's
-`PT006` and `PT007` check.
+reads as `test_an_overdue_invoice_needs_a_reminder[reminded-one-interval-ago]`, not
+`[last_reminded_on1-today1]`. Argument names are a tuple (a single name is a string) and rows
+a list, the forms ruff's `PT006` and `PT007` check.
 
 ```python
 class TestNeedsReminder:
@@ -229,7 +229,9 @@ class TestNeedsReminder:
         [
             pytest.param(None, date(2026, 9, 2), id="never-reminded-a-day-after-due"),
             pytest.param(
-                date(2026, 9, 2), date(2026, 9, 9), id="reminded-exactly-a-week-ago"
+                date(2026, 9, 2),
+                date(2026, 9, 2) + REMINDER_INTERVAL,
+                id="reminded-one-interval-ago",
             ),
             pytest.param(date(2026, 9, 2), date(2026, 9, 30), id="reminded-weeks-ago"),
         ],
@@ -260,7 +262,10 @@ A table pays when the rows share one guarantee and one body. Leave it out when:
   so, as in `test_each_status_maps_to_its_http_code`.
 - **The body branches on a parameter.** An `if` on a row value is two tests sharing a name.
 - **The expected value is computed in the test** with the same formula as the code. The test then
-  agrees with any bug in the formula; write the expected values out.
+  agrees with any bug in the formula; write the expected values out. An input built from the
+  unit's own constant, as `REMINDER_INTERVAL` above, is not such a formula: the interval is a
+  value someone chose, and a test that pinned seven days would turn red on that choice
+  ([what-to-test.md](what-to-test.md) section 3).
 - **A row needs setup the others do not.** Give it its own test.
 - **There are one or two rows.** Two named tests read better than a table of two.
 

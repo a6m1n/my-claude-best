@@ -268,13 +268,14 @@ checker sees missing arguments".
 
 ```python
 import os
+from typing import Final
 
 import pytest
 from pydantic import ValidationError
 
 from acme.core.config import Settings
 
-VALID_ENVIRONMENT = {
+VALID_ENVIRONMENT: Final = {
     "ACME_DATABASE_HOST": "db.example.com",
     "ACME_DATABASE_NAME": "shop",
     "ACME_DATABASE_USER": "shop",
@@ -311,8 +312,9 @@ class TestSettings:
         with pytest.raises(ValidationError) as caught:
             Settings(_env_file=None)
 
+        # include_input=False: the message shows each field and holds no value it read
         errors = caught.value.errors(include_input=False)
-        assert [error["type"] for error in errors] == ["missing"]
+        assert [error["type"] for error in errors] == ["missing"], errors
 
     def test_an_empty_value_stops_the_start(
         self, environment: pytest.MonkeyPatch
@@ -338,10 +340,17 @@ class TestSettings:
 
         assert "payments-key-for-tests" not in str(caught.value)
 
+    @pytest.mark.parametrize(
+        "name",
+        [
+            pytest.param(name, id=name)
+            for name in ["ACME_DATABASE_PASSWORD", "ACME_PAYMENTS_API_KEY"]
+        ],
+    )
     def test_a_placeholder_secret_stops_the_start(
-        self, environment: pytest.MonkeyPatch
+        self, environment: pytest.MonkeyPatch, name: str
     ) -> None:
-        environment.setenv("ACME_PAYMENTS_API_KEY", "changethis")
+        environment.setenv(name, "changethis")
 
         with pytest.raises(ValidationError, match="placeholder"):
             Settings(_env_file=None)
@@ -382,7 +391,7 @@ Each thing that went wrong in Before now fails, or shows, where the reader looks
   clients and hands the values on.
 
 Run with the test file above on CPython 3.12 (pydantic 2.12.5, pydantic-settings 2.14.2) and
-CPython 3.13 (pydantic 2.13.4, pydantic-settings 2.14.2): the eight test ids pass; with the
+CPython 3.13 (pydantic 2.13.4, pydantic-settings 2.14.2): the nine test ids pass; with the
 machine's own `ACME_DATABASE_HOST` exported, they still pass, because the fixture removes it; with
 `hide_input_in_errors=True`, `env_ignore_empty=True` or the placeholder check deleted, or a default
 given to a required field, the test or the row that pins it fails, and for `payments_api_key` the

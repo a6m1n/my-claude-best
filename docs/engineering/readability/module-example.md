@@ -123,28 +123,33 @@ Why it is good:
 `tests/unit/remind_overdue_invoice/test_reminder_rules.py`
 
 ```python
-from datetime import date
+from datetime import date, timedelta
+from typing import Final
 
 from shop.billing.remind_overdue_invoice.reminder_rules import (
     REMINDER_INTERVAL,
     needs_reminder,
 )
 
+DUE_ON: Final = date(2026, 9, 1)
+LAST_REMINDED_ON: Final = date(2026, 9, 10)
+
 
 class TestNeedsReminder:
     """An overdue invoice gets a reminder after its due date, at most once a week."""
 
-    def test_invoice_not_past_its_due_date_needs_no_reminder(self) -> None:
-        due_on = date(2026, 9, 1)
+    def test_an_invoice_not_past_its_due_date_needs_no_reminder(self) -> None:
+        assert not needs_reminder(DUE_ON, last_reminded_on=None, today=DUE_ON)
 
-        assert not needs_reminder(due_on, last_reminded_on=None, today=due_on)
+    def test_a_second_reminder_waits_for_the_interval(self) -> None:
+        today = LAST_REMINDED_ON + REMINDER_INTERVAL - timedelta(days=1)
 
-    def test_reminder_repeats_once_the_interval_has_passed(self) -> None:
-        due_on = date(2026, 9, 1)
-        last_reminded_on = date(2026, 9, 10)
-        today = last_reminded_on + REMINDER_INTERVAL
+        assert not needs_reminder(DUE_ON, LAST_REMINDED_ON, today)
 
-        assert needs_reminder(due_on, last_reminded_on, today)
+    def test_a_reminder_repeats_once_the_interval_has_passed(self) -> None:
+        today = LAST_REMINDED_ON + REMINDER_INTERVAL
+
+        assert needs_reminder(DUE_ON, LAST_REMINDED_ON, today)
 ```
 
 The flow, the use case run with a test database and a fake mailer, is covered by
@@ -156,6 +161,10 @@ Why it is good:
 
 - **No patch, no clock, no network for the rule** (section 6). The tests pass plain dates, and the
   rule answers from them alone.
+- **The interval comes from the rule's own constant.** The two interval tests pin the day before
+  it ends and the day it ends, so `>` for `>=` or a dropped check turns one red, while a new
+  interval someone chose keeps both green ([testing/what-to-test.md](../testing/what-to-test.md)
+  section 3).
 - **Each test's name says the behavior it pins** (section 7), inside one class for the one unit
   the tests call ([testing/test-structure.md](../testing/test-structure.md) section 1).
 - **Arrange is one stage, and the assert holds the act** (section 5): the rule only returns the
