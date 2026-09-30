@@ -77,7 +77,9 @@ one part of that true.
 ## The points to adapt
 
 - **Which stand-in comes first.** This practice prefers the real class with a fake inside, then a
-  hand-written fake, then `create_autospec`. A team that prefers `create_autospec` for every
+  hand-written fake, then `create_autospec`, for the reasons in
+  [fakes-and-boundaries.md](fakes-and-boundaries.md) section 1, "Why this order", which also names
+  the one measurement that points the other way. A team that prefers `create_autospec` for every
   collaborator keeps section 2 of [fakes-and-boundaries.md](fakes-and-boundaries.md), which is
   about what a test asserts, whatever the stand-in.
 - **The async plugin** is pytest-asyncio or anyio's own, by what the code runs on

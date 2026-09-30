@@ -216,6 +216,11 @@ fixture or a test, never at module level.
           yield
   ```
 
+- **`with mock.patch(...): yield` and `with mock.patch.dict(os.environ, ...): yield` are the same
+  form with `unittest.mock`**, the one Adam Johnson shows in "How to Mock Environment Variables in
+  pytest" (2020). Its undo is as safe as the `MonkeyPatch.context()` form, because the `with`
+  block's exit runs either way. It is out here only for the reasons of the bullet "Never
+  `unittest.mock.patch` or pytest-mock's `mocker`" below.
 - **Never undo by hand after `yield`**: no saved value put back, and no `undo()` or `stop()` on
   the line after it. pytest skips that line when the fixture fails before it: "if a yield fixture
   raises an exception before yielding, pytest won't try to run the teardown code after that yield
@@ -231,16 +236,24 @@ fixture or a test, never at module level.
 - **Never patch the application's settings.** A test takes what
   [python.md](../python/python.md) section 5 names: the plain values the unit takes, or the
   `Settings` a whole-app test passes to the function that builds the app.
-- **Never `unittest.mock.patch` or pytest-mock's `mocker`, in a test or in a fixture.** Two
-  patchers keep two lists of what to undo, and neither knows about the other, so a name patched
-  through both can be put back in the wrong order and leak into later tests. pytest-mock's
+- **Never `unittest.mock.patch` or pytest-mock's `mocker`, in a test or in a fixture.** `patch`
+  with no replacement puts in a `MagicMock` (an `AsyncMock` for an async function), where
+  `setattr` always names its value. `setenv`, `delenv` and `setitem` cover the environment and
+  dicts without `patch.dict`. Every patcher object also keeps its own list of what to undo: the
+  `monkeypatch` fixture, each `MonkeyPatch.context()`, `mocker`, each `mock.patch`. A name patched
+  through two of them can be put back in the wrong order and leak into later tests. pytest-mock's
   maintainer, on such a leak: "`mocker` is provided by `pytest-mock`, and they don't talk to each
-  other". `patch` with no replacement also puts in a `MagicMock`. pytest itself takes no side:
-  Anthony Sottile, a maintainer, answered that "there's no official recommendation because it's
-  really about opinions and trade offs", and he prefers the `with` form of `unittest.mock`. This
-  practice takes `monkeypatch` because it ships with pytest and its `setattr` refuses a name that
-  does not exist; a project that takes `unittest.mock` instead uses it alone, for the same reason.
-  Check: `grep -rn "mock.patch\|@patch(\|mocker" --include='*.py' tests/` prints nothing.
+  other". So a suite uses one patcher library, and in one test one patcher object per name: never
+  the `monkeypatch` fixture and a `MonkeyPatch.context()` block on the same name. Against
+  pytest-mock there is one more reason: `monkeypatch` ships with pytest, and `mocker` is one more
+  dependency. pytest itself takes no side: Anthony Sottile, a maintainer, answered that "there's
+  no official recommendation because it's really about opinions and trade offs". He prefers the
+  `with` form of `unittest.mock` because of what he calls the "unknown scope duration" of
+  `monkeypatch`; here the fixture that asks for `monkeypatch` states its scope (section 1), so how
+  long a patch lasts is written down. A project that takes `unittest.mock` instead uses it alone:
+  one patcher library per suite. Check:
+  `grep -rnE "unittest\.mock import .*\bpatch\b|from mock import|mock\.patch|\bmocker\b" --include='*.py' tests/`
+  prints nothing.
 
 ## 7. Factories
 
@@ -344,4 +357,5 @@ and files in tests" (`tmp_path_factory`), "How to parametrize fixtures and test 
 fixtures deprecated); pytest source at 9.1.1, `src/_pytest/fixtures.py` (the type of
 `request.param`). ruff rules `PT003` and `PT025`. pytest issue #4576 (Anthony Sottile, 2020, on
 `monkeypatch` and `unittest.mock`); pytest-mock issue #289 (2022, a patch leaked between the two).
-testcontainers-python documentation (`PostgresContainer`).
+Adam Johnson, "How to Mock Environment Variables in pytest" (adamj.eu, 2020). testcontainers-python
+documentation (`PostgresContainer`).

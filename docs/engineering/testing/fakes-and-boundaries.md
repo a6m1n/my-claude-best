@@ -47,8 +47,13 @@ avoided when possible because overuse can easily result in brittle tests". Each 
 realism for cost: step 1 runs the class's own code, step 2 behaves like the class without being
 it, step 3 only checks that the calls fit the signatures. Hynek Schlawack uses "verified fakes" for
 anything beyond a simple stub, and Itamar Turner-Trauring warns that a fake nobody checks assumes
-it behaves like the real class "without any evidence". No study measures the difference in defects
-or in cost: the order rests on this practice, not on a number.
+it behaves like the real class "without any evidence". No study compares these stand-ins on defects
+or cost: the order rests on this practice, not on a number. The one measurement near the question
+goes the other way: in eleven Java projects, checks on mock calls caught faults that checks on
+results missed, 782 of the 1,557 injected faults the mock checks caught (Hengcheng Zhu and
+co-authors, FSE 2025). This order keeps that check where it matters: a fake records the calls it
+receives, and section 2 asserts on them when the call itself is the behavior. What it gives up is
+checks on calls whose result the test already sees.
 
 **Never a bare `Mock()` or `MagicMock()`.** typeshed declares `NonCallableMock` a subclass of
 `Any`, so the type checker accepts a bare mock for any parameter, and the mock accepts any
@@ -183,7 +188,9 @@ Titus Winters, Tom Manshreck and Hyrum Wright (eds.), *Software Engineering at G
 Patterns with Python* (O'Reilly, 2020), chapter 3, "A Brief Interlude: On Coupling and
 Abstractions", free at cosmicpython.com. Hynek Schlawack, "'Don't Mock What You Don't Own' in 5
 Minutes" (2022). Itamar Turner-Trauring, "Fast tests for slow services: why you should use
-verified fakes" (pythonspeed.com, 2021). pytest issue #4576 (Anthony Sottile's comment,
+verified fakes" (pythonspeed.com, 2021). Hengcheng Zhu, Valerio Terragni, Lili Wei, Shing-Chi
+Cheung, Jiarong Wu and Yepang Liu, "Understanding and Characterizing Mock Assertions in Unit
+Tests" (FSE 2025, arXiv:2503.19284). pytest issue #4576 (Anthony Sottile's comment,
 2020-06-30). Python documentation,
 `unittest.mock`, "Autospeccing" (`create_autospec`, `instance=True`). typeshed,
 `stdlib/unittest/mock.pyi` (`NonCallableMock` subclasses `Any`). httpx documentation, "Transports"

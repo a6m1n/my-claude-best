@@ -141,6 +141,11 @@ class TestNeedsReminder:
     def test_an_invoice_not_past_its_due_date_needs_no_reminder(self) -> None:
         assert not needs_reminder(DUE_ON, last_reminded_on=None, today=DUE_ON)
 
+    def test_an_overdue_invoice_never_reminded_needs_a_reminder(self) -> None:
+        assert needs_reminder(
+            DUE_ON, last_reminded_on=None, today=DUE_ON + timedelta(days=1)
+        )
+
     def test_a_second_reminder_waits_for_the_interval(self) -> None:
         today = LAST_REMINDED_ON + REMINDER_INTERVAL - timedelta(days=1)
 
@@ -162,8 +167,8 @@ Why it is good:
 - **No patch, no clock, no network for the rule** (section 6). The tests pass plain dates, and the
   rule answers from them alone.
 - **The interval comes from the rule's own constant.** The two interval tests pin the day before
-  it ends and the day it ends, so `>` for `>=` or a dropped check turns one red, while a new
-  interval someone chose keeps both green ([testing/what-to-test.md](../testing/what-to-test.md)
+  it ends and the day it ends, so `>` for `>=` or a dropped interval check turns one red, while a
+  new interval someone chose keeps both green ([testing/what-to-test.md](../testing/what-to-test.md)
   section 3).
 - **Each test's name says the behavior it pins** (section 7), inside one class for the one unit
   the tests call ([testing/test-structure.md](../testing/test-structure.md) section 1).
