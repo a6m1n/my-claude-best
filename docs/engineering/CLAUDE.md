@@ -90,4 +90,5 @@ Approach: one bullet: every rule opens with its level, Must (always, when its co
 Should (keep it when a test shows it helps). Existing practices adopt it when a change touches
 them (refactoring/refactoring.md section 7, "New and touched code").
 prompt-engineering/prompt-engineering.md section 1 is the first practice written this way.
+evals/evals.md section 1 adds a third level, Optional: add it when the need the rule names appears.
 -->

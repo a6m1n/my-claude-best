@@ -34,8 +34,8 @@ text, the reasoning effort set on every call, and every change tested old agains
    same questions every time.
 4. The practice links [file-structure.md](../file-structure/file-structure.md),
    [python.md](../python/python.md), [readability.md](../readability/readability.md),
-   [logging.md](../logging/logging.md) and [refactoring.md](../refactoring/refactoring.md) for the
-   rules they own. Copy those folders too, or replace each link with your own rule for that topic.
+   [logging.md](../logging/logging.md), [refactoring.md](../refactoring/refactoring.md) and
+   [evals/](../evals/README.md) for the rules they own. Copy those folders too, or replace each link with your own rule for that topic.
 5. Re-check the lines that name a moving target: the vendor table in section 15 of the rules
    (dated September 2026), the Claude model versions named in section 13, and the vendor
    mechanics in sections 11, 16 and 17. Vendors change these with each model release.

@@ -69,6 +69,10 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 │   │       └── test_usecase.py
 │   └── support/                            # fakes and builders that tests import
 │       └── fake_<system>.py
+├── evals/                                  # only when a module calls a model (evals/evals.md section 4)
+│   └── <module>/
+│       ├── cases_<purpose>.jsonl           # the case set, one case per line
+│       └── experiment_<purpose>.py         # the run: task, graders, gate
 ├── migrations/                             # only with a database: one file per schema change
 ├── scripts/                                # run by hand; the app never imports them
 ├── docs/

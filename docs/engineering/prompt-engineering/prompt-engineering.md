@@ -875,30 +875,22 @@ own no-cache switch, where one exists, is left out too.
 
 **Must.** Keep every prompt in git, next to the code that sends it, reviewed and shipped with it.
 On every change to a prompt, a tool definition, the model or its settings, run the old and the
-new version on one fixed set of cases and compare them case by case:
+new version on one fixed set of cases and compare them case by case. How the case set is built
+and grown, how each case is graded, and how the two versions are compared is
+[evals.md](../evals/evals.md) sections 3 to 7. A new prompt runs alone against the set; a change to
+an existing prompt or model runs old against new on it. What is particular to a prompt:
 
-- No case set yet: build one before the change ships, from real inputs of the task, anonymised
-  the way section 7 anonymises an example, each with its expected answer. Where no real inputs
-  exist yet, write inputs that cover the kinds the task expects, and replace them with real ones
-  as they arrive. A new prompt runs alone against the set; a change to an existing prompt or model
-  runs old against new on it.
-- Grow the set from real errors you have seen, not from cases you invented to pass.
-- Write the pass criterion down before you run.
 - On a model change, keep the prompt fixed, so the test measures the model.
 - Keep options in one fixed order, or shuffle them across runs; parse leniently before you score;
   count the way-out answers of section 8 apart from right and wrong ones.
-- Do not claim a small difference from a small set.
 
 **Should.** When you try a technique this practice marks Should, such as a role, examples, a
 reasoning field, definitions, the order of the parts, a per-model layer or a reasoning level, run
 it as an experiment: the prompt with it and without it, on the same cases, and keep it only if it
 wins. Every "test it" in this file means this section.
 
-How big a set: about 1,000 questions to see a 3-point difference with the usual statistical
-power (Miller, 2024); 50 to 100 cases show only large shifts; below a few hundred cases the
-usual error bars are too narrow (arXiv:2503.01747). There is no general rule for the number of
-reruns: rerun until the result stops moving on your cases. Compare the two versions case by case
-on the same set, never two averages from different sets.
+How big a set, and how many runs of each case: [repeated-runs.md](../evals/repeated-runs.md)
+section 7.
 
 Why: an edit that fixes the case in front of you changes others you do not see. Reading real
 outputs and turning failures into cases is the most useful part of evaluating a model
@@ -908,14 +900,6 @@ atomically with the application code". A generic "better" prompt can make the re
 chose (Wharton Prompting Science Report 1, 2025). Parse errors alone deflated one model's score by
 up to 206% (arXiv:2607.22969), and shuffling the input order cost 3 to 12 points
 (arXiv:2502.04134). Grading on accuracy alone rewards guessing (Kalai et al., 2025).
-
-<!--
-FUTURE: an evals practice (docs/engineering/evals/)
-Trigger: a project needs LLM judges, error bars or an eval gate in CI.
-Fix location: a new practice folder, linked from this section.
-Approach: case sets from error analysis, paired comparison, sample size for the effect you need,
-judge validation, way-out answers scored on their own.
--->
 
 ## 19. Where it stops holding
 
@@ -984,8 +968,7 @@ arXiv:2607.15593 and arXiv:2605.24660 on the number of tools; ParamBench (2026);
 and without thinking; the Qwen3 technical report; arXiv:2606.09662 on format rules with thinking
 on; arXiv:2510.07880 on date arithmetic; LongBench Pro (arXiv:2601.02872); TextReasoningBench
 (arXiv:2603.19558); arXiv:2603.07915 on the tokens of each effort level; ReasonBENCH
-(arXiv:2512.07795); arXiv:2609.04748 on prefix caches in self-hosted serving; Miller, "Adding
-Error Bars to Evals" (arXiv:2411.00640); arXiv:2503.01747 on error bars for small sets;
+(arXiv:2512.07795); arXiv:2609.04748 on prefix caches in self-hosted serving;
 arXiv:2607.22969 on parse errors in scoring; arXiv:2502.04134 on input order.
 
 Practitioners: Hamel Husain and Shreya Shankar, the evals FAQ (hamel.dev, 2025–2026), on error

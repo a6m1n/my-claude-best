@@ -76,6 +76,14 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   tests. The check: every test file the change adds sits at the path `layout.md` section 3 gives
   it and holds one `Test<Unit>` class, every fixture it adds states `scope=`, and
   `grep -rn autouse --include='*.py' tests/` prints nothing.
+- Before you change a prompt, a tool definition, the model or its settings, the retrieval or an
+  agent's graph, or add a check on what a model answers, read `docs/engineering/evals/README.md`
+  and the file it routes to for that work, and `docs/engineering/evals/case-set-example.md` when
+  you write a module's first eval, `docs/engineering/evals/judge-example.md` when you write a judge,
+  `docs/engineering/evals/agent-eval-example.md` when you test an agent. The check: the pull
+  request's Verification holds the eval's result next to its baseline, every rate the eval reports
+  is divided by the cases it asked for, and every judge that gates has its TPR and TNR on held-back
+  labels.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`

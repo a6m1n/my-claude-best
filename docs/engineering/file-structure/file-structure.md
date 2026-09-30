@@ -318,6 +318,7 @@ sit where [testing/layout.md](../testing/layout.md) section 1 puts them. No modu
 <repo>/
 ├── src/<app>/          # the application package
 ├── tests/
+├── evals/              # only when the application calls a language model: case sets and eval runs
 ├── docs/
 │   ├── ARCHITECTURE.md # the map (section 10)
 │   └── guides/         # for people who call or run the application
@@ -346,6 +347,9 @@ sit where [testing/layout.md](../testing/layout.md) section 1 puts them. No modu
   top folders above. Never a `.env` with real values, never a loose script.
 - **`scripts/` is for commands a person runs by hand**: seed data, a one-off upload. The application
   never imports from it; code both need lives in the package.
+- **`evals/` holds the case sets and the eval runs of the modules that call a language model**, one
+  folder per module, named as the module is. The application never imports from it. What goes
+  inside is [evals/evals.md](../evals/evals.md) section 4's.
 
 ## 10. The map: kinds and rules, not a file list
 
