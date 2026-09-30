@@ -26,9 +26,8 @@ maintenance cost slows down development. These tests should be re-written or del
 that something outside reads, such as a field another service parses, breaks that reader: its test
 is the last row of section 2.
 
-Check: before you stage, name, for each test the diff adds, the edit to the team's code that turns
-it red and the `FAILED` line it printed in section 4, step 5. Both go in the pull request's
-Verification section.
+Check: before you stage, for each test the diff adds, name the edit to the team's code that turns
+it red and the run where you saw it fail on that edit (section 4, step 5).
 
 **A test that reproduces a bug that reached users is always written**, whatever row of section 3
 the code falls in. Mark Seemann, who leaves code with one path untested, makes the same exceptions:
@@ -73,8 +72,8 @@ and the commit body names every expected value the change edits.
 - **Rules** are where a test finds bugs. HackSoft's Django Styleguide puts the line for a model:
   "Models need to be tested only if there's something additional to them - like validation,
   properties or methods."
-- **Flows** get few tests, at their entry. Harry Percival and Bob Gregory: "Write the bulk of your
-  tests against the service layer."
+- **Flows** get few tests, at their entry: the rules under them are tested on their own
+  ([readability.md](../readability/readability.md) section 6).
 - **Decisions like these** fail silently when someone deletes the line, and nothing else notices:
   without `hide_input_in_errors=True`, a failed pydantic-settings start writes what it read into
   the error text. An input whose repr is over 50 bytes shows as its first 25 and last 24 bytes, so
@@ -85,6 +84,14 @@ and the commit body names every expected value the change edits.
   distributed systems: "almost all (92%) of the catastrophic system failures are the result of
   incorrect handling of non-fatal errors", and in 58% of them "the underlying faults could easily
   have been detected through simple testing of error handling code".
+
+**The rows have no order.** Code your change adds or edits gets the test its row names, in that
+change. No study measures which tests to write first: a defect model trained on one project
+predicted another project's defects well in 21 of 622 tries (Zimmermann et al., 2009), and at
+Google bug prediction changed nothing developers did (Lewis et al., 2013). So this file ranks no
+row above another. One test is written whatever the time: a test that reproduces a bug that
+reached users (section 1). Old code with no tests that you are about to change is
+[refactoring.md](../refactoring/refactoring.md) section 3's case.
 
 Code that holds a rule and also reaches outside is split before it is tested, by moving "as much
 as logic as possible out of the hard-to-test element" (Martin Fowler, *Humble Object*); the rule
@@ -167,15 +174,17 @@ test-first order itself had no important effect.
 ## 6. Sources
 
 Alex Eagle, "Testing on the Toilet: Change-Detector Tests Considered Harmful", Google Testing Blog
-(2015). HackSoft Django Styleguide, "Testing". Harry Percival and Bob Gregory, *Architecture
-Patterns with Python*, ch. 5. langflow pull request #15147 (September 2026), on a password leaked
-through a settings `ValidationError`. pydantic-core `src/tools.rs` at v2.41.5: how an error's text
-cuts an input's repr over 50 bytes. Ding Yuan et al., "Simple Testing Can Prevent Most Critical
-Failures" (OSDI 2014). Martin Fowler, "HumbleObject" (bliki). pydantic-settings
+(2015). HackSoft Django Styleguide, "Testing". langflow pull request #15147 (September 2026), on a
+password leaked through a settings `ValidationError`. pydantic-core `src/tools.rs` at v2.41.5: how
+an error's text cuts an input's repr over 50 bytes. Ding Yuan et al., "Simple Testing Can Prevent
+Most Critical Failures" (OSDI 2014). Martin Fowler, "HumbleObject" (bliki). pydantic-settings
 `tests/test_settings.py` at 2.15.0. Ham Vocke, "The Practical Test Pyramid", martinfowler.com
-(2018). Mark Seemann, "What to test and not to test" (2018). Robert C. Martin, *Clean Code*
-(2008), ch. 8, "Learning Tests Are Better Than Free". Joseph Hejderup and Georgios Gousios, "Can We
-Trust Tests To Automate Dependency Updates?" (JSS 2022).
+(2018). Mark Seemann, "What to test and not to test" (2018). Robert C. Martin, *Clean Code* (2008),
+ch. 8, "Learning Tests Are Better Than Free". Joseph Hejderup and Georgios Gousios, "Can We Trust
+Tests To Automate Dependency Updates?" (JSS 2022). Thomas Zimmermann et al., "Cross-project Defect
+Prediction" (ESEC/FSE 2009): 21 of 622 cross-project predictions met the paper's criteria. Chris
+Lewis et al., "Does Bug Prediction Support Human Developers? Findings from a Google Case Study"
+(ICSE 2013).
 
 The red-test rule of section 1: Titus Winters, Tom Manshreck and Hyrum Wright (eds.), *Software
 Engineering at Google* (2020), ch. 12, "Strive for Unchanging Tests". Google Testing on the Toilet,

@@ -162,9 +162,12 @@ how a test holds the code to it.
 
 **Pair every negative `caplog` assertion with a positive one in the same test**, after
 `caplog.set_level(logging.DEBUG)`, so the negative check reads every level
-[logging.md](../logging/logging.md) section 10 covers. With nothing captured,
-`"key-for-tests" not in caplog.text` is true for the wrong reason. The positive line checks that a
-record was captured at the level the code logs at, not its text.
+[logging.md](../logging/logging.md) section 10 covers. With nothing captured, the negative check is
+true for the wrong reason. The positive line checks that a record was captured at the level the code
+logs at, not its text. The negative check reads every attribute of every record, not `caplog.text`:
+the text holds only what its log format prints (the level, the logger, the file, the line and the
+message), and a value the code passes in `extra=` ([logging.md](../logging/logging.md) section 3)
+never reaches it.
 
 ```python
 # Bad: nothing positive is asserted, so a run that logged nothing passes the check.
@@ -173,7 +176,7 @@ caplog.set_level(logging.DEBUG)
 with pytest.raises(PaymentUnavailable, match="status 503"):
     unavailable_gateway.charge(PaymentId("pay-1001"), Decimal("120.00"))
 
-assert "key-for-tests" not in caplog.text
+assert not any("key-for-tests" in repr(vars(record)) for record in caplog.records)
 
 # Good: the level is set, a WARNING record is found first, and then the key is not.
 caplog.set_level(logging.DEBUG)
@@ -182,7 +185,7 @@ with pytest.raises(PaymentUnavailable, match="status 503"):
     unavailable_gateway.charge(PaymentId("pay-1001"), Decimal("120.00"))
 
 assert any(record.levelno == logging.WARNING for record in caplog.records)
-assert "key-for-tests" not in caplog.text
+assert not any("key-for-tests" in repr(vars(record)) for record in caplog.records)
 ```
 
 `unavailable_gateway` is the gateway of [fakes-and-boundaries.md](fakes-and-boundaries.md)
