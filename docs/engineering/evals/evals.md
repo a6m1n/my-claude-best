@@ -136,14 +136,22 @@ named as the module is:
 
 ```text
 evals/
-└── triage/
-    ├── cases_triage.jsonl      the case set: one JSON object per line
-    └── experiment_triage.py    the run: task, graders, gate
+├── rate_gate.py                     the gate every experiment ends with
+└── <module>/
+    ├── cases_<purpose>.jsonl        the case set: one JSON object per line
+    ├── experiment_<purpose>.py      the run: task, graders, metadata
+    ├── schemas.py                   a case, a run's output and the criteria, typed once
+    ├── consts.py                    only with a judge: its model and effort
+    ├── prompts.py                   only with a judge: its prompt
+    ├── judge_<criterion>.py         only with a judge: the one call
+    └── labels_<criterion>.jsonl     only with a judge: people's labels (judges.md section 6)
 ```
 
 A grader that only evals use lives next to the experiment that uses it; a grader the application
-also runs in production lives in the application. [case-set-example.md](case-set-example.md) shows
-the files.
+also runs in production lives in the application. Code in `evals/` is checked like `src/` and
+`tests/`: the type checker's file list names it ([python.md](../python/python.md) section 3: types
+in half the code check half the code). [case-set-example.md](case-set-example.md) and
+[judge-example.md](judge-example.md) show the files.
 
 ## 5. Graders: the cheapest one that can decide
 

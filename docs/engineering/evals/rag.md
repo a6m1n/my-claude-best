@@ -35,7 +35,7 @@ the top k), recall at k (the share of right documents in the top k) and, when th
 MRR (how high the first right document sits). These are a few lines each and need no model.
 
 ```python
-def recall_at_k(retrieved_ids: Sequence[str], relevant_ids: frozenset[str], k: int) -> float:
+def recall_at_k(retrieved_ids: Sequence[str], relevant_ids: Set[str], k: int) -> float:
     """The share of the relevant documents that appear in the first k retrieved."""
     # A question no document answers has no recall; section 5 scores it.
     if not relevant_ids:
@@ -44,7 +44,8 @@ def recall_at_k(retrieved_ids: Sequence[str], relevant_ids: frozenset[str], k: i
     return len(set(retrieved_ids[:k]) & relevant_ids) / len(relevant_ids)
 ```
 
-`Sequence` comes from `collections.abc`.
+`Sequence` and `Set` come from `collections.abc`: the widest types the body uses
+([python.md](../python/python.md) section 3).
 
 Why: when the right passage never arrives, no prompt fixes the answer; Jason Liu measures recall
 before he touches the prompt. In one production RAG system, whether any source was found explained

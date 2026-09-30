@@ -93,6 +93,7 @@ import pytest
 from deepeval.metrics import GEval
 from deepeval.models import OpenAIModel
 from deepeval.test_case import LLMTestCase, SingleTurnParams
+from langchain_core.messages import HumanMessage
 
 from acme.core.config import Settings
 from acme.support.chat.graph import ChatAgent
@@ -113,7 +114,8 @@ def keeps_to_order_status() -> GEval:
         ],
         evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT, SingleTurnParams.CONTEXT],
         model=OpenAIModel(
-            model=REPLY_JUDGE_LLM_MODEL, api_key=settings.openai_api_key.get_secret_value()
+            model=REPLY_JUDGE_LLM_MODEL,
+            api_key=settings.openai_api_key.get_secret_value(),
         ),
         strict_mode=True,
     )
@@ -123,16 +125,20 @@ def keeps_to_order_status() -> GEval:
 class TestBuildAgent:
     """The support agent's replies keep to what the order store says."""
 
-    def test_a_processing_order_gets_no_promise_of_a_date_in_two_runs_of_three(
+    async def test_a_processing_order_gets_no_promise_of_a_date_in_two_runs_of_three(
         self, chat_agent: ChatAgent, keeps_to_order_status: GEval
     ) -> None:
         verdicts: list[bool | None] = []
         for _ in range(RUNS_PER_CASE):
-            reply = ...  # the agent's real reply to QUESTION, cut here
-            test_case = LLMTestCase(
-                input=QUESTION, actual_output=reply, context=["order A-1042: processing"]
+            output = await chat_agent.ainvoke(
+                {"messages": [HumanMessage(QUESTION)]}, version="v2"
             )
-            keeps_to_order_status.measure(test_case)
+            test_case = LLMTestCase(
+                input=QUESTION,
+                actual_output=output.value["structured_response"].text,
+                context=["order A-1042: processing"],
+            )
+            await keeps_to_order_status.a_measure(test_case)
             verdicts.append(keeps_to_order_status.is_successful())
 
         assert verdicts.count(True) >= 2
@@ -140,7 +146,12 @@ class TestBuildAgent:
 
 The names are those of DeepEval 4.2.7; the agent, its fixture and `REPLY_JUDGE_LLM_MODEL` are cut
 here, [agent-eval-example.md](agent-eval-example.md) builds the agent, and `openai_api_key` is the
-settings field of [logging/agent-example.md](../logging/agent-example.md). What makes this snippet
+settings field of [logging/agent-example.md](../logging/agent-example.md). The test is async
+because the agent is ([agent-eval-example.md](agent-eval-example.md) says why), so it awaits the
+agent and DeepEval's `a_measure`. The judge's model here has no reasoning effort to set; one that
+has one gets it from its `<purpose>_llm_reasoning_effort` constant through `OpenAIModel`'s
+`generation_kwargs` ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md)
+section 15). What makes this snippet
 follow the method:
 
 - **Should. `evaluation_steps` instead of `criteria`** ([judges.md](judges.md) section 7): DeepEval's

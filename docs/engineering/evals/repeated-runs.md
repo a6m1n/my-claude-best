@@ -181,8 +181,9 @@ What the evidence says:
 **Must.** A timeout, a rate limit or a server error is reported as an error of the run, by case id,
 apart from wrong answers; the errored cases are run again, and a run with errors left does not pass
 its gate ([evals.md](evals.md) section 6). The vendors' SDKs already retry these errors twice by
-default, so an error that reaches the eval is not a flake of the answer. Which exceptions a pytest
-rerun may catch is [running-tests.md](../testing/running-tests.md) section 9's.
+default, so an error that reaches the eval is not a flake of the answer. Where a pytest rerun is
+allowed, and what it lets through, is [running-tests.md](../testing/running-tests.md) sections 9
+and 10's.
 
 ## 9. Sources
 
