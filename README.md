@@ -27,6 +27,7 @@ My personal collection of engineering best practices: how I set up projects, wri
 
 ## License
 
-© 2026 a6m1n. This work is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). See [LICENSE](LICENSE). You can use, change, and share it, including commercially, as long as you credit the author.
+- Text, documentation and images, except the code below: © 2026 a6m1n and the collaborators whose commits are in the history, under [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/), see [LICENSE](LICENSE). You can use, change, and share it, including commercially. When you share it, credit the author, link the license, and say if you changed it.
+- Code: © 2026 The my-claude-best authors (the author and every collaborator whose commit is in the history), under the [MIT License](LICENSE-CODE). It covers the scripts in `claude-config/` and every fenced block in the repository's Markdown files, such as the one-paste prompt in `install.md` and the `CLAUDE.md` section in `CLAUDE.local.md`. Keep its copyright and permission notice in copies or substantial portions of the code.
 
 Please credit as: "a6m1n, my-claude-best, https://github.com/a6m1n/my-claude-best".

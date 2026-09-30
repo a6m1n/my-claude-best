@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 The my-claude-best authors
 """Claude Code status line: ctx | model+effort | 5h | 7d | cache | burn speedometer."""
 from __future__ import annotations  # lets `str | None` hints run on Python 3.9
 
