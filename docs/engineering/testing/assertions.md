@@ -186,7 +186,7 @@ caplog.set_level(logging.WARNING)
 with pytest.raises(PaymentUnavailable, match="status 503"):
     unavailable_gateway.charge(PaymentId("pay-1001"), Decimal("120.00"))
 
-assert "retry 1 of 2" in caplog.text
+assert "retry 1 of" in caplog.text
 assert "key-for-tests" not in caplog.text
 ```
 

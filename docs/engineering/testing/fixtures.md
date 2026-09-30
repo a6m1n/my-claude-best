@@ -252,7 +252,7 @@ fixture or a test, never at module level.
   `monkeypatch`; here the fixture that asks for `monkeypatch` states its scope (section 1), so how
   long a patch lasts is written down. A project that takes `unittest.mock` instead uses it alone:
   one patcher library per suite. Check:
-  `grep -rnE "unittest\.mock import .*\bpatch\b|from mock import|mock\.patch|\bmocker\b" --include='*.py' tests/`
+  `grep -rnE "unittest\.mock import .*\bpatch\b|from mock import|mock\.patch|mocker\b" --include='*.py' tests/`
   prints nothing.
 
 ## 7. Factories
