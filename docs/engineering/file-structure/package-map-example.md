@@ -11,9 +11,9 @@ keeps `<module>`, `<name>` and `<system>` as they are, because those stand for m
 ## Package map: kinds and rules, not a file list
 
 `ls` lists the instances: `ls src/<app>/<domain>` shows the modules, `ls` inside a module shows its
-files. This map holds what `ls` cannot tell you: what each kind of file is for, and what must hold
-for every one of them. Adding a module or a file changes nothing here; a new kind of file or a new
-rule does.
+files. This map records what `ls` cannot show: the job of each kind of file, and the rules every
+file of that kind follows. Adding a module or a file changes nothing here; a new kind of file or a
+new rule does.
 
 ```
 src/<app>/

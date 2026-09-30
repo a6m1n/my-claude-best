@@ -65,11 +65,11 @@ the second to its adapter tests ([running-tests.md](running-tests.md) section 3)
 ```toml
 [tool.pytest]
 testpaths = ["tests"]
-addopts = ["-ra", "--disable-socket", "--allow-unix-socket", "-m", "not real_model"]
+addopts = ["-ra", "--disable-socket", "--allow-unix-socket", "-m", "not live_model"]
 markers = [
-    "unit: added by tests/conftest.py to every test under tests/unit",
-    "integration: added by tests/conftest.py to every test under tests/integration",
-    "real_model: calls a real language model; costs money; run by hand",
+    "unit: the offline suite; the collection hook sets it from the folder",
+    "integration: the suite that needs a service; set from the folder too",
+    "live_model: sends each call to a paid model API; select it on purpose",
 ]
 strict_config = true
 strict_markers = true
@@ -164,7 +164,7 @@ own job. The rules behind this tree are in `docs/engineering/testing/`.
 | `uv run pytest tests/integration` | the integration suite; Docker must be running |
 | `uv run pytest tests/*/<module> tests/*/*/*_<module>*` | one module in every suite, its adapter tests included (leave out the second pattern while it has none): run it before you push a change to it |
 | `uv run pytest -n auto` | everything in parallel; needs pytest-xdist installed |
-| `uv run pytest -m real_model` | the tests that call a real model; they cost money |
+| `uv run pytest -m live_model` | the tests that call a real model; they cost money |
 
 ## Where a new test goes
 
@@ -200,7 +200,7 @@ at the section that owns the rule, in `docs/engineering/testing/`.
 - No bare `Mock()` and no `mock.patch`. → `fakes-and-boundaries.md` section 1, `fixtures.md` section 6
 - Never write the marks `unit`, `integration` or `enable_socket`; the hook sets them.
   → `running-tests.md` section 2, `fakes-and-boundaries.md` section 4
-- A test that calls a real model is marked `real_model`. → `running-tests.md` section 10
+- A test that calls a real model is marked `live_model`. → `running-tests.md` section 10
 ```
 
 It is good because each line is a rule whose break shows in a diff, and each points to its owner
