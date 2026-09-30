@@ -113,9 +113,6 @@ assert share_overdue == pytest.approx(0.33, abs=0.005)
 
 - **Money is a `Decimal`, and a `Decimal` is compared exactly.** A rounding rule is part of the
   guarantee, so the test writes the rounded value.
-- **A value nothing computed**, such as a constant the code assigns, is compared with `==`.
-- **pytest 9.1's `approx` also takes `datetime` and `timedelta`**, for a time the code computed
-  from the clock it was given.
 
 ## 5. Assert messages
 
@@ -147,7 +144,6 @@ for row in reminded_rows:
 With the Bad message the report reads "reminded too early" over
 `assert datetime.date(2026, 9, 10) > datetime.date(2026, 9, 12)`, and no line names the row.
 
-- **The message is data, not prose.** An f-string with the value, never "check failed".
 - **A message never holds a secret or a customer's text** (section 6): it is printed in the
   report, and CI keeps the report.
 - **A loop of asserts passes when it runs zero times.** When the list comes out of a filter, as

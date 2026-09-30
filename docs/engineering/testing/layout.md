@@ -72,8 +72,7 @@ folder per module, not the split.
 - **A module subfolder that is not a role folder, such as a pipeline's folder, is always mirrored
   in the test tree**, whatever its file names: `src/<app>/<domain>/<module>/<pipeline>/schemas.py`
   is tested in `tests/unit/<module>/<pipeline>/test_schemas.py`, next to the module's own
-  `test_schemas.py`. A test file in that folder promoted to a folder of its own (section 4) is the
-  one case the depth check there prints.
+  `test_schemas.py`.
 
 Check: `find tests -name 'test_*.py' | awk -F/ 'NF < 4'` prints only the guarantee files of
 section 5: every other test file sits at least one folder below its suite.
@@ -92,7 +91,6 @@ tests, not the same: it may use the disk through `tmp_path`.
 |---|---|---|
 | `unit/` | nothing outside the Python process: no network, no database, no container, no real model | on every push and in the pre-merge CI job |
 | `integration/` | at least one of: a real database, a container, the network, a real model | in its own CI job, and on demand |
-| `e2e/`, when you add it | the running application, driven from outside through its real way in | on a schedule or before a release |
 
 - **When you create a test file, ask what its act step needs.** The act step is the one line
   that calls the code under test ([test-structure.md](test-structure.md) section 1). If that call
@@ -127,11 +125,6 @@ it.
   for the source file.
 - **The unit of an adapter test is the route or command function** the test reaches through the
   app or the command line.
-- **`core` and the adapters are reserved names** in a suite folder, because no module is named
-  after them ([file-structure.md](../file-structure/file-structure.md) section 8).
-- **A new module gets its test folder in the commit that adds its first test**, not before: an
-  empty folder is a placeholder, which [file-structure.md](../file-structure/file-structure.md)
-  section 3 does not allow.
 
 Check: for each test file, `ls` the source folder of its module and find the file its name
 comes from. A test file whose stem names no source file is either a promoted file (section 4) or a
@@ -179,24 +172,11 @@ One unit's tests split by subject when its class docstring needs "and"
 ([readability.md](../readability/readability.md) section 2). Each file then keeps the class
 `Test<Unit>` and is named `test_<subject>.py`.
 
-- **Move the first file in a commit of its own, before the commit that adds the second.** A move
-  and an edit in one commit can drop below git's rename threshold, and `git log --follow` then
-  loses the file's history; [refactoring.md](../refactoring/refactoring.md) section 3 owns the
-  separate move commit. Check `git diff -M --name-status HEAD~1` on the move commit: every moved
-  file shows `R`.
-- **A promoted folder never gets a subfolder.** If one of its files would need a second class
-  again, the source file holds too much: split the source file first
-  ([file-structure.md](../file-structure/file-structure.md) section 6, move 2). Check:
-  `find tests -mindepth 4 -type d -not -name __pycache__ -not -path 'tests/support/*' -not -path '*/__snapshots__*'`
-  prints nothing but a promoted folder inside a module subfolder that section 1 mirrors: a promoted
-  folder is the deepest level.
-- **When the source file becomes a folder itself** ([file-structure.md](../file-structure/file-structure.md)
-  section 6, move 2), **dissolve its promoted test folder in the same move commit**: each test file
-  moves up to the module's test folder, named for the new source file it tests, since the test
-  tree stops at the module (section 1).
-- **Never keep both forms.** A folder that holds `test_<file>.py` next to `<file>/` makes a reader
-  guess which one is the main file. Check: no folder under `tests/` lists both `test_<x>.py` and
-  `<x>/`.
+- **Move the first file in a commit of its own, before the commit that adds the second**:
+  [file-structure.md](../file-structure/file-structure.md) section 6 owns the separate move
+  commit.
+- **A promoted folder is the deepest level**; when the source file becomes a folder itself, its
+  tests take the paths section 3 gives the new files, in the same move commit.
 
 ## 5. A test of several files together
 
@@ -233,20 +213,9 @@ A test imports the harness by its package path:
 from tests.support.fake_mailer import FakeMailer
 ```
 
-Why `prepend` and not `importlib`:
-
-- pytest keeps `prepend` the default "for the foreseeable future", because `importlib` "has its
-  own set of drawbacks", and it recommends `__init__.py` packages for `prepend` ("pytest import
-  mechanisms and sys.path/PYTHONPATH"). The default stays, its maintainers say, because changing
-  it "would severely impact a lot of test suites"; its "Good Integration Practices" calls
-  `prepend` the default "for historical reasons" and recommends `importlib` for new projects.
-- Under `importlib`, the same reference says, helper modules in the test folders "are not
-  importable". A test that annotates a fixture with the fake's type has to import that type for
-  the type checker, so the harness must be importable. pytest 9.1 does import `tests.support`
-  under `importlib` when every folder has an `__init__.py`, but its reference still says it does
-  not, no test of pytest's own pins it, and a release could change it without warning.
-- `importlib`'s advantage for a new project, same-named test files that do not collide, comes
-  from the packages here too.
+Why `prepend` and not `importlib`: pytest keeps `prepend` the default, and under `importlib` its
+reference says helper modules in the test folders "are not importable", where a test that
+annotates a fixture with a fake's type has to import that type from `tests.support`.
 
 Rules that follow from it:
 
@@ -277,8 +246,6 @@ stands in for or per kind of data, named with its role first, `fake_mailer.py` h
   fixture is requested by name, so fixtures live in `conftest.py` files
   ([fixtures.md](fixtures.md) section 4). Check: `grep -rn "@pytest.fixture" tests/support/`
   prints nothing.
-- **No test files in `support/`.** Nothing in it starts with `test_`, so pytest collects nothing
-  there. Check: `ls tests/support/test_*.py` finds nothing.
 - **A file a test reads is built in the test when its bytes do not matter**, with `tmp_path`, and
   checked in only when the bytes are the subject, such as a sample of a partner's real export
   format. A checked-in file goes under `tests/support/data/<system>/`, with an `__init__.py` in

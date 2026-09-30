@@ -70,8 +70,7 @@ section 4); failing on a warning is `filterwarnings = ["error"]`
 ([running-tests.md](running-tests.md) section 4). Configuration holds for every test with nothing
 to forget, and it is written down in one place.
 
-`usefixtures` never goes on a fixture function: pytest 9 fails on a mark applied to a fixture, and
-ruff's `PT025`, on by default, reports it. A fixture that needs another asks for it as an argument.
+A fixture that needs another asks for it as an argument.
 
 Check: `grep -rn "autouse" --include='*.py' tests/` prints nothing.
 
@@ -90,8 +89,6 @@ change it.**
 | `module` (one test file) | an expensive object the tests of one file share and never change | a large parsed sample file |
 | `session` | an expensive resource the whole run shares, whose object never changes | a database container and its URL |
 
-- **Never `class` scope.** A file holds one class ([layout.md](layout.md) section 4), so `class`
-  and `module` scopes last exactly as long; `module` says it plainly.
 - **A shared resource whose contents tests change gets a function-scoped fixture that puts it
   back.** The database container lives for the session; a function-scoped fixture empties its
   tables after each test ([suite-example.md](suite-example.md) shows the pair).
@@ -118,21 +115,7 @@ A fixture climbs a ladder, and only as far as it must:
 
 - **Start in the test file.** When a second file needs the fixture, move it to the lowest
   `conftest.py` both files can see, and delete the first copy in the same edit. Two copies drift
-  on the first edit to one of them. Check: `grep -rn "def <name>(" tests/` prints one line, or one
-  line per suite for a fixture whose body only calls a `tests/support/` builder.
-- **A fixture for a resource the whole suite shares, such as a database container, starts in the
-  suite's `conftest.py`**, not in the first test file that asks for it.
-- **A fixture both suites of one module need never climbs to `tests/conftest.py`.** The builder
-  goes in `tests/support/`, and each suite's `<module>/conftest.py` holds a one-line fixture that
-  calls it.
-- **A fixture is never a method of the test class.** With one class per file, a module-level
-  fixture is already private to that class. A class-scoped fixture written as a method without
-  `@classmethod` is deprecated since pytest 9.1.
-- **A fixture never lives in `tests/support/`**: that package is imported, not requested
-  ([layout.md](layout.md) section 7). A fake lives there; the fixture that builds it lives in a
-  `conftest.py`.
-- **A fixture with the name of one flow stays near that flow.** `mailer` means one kind of fake
-  and may climb; `overdue_invoice` means one module's data and stays in that module's folder.
+  on the first edit to one of them. Check: `grep -rn "def <name>(" tests/` prints one line.
 
 ## 5. Setup and teardown with yield
 
@@ -157,7 +140,6 @@ def postgres_url() -> Iterator[str]:
   second never runs; two fixtures clean up independently. pytest's docs call this the safest
   structure: "limiting fixtures to only making one state-changing action each, and then bundling
   them together with their teardown code".
-- **A generator fixture is annotated `Iterator[<the type it yields>]`** (section 9).
 
 ## 6. Patch and undo
 
@@ -229,10 +211,8 @@ fixture or a test, never at module level.
 - **Patch the name where the code looks it up.** `from acme_sdk import DEFAULT_RETRIES` copies
   the value into the importing module, so patching `acme_sdk` does not reach it; patch each module
   that holds its own reference, and say in one comment why the lines differ.
-- **Set a stand-in, never a bare `MagicMock()`.** What `setattr` puts in is one of the stand-ins
-  of [fakes-and-boundaries.md](fakes-and-boundaries.md) section 1: a fake, or
-  `create_autospec(...)`. A rule against `unittest.mock.patch` followed by
-  `monkeypatch.setattr(target, "name", MagicMock())` keeps the mock and loses its spec.
+- What `setattr` puts in is a stand-in of [fakes-and-boundaries.md](fakes-and-boundaries.md)
+  section 1.
 - **Never patch the application's settings.** A test takes what
   [python.md](../python/python.md) section 5 names: the plain values the unit takes, or the
   `Settings` a whole-app test passes to the function that builds the app.
@@ -327,16 +307,10 @@ light one stays in the test.
 
 ## 9. Types
 
-A fixture is code, so [python.md](../python/python.md) section 3 annotates it like any function:
-
-- **The return type is the type the test receives.** A generator fixture returns
-  `Iterator[<type>]`, and one that yields nothing `Iterator[None]`.
-- **pytest's own objects have public names**: `pytest.FixtureRequest`, `pytest.MonkeyPatch`,
-  `pytest.TempPathFactory`, `pytest.LogCaptureFixture`, `pytest.CaptureFixture[str]`. Import
-  nothing from `_pytest`.
-- **`request.param` is `Any`**, because pytest's own typing of it "is still in flux". Assign it to
-  a name with a type in the first line of the fixture, as in section 8. Nothing checks that the
-  rows of `params` fit that annotation: the type checker takes it on trust.
+A fixture is code, so [python.md](../python/python.md) section 3 annotates it like any function.
+**pytest's own objects have public names**: `pytest.FixtureRequest`, `pytest.MonkeyPatch`,
+`pytest.TempPathFactory`, `pytest.LogCaptureFixture`, `pytest.CaptureFixture[str]`. Import nothing
+from `_pytest`.
 
 ## 10. Where it stops holding
 
@@ -353,9 +327,8 @@ The Zen of Python (PEP 20). pytest documentation: "How to use fixtures" (scopes,
 modules and environments" ("a safer long-term pattern") and the `MonkeyPatch` reference (undo
 semantics, `MonkeyPatch.context()` outside the fixture since 6.2), "How to use temporary directories
 and files in tests" (`tmp_path_factory`), "How to parametrize fixtures and test functions"
-(`indirect`), the 9.0 and 9.1 changelogs (marks on fixtures fail; class-scoped instance-method
-fixtures deprecated); pytest source at 9.1.1, `src/_pytest/fixtures.py` (the type of
-`request.param`). ruff rules `PT003` and `PT025`. pytest issue #4576 (Anthony Sottile, 2020, on
+(`indirect`); pytest source at 9.1.1, `src/_pytest/fixtures.py` (the type of `request.param`).
+ruff rule `PT003`. pytest issue #4576 (Anthony Sottile, 2020, on
 `monkeypatch` and `unittest.mock`); pytest-mock issue #289 (2022, a patch leaked between the two).
 Adam Johnson, "How to Mock Environment Variables in pytest" (adamj.eu, 2020). testcontainers-python
 documentation (`PostgresContainer`).

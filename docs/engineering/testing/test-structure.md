@@ -204,9 +204,6 @@ class TestNeedsReminder:
         assert not needs_reminder(DUE_ON, last_reminded_on=None, today=DUE_ON)
 ```
 
-Check: `grep -n '"""Regression\|"""Pins' <file>` names each regression test and each pin you
-wrote.
-
 ## 6. One guarantee, a table of inputs
 
 `@pytest.mark.parametrize` runs one test body over rows of inputs. It is for one guarantee that
@@ -242,13 +239,6 @@ class TestNeedsReminder:
         assert needs_reminder(DUE_ON, last_reminded_on, today)
 ```
 
-- **The row ids are unique.** `strict_parametrization_ids` makes a duplicate id an error
-  instead of a silent number suffix ([running-tests.md](running-tests.md) section 1).
-- **Rows are a list or a tuple, never a generator.** pytest 9.1 deprecated other iterables as
-  row values.
-- **A table longer than one screen goes to a module-level constant** above the class, named for
-  what the rows are: `OVERDUE_CASES`.
-
 Check: `pytest --collect-only -q <file>` prints ids made of words, never an id that ends in a
 number pytest invented.
 
@@ -274,9 +264,6 @@ instead of writing out the combinations: pytest runs every pair. Check that
 `pytest --collect-only -q <file>::<Class>::<test>` prints as many lines as the product of the two
 tables.
 
-**pytest 9's `subtests` fixture** is for cases that are not known until the test runs, such as
-one check per row of a file the test reads. Cases known when the file is written are a table.
-
 When a table should feed a fixture rather than the test, such as a database in two states, that
 is indirect parametrization, [fixtures.md](fixtures.md) section 8.
 
@@ -291,7 +278,6 @@ is indirect parametrization, [fixtures.md](fixtures.md) section 8.
 
 ## 9. Sources
 
-pytest documentation: "Get Started" (grouping tests in a class, and one instance per test),
-"How to parametrize fixtures and test functions", the subtests pages (pytest 9.0), and the
-configuration reference (`strict_parametrization_ids`, 9.0; the 9.1 deprecation of non-collection
-iterables as parametrize values). ruff rules `PT006` and `PT007` (flake8-pytest-style).
+pytest documentation: "Get Started" (grouping tests in a class, and one instance per test) and
+"How to parametrize fixtures and test functions". ruff rules `PT006` and `PT007`
+(flake8-pytest-style).

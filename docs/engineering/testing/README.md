@@ -95,6 +95,3 @@ hold the change to the example `tests/CLAUDE.md` in [suite-example.md](suite-exa
   about what a test asserts, whatever the stand-in.
 - **The async plugin** is pytest-asyncio or anyio's own, by what the code runs on
   ([running-tests.md](running-tests.md) section 7).
-
-What does not change is the one rule above: a red test names one broken guarantee, and nothing else
-turns it red.

@@ -271,8 +271,9 @@ migrations the application runs, so the test database cannot drift from the real
 container and running migrations is the slowest thing in the suite, so they live for the session;
 the rows are what tests change, so the function-scoped `database` puts them back after every
 test, whether it passed or not
-([fixtures.md](fixtures.md) section 3). Every integration module can ask for `database`, which is
-why it sits in the suite's `conftest.py` ([fixtures.md](fixtures.md) section 4). Under
+([fixtures.md](fixtures.md) section 3). Two files ask for `database`, this module's test and the
+CLI command's test, so it sits in the lowest `conftest.py` both can see, the suite's
+([fixtures.md](fixtures.md) section 4). Under
 pytest-xdist each worker gets its own container, which keeps the workers apart
 ([running-tests.md](running-tests.md) section 8).
 
