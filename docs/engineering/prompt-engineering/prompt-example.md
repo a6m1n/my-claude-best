@@ -391,10 +391,15 @@ into four steps, each one a small diff:
    `MODEL_NOTES` is `""`. A model not yet in the project gets both lines in this step.
 2. **Run the base unchanged.** The case set runs the current setup, `acme-small-3` at `low` with
    its notes, against `acme-large-2` with the base alone, at each effort level the model offers,
-   with repeats (sections 15 and 18). The prompt text does not change in this step, so the result
-   measures the model.
+   with repeats (sections 15 and 18). Before the run, write the decision rule down: each
+   criterion's pass rate over the set, with every case run three times, falls no more than a stated
+   margin below the old model's on the same cases ([evals.md](../evals/evals.md) section 7,
+   [repeated-runs.md](../evals/repeated-runs.md) section 5). The prompt text does not change in
+   this step, so the result measures the model.
 3. **Tune only the layer.** Where the new model fails cases the old one passed, add a line to its
    entry in `MODEL_NOTES`, and run the set again. The base does not change unless every model
    needs the change; then it is a prompt change, tested as one.
 4. **Switch the constants.** One commit sets `TRIAGE_LLM_MODEL` and `TRIAGE_LLM_REASONING_EFFORT`
-   to what the case set chose. The old model's entry stays until no call site uses it.
+   to what the case set chose. Its pull request's Verification section holds each criterion's rate
+   for the new model, the old model's rate as the baseline, and whether the decision rule holds
+   ([evals.md](../evals/evals.md) section 8). The old model's entry stays until no call site uses it.

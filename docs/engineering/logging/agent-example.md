@@ -340,8 +340,9 @@ from typing import Final
 
 from openai.types import ChatModel
 
+# A dated version, not a moving alias (evals/production.md section 6).
 # gpt-4.1-mini has no reasoning effort to set (prompt-engineering.md section 15).
-SUPPORT_CHAT_LLM_MODEL: Final[ChatModel] = "gpt-4.1-mini"
+SUPPORT_CHAT_LLM_MODEL: Final[ChatModel] = "gpt-4.1-mini-2025-04-14"
 ```
 
 ```python
@@ -360,7 +361,9 @@ class ChatReply(BaseModel):
 `SUPPORT_CHAT_LLM_MODEL` follows `<purpose>_llm_model`
 ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 15), and `ChatModel`,
 the OpenAI SDK's own `Literal`, makes a misspelt model fail the type checker
-([python.md](../python/python.md) section 3). `ChatReply` is the response schema the provider
+([python.md](../python/python.md) section 3). Its value is a dated version, not the alias
+`gpt-4.1-mini`, which the vendor can point at a new build
+([production.md](../evals/production.md) section 6). `ChatReply` is the response schema the provider
 fills ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 11).
 
 ## `support/chat/graph.py` and `support/chat/services/service_orders.py`: the agent and a tool
