@@ -538,6 +538,7 @@ def format_burn(
 
     pct = float(five_h["used_percentage"])
     reset_ts = parse_epoch(five_h.get("resets_at"))
+
     if reset_ts is None:
         return f"burn: {detail_bits[0]}"  # can't project without a reset time
 
@@ -560,6 +561,7 @@ def format_burn(
         text += f" {color}⚠100% in {eta}{RESET}" if show_detail else f" {color}⚠{RESET}"
     if show_detail:
         text += detail
+
     return text
 
 
@@ -625,6 +627,7 @@ def update_task_activity(tasks, session_id: str, now: float) -> dict[str, float]
     entries = state.get("tasks")
     if not isinstance(entries, dict):
         entries = {}
+
     fresh: dict[str, list[float]] = {}
     stall_ages: dict[str, float] = {}
     for task in tasks:
@@ -641,8 +644,10 @@ def update_task_activity(tasks, session_id: str, now: float) -> dict[str, float]
         else:
             fresh[task_id] = [count, now]
             stall_ages[task_id] = 0.0
+
     if fresh != entries:
         save_state_file(task_state_path(session_id), {"tasks": fresh})
+
     return stall_ages
 
 
@@ -810,6 +815,7 @@ def main() -> None:
 
     ctx_str, has_window = format_context(payload, usages)
     parts = [ctx_str, format_model(model, effort, has_window)]
+
     rate_segments = []
     for key, label in (("five_hour", "5h"), ("seven_day", "7d")):
         seg = format_rate_limit(rate_limits.get(key), label, show_detail, now)
@@ -819,11 +825,13 @@ def main() -> None:
         # One clickable link spanning the whole "5h … │ 7d …" run (separator
         # included), so clicking anywhere on it opens the usage page.
         parts.append(osc8_link(USAGE_URL, SEP.join(rate_segments)))
+
     cache_seg = format_cache(usages)
     countdown = format_cache_countdown(timed_usages, now)
     if countdown:
         cache_seg += f" {countdown}"
     parts.append(cache_seg)
+
     burn = format_burn(
         rate_limits.get("five_hour"),
         now,
@@ -833,6 +841,7 @@ def main() -> None:
     )
     if burn:
         parts.append(burn)
+
     print(SEP.join(parts))
 
 
