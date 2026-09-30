@@ -1,68 +1,163 @@
 # my-claude-best
 
-Engineering practices for teams that code with AI agents, plus a Claude Code status line.
+Engineering practices that people and AI coding agents both follow, plus a status line for Claude Code.
 
 **Navigation**
 
-- [What it is](#what-it-is)
-- [Start here](#start-here)
-- [Layout](#layout)
-- [Conventions](#conventions)
+- [What it does](#what-it-does)
+- [Why it is useful](#why-it-is-useful)
+- [Getting started](#getting-started)
+- [Project structure](#project-structure)
 - [Where to get help](#where-to-get-help)
 - [Maintainers and contributing](#maintainers-and-contributing)
 - [License](#license)
 
-## What it is
+## What it does
 
-My personal collection of engineering best practices: how I set up projects, write and review code, and work with AI coding agents. Each practice is a folder of rules and examples that you copy into your own repository, and that your coding agent reads before it works there. Almost everything here is Markdown. The exception is `claude-config/`: my Claude Code configuration, as files you copy to your own machine. There is nothing to build. The code examples are in Python.
+A practice is a folder of rules and worked examples for one kind of work, such as commits, tests or prompts. You copy the folder into your repository and add one line to your agent's instruction file. From then on, the agent reads the rules before it does that kind of work, and the people on your team read the same file.
 
-This is an unofficial project, not affiliated with or endorsed by Anthropic.
+For example, the git practice needs this one line in your `CLAUDE.md`:
 
-## Start here
+```markdown
+- Before any git operation, read `docs/engineering/git/git.md`.
+```
 
-- To adopt a practice, open [docs/engineering/git/](docs/engineering/git/). Its `README.md` has a "How to adopt" section: the steps that copy the folder into your repository and point your agent at it.
-- To try something in five minutes, install the [status line](claude-config/statusline/): context, usage limits, the prompt cache and the agent panel, under the Claude Code prompt.
-- To write instructions for Claude Code, read [claude-md.md](docs/claude-code/claude-md.md): what belongs in a `CLAUDE.md` and what does not.
+With this line in your `CLAUDE.md`, the agent opens `git.md` before its first git command, and its commit titles take one form, such as `fix(orders): reject an empty cart`.
 
-## Layout
+It is for teams that write code with an AI coding agent. The code examples are in Python. The practices are Markdown, so there is nothing to build or install. Every name in the examples is invented.
 
-- `docs/engineering/` — engineering practices, one folder per topic, each with a `README.md` map, its rules and examples. [docs/engineering/CLAUDE.md](docs/engineering/CLAUDE.md) is the contract for writing one. In the order to read them:
-  - [git/](docs/engineering/git/) — branches, commits, pull requests, merging, and no rewriting of pushed history.
-  - [python/](docs/engineering/python/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
-  - [refactoring/](docs/engineering/refactoring/) — how old code reaches a practice without a rewrite of the repository.
-  - [file-structure/](docs/engineering/file-structure/) — where code lives in an application, and file names that say what a file holds.
-  - [logging/](docs/engineering/logging/) — how a Python application logs through the standard logger.
-  - [readability/](docs/engineering/readability/) — how one function or class reads.
-  - [static-checks/](docs/engineering/static-checks/) — the formatter, the linter, a strict type checker and import contracts, run the same way in hooks and in CI.
-  - [prompt-engineering/](docs/engineering/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
-  - [testing/](docs/engineering/testing/) — which code earns a test, and how a pytest suite is laid out and written.
-  - [evals/](docs/engineering/evals/) — how to check what a language model does in an application: real calls on real cases, judges checked against people's labels, pass rules over repeated runs, agents and RAG.
-- `docs/claude-code/` — how I set up and instruct Claude Code. So far: [claude-md.md](docs/claude-code/claude-md.md).
-- `docs/artifacts/` — working files a session writes (plans, reports, research runs). Git-ignored: not part of the library.
-- `skills/` — Claude Code skills to read and copy. None yet: `pr/` and `commit/` are planned. Nothing in this folder is loaded automatically.
-- `claude-config/` — my global Claude Code configuration (`~/.claude/`), one folder per module; each module's `README.md` shows what it does and links to its install guide. So far: [statusline/](claude-config/statusline/).
-- `CLAUDE.local.md` — an example of the practices section of a project `CLAUDE.md`, for a repository that copies `docs/engineering/` in. The rule file this repo itself runs on is local and not committed.
+The practices, in the order to read them:
 
-## Conventions
+- [git](docs/engineering/git/) — branches, commits, pull requests and merging, with no rewriting of pushed history.
+- [python](docs/engineering/python/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
+- [refactoring](docs/engineering/refactoring/) — how old code reaches a practice without a rewrite of the whole repository.
+- [file-structure](docs/engineering/file-structure/) — where code lives in an application, and file names that say what a file holds.
+- [logging](docs/engineering/logging/) — how a Python application logs through the standard `logging` module.
+- [readability](docs/engineering/readability/) — how one function or class reads.
+- [static-checks](docs/engineering/static-checks/) — the formatter, the linter, a strict type checker and import contracts, run the same way in hooks and in CI.
+- [prompt-engineering](docs/engineering/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
+- [testing](docs/engineering/testing/) — which code earns a test, and how a pytest suite is laid out and written.
+- [evals](docs/engineering/evals/) — how to check what a language model does in an application, with real calls on real cases.
 
-- All content is in English.
-- One topic per file, named by the topic (for example `code-review.md`). A topic with examples becomes a folder named by the topic, with a `README.md` map. Under `docs/engineering/` a practice is always a folder.
-- Every `README.md` with two or more `##` sections, and every long rules file or guide a reader consults section by section, opens with a **Navigation** block of links to its sections. [git.md](docs/engineering/git/git.md) section 9 says which files get one and which do not.
-- Every name in the examples is fictional: companies, people, tickets, domains.
-- A good example follows every practice that governs what it shows. [docs/engineering/CLAUDE.md](docs/engineering/CLAUDE.md) holds the rules for good and bad examples.
+Two more parts are about Claude Code itself:
+
+- [The status line](claude-config/statusline/) — context, usage limits, the prompt cache and each agent's progress, under the Claude Code prompt.
+- [The CLAUDE.md guide](docs/claude-code/claude-md.md) — what belongs in a `CLAUDE.md` and what does not.
+
+What it does not do:
+
+- It is not a standard. The practices are one author's choices: change or drop any rule in your copy.
+- It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself.
+- It has no examples in languages other than Python.
+- It is not an official Anthropic project, and Anthropic does not endorse it.
+
+Two skills, for commits and pull requests, are planned. The `skills/` folder has none yet.
+
+## Why it is useful
+
+- The agent reads a practice only when the work needs it. Your `CLAUDE.md` holds one trigger line per practice, not the rules themselves, so it stays short.
+- Each rule is one act at one moment, such as "before you stage" or "when you add a log call". An agent can follow it, and a reviewer can check that it did.
+- Every rule comes from public practice, never from what one codebase happens to do. Most practices end with the sources behind their rules.
+- A good example follows every practice that governs what it shows, not only the one it illustrates. A bad example names its problem and sits next to the fixed version.
+- It works with any agent that reads `CLAUDE.md` or `AGENTS.md`, not only Claude Code.
+- The English is plain: short sentences and common words, for readers whose first language is not English.
+
+## Getting started
+
+You need a git repository and a coding agent that reads `CLAUDE.md` or `AGENTS.md`.
+
+### Adopt one practice
+
+The steps use the git practice. Every practice is adopted the same way. Its `README.md` lists any extra step under "How to adopt".
+
+1. Clone this repository next to your project: the green Code button on the repository page copies its address. Note the commit you copy from:
+
+   ```bash
+   git clone <address> my-claude-best
+   cd my-claude-best
+   git rev-parse --short HEAD
+   ```
+
+   It prints a short commit id, such as `1a2b3c4`. Put it in the message of the commit that adds the folder: you compare against it later.
+
+2. Copy the practice folder into your project, at the same path:
+
+   ```bash
+   mkdir -p ../your-project/docs/engineering
+   cp -R docs/engineering/git ../your-project/docs/engineering/
+   ```
+
+3. Add the trigger line to the instruction file your agent reads. Claude Code reads `CLAUDE.md`. It reads `AGENTS.md` only from version 2.1.277, and only when no `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` sits in the project folder or above it. If you keep the line in `AGENTS.md` and also have a `CLAUDE.md`, add the line `@AGENTS.md` to your `CLAUDE.md`.
+
+   ```markdown
+   - Before any git operation, read `docs/engineering/git/git.md`.
+   ```
+
+   Without this line, the agent never opens the folder.
+
+4. Ask the agent to commit a change. Before its first git command, it reads `docs/engineering/git/git.md`, and Claude Code shows that read in the session. The commit title then takes the form from section 3 of that file, such as `fix(orders): reject an empty cart`.
+
+A copy does not update itself. To see what changed in the practice since then, run this in your clone of this repository. Put your commit id in place of `1a2b3c4`:
+
+```bash
+git pull
+git log --oneline 1a2b3c4..HEAD -- docs/engineering/git
+```
+
+### Try the status line
+
+![The status line under the Claude Code prompt: context, model and effort, 5-hour and weekly limits, cache, burn](claude-config/statusline/img/statusline.svg)
+
+The status line keeps the numbers you would otherwise ask Claude Code for. It shows how full the context is, how much of the 5-hour and weekly limits you have used, and how long the prompt cache stays warm. It is one Python file and two keys in `settings.json`, and it needs Python 3.9 or newer. [install.md](claude-config/statusline/install.md) sets it up by hand or with one paste, and says how to undo it.
+
+## Project structure
+
+```
+my-claude-best/
+├── docs/
+│   ├── engineering/     # the practices, one folder each, and CLAUDE.md: the contract for writing one
+│   └── claude-code/     # guides on instructing Claude Code
+├── claude-config/
+│   └── statusline/      # the status line: the script, its install guide, its images
+├── skills/              # planned skills to read and copy; none yet
+├── CLAUDE.local.md      # an example practices section for a project CLAUDE.md
+├── CONTRIBUTING.md
+├── SECURITY.md
+├── LICENSE              # CC BY 4.0, for the text
+└── LICENSE-CODE         # MIT, for the code
+```
+
+Every practice folder has the same shape. It holds a `README.md` that maps the folder and says how to adopt it, one or more rules files, and `*-example.md` files with worked examples. Run `ls docs/engineering` for the practice folders.
 
 ## Where to get help
 
-- A question, or a mistake in a practice: open an issue. Name the file and the section, and quote the line.
-- A security problem in `claude-config/`: never describe it in an issue. See [SECURITY.md](SECURITY.md).
+- A question, or a mistake in a practice: open an issue in this repository. Name the file and the section, and quote the line. [CONTRIBUTING.md](CONTRIBUTING.md) says what a useful issue holds.
+- A security problem in the status line script: never describe it in a public issue. [SECURITY.md](SECURITY.md) says how to report it privately.
+
+I read issues when I can. There is no set response time.
 
 ## Maintainers and contributing
 
-I maintain this library alone, and the practices say how I work. Issues are welcome. Pull requests are open to collaborators only: when I agree with an issue, I change the text myself, in the library's style. [CONTRIBUTING.md](CONTRIBUTING.md) says what a useful issue holds.
+I maintain this library, and the practices describe how I work. It is open source, but not open to outside contributions.
+
+Issues are welcome. Pull requests are open only to collaborators, the people with write access to this repository. When I agree with an issue, I change the text myself, so the library keeps one voice and one style. [CONTRIBUTING.md](CONTRIBUTING.md) says what a useful issue holds and what happens to it.
 
 ## License
 
-- Text, documentation and images, except the code below: © 2026 a6m1n and the collaborators whose commits are in the history, under [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/), see [LICENSE](LICENSE). You can use, change, and share it, including commercially. When you share it, credit the author, link the license, and say if you changed it.
-- Code: © 2026 The my-claude-best authors (the author and every collaborator whose commit is in the history), under the [MIT License](LICENSE-CODE). It covers the scripts in `claude-config/` and every fenced block in the repository's Markdown files, such as the one-paste prompt in `install.md` and the `CLAUDE.md` section in `CLAUDE.local.md`. Keep its copyright and permission notice in copies or substantial portions of the code.
+The text and the code have different licenses. GitHub's sidebar lists both, but a license badge or the GitHub API shows only CC BY 4.0.
 
-Please credit as: "a6m1n, my-claude-best, https://github.com/a6m1n/my-claude-best".
+| Part | License | File |
+| --- | --- | --- |
+| Text, documentation and images | Creative Commons Attribution 4.0 International (`CC-BY-4.0`) | [LICENSE](LICENSE) |
+| Code: the scripts in `claude-config/` and every fenced code block in the Markdown files | MIT License (`MIT`) | [LICENSE-CODE](LICENSE-CODE) |
+
+Both are © 2026 The my-claude-best authors: the author and every collaborator whose commit is in the history.
+
+You can use, change and share both, including commercially.
+
+- When you share the text, or a folder you copied, keep the notices, credit the author, link the license, and say if you changed it.
+- Keep the MIT copyright and permission notice in all copies or substantial portions of the code.
+
+To credit a folder you copied, put this line at the top of its `README.md`, with the folder's name filled in:
+
+> This work, "the folder's name", is adapted from "my-claude-best" by a6m1n (https://github.com/a6m1n/my-claude-best), used under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).
