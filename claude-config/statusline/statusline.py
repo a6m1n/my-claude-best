@@ -61,6 +61,8 @@ BURN_MIN_SPAN_S = 180  # need >=3 min of history before the slope is trustworthy
 BURN_SLOPE_WINDOW_S = 3600  # slope over the last hour of samples
 BURN_RESET_JITTER_S = 120  # resets_at drift below this is the same 5h window
 BURN_PCT_DROP_RESET = 5.0  # pct drop larger than this means the window rolled over
+# An unchanged pct is still sampled this often, so idle time flattens the slope.
+BURN_SAMPLE_EVERY_S: Final = 60
 
 # State files live in a folder of their own inside Claude Code's config folder
 # (~/.claude, or an absolute CLAUDE_CONFIG_DIR): Claude Code writes its
@@ -536,10 +538,13 @@ def update_burn_samples(five_h: dict, now: float, state_path: str) -> list[list[
     if reset_moved or pct_dropped:
         samples = []
 
-    is_new_sample = not samples or pct != samples[-1][1] or now - samples[-1][0] >= 60
+    is_new_sample = (
+        not samples or pct != samples[-1][1] or now - samples[-1][0] >= BURN_SAMPLE_EVERY_S
+    )
     if is_new_sample:
         samples.append([now, pct])
         samples = samples[-BURN_MAX_SAMPLES:]
+
         if not save_state_file(state_path, {"resets_at": resets_at, "samples": samples}):
             return None
 
@@ -776,9 +781,12 @@ def update_task_activity(
     for task in tasks:
         if not isinstance(task, dict) or not task.get("id"):
             continue
+
         count = task.get("tokenCount")
+
         if not isinstance(count, (int, float)):
             continue
+
         task_id = str(task["id"])
         prev = entries.get(task_id)
         is_unchanged = (
@@ -787,6 +795,7 @@ def update_task_activity(
             and prev[0] == count
             and is_plausible_epoch(prev[1], now)
         )
+
         if is_unchanged:
             fresh[task_id] = prev
             stall_ages[task_id] = max(now - float(prev[1]), 0.0)
@@ -923,11 +932,16 @@ def print_subagent_rows() -> None:
         payload = json.load(sys.stdin)
     except json.JSONDecodeError:
         return
+
     tasks = payload.get("tasks")
+
     if not isinstance(tasks, list):
         return
+
     now = time.time()
+
     state_dir = open_state_dir(claude_config_dir(os.environ))
+
     session_id = str(payload.get("session_id") or "")
     try:
         if state_dir:
@@ -935,7 +949,11 @@ def print_subagent_rows() -> None:
         else:
             stall_ages = {}
     except Exception:
+        # The barrier in __main__ prints nothing in this mode, so an error here
+        # would cost every row its decoration; without stall ages the rows
+        # still render, and only the ⏸ timer is missing.
         stall_ages = {}
+
     for task in tasks:
         # One malformed task must never cost the whole tick: a nonzero exit
         # (or an uncaught exception) makes Claude Code drop EVERY row's
@@ -946,6 +964,7 @@ def print_subagent_rows() -> None:
             )
         except Exception:
             continue
+
         if row:
             print(json.dumps(row, ensure_ascii=False))
 
@@ -963,9 +982,13 @@ def main() -> None:
     transcript_path = payload.get("transcript_path", "")
     rate_limits = payload.get("rate_limits") or {}
     show_detail = terminal_cols() >= NARROW_COLS
+
     state_dir = open_state_dir(claude_config_dir(os.environ))
     burn_path = burn_state_path(state_dir, session_id) if state_dir else None
-    # A session's first run is the one moment worth a folder listing.
+
+    # A folder listing on every refresh costs time, so prune only while this
+    # session has no burn file: its first run, or every run while no 5h data
+    # arrives or saves fail.
     if state_dir and not os.path.exists(burn_path):
         prune_stale_state(state_dir, now)
 
