@@ -87,14 +87,7 @@ A marker is pytest's tag: a name on a test that `-m` selects by. Two kinds exist
 - **A `-m` on the command line replaces the one in `addopts`, so a selection by suite mark repeats
   the exclusion**, `-m "integration and not live_model"`; `-m integration` alone also runs the
   paid tests of section 10.
-- **A mark of your own is added only with a selector that reads it**: a CI job, a make target, or
-  the exclusion in `addopts`. Declare it in `markers` with what it costs, in the edit that first
-  uses it. A mark nothing selects by is a label; delete it. `live_model` is the one such mark in
-  this practice (section 10).
-
-Never declare a mark that pytest or a plugin registers, such as `parametrize` or `enable_socket`:
-`pytest --markers` lists those. Check: every name in `markers` other than the two suite marks
-appears in a `-m` expression in CI, a make target or `addopts`.
+- **A mark of your own, such as `live_model`, is declared in `markers` with what it costs.**
 
 ## 3. Running one part of the suite
 
@@ -123,12 +116,10 @@ pytest --lf                                              # only the tests that f
   suite before a merge.
 - **Select by path first.** A path is exact: it runs one folder and nothing else.
 - **`-k` matches substrings, case-insensitively, in the names of the test, its class, its file and
-  its folders**: `-k remind` also picks up `reminder`. Folder names match too, in pytest 9.1's
-  source and in a run, though the documentation names only the file and the class. `-k invoice`
-  therefore also picks up every test in any other module with "invoice" in a name. A `-k` that matches nothing exits with code 5, "no tests ran":
-  that is a selector that found nothing, not a broken suite.
-- **Test names made of words make `-k` work** ([test-structure.md](test-structure.md) section 3):
-  `test_case_3` is not selectable by what it does.
+  its folders.** Folder names match too, in pytest 9.1's source and in a run, though the
+  documentation names only the file and the class. `-k invoice` therefore also picks up every test
+  in any other module with "invoice" in a name. A `-k` that matches nothing exits with code 5, "no
+  tests ran": that is a selector that found nothing, not a broken suite.
 
 ## 4. Warnings are errors
 
@@ -168,12 +159,9 @@ Under pytest-xdist every worker gets the same seed.
 
 ## 6. Clocks and waiting
 
-- **Give the code the time as a value.** A unit takes `today` or `now` as a parameter
-  ([readability.md](../readability/readability.md) section 6), so its test passes a date and needs
-  no clock at all.
-- **When a library you do not own reads the clock, move the clock with time-machine**
-  (`time_machine.travel(...)`) instead of sleeping until a moment arrives. Since time-machine 3.0
-  `time.monotonic()` is not moved, so a timeout measured with it still runs on the real clock.
+- How a test controls the time is [readability.md](../readability/readability.md) section 6 (a
+  value the unit takes) and [fakes-and-boundaries.md](fakes-and-boundaries.md) section 3
+  (time-machine, when a library reads the clock itself).
 - **Never sleep to reach a point in time.** Wait on the event the other side sets, with a timeout:
   `assert worker_started.wait(timeout=WORKER_START_TIMEOUT_SECONDS)`. A sleep that stays names its
   window as a constant whose comment says what it waits for.
@@ -214,8 +202,6 @@ backend it finds.
   and its tests together.
 - **With anyio, an async fixture wider than a function needs an `anyio_backend` fixture of the
   same scope**, "because the default `anyio_backend` fixture is function scoped."
-- **pytest 9 fails on an async fixture that no plugin handles.** With one plugin in auto mode,
-  every async fixture is handled.
 
 ## 8. Parallel runs
 
@@ -225,7 +211,6 @@ the same configuration and collects the whole tree.
 - **Pass `-n` only where the whole suite runs**, such as the CI job or the one command that runs the
   full suite, never in `addopts`. Otherwise a run of one test pays for several worker startups and
   full collections.
-- **`-n auto` counts physical cores only when `psutil` is installed**, and logical cores otherwise.
 - **A session fixture runs once per worker, not once per run**: "tests in different processes
   requesting a high-level scoped fixture (for example `session`) will execute the fixture code more
   than once." One database container per worker is usually fine. When something must happen once
@@ -367,5 +352,4 @@ documentation: configuration (`asyncio_mode`, the two loop-scope defaults), the 
 decorator's `loop_scope`, the markers reference. anyio documentation, "Testing with AnyIO".
 pytest-xdist documentation, "How-to" (session fixtures per worker, the file-lock recipe,
 `worker_id`, `testrun_uid`). pytest-randomly README and source (the seed handed to xdist
-workers). pytest-rerunfailures README. pytest-timeout README. time-machine changelog (3.0,
-`time.monotonic`). pytest-socket README.
+workers). pytest-rerunfailures README. pytest-timeout README. pytest-socket README.

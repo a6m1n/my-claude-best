@@ -139,10 +139,14 @@ The methods below sit in `TestNeedsReminder`; its class line is left out.
 
 ```python
 # Bad: two guarantees under one name. When the first assertion fails, nobody
-# learns whether the weekly limit still holds.
-def test_a_first_reminder_goes_out_and_a_second_waits_a_week(self) -> None:
+# learns whether the interval limit still holds.
+def test_a_first_reminder_goes_out_and_a_second_waits_for_the_interval(self) -> None:
     assert needs_reminder(DUE_ON, last_reminded_on=None, today=date(2026, 9, 2))
-    assert not needs_reminder(DUE_ON, date(2026, 9, 2), today=date(2026, 9, 5))
+    assert not needs_reminder(
+        DUE_ON,
+        date(2026, 9, 2),
+        today=date(2026, 9, 2) + REMINDER_INTERVAL - timedelta(days=1),
+    )
 
 
 # Good: the split the name asked for. Each guarantee fails on its own line in the
@@ -154,7 +158,11 @@ def test_an_invoice_never_reminded_gets_its_first_reminder_after_the_due_date(
 
 
 def test_a_second_reminder_waits_for_the_interval(self) -> None:
-    assert not needs_reminder(DUE_ON, date(2026, 9, 2), today=date(2026, 9, 5))
+    assert not needs_reminder(
+        DUE_ON,
+        date(2026, 9, 2),
+        today=date(2026, 9, 2) + REMINDER_INTERVAL - timedelta(days=1),
+    )
 ```
 
 ## 5. Docstrings
@@ -182,7 +190,11 @@ class TestNeedsReminder:
     # Good: the docstring gives the consequence, which the name cannot.
     def test_a_second_reminder_waits_for_the_interval(self) -> None:
         """Daily reminders made customers unsubscribe instead of paying."""
-        assert not needs_reminder(DUE_ON, date(2026, 9, 2), today=date(2026, 9, 5))
+        assert not needs_reminder(
+            DUE_ON,
+            date(2026, 9, 2),
+            today=date(2026, 9, 2) + REMINDER_INTERVAL - timedelta(days=1),
+        )
 
     # Good: the bug in the past tense, then what holds now.
     def test_a_reminder_goes_out_on_the_day_the_interval_ends(self) -> None:
@@ -204,9 +216,6 @@ class TestNeedsReminder:
         assert not needs_reminder(DUE_ON, last_reminded_on=None, today=DUE_ON)
 ```
 
-Check: `grep -n '"""Regression\|"""Pins' <file>` names each regression test and each pin you
-wrote.
-
 ## 6. One guarantee, a table of inputs
 
 `@pytest.mark.parametrize` runs one test body over rows of inputs. It is for one guarantee that
@@ -223,7 +232,7 @@ a list, the forms ruff's `PT006` and `PT007` check.
 class TestNeedsReminder:
     """An overdue invoice gets a reminder after its due date, at most once a week."""
 
-    # Good: one guarantee, three named rows. Adding a fourth case is one line.
+    # Good: one guarantee, three named rows. A fourth case is one more `pytest.param`.
     @pytest.mark.parametrize(
         ("last_reminded_on", "today"),
         [
@@ -233,7 +242,11 @@ class TestNeedsReminder:
                 date(2026, 9, 2) + REMINDER_INTERVAL,
                 id="reminded-one-interval-ago",
             ),
-            pytest.param(date(2026, 9, 2), date(2026, 9, 30), id="reminded-weeks-ago"),
+            pytest.param(
+                date(2026, 9, 2),
+                date(2026, 9, 2) + 4 * REMINDER_INTERVAL,
+                id="reminded-four-intervals-ago",
+            ),
         ],
     )
     def test_an_overdue_invoice_needs_a_reminder(
@@ -241,13 +254,6 @@ class TestNeedsReminder:
     ) -> None:
         assert needs_reminder(DUE_ON, last_reminded_on, today)
 ```
-
-- **The row ids are unique.** `strict_parametrization_ids` makes a duplicate id an error
-  instead of a silent number suffix ([running-tests.md](running-tests.md) section 1).
-- **Rows are a list or a tuple, never a generator.** pytest 9.1 deprecated other iterables as
-  row values.
-- **A table longer than one screen goes to a module-level constant** above the class, named for
-  what the rows are: `OVERDUE_CASES`.
 
 Check: `pytest --collect-only -q <file>` prints ids made of words, never an id that ends in a
 number pytest invented.
@@ -274,9 +280,6 @@ instead of writing out the combinations: pytest runs every pair. Check that
 `pytest --collect-only -q <file>::<Class>::<test>` prints as many lines as the product of the two
 tables.
 
-**pytest 9's `subtests` fixture** is for cases that are not known until the test runs, such as
-one check per row of a file the test reads. Cases known when the file is written are a table.
-
 When a table should feed a fixture rather than the test, such as a database in two states, that
 is indirect parametrization, [fixtures.md](fixtures.md) section 8.
 
@@ -291,7 +294,6 @@ is indirect parametrization, [fixtures.md](fixtures.md) section 8.
 
 ## 9. Sources
 
-pytest documentation: "Get Started" (grouping tests in a class, and one instance per test),
-"How to parametrize fixtures and test functions", the subtests pages (pytest 9.0), and the
-configuration reference (`strict_parametrization_ids`, 9.0; the 9.1 deprecation of non-collection
-iterables as parametrize values). ruff rules `PT006` and `PT007` (flake8-pytest-style).
+pytest documentation: "Get Started" (grouping tests in a class, and one instance per test) and
+"How to parametrize fixtures and test functions". ruff rules `PT006` and `PT007`
+(flake8-pytest-style).

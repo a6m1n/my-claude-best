@@ -201,6 +201,8 @@ at the section that owns the rule, in `docs/engineering/testing/`.
 - Never write the marks `unit`, `integration` or `enable_socket`; the hook sets them.
   → `running-tests.md` section 2, `fakes-and-boundaries.md` section 4
 - A test that calls a real model is marked `live_model`. → `running-tests.md` section 10
+- A test your change turned red: fix the code; no `skip` or `xfail`, and no new expected value
+  unless the change's purpose is that behavior. → `what-to-test.md` section 1
 ```
 
 It is good because each line is a rule whose break shows in a diff, and each points to its owner
@@ -269,8 +271,9 @@ migrations the application runs, so the test database cannot drift from the real
 container and running migrations is the slowest thing in the suite, so they live for the session;
 the rows are what tests change, so the function-scoped `database` puts them back after every
 test, whether it passed or not
-([fixtures.md](fixtures.md) section 3). Every integration module can ask for `database`, which is
-why it sits in the suite's `conftest.py` ([fixtures.md](fixtures.md) section 4). Under
+([fixtures.md](fixtures.md) section 3). Two files ask for `database`, this module's test and the
+CLI command's test, so it sits in the lowest `conftest.py` both can see, the suite's
+([fixtures.md](fixtures.md) section 4). Under
 pytest-xdist each worker gets its own container, which keeps the workers apart
 ([running-tests.md](running-tests.md) section 8).
 
