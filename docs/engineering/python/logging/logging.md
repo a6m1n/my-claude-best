@@ -284,7 +284,7 @@ LangChain's handler does not group calls by itself: "each invocation will end up
 trace" (Langfuse's LangChain docs). An endpoint that retrieves documents, runs an agent and writes
 a summary leaves three traces, and nothing in them shows that they answered one request.
 
-- **The adapter opens one root span per request, around the use case call.** Every model call
+- **The adapter opens one root span per request that calls a model, around the use case call.** Every model call
   of the request then runs inside it: the handler's runs, `@observe` functions and spans you open
   by hand nest under it by themselves. With Langfuse it is
   `start_as_current_observation(as_type="span", ...)`, called in `core/langfuse_client.py`. Open

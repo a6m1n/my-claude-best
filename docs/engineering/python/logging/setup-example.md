@@ -389,8 +389,11 @@ The same `Report 81 generated` line with `ACME_LOG_FORMAT=json`:
 {"request_id": "7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12", "thread_id": "-", "trace_id": "-", "sections": 6, "ts": "2026-09-27T14:03:16.020+00:00", "level": "INFO", "logger": "acme.reports.report.usecase", "message": "Report 81 generated", "template": "Report %s generated"}
 ```
 
-This request opens no span, so `trace_id` is `-`; an HTTP tracer, for example OpenTelemetry's
-FastAPI instrumentation, fills the field.
+This request calls no model, so it opens no root span ([logging.md](logging.md) section 8), and
+`trace_id` is `-`. A route that calls a model opens the request's root span, and every line inside
+it carries that span's trace id. An OpenTelemetry HTTP instrumentation fills the field on every
+route, but read [logging.md](logging.md) section 12 before you add one to a process that traces
+with Langfuse.
 
 The start line carries `-`: uvicorn wrote it before any request existed. The access line carries
 the request's id because uvicorn writes it inside the request's own task.

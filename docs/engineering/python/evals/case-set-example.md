@@ -419,6 +419,8 @@ jobs:
           ACME_LANGFUSE_PUBLIC_KEY: ${{ secrets.EVALS_LANGFUSE_PUBLIC_KEY }}
           ACME_LANGFUSE_SECRET_KEY: ${{ secrets.EVALS_LANGFUSE_SECRET_KEY }}
           ACME_LANGFUSE_BASE_URL: ${{ vars.LANGFUSE_BASE_URL }}
+          # Required: the settings give it no default. Eval runs report as development.
+          ACME_LANGFUSE_ENVIRONMENT: development
           ACME_GIT_COMMIT: ${{ github.sha }}
 ```
 

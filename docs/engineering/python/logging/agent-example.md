@@ -247,6 +247,9 @@ def callback_handler() -> BaseCallbackHandler:
 `request_trace` is the one place that opens a request's root span: the adapter passes the values
 and gets back only `record_output`, so no adapter calls Langfuse itself. The root is a plain
 `span`, because it holds steps of several kinds; the handler gives each step under it its own type.
+The example passes no tags. A service with a value known before the run, such as the channel, adds
+`tags=[...]` to the same `propagate_attributes` call, because a tag is fixed when its span is
+created ([logging.md](logging.md) section 8).
 
 ## `core/openai_client.py`: the one client of the model provider
 
