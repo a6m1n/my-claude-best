@@ -87,6 +87,42 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   request's Verification holds the eval's result next to its baseline, every rate the eval reports
   is divided by the cases it asked for, and every judge that gates has its TPR and TNR on held-back
   labels.
+- Before you create a React application, or add a module, a route, a query, a mutation or a
+  dependency to one, read `docs/engineering/react/architecture/architecture.md`, and
+  `docs/engineering/react/architecture/layout-example.md` when you lay out an application or add a
+  module, `docs/engineering/react/architecture/libraries.md` when you pick a library or a tool. The
+  check: every import the change adds is absolute and names the file that holds the name, with no
+  barrel file (`architecture.md` section 5), no module imports another module or the router, and no
+  component state holds a copy of server data (`architecture.md` section 7).
+- Before you write or change a React component or a hook, or review one, read
+  `docs/engineering/react/components/components.md`, and
+  `docs/engineering/react/components/component-example.md` when you write a module's first
+  component. The check: the hooks and compiler lint rules pass on the change (`components.md`
+  section 2), and every `useEffect`, `useMemo`, `useCallback`, `memo` and `"use no memo"` the change
+  adds carries a comment that names the outside system or the escape hatch it is for
+  (`components.md` sections 5 and 7).
+- Before you design or restyle a screen, add a control, a form or a route to one, or ask an agent to
+  build a screen, read `docs/engineering/react/design/README.md` and the file it routes to for that
+  work, and `docs/engineering/react/design/design-brief-example.md` when you write the brief for a
+  screen. The check: every colour, radius and space the change adds is a token role or a step of the
+  scale (`visual-design.md` section 3), the closing summary says which steps of the manual
+  accessibility pass were run (`accessibility.md` section 11), and someone other than the author of
+  the screen answered its review checklist (`designing-with-claude-code.md` section 6).
+- Before you render a value from outside the application as HTML or as a URL, keep or send a
+  credential, or add an environment variable, a dependency, a third-party script, a response header
+  or a CI step, read `docs/engineering/react/security/security.md`, and
+  `docs/engineering/react/security/security-example.md` when you set these up in an application. The
+  check: `grep -rln dangerouslySetInnerHTML src/` prints one file, the one that sanitises
+  (`security.md` section 4), `grep -rnE 'localStorage|sessionStorage' src/` prints no line that
+  holds a credential (`security.md` section 6), and no secret sits in a variable the bundler exposes
+  (`security.md` section 9).
+- Before you add an image, a font, a route, a data request or a dependency to a screen's first load,
+  or act on a report that the application is slow, read
+  `docs/engineering/react/performance/performance.md`, and
+  `docs/engineering/react/performance/performance-example.md` when you set up field metrics, code
+  splitting or caching. The check: a change that claims a gain names the metric, its percentile, its
+  source and its date in the pull request's Verification (`performance.md` section 4), and every
+  image the change adds has `width` and `height` (`performance.md` section 5).
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`
