@@ -101,23 +101,24 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   section 2), and every `useEffect`, `useMemo`, `useCallback`, `memo` and `"use no memo"` the change
   adds carries a comment that names the outside system or the escape hatch it is for
   (`components.md` sections 5 and 7).
-- Before you design or restyle a screen, add a control, a form or a route to one, or ask an agent to
-  build a screen, read `docs/engineering/react/design/README.md` and the file it routes to for that
-  work, and `docs/engineering/react/design/design-brief-example.md` when you write the brief for a
-  screen. The check: every colour, radius and space the change adds is a token role or a step of the
-  scale (`visual-design.md` section 3), the closing summary says which steps of the manual
-  accessibility pass were run (`accessibility.md` section 11), and someone other than the author of
-  the screen answered its review checklist (`designing-with-claude-code.md` section 6).
-- Before you render a value from outside the application as HTML or as a URL, keep or send a
-  credential, or add an environment variable, a dependency, a third-party script, a response header
-  or a CI step, read `docs/engineering/react/security/security.md`, and
+- Before you design or restyle a screen of a React application, add a control, a form or a route to
+  one, or ask an agent to build a screen, read `docs/engineering/react/design/README.md` and the
+  file it routes to for that work, and `docs/engineering/react/design/design-brief-example.md` when
+  you write the brief for a screen. The check: every colour, radius and space the change adds is a
+  token role or a step of the scale (`visual-design.md` section 3), the closing summary says which
+  steps of the manual accessibility pass were run (`accessibility.md` section 11), and someone other
+  than the author of the screen answered its review checklist (`designing-with-claude-code.md`
+  section 6).
+- Before you render a value from outside as HTML or as a URL in a React application, keep or send a
+  credential in one, or add an environment variable, a dependency, a third-party script, a response
+  header or a CI step to one, read `docs/engineering/react/security/security.md`, and
   `docs/engineering/react/security/security-example.md` when you set these up in an application. The
   check: `grep -rln dangerouslySetInnerHTML src/` prints one file, the one that sanitises
   (`security.md` section 4), `grep -rnE 'localStorage|sessionStorage' src/` prints no line that
   holds a credential (`security.md` section 6), and no secret sits in a variable the bundler exposes
   (`security.md` section 9).
-- Before you add an image, a font, a route, a data request or a dependency to a screen's first load,
-  or act on a report that the application is slow, read
+- Before you add an image, a font, a route, a data request or a dependency to the first load of a
+  screen in a React application, or act on a report that such an application is slow, read
   `docs/engineering/react/performance/performance.md`, and
   `docs/engineering/react/performance/performance-example.md` when you set up field metrics, code
   splitting or caching. The check: a change that claims a gain names the metric, its percentile, its
