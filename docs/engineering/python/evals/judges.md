@@ -20,7 +20,7 @@
 An LLM judge is a model call that grades another model's output against a criterion. This file is
 for anyone who adds a judge to an eval or to production, or reads a judge's score. Its levels are
 those of [evals.md](evals.md) section 1. A judge is a model call like any other: its prompt follows
-[prompt-engineering.md](../prompt-engineering/prompt-engineering.md), and its model comes from a
+[prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md), and its model comes from a
 `<purpose>_llm_model` constant (section 15 there). [judge-example.md](judge-example.md) shows one
 judge from its prompt to its validation.
 
@@ -79,13 +79,13 @@ criteria and pairwise for subjective ones.
 - **Pass or fail.** Split a quality into binary checks instead of a scale ([section 7](#7-a-threshold-on-a-score)
   when a tool gives a score).
 - **The evidence before the verdict.** The judge's answer is JSON through a response schema
-  ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 11), with a short
+  ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 11), with a short
   field that quotes the evidence from the output first and the verdict last (section 12 there). Asked
   to cite the evidence before the verdict, small judges changed their verdict after a planted label
   in 5 to 22% of cases, against 75 to 85% with free reasoning; long reasoning makes position bias
   worse, so keep the field short.
 - **The output under judgment is inserted material** in its own tag
-  ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 5), and it is
+  ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 5), and it is
   untrusted: it can hold text that addresses the judge.
 - **Never the system's own reasoning.** Give the judge the output and the facts it needs, not the
   agent's chain of thought or its claim about its progress. A fluent visible reasoning raised a weak
@@ -185,7 +185,7 @@ answers better. A judge cannot grade reliably what it cannot solve itself, which
 to give it the reference (section 2).
 
 The chosen model goes into the judge's `<purpose>_llm_model` constant
-([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 15), with the date of
+([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 15), with the date of
 the choice in its comment; model names and prices age.
 
 ## 9. When a judge may gate a change

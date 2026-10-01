@@ -1,7 +1,7 @@
 # Example: one judge, from its prompt to its validation
 
 A worked example for [judges.md](judges.md). The support agent of
-[python/logging/agent-example.md](../../python/logging/agent-example.md) answers customers about their orders, and
+[python/logging/agent-example.md](../logging/agent-example.md) answers customers about their orders, and
 reading its traces showed one failure mode ([evals.md](evals.md) section 3): replies that promise
 what the order's status does not support, such as a delivery date for an order that has not shipped.
 No code can decide that for free text, so it gets a judge. Every name is a placeholder, the model ids
@@ -34,7 +34,7 @@ UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT: Final = ReasoningEffort.LOW
 ```
 
 The names follow `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort`
-([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 15). The comment keeps
+([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 15). The comment keeps
 the reason and the date of the choice, because a cheaper model is kept only while it holds on the
 labels, and model names age. The agent answers with an OpenAI model; the judge is of another family,
 so it does not grade its own family's writing.
@@ -87,10 +87,10 @@ Why it looks like this:
 - **The reference is in the prompt** ([judges.md](judges.md) section 2): the order's status is the
   fact the reply must keep to. Without it, the judge would have to guess what is true.
 - **The steps define a promise, with near misses on both sides**
-  ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) sections 2 and 4), because
+  ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) sections 2 and 4), because
   "promise" is the label the criterion turns on.
 - **The reply is inserted material in its own tag** and is named as untrusted
-  ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 5).
+  ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 5).
 - **No agent reasoning, no role**: the judge sees the reply the customer saw and the status, nothing
   the agent wrote about its own work ([judges.md](judges.md) section 4), and code reads the answer.
 
@@ -153,10 +153,10 @@ class LabelledReply(BaseModel):
 
 `evidence` comes before `verdict`, and it is a quote, not free reasoning: citing the evidence before
 the verdict is what held judges to it ([judges.md](judges.md) section 4), and the reasoning field
-comes first ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 12). The
+comes first ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 12). The
 verdict, the split and the reason for no verdict are closed sets, so they are enums, and the order's
 status is the store's closed set, so it is typed as the store client's `OrderStatus`
-([python.md](../../python/language/python.md) section 3), and `None` marks a reply the agent gave when it saw no
+([python.md](../language/python.md) section 3), and `None` marks a reply the agent gave when it saw no
 order's status.
 
 ## `evals/chat/judge_unsupported_promise.py`: the judge
@@ -191,12 +191,12 @@ def judge_unsupported_promise(
 ```
 
 The call goes through the one client of the vendor
-([prompt-example.md](../prompt-engineering/prompt-example.md)), which parses the answer into
+([prompt-example.md](../../any-language/prompt-engineering/prompt-example.md)), which parses the answer into
 `PromiseVerdict` and turns a refusal or a malformed answer into a named error. The model and the
 effort are parameters, so the validation below can try a cheaper model on the same labels.
 
 `AcmeAiClient`, `LlmModel` and `ReasoningEffort` are those of
-[prompt-example.md](../prompt-engineering/prompt-example.md); `OrderStatus` is the order store
+[prompt-example.md](../../any-language/prompt-engineering/prompt-example.md); `OrderStatus` is the order store
 client's, not shown.
 
 ## `evals/chat/labels_unsupported_promise.jsonl`: people's labels
@@ -394,14 +394,14 @@ Why it looks like this:
   against TPR or TNR, and the report shows it as "no verdict". Only `ModelUnavailable`, the
   provider's failure, is an error of the run: it is counted apart and fails the check, never
   dropped. `_judge` decides both, so it logs each once, with the reply's id
-  ([logging.md](../../python/logging/logging.md) section 5). The errors are the client's named errors, which
-  carry no reply text ([logging.md](../../python/logging/logging.md) section 10), and the printout holds
+  ([logging.md](../logging/logging.md) section 5). The errors are the client's named errors, which
+  carry no reply text ([logging.md](../logging/logging.md) section 10), and the printout holds
   counts only.
 - **Counting, deciding and reporting are three functions**: `_scores` counts, `_may_gate` decides,
-  `_report` writes the text ([readability.md](../readability/readability.md) section 2). The report
+  `_report` writes the text ([readability.md](../../any-language/readability/readability.md) section 2). The report
   is the command's output, so it goes to stdout through the one `print`, whose suppression names its
-  rule and why ([static-checks.md](../../python/static-checks/static-checks.md) section 6); the log goes to
-  stderr, as for any command ([logging.md](../../python/logging/logging.md) section 6).
+  rule and why ([static-checks.md](../static-checks/static-checks.md) section 6); the log goes to
+  stderr, as for any command ([logging.md](../logging/logging.md) section 6).
 - **The decision is written before the run**: the constants name the rates the gate needs and the
   labels they are measured on. When the judge's model or prompt changes, or the agent's model does,
   this runs again, and its printout goes into the pull request ([judges.md](judges.md) section 6).
@@ -409,9 +409,9 @@ Why it looks like this:
   and a cheaper one by changing the two constants, and keep the cheapest that clears the bar.
 
 `AcmeAiClient`, `AcmeAiSdk`, `Settings` and the `acme.core.errors` classes are those of
-[prompt-example.md](../prompt-engineering/prompt-example.md), and `build_logging_config` and the
+[prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), and `build_logging_config` and the
 settings fields `log_level` and `log_format` those of
-[python/logging/setup-example.md](../../python/logging/setup-example.md); `acme_ai_api_key` stands for a settings
+[python/logging/setup-example.md](../logging/setup-example.md); `acme_ai_api_key` stands for a settings
 field the examples leave out.
 
 Once it clears the bar, the judge joins the agent's eval as one grader among the code checks

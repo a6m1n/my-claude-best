@@ -331,7 +331,7 @@ Never add a bare "Unknown" or "not sure" option. Define the way out against its 
 neighbour: "not stated" is a different answer from "no", and "about a week ago" is not a date.
 The form depends on the task: a nullable field, an enum value whose condition sits in the field's
 description, a refusal, or a question back. Count how often the way out is taken, apart from the
-right and wrong answers ([evals.md](../evals/evals.md) section 4).
+right and wrong answers ([evals.md](../../python/evals/evals.md) section 4).
 
 **Should**, in an interactive setting: let the model ask one clarifying question when a missing
 detail would change the answer.
@@ -718,7 +718,7 @@ constants per call site: `<purpose>_llm_model` and `<purpose>_llm_reasoning_effo
 closed set, so it is an enum ([python.md](../../python/language/python.md) section 3). The one client of the
 vendor maps it to the vendor's parameter. Choose the model first, then tune the effort.
 Which version the constant names, a dated snapshot rather than a moving alias, is
-[any-language/evals/production.md](../evals/production.md) section 6's.
+[python/evals/production.md](../../python/evals/production.md) section 6's.
 
 Where to start. The table shows what is usually used: it is a starting point, not a rule. Raise or
 lower the level freely. A higher level often buys accuracy on a hard task, at a cost, and the
@@ -877,9 +877,9 @@ own no-cache switch, where one exists, is left out too.
 
 **Must.** Keep every prompt in git, next to the code that sends it, reviewed and shipped with it.
 On every change to a prompt, a tool definition, the model or its settings, run its eval as
-[evals.md](../evals/evals.md) sections 7 and 8 say. How the case set is built
+[evals.md](../../python/evals/evals.md) sections 7 and 8 say. How the case set is built
 and grown, how each case is graded, and how the two versions are compared is
-[evals.md](../evals/evals.md) sections 3 to 7. A new prompt runs alone against the set; a change to
+[evals.md](../../python/evals/evals.md) sections 3 to 7. A new prompt runs alone against the set; a change to
 an existing prompt or model runs old against new on it. What is particular to a prompt:
 
 - On a model change, keep the prompt fixed, so the test measures the model.
@@ -890,7 +890,7 @@ reasoning field, definitions, the order of the parts, a per-model layer or a rea
 it as an experiment: the prompt with it and without it, on the same cases, and keep it only if it
 wins. Every "test it" in this file means this section.
 
-How big a set, and how many runs of each case: [repeated-runs.md](../evals/repeated-runs.md)
+How big a set, and how many runs of each case: [repeated-runs.md](../../python/evals/repeated-runs.md)
 section 7.
 
 Why: an edit that fixes the case in front of you changes others you do not see. Reading real

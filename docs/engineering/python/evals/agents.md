@@ -151,7 +151,7 @@ The unit layer cannot see what the model does with a prompt or a tool's descript
 about 1% of the tests in agent projects, and rewriting tool descriptions moved task success by a
 median of 5.85 points, with a regression in 16.67% of cases. So a change to a tool's name,
 description or arguments runs the eval, as
-[prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 14 asks.
+[prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 14 asks.
 
 **Most of an agent's testing needs the real model.** The unit layer runs on every push because it is
 cheap, and it tests the code around the model. What it cannot see is the model's own choice: which
@@ -166,14 +166,14 @@ or a sandbox (section 6). No study has measured which defects each layer catches
 ## 5. Unit tests of a LangGraph agent
 
 The unit suite runs without a network and without a model
-([python/testing/fakes-and-boundaries.md](../../python/testing/fakes-and-boundaries.md) section 4). For an agent,
+([python/testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 4). For an agent,
 that takes these parts:
 
 - **Must. The model is the real chat model class with a scripted transport.** A `ChatOpenAI` built
   with `http_client=httpx.Client(transport=httpx.MockTransport(handler))` (or
   `http_async_client=` with an `httpx.AsyncClient` for async code) answers from a script: first a
   tool call, then the final reply. It is the first stand-in of
-  [python/testing/fakes-and-boundaries.md](../../python/testing/fakes-and-boundaries.md) section 1, the real class
+  [python/testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 1, the real class
   with a fake inside. The request it sends carries the real tool list and schemas, so the test can
   also check them. LangChain's `GenericFakeChatModel` has no `bind_tools`, so `create_agent` with
   tools raises `NotImplementedError`; a subclass whose `bind_tools` returns the model works, but
@@ -181,7 +181,7 @@ that takes these parts:
   replaced. [agent-eval-example.md](agent-eval-example.md) shows the handler.
 - **Must. A fresh graph and a fresh checkpointer per test**: compile the graph in the test's
   fixture with `InMemorySaver()` (`langgraph.checkpoint.memory`; `MemorySaver` is its older name)
-  and a new `thread_id`, at function scope ([python/testing/fixtures.md](../../python/testing/fixtures.md)).
+  and a new `thread_id`, at function scope ([python/testing/fixtures.md](../testing/fixtures.md)).
 - **Should. One node at a time**: `graph.nodes["route"].invoke(state)` runs one node; to start in
   the middle, `graph.update_state(config, values, as_node="<the node before>")`, then
   `graph.invoke(None, config)`. This is for a graph you built with `StateGraph`; an agent made by
@@ -208,7 +208,7 @@ that takes these parts:
 - **Optional. Pin the stream format** in a test that asserts streamed events (`version="v2"` in
   LangGraph 1.1 and later), so an upgrade does not turn it red with no change in behaviour.
 - **Should. Test memory on the checkpointer the service runs**, in `integration/` with a real
-  database, as [python/testing/suite-example.md](../../python/testing/suite-example.md) runs its database.
+  database, as [python/testing/suite-example.md](../testing/suite-example.md) runs its database.
   `InMemorySaver` stores data differently: a check that passed on it raised on `SqliteSaver`
   (LangGraph issue #8942).
 

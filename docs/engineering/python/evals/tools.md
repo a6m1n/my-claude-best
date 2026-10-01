@@ -14,7 +14,7 @@
 
 This file says which tool does which job of the method in [evals.md](evals.md), when to add it, and
 what to watch for. Read it before you add an eval library or platform. The pytest plugins of the
-unit and integration suites are [python/testing/libraries.md](../../python/testing/libraries.md)'s. Everything here
+unit and integration suites are [python/testing/libraries.md](../testing/libraries.md)'s. Everything here
 was read in September 2026; these tools change every month, so check the watch-for column against
 the current release when you adopt one.
 
@@ -30,7 +30,7 @@ Both trace LangChain and LangGraph runs, keep datasets, run experiments, host LL
 traffic and give people queues to label traces.
 
 **Should.** Use one platform that traces eval runs, stores case sets and runs experiments. The
-default here is Langfuse, which [logging.md](../../python/logging/logging.md) section 8 already uses as the
+default here is Langfuse, which [logging.md](../logging/logging.md) section 8 already uses as the
 trace store; LangSmith where the conditions below say it fits better. Tracing every eval run is a
 Must of [evals.md](evals.md) section 9.
 
@@ -175,15 +175,15 @@ class TestBuildAgent:
 
 The names are those of DeepEval 4.2.7; the agent, its fixture and `REPLY_JUDGE_LLM_MODEL` are cut
 here, [agent-eval-example.md](agent-eval-example.md) builds the agent, and `openai_api_key` is the
-settings field of [python/logging/agent-example.md](../../python/logging/agent-example.md); `GraphRecursionError` is
+settings field of [python/logging/agent-example.md](../logging/agent-example.md); `GraphRecursionError` is
 LangGraph's, and the `acme.core.errors` classes the agent's middlewares raise are those of
-[python/logging/agent-example.md](../../python/logging/agent-example.md). The test is async
+[python/logging/agent-example.md](../logging/agent-example.md). The test is async
 because the agent is ([agent-eval-example.md](agent-eval-example.md) says why), so it awaits the
 agent and DeepEval's `a_measure`. The judge's context is what the run's tools returned, not a copy
 of the fixture's data, so the reply is judged against the facts the agent saw
 ([agents.md](agents.md) section 2). The judge's model here has no reasoning effort to set; one that
 has one gets it from its `<purpose>_llm_reasoning_effort` constant through `OpenAIModel`'s
-`generation_kwargs` ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md)
+`generation_kwargs` ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md)
 section 15). `OpenAIModel` keeps the snippet on the one key the logging example has;
 [judges.md](judges.md) section 4 asks for a judge of another family than the agent's, so a real
 suite passes DeepEval's model class for that family. What makes this snippet
@@ -196,15 +196,15 @@ follow the method:
   without it the metric passes at a score of 0.5 by default, a threshold nobody chose
   ([judges.md](judges.md) section 7).
 - **Must. `model=`** takes the judge's model from its constant
-  ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 15), never
+  ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 15), never
   DeepEval's default.
 - **Must. The metric is built in a function-scoped fixture**, a fresh metric per test: `measure`
   writes its score, result and error onto the metric, and a metric that keeps an error reads as
-  failed in every later test ([python/testing/fixtures.md](../../python/testing/fixtures.md) section 3). Not at module
+  failed in every later test ([python/testing/fixtures.md](../testing/fixtures.md) section 3). Not at module
   level: a `GEval` given a model builds its client when it is created, so a module-level metric fails
   collection without a key, even in a default run that leaves the test out. Only `live_model` tests
   ask for the fixture, which reads the key through `Settings()`
-  ([running-tests.md](../../python/testing/running-tests.md) section 10).
+  ([running-tests.md](../testing/running-tests.md) section 10).
 - **Should. Three runs, and the passes counted** ([repeated-runs.md](repeated-runs.md) section 5):
   one run of one case decides nothing, and `assert_test` decides one case on one run. The metric
   stays advisory, never alone in a gate, until [judges.md](judges.md) sections 6 and 9 hold. A run
@@ -225,10 +225,10 @@ follow the method:
 | Tool | Why it is not in the default set |
 |---|---|
 | agentevals | its trajectory evaluators moved to openevals in 2025; no release since July 2025, and an open bug swaps the arguments in `subset` mode |
-| pytest-rerunfailures, for a claim about quality | a rerun passes a case that is right once in three runs ([repeated-runs.md](repeated-runs.md) section 4); where it belongs is [running-tests.md](../../python/testing/running-tests.md) section 9 |
+| pytest-rerunfailures, for a claim about quality | a rerun passes a case that is right once in three runs ([repeated-runs.md](repeated-runs.md) section 4); where it belongs is [running-tests.md](../testing/running-tests.md) section 9 |
 | small "k of n" plugins (flakelens, lcb-gate, pytest-stochastics, pytest-llm) | single authors, few users; a plain loop does the same ([repeated-runs.md](repeated-runs.md) section 5) |
 | generic ready-made metrics used as a gate | they measure what the library's authors chose, not your failure modes ([evals.md](evals.md) section 3); validate first |
-| recorded model answers as an eval | a replay checks parsing, not behaviour; recordings are [python/testing/libraries.md](../../python/testing/libraries.md) section 3's subject |
+| recorded model answers as an eval | a replay checks parsing, not behaviour; recordings are [python/testing/libraries.md](../testing/libraries.md) section 3's subject |
 
 ## 6. Settings that keep data in and failures visible
 

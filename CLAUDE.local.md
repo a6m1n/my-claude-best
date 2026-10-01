@@ -77,10 +77,10 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   it and holds one `Test<Unit>` class, every fixture it adds states `scope=`, and
   `grep -rn autouse --include='*.py' tests/` prints nothing.
 - Before you change a prompt, a tool definition, the model or its settings, the retrieval or an
-  agent's graph, or add a check on what a model answers, read `docs/engineering/any-language/evals/README.md`
-  and the file it routes to for that work, and `docs/engineering/any-language/evals/case-set-example.md` when
-  you write a module's first eval, `docs/engineering/any-language/evals/judge-example.md` when you write a judge,
-  `docs/engineering/any-language/evals/agent-eval-example.md` when you test an agent. The check: the pull
+  agent's graph, or add a check on what a model answers, read `docs/engineering/python/evals/README.md`
+  and the file it routes to for that work, and `docs/engineering/python/evals/case-set-example.md` when
+  you write a module's first eval, `docs/engineering/python/evals/judge-example.md` when you write a judge,
+  `docs/engineering/python/evals/agent-eval-example.md` when you test an agent. The check: the pull
   request's Verification holds the eval's result next to its baseline, every rate the eval reports
   is divided by the cases it asked for, and every judge that gates has its TPR and TNR on held-back
   labels.

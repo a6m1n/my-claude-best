@@ -81,18 +81,18 @@ The terms of the next section are what a reader needs to know before the rules.
 
 ## How to adopt
 
-1. Copy this folder into your repository at `docs/engineering/any-language/evals/`.
+1. Copy this folder into your repository at `docs/engineering/python/evals/`.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you change a prompt, a tool definition,
    the model, the retrieval or an agent's graph, or add a check on what a model answers, read
-   `docs/engineering/any-language/evals/README.md` and the file it points to." Without it an agent never opens the
+   `docs/engineering/python/evals/README.md` and the file it points to." Without it an agent never opens the
    folder.
 3. Create `evals/` at the repository root, as
-   [file-structure.md](../file-structure/file-structure.md) section 9 places it, and start each
+   [file-structure.md](../../any-language/file-structure/file-structure.md) section 9 places it, and start each
    module's case set from its real traces ([evals.md](evals.md) sections 3 and 4).
-4. The practice links [python/testing/](../../python/testing/README.md),
-   [prompt-engineering.md](../prompt-engineering/prompt-engineering.md),
-   [logging.md](../../python/logging/logging.md), [file-structure.md](../file-structure/file-structure.md) and
-   [git.md](../git/git.md) for the rules they own. Copy those folders too, or replace each link with
+4. The practice links [python/testing/](../testing/README.md),
+   [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md),
+   [logging.md](../logging/logging.md), [file-structure.md](../../any-language/file-structure/file-structure.md) and
+   [git.md](../../any-language/git/git.md) for the rules they own. Copy those folders too, or replace each link with
    your own rule for that topic.
 5. Re-check the lines that name a moving target: the library versions and behaviours in
    [tools.md](tools.md) and the examples, the vendor facts in [production.md](production.md), and the

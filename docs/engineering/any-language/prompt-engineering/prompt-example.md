@@ -28,7 +28,7 @@ from enum import StrEnum, unique
 from typing import Literal, TypeAlias
 
 # The vendor owns the ids; this is the set this project has tested its prompts on.
-# Each id names one fixed build, never a moving alias (any-language/evals/production.md section 6).
+# Each id names one fixed build, never a moving alias (python/evals/production.md section 6).
 LlmModel: TypeAlias = Literal["acme-large-2", "acme-small-3"]
 
 
@@ -394,8 +394,8 @@ into four steps, each one a small diff:
    its notes, against `acme-large-2` with the base alone, at each effort level the model offers,
    with repeats (sections 15 and 18). Before the run, write the decision rule down: each
    criterion's pass rate over the set, with every case run three times, falls no more than a stated
-   margin below the old model's on the same cases ([evals.md](../evals/evals.md) section 7,
-   [repeated-runs.md](../evals/repeated-runs.md) section 5). The prompt text does not change in
+   margin below the old model's on the same cases ([evals.md](../../python/evals/evals.md) section 7,
+   [repeated-runs.md](../../python/evals/repeated-runs.md) section 5). The prompt text does not change in
    this step, so the result measures the model.
 3. **Tune only the layer.** Where the new model fails cases the old one passed, add a line to its
    entry in `MODEL_NOTES`, and run the set again. The base does not change unless every model
@@ -403,4 +403,4 @@ into four steps, each one a small diff:
 4. **Switch the constants.** One commit sets `TRIAGE_LLM_MODEL` and `TRIAGE_LLM_REASONING_EFFORT`
    to what the case set chose. Its pull request's Verification section holds each criterion's rate
    for the new model, the old model's rate as the baseline, and whether the decision rule holds
-   ([evals.md](../evals/evals.md) section 8). The old model's entry stays until no call site uses it.
+   ([evals.md](../../python/evals/evals.md) section 8). The old model's entry stays until no call site uses it.

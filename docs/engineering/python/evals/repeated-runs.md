@@ -39,7 +39,7 @@ does not use, and a newer model may reject the call.
 ## 3. A flaky test with no model in it is a bug
 
 A test that calls no model and passes one run and fails the next has a cause: an order, a clock, a
-shared path or port. Find it and fix it; [python/testing/running-tests.md](../../python/testing/running-tests.md)
+shared path or port. Find it and fix it; [python/testing/running-tests.md](../testing/running-tests.md)
 section 9 owns this rule and the tools for it. Everything below is about checks that call a real
 model.
 
@@ -69,7 +69,7 @@ probability p:
 | 0.30 | 0.027 | 0.216 | 0.657 |
 
 The formulas are p³, 3p² − 2p³ and 1 − (1 − p)³. Rerunning a failed test twice, as
-pytest-rerunfailures' `--reruns 2` does, is any of 3: [running-tests.md](../../python/testing/running-tests.md)
+pytest-rerunfailures' `--reruns 2` does, is any of 3: [running-tests.md](../testing/running-tests.md)
 section 10 owns that command and shows what it lets through.
 
 **Must.** Gate a feature on the rate over the set, not on every case's k of n at once. A per-case
@@ -136,8 +136,8 @@ class TestTriageTicket:
 ```
 
 The client, the fixture and the call are those of
-[running-tests.md](../../python/testing/running-tests.md) section 10, and the `acme.core.errors` classes those
-of [prompt-example.md](../prompt-engineering/prompt-example.md). A refusal, an answer cut off or one
+[running-tests.md](../testing/running-tests.md) section 10, and the `acme.core.errors` classes those
+of [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md). A refusal, an answer cut off or one
 that does not parse is the model's own answer, so `kind_or_model_failure` puts it in the list in
 place of a kind, and it counts as a wrong one. Only `ModelUnavailable`, the provider's failure,
 raises, and the test fails on it as an error of the run ([evals.md](evals.md) section 6). pytest's
@@ -200,7 +200,7 @@ What the evidence says:
 A timeout, a rate limit or a server error is a failure of the provider, not a flake of the answer:
 the vendors' SDKs already retry these twice by default. Which failures are errors of the run and
 which are failed cases is [evals.md](evals.md) section 6's rule. Where a pytest rerun is allowed,
-and what it lets through, is [running-tests.md](../../python/testing/running-tests.md) sections 9 and 10's.
+and what it lets through, is [running-tests.md](../testing/running-tests.md) sections 9 and 10's.
 
 ## 9. Sources
 

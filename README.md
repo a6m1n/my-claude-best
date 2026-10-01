@@ -42,7 +42,7 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 - [python/static-checks](docs/engineering/python/static-checks/) — the formatter, the linter, a strict type checker and import contracts, run the same way in hooks and in CI.
 - [any-language/prompt-engineering](docs/engineering/any-language/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
 - [python/testing](docs/engineering/python/testing/) — which code earns a test, and how a pytest suite is laid out and written.
-- [any-language/evals](docs/engineering/any-language/evals/) — how to check what a language model does in an application, with real calls on real cases.
+- [python/evals](docs/engineering/python/evals/) — how to check what a language model does in an application, with real calls on real cases.
 
 Two more parts are about Claude Code itself:
 

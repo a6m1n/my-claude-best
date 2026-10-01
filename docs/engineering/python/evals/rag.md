@@ -45,7 +45,7 @@ def recall_at_k(retrieved_ids: Sequence[str], relevant_ids: Set[str], k: int) ->
 ```
 
 `Sequence` and `Set` come from `collections.abc`: the widest types the body uses
-([python.md](../../python/language/python.md) section 3).
+([python.md](../language/python.md) section 3).
 
 Why: when the right passage never arrives, no prompt fixes the answer; Jason Liu measures recall
 before he touches the prompt. In one production RAG system, whether any source was found explained
@@ -104,7 +104,7 @@ Report the invented-answer rate and the missed-answer rate separately: they trad
 measured a correlation of −0.78 between them), and the best systems reached only 42.9 to 47.4% on
 recent refusal benchmarks. In an agent that can search again, the search overrode a correct "not
 found" in 20 to 67% of cases. How the prompt offers the way out is
-[prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 8's; this table is how
+[prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 8's; this table is how
 the eval scores it. Write the scoring yourself: no library ships a refusal score, and Ragas' answer
 relevance returns 0 or no value at all on a refusal, depending on the version and the code path.
 

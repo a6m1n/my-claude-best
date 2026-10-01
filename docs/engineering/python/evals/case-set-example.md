@@ -1,7 +1,7 @@
 # Example: the case set and the eval of one model call
 
 A worked example for [evals.md](evals.md) and [repeated-runs.md](repeated-runs.md). It continues the
-triage call of [prompt-example.md](../prompt-engineering/prompt-example.md): `support/triage/` reads a
+triage call of [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md): `support/triage/` reads a
 customer's ticket and returns its kind and the date its problem first occurred. Here the call gets
 its case set, its eval in Langfuse and the CI job that runs it. The eval calls the house client,
 `AcmeAiClient`, because that example sends every model call through the one client in `core/`; a
@@ -33,7 +33,7 @@ Why it looks like this ([evals.md](evals.md) section 4):
 - **Each case has a stable id and its pass criterion**: the kind and the date the call must return.
 - **The set holds the near misses the prompt defines**: a request the customer calls a bug, and a
   vague date, where the right answer is the way out, `null`
-  ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 8).
+  ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 8).
 - **The tickets are real tickets with the identifying details removed**; here they are invented.
   A ticket that failed in production gets its line in the pull request that fixes it.
 
@@ -78,11 +78,11 @@ class TriageCase(BaseModel):
 ```
 
 A line of the file is data from outside the code, so it becomes a model once, when it is read
-([python.md](../../python/language/python.md) section 4). A misspelt kind or a key the model does not name fails
+([python.md](../language/python.md) section 4). A misspelt kind or a key the model does not name fails
 the load, not the grading. `kind` is the application's own `TicketKind`, that of
-[prompt-example.md](../prompt-engineering/prompt-example.md), so a case cannot expect a kind the
+[prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), so a case cannot expect a kind the
 application does not have. The criteria and the model's failures are closed sets, so they are
-enums, not strings ([python.md](../../python/language/python.md) section 3).
+enums, not strings ([python.md](../language/python.md) section 3).
 
 ## `evals/triage/experiment_triage.py`: the run and its gate
 
@@ -314,7 +314,7 @@ def _passes(runs: Iterable[ExperimentItemResult], criterion: StrEnum) -> int:
 
 The gate knows no module: an experiment passes its cases' ids, its baseline and its margin. So it
 sits at the root of `evals/`, where every experiment imports it
-([file-structure.md](../file-structure/file-structure.md) section 6: code that belongs to no module
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 6: code that belongs to no module
 moves down).
 
 Why it looks like this:
@@ -337,7 +337,7 @@ Why it looks like this:
   [What this example does not claim](#what-this-example-does-not-claim). A change is judged against
   these rates, and a pull request that moves them has to say why.
 - **Every run reaches the model**: the client's cache switch
-  ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 17) puts a fresh
+  ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 17) puts a fresh
   UUID first in each prompt, so a response cache in front of the model cannot answer a run from an
   earlier one. The model runs with the settings production uses
   ([repeated-runs.md](repeated-runs.md) section 2).
@@ -345,18 +345,18 @@ Why it looks like this:
   trace per run, linked from its result in Langfuse, with the case id in its metadata; the run's
   metadata names the model, its effort and the commit, which versions the prompt.
 - **Run as a module** (`uv run --locked python -m evals.triage.experiment_triage`): `main()` reads
-  `Settings()` once, as the application's own entry points do ([python.md](../../python/language/python.md)
-  section 5), sets up logging as the CLI of [python/logging/setup-example.md](../../python/logging/setup-example.md)
+  `Settings()` once, as the application's own entry points do ([python.md](../language/python.md)
+  section 5), sets up logging as the CLI of [python/logging/setup-example.md](../logging/setup-example.md)
   does, and gives Langfuse its keys through `start_tracing`, the one client of Langfuse of
-  [python/logging/agent-example.md](../../python/logging/agent-example.md). The `langfuse/experiment-action` GitHub
+  [python/logging/agent-example.md](../logging/agent-example.md). The `langfuse/experiment-action` GitHub
   Action calls `experiment(context)` instead, and adds a comment to the pull request.
 
 `AcmeAiClient`, `AcmeAiSdk`, `Settings`, `triage_ticket`, `TicketTriage`, `TRIAGE_LLM_MODEL`,
 `TRIAGE_LLM_REASONING_EFFORT` and the `acme.core.errors` classes are those of
-[prompt-example.md](../prompt-engineering/prompt-example.md), `build_logging_config` and the
+[prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), `build_logging_config` and the
 settings fields `log_level` and `log_format` those of
-[python/logging/setup-example.md](../../python/logging/setup-example.md), and `start_tracing` that of
-[python/logging/agent-example.md](../../python/logging/agent-example.md); `acme_ai_api_key`, `git_commit` and the
+[python/logging/setup-example.md](../logging/setup-example.md), and `start_tracing` that of
+[python/logging/agent-example.md](../logging/agent-example.md); `acme_ai_api_key`, `git_commit` and the
 Langfuse keys and URL stand for the settings fields those examples leave out.
 
 ## With LangChain
@@ -366,17 +366,17 @@ stay as they are. The task runs the app's own code, built the way the app builds
 things the eval adds:
 
 - **the cache switch on**, passed where the app applies it, as `build_agent` passes it to
-  `PromptCacheSwitchMiddleware` ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md)
+  `PromptCacheSwitchMiddleware` ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md)
   section 17), so a response cache in a gateway or LangChain's global cache cannot answer a run from
   an earlier one;
 - **the Langfuse handler** in the call's `callbacks`, so the run's trace holds the model and tool
   calls ([evals.md](evals.md) section 9);
 - **the model and its effort from the call site's own constants**, the ones the app uses
-  ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 15): the eval never
+  ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 15): the eval never
   picks them.
 
 [agent-eval-example.md](agent-eval-example.md) shows such a task end to end, for the LangChain agent
-of [python/logging/agent-example.md](../../python/logging/agent-example.md), with the graders and the gate of this
+of [python/logging/agent-example.md](../logging/agent-example.md), with the graders and the gate of this
 example.
 
 ## `.github/workflows/evals.yml`: when it runs
@@ -426,12 +426,12 @@ so the job fails. The key belongs to a project with a spend limit, because nobod
 nightly run. The Langfuse keys belong to a project of their own, because a project's keys read
 every trace in it, and this job runs the pull request's code.
 `Settings` reads each field from `ACME_` plus the field's name in upper case
-([python/language/settings-example.md](../../python/language/settings-example.md)), so `acme_ai_api_key` comes from
+([python/language/settings-example.md](../language/settings-example.md)), so `acme_ai_api_key` comes from
 `ACME_ACME_AI_API_KEY`. The job must also set every other required field of the application's
 `Settings`, such as the database and payments fields of that example, with throwaway values, never
 the real secrets; this snippet leaves them out.
 The checkout, the uv setup and the read-only token are those of
-[python/static-checks/setup-example.md](../../python/static-checks/setup-example.md): the job holds a paid key, so
+[python/static-checks/setup-example.md](../static-checks/setup-example.md): the job holds a paid key, so
 the token does not stay in `.git/config`.
 
 ## The contract of single cases
@@ -440,7 +440,7 @@ The eval gives the rate over the set. A contract that must hold for one case is 
 `tests/integration/triage/test_service_triage.py`, as
 [repeated-runs.md](repeated-runs.md) section 5 shows: "a crash report is filed as a bug in two runs
 of three", a plain loop and a count. It runs by hand, as
-[running-tests.md](../../python/testing/running-tests.md) section 10 says, before a pull request that changes
+[running-tests.md](../testing/running-tests.md) section 10 says, before a pull request that changes
 the prompt.
 
 ## What this example does not claim

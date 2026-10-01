@@ -69,9 +69,9 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 │   │       └── test_usecase.py
 │   └── support/                            # fakes and builders that tests import
 │       └── fake_<system>.py
-├── evals/                                  # only when a module calls a model (any-language/evals/evals.md section 4)
+├── evals/                                  # only when a module calls a model (python/evals/evals.md section 4)
 │   ├── rate_gate.py                        # the gate every experiment ends with
-│   └── <module>/                           # a judge's files too: any-language/evals/evals.md section 4
+│   └── <module>/                           # a judge's files too: python/evals/evals.md section 4
 │       ├── cases_<purpose>.jsonl           # the case set, one case per line
 │       ├── experiment_<purpose>.py         # the run: task, graders, metadata
 │       └── schemas.py                      # a case, a run's output and the criteria

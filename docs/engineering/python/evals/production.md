@@ -27,7 +27,7 @@ replace the reading.**
 
 **Must.** Every production run of a model call or an agent is traced in the trace store, with the
 model's version, the prompt's version and the user's session. What goes into a trace, and what never
-goes into a log, is [logging.md](../../python/logging/logging.md) section 8's, which also wires Langfuse into
+goes into a log, is [logging.md](../logging/logging.md) section 8's, which also wires Langfuse into
 LangChain and LangGraph. Without traces there is nothing to read and nothing to turn into cases.
 
 ## 3. A person reads a sample every week
@@ -163,7 +163,7 @@ attacks it stops, how many good requests it blocks, and the time it adds. In one
 NeMo Guardrails stopped every attack and blocked 16.2% of students' normal questions, adding 1.4
 seconds; injection detectors that scored 0.98 on their own data blocked 22 to 42% of harmless
 prompts from elsewhere. A rule-based guardrail is tested like any code
-([python/testing/](../../python/testing/README.md)).
+([python/testing/](../testing/README.md)).
 
 ## 9. Where it stops holding
 

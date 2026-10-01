@@ -349,7 +349,7 @@ sit where [python/testing/layout.md](../../python/testing/layout.md) section 1 p
   never imports from it; code both need lives in the package.
 - **`evals/` holds the case sets and the eval runs of the modules that call a language model**, one
   folder per module, named as the module is. The application never imports from it. What goes
-  inside is [any-language/evals/evals.md](../evals/evals.md) section 4's.
+  inside is [python/evals/evals.md](../../python/evals/evals.md) section 4's.
 
 ## 10. The map: kinds and rules, not a file list
 

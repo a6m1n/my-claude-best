@@ -1,7 +1,7 @@
 # Example: the unit tests and the eval of one LangGraph agent
 
 A worked example for [agents.md](agents.md). The agent is the support agent of
-[python/logging/agent-example.md](../../python/logging/agent-example.md): LangChain's `create_agent` with one tool,
+[python/logging/agent-example.md](../logging/agent-example.md): LangChain's `create_agent` with one tool,
 `find_order`, and a reply in the shape `ChatReply`, built by `build_agent(llm, orders, *, model,
 disable_prompt_cache, new_request_uuid)`. Here it gets unit tests that need no model and an eval
 that runs the real one. Every name is a placeholder; the orders and rates are example values.
@@ -54,7 +54,7 @@ class FakeOrderStore(OrderStore):
 
 The real store's client, its `Order` record and its `OrderStatus` are not shown in the logging
 example; the fake overrides the one method the tool calls
-([python/testing/fakes-and-boundaries.md](../../python/testing/fakes-and-boundaries.md) section 1).
+([python/testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 1).
 An unknown id returns `None`, as the real store does, so the agent's "no such order" path
 runs against the fake too. An id listed as unavailable raises `ConnectionError`, the error
 `find_order` catches when the store is down, so the tool's failure path runs too:
@@ -232,7 +232,7 @@ Why it looks like this:
   through `http_async_client`: `build_agent`'s middlewares define only async hooks, so a sync
   `invoke` raises `NotImplementedError`. LangChain's `GenericFakeChatModel` would fail
   here: it has no `bind_tools`. This is the first stand-in of
-  [python/testing/fakes-and-boundaries.md](../../python/testing/fakes-and-boundaries.md) section 1, and the logging
+  [python/testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 1, and the logging
   example's text already names it for this agent.
 - **What the test can say, and what it cannot.** The script decides what the "model" answers, so the
   tests check the agent's code: that a tool call reaches the store with the model's argument, that
@@ -243,21 +243,21 @@ Why it looks like this:
   body the provider received and compares the whole definition, the name, the description (as the
   docstring gives it, indentation included) and the argument schema. A change to any of them turns
   it red, and a change to a tool definition runs the eval
-  ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 14). The raw bodies
+  ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 14). The raw bodies
   are kept as bytes and parsed in `offered_tools`, so the `Any` that `json.loads` returns stays
-  inside the parser ([python.md](../../python/language/python.md) section 3).
+  inside the parser ([python.md](../language/python.md) section 3).
 - **The step limit is the application's**: `build_agent` sets it from `SUPPORT_CHAT_MAX_STEPS`, and
   the test passes no limit of its own, so it turns red when someone removes the limit or sets it
   to a value other than the constant's; raising the constant is a decision, not a bug, and stays
-  green ([python/testing/what-to-test.md](../../python/testing/what-to-test.md) section 3). The test asserts the
+  green ([python/testing/what-to-test.md](../testing/what-to-test.md) section 3). The test asserts the
   error and its message, not a count of calls, which is LangGraph's own detail.
 - **`version="v2"`**, as the logging example's use case calls the agent, so the output is typed
   and `structured_response` is a `ChatReply`.
 - **One class for the unit, names that state the guarantee, a fresh agent and a fresh store in each
-  test** ([python/testing/test-structure.md](../../python/testing/test-structure.md) sections 1 to 4): the agent is
+  test** ([python/testing/test-structure.md](../testing/test-structure.md) sections 1 to 4): the agent is
   built inside the test, so nothing carries from one test to the next. The scripted provider is used
   by this file alone, so it stays here
-  ([python/testing/fakes-and-boundaries.md](../../python/testing/fakes-and-boundaries.md) section 1).
+  ([python/testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 1).
 
 `build_agent`, `ChatAgent`, `ChatReply`, `SUPPORT_CHAT_LLM_MODEL` and `SUPPORT_CHAT_MAX_STEPS` are
 those of the logging example; its `build_agent` asks for `ChatOpenAI`, which is what the test
@@ -394,11 +394,11 @@ class ChatRun:
 `Budget` and `ChatCase` come from the case file through `model_validate_json`, so they are strict
 models, as the triage case is. `RunUsage` and `ChatRun` are built by the eval's own code from values
 it already holds, so they are frozen dataclasses, like `JudgeScores`
-([python.md](../../python/language/python.md) section 4). Two rules are validators on `ChatCase`, so a case
+([python.md](../language/python.md) section 4). Two rules are validators on `ChatCase`, so a case
 that breaks one fails the load: a case allows every tool it requires, and it gives no status to an
 order the store fails on. The fake records that id too, so `_first_status_seen` would hand the
 judge a status the agent never saw. How a run ended is a closed set, so `RunEnd` is an enum
-([python.md](../../python/language/python.md) section 3), and a run that did not end on its reply is still a
+([python.md](../language/python.md) section 3), and a run that did not end on its reply is still a
 `ChatRun`, so it is graded, never dropped ([evals.md](evals.md) section 6).
 
 ## `evals/chat/experiment_chat.py`: the agent's eval
@@ -793,7 +793,7 @@ Why it looks like this:
   a budget, the counts of its shortest successful run and the 90th percentile of its successful
   runs' seconds, and `_run_agent` counts the model calls, tool calls, tokens and seconds from the
   run's messages and the clock it is given; the duration is part of what it returns, so the clock
-  is a parameter ([readability.md](../readability/readability.md) section 6). Two run evaluators,
+  is a parameter ([readability.md](../../any-language/readability/readability.md) section 6). Two run evaluators,
   which Langfuse runs once over all the results, report the share of successful runs inside their
   budget and the tokens per successful run against main's figure.
   They are reported, not gated, and they stay out of `Criterion`, so they never enter the headline
@@ -846,13 +846,13 @@ Why it looks like this:
 
 `build_agent`, `SUPPORT_CHAT_LLM_MODEL`, `chat_model`, `callback_handler`, `start_tracing` and the
 `acme.core.errors` classes the agent's middlewares raise are those of
-[python/logging/agent-example.md](../../python/logging/agent-example.md), `build_logging_config` that of
-[python/logging/setup-example.md](../../python/logging/setup-example.md), `AcmeAiClient`, `AcmeAiSdk` and `Settings`
-those of [prompt-example.md](../prompt-engineering/prompt-example.md), and
+[python/logging/agent-example.md](../logging/agent-example.md), `build_logging_config` that of
+[python/logging/setup-example.md](../logging/setup-example.md), `AcmeAiClient`, `AcmeAiSdk` and `Settings`
+those of [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), and
 `judge_unsupported_promise`, its model constants and `Verdict` those of
 [judge-example.md](judge-example.md). Of the settings fields, `openai_api_key` is the logging
 example's, `log_level` and `log_format` are those of
-[python/logging/setup-example.md](../../python/logging/setup-example.md), and `acme_ai_api_key`, `git_commit` and the
+[python/logging/setup-example.md](../logging/setup-example.md), and `acme_ai_api_key`, `git_commit` and the
 Langfuse keys and URL stand for the fields the examples leave out, as in
 [case-set-example.md](case-set-example.md).
 

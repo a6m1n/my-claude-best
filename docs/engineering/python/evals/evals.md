@@ -26,8 +26,8 @@ It covers the method. The other files of this folder cover one subject each: rep
 pass rules in [repeated-runs.md](repeated-runs.md), judges in [judges.md](judges.md), agents in
 [agents.md](agents.md), RAG in [rag.md](rag.md), what runs after release in
 [production.md](production.md), and the libraries in [tools.md](tools.md). How a pytest suite is
-laid out and run is [python/testing/](../../python/testing/README.md)'s. How a prompt is written and what changes it
-triggers is [prompt-engineering.md](../prompt-engineering/prompt-engineering.md)'s.
+laid out and run is [python/testing/](../testing/README.md)'s. How a prompt is written and what changes it
+triggers is [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md)'s.
 
 The one rule of this folder is in its [README](README.md#the-one-rule); every section below serves
 it.
@@ -49,7 +49,7 @@ such as case set, grader, pass@k and pass^k, are in the [README](README.md#what-
 **Must.** When a change touches a prompt, a tool definition, the model or its settings, the
 retrieval, or an agent's graph, check what the model now does with real model calls before the
 change merges. A unit test with a stand-in for the model
-([python/testing/fakes-and-boundaries.md](../../python/testing/fakes-and-boundaries.md) section 3) checks the code
+([python/testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 3) checks the code
 around the model: the request it builds, how the answer is parsed, which tool runs, what happens on
 an error. It never checks what the model decides, because the stand-in answers what the test told
 it to answer.
@@ -60,7 +60,7 @@ There are two kinds of check with real calls, and they answer different question
 |---|---|---|
 | The question | Does this case meet its contract? | How often does the system get it right over a set of cases, and did a change make it worse? |
 | The result | pass or fail for one case | a pass rate per criterion, compared with a baseline |
-| Where it lives | `tests/integration/<module>/`, under the `live_model` mark ([running-tests.md](../../python/testing/running-tests.md) section 10) | `evals/<module>/` (section 4) |
+| Where it lives | `tests/integration/<module>/`, under the `live_model` mark ([running-tests.md](../testing/running-tests.md) section 10) | `evals/<module>/` (section 4) |
 | How it runs | pytest | an eval runner, such as a Langfuse experiment ([tools.md](tools.md) section 2) |
 
 A pytest run returns pass or fail, and a rate over a hundred cases is not a pass or a fail. So a
@@ -97,7 +97,7 @@ A case set is the list of inputs an eval runs, each with what counts as a pass.
 **Must**, for every case set:
 
 - **Cases come from real inputs**, with names and identifying details removed the way
-  [prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 7 removes them from an
+  [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 7 removes them from an
   example.
 - **Each case states its pass criterion before the run**: an expected value, the tool calls that
   must and must not happen, or the criteria a grader checks. A criterion written after you saw the
@@ -106,7 +106,7 @@ A case set is the list of inputs an eval runs, each with what counts as a pass.
 - **Every failure found in review or in production becomes a case** in the change that fixes it.
   Grow the set from failures you saw, not from cases you invented to pass.
 - **The set holds cases where the right answer is not an answer**: the way out of
-  [prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 8, a refusal, a
+  [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 8, a refusal, a
   question back to the user, a request for confirmation. Their results are counted apart from the
   others, as a two-by-two table: should answer or not, did answer or not. In one study a system
   scored 71.8% overall and got 19.5% of the cases right where it should have refused; in a RAG
@@ -130,7 +130,7 @@ real ones. On one university chatbot, the best retrieval setup scored a hit rate
 generated questions and 0.53 on real ones, and the ranking of setups flipped.
 
 Where the files live: `evals/` sits at the repository root
-([file-structure.md](../file-structure/file-structure.md) section 9), with one folder per module,
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 9), with one folder per module,
 named as the module is:
 
 ```text
@@ -148,7 +148,7 @@ evals/
 
 A grader that only evals use lives next to the experiment that uses it; a grader the application
 also runs in production lives in the application. Code in `evals/` is checked like `src/` and
-`tests/`: the type checker's file list names it ([python.md](../../python/language/python.md) section 3: types
+`tests/`: the type checker's file list names it ([python.md](../language/python.md) section 3: types
 in half the code check half the code). [case-set-example.md](case-set-example.md) and
 [judge-example.md](judge-example.md) show the files.
 
@@ -201,7 +201,7 @@ before and fails now is listed in the pull request for a person to read". The ga
 case's own pass rule is a report, not a gate ([repeated-runs.md](repeated-runs.md) section 4). Keep
 each run's results, so the next change has a baseline. How many cases and runs a comparison needs is
 [repeated-runs.md](repeated-runs.md) section 7; a change to a prompt or a model has its own rules in
-[prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 18.
+[prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 18.
 
 Why: an edit that fixes the case in front of you changes others you do not see, and two averages
 from different sets or different days say nothing about the change. A paired comparison on the same
@@ -212,7 +212,7 @@ cases needs about a third to a half of the cases an unpaired one needs to see th
 
 **Must.** Before a change to a prompt, a tool definition, the model or its settings, the retrieval
 or an agent's graph merges, run its eval and put the result, with the baseline, in the pull
-request's Verification section ([git.md](../git/git.md) section 4). A person may start this run by
+request's Verification section ([git.md](../../any-language/git/git.md) section 4). A person may start this run by
 hand.
 
 **Should.** Run the whole eval on the main branch on a schedule, nightly or weekly, including
@@ -238,7 +238,7 @@ What each run holds:
 return within 24 hours.
 
 A replayed recording of a model's answer (a cassette) checks the code that parses it, never the
-model's behaviour; it is [python/testing/libraries.md](../../python/testing/libraries.md) section 3's subject, and it
+model's behaviour; it is [python/testing/libraries.md](../testing/libraries.md) section 3's subject, and it
 never counts as an eval.
 
 ## 9. Trace every eval run
@@ -246,7 +246,7 @@ never counts as an eval.
 **Must.** Every eval run records one trace per case in the trace store, and each result links to its
 trace, so a failure is read, not guessed at. The run's metadata names the model and its version, the
 prompt's version and, for a judge, the judge's model and prompt version. What a trace may hold and
-what never goes into a log is [logging.md](../../python/logging/logging.md) section 8's.
+what never goes into a log is [logging.md](../logging/logging.md) section 8's.
 
 Why: a pass rate says that something changed; the trace says what. Reading traces is the step
 section 3 asks for, and the failures a person finds there become the next cases.
@@ -256,7 +256,7 @@ section 3 asks for, and the failures a person finds there become the next cases.
 - **A prompt you run once by hand**, in a notebook or a chat window, to explore. Sections 3 and 4
   still help; the rest is ceremony there.
 - **Code that calls no model**, even when it sits next to one. It is tested like any other code
-  ([python/testing/](../../python/testing/README.md)).
+  ([python/testing/](../testing/README.md)).
 - **An application too small for a schedule**, such as an internal tool with ten users. Sections 2
   to 7 still hold; section 8's schedule does not, and a person reads the outputs each week instead.
 
