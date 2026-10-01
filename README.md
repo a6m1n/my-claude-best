@@ -24,25 +24,25 @@ A practice is a folder of rules and worked examples for one kind of work, such a
 For example, the git practice needs this one line in your `CLAUDE.md`:
 
 ```markdown
-- Before any git operation, read `docs/engineering/git/git.md`.
+- Before any git operation, read `docs/engineering/any-language/git/git.md`.
 ```
 
 With this line in your `CLAUDE.md`, the agent opens `git.md` before its first git command, and its commit titles take one form, such as `fix(orders): reject an empty cart`.
 
 It is for teams that write code with an AI coding agent. The code examples are in Python. The practices are Markdown, so there is nothing to build or install. Every name in the examples is invented.
 
-The practices, in the order to read them:
+The practices sit in group folders: `any-language/` for the ones whose rules work in any language (their examples are still in Python), and `python/` for the ones written for Python. [docs/engineering/CLAUDE.md](docs/engineering/CLAUDE.md) says how a practice's group is picked. In the order to read them:
 
-- [git](docs/engineering/git/) — branches, commits, pull requests and merging, with no rewriting of pushed history.
-- [python](docs/engineering/python/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
-- [refactoring](docs/engineering/refactoring/) — how old code reaches a practice without a rewrite of the whole repository.
-- [file-structure](docs/engineering/file-structure/) — where code lives in an application, and file names that say what a file holds.
-- [logging](docs/engineering/logging/) — how a Python application logs through the standard `logging` module.
-- [readability](docs/engineering/readability/) — how one function or class reads.
-- [static-checks](docs/engineering/static-checks/) — the formatter, the linter, a strict type checker and import contracts, run the same way in hooks and in CI.
-- [prompt-engineering](docs/engineering/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
-- [testing](docs/engineering/testing/) — which code earns a test, and how a pytest suite is laid out and written.
-- [evals](docs/engineering/evals/) — how to check what a language model does in an application, with real calls on real cases.
+- [any-language/git](docs/engineering/any-language/git/) — branches, commits, pull requests and merging, with no rewriting of pushed history.
+- [python/language](docs/engineering/python/language/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
+- [any-language/refactoring](docs/engineering/any-language/refactoring/) — how old code reaches a practice without a rewrite of the whole repository.
+- [any-language/file-structure](docs/engineering/any-language/file-structure/) — where code lives in an application, and file names that say what a file holds.
+- [python/logging](docs/engineering/python/logging/) — how a Python application logs through the standard `logging` module.
+- [any-language/readability](docs/engineering/any-language/readability/) — how one function or class reads.
+- [python/static-checks](docs/engineering/python/static-checks/) — the formatter, the linter, a strict type checker and import contracts, run the same way in hooks and in CI.
+- [any-language/prompt-engineering](docs/engineering/any-language/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
+- [python/testing](docs/engineering/python/testing/) — which code earns a test, and how a pytest suite is laid out and written.
+- [python/evals](docs/engineering/python/evals/) — how to check what a language model does in an application, with real calls on real cases.
 
 Two more parts are about Claude Code itself:
 
@@ -85,28 +85,28 @@ The steps use the git practice. Every practice is adopted the same way. Its `REA
 
    It prints a short commit id, such as `1a2b3c4`. Put it in the message of the commit that adds the folder: you compare against it later.
 
-2. Copy the practice folder into your project, at the same path:
+2. Copy the practice folder into your project, at the same path, group folder included. The links from one practice to another count on that path:
 
    ```bash
-   mkdir -p ../your-project/docs/engineering
-   cp -R docs/engineering/git ../your-project/docs/engineering/
+   mkdir -p ../your-project/docs/engineering/any-language
+   cp -R docs/engineering/any-language/git ../your-project/docs/engineering/any-language/
    ```
 
 3. Add the trigger line to the instruction file your agent reads. Claude Code reads `CLAUDE.md`. It reads `AGENTS.md` only from version 2.1.277, and only when no `CLAUDE.md`, `.claude/CLAUDE.md` or `CLAUDE.local.md` sits in the project folder or above it. If you keep the line in `AGENTS.md` and also have a `CLAUDE.md`, add the line `@AGENTS.md` to your `CLAUDE.md`.
 
    ```markdown
-   - Before any git operation, read `docs/engineering/git/git.md`.
+   - Before any git operation, read `docs/engineering/any-language/git/git.md`.
    ```
 
    Without this line, the agent never opens the folder.
 
-4. Ask the agent to commit a change. Before its first git command, it reads `docs/engineering/git/git.md`, and Claude Code shows that read in the session. The commit title then takes the form from section 3 of that file, such as `fix(orders): reject an empty cart`.
+4. Ask the agent to commit a change. Before its first git command, it reads `docs/engineering/any-language/git/git.md`, and Claude Code shows that read in the session. The commit title then takes the form from section 3 of that file, such as `fix(orders): reject an empty cart`.
 
 A copy does not update itself. To see what changed in the practice since then, run this in your clone of this repository. Put your commit id in place of `1a2b3c4`:
 
 ```bash
 git pull
-git log --oneline 1a2b3c4..HEAD -- docs/engineering/git
+git log --oneline 1a2b3c4..HEAD -- docs/engineering/any-language/git
 ```
 
 ### Try the status line
@@ -120,19 +120,21 @@ The status line keeps the numbers you would otherwise ask Claude Code for. It sh
 ```
 my-claude-best/
 ├── docs/
-│   ├── engineering/     # the practices, one folder each, and CLAUDE.md: the contract for writing one
-│   └── claude-code/     # guides on instructing Claude Code
+│   ├── engineering/       # the practices, and CLAUDE.md: the contract for writing one
+│   │   ├── any-language/  # practices whose rules work in any language, one folder each
+│   │   └── python/        # practices whose rules are written for Python, one folder each
+│   └── claude-code/       # guides on instructing Claude Code
 ├── claude-config/
-│   └── statusline/      # the status line: the script, its install guide, its images
-├── skills/              # planned skills to read and copy; none yet
-├── CLAUDE.local.md      # an example practices section for a project CLAUDE.md
+│   └── statusline/        # the status line: the script, its install guide, its images
+├── skills/                # planned skills to read and copy; none yet
+├── CLAUDE.local.md        # an example practices section for a project CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
-├── LICENSE              # CC BY 4.0, for the text
-└── LICENSE-CODE         # MIT, for the code
+├── LICENSE                # CC BY 4.0, for the text
+└── LICENSE-CODE           # MIT, for the code
 ```
 
-Every practice folder has the same shape. It holds a `README.md` that maps the folder and says how to adopt it, one or more rules files, and `*-example.md` files with worked examples. Run `ls docs/engineering` for the practice folders.
+Every practice folder has the same shape. It holds a `README.md` that maps the folder and says how to adopt it, one or more rules files, and `*-example.md` files with worked examples. Run `ls -d docs/engineering/*/*/` for the practice folders.
 
 ## Where to get help
 
