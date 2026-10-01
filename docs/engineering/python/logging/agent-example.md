@@ -264,6 +264,8 @@ handler and `@observe` read the client from `get_client()` by themselves, and `g
 it from the one configuration `start_tracing` registered, so a handle passed in would add nothing.
 `start_tracing` is also where a `mask_otel_spans` function goes when a service keeps some values
 out of the trace store ([logging.md](logging.md) section 8); this example masks nothing.
+Retention is set on the Langfuse project, or by a scheduled deletion job where the plan has no
+policy; neither is shown ([logging.md](logging.md) section 8).
 
 ## `core/openai_client.py`: the one client of the model provider
 
