@@ -31,7 +31,7 @@ With this line in your `CLAUDE.md`, the agent opens `git.md` before its first gi
 
 It is for teams that write code with an AI coding agent. The code examples are in Python. The practices are Markdown, so there is nothing to build or install. Every name in the examples is invented.
 
-The practices sit in two group folders. `any-language/` holds the ones whose rules work in any language; their examples are in Python. `python/` holds the ones whose rules name Python's own tools. In the order to read them:
+The practices sit in group folders, by what their rules cover. `any-language/` holds the ones whose rules work in any language, even when their examples are in Python or a part of them applies the rules to Python's tools. `python/` holds the ones whose rules are written for Python's code and tools throughout. In the order to read them:
 
 - [any-language/git](docs/engineering/any-language/git/) — branches, commits, pull requests and merging, with no rewriting of pushed history.
 - [python/language](docs/engineering/python/language/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
@@ -122,7 +122,7 @@ my-claude-best/
 ├── docs/
 │   ├── engineering/       # the practices, and CLAUDE.md: the contract for writing one
 │   │   ├── any-language/  # practices whose rules work in any language, one folder each
-│   │   └── python/        # practices whose rules name Python's own tools, one folder each
+│   │   └── python/        # practices whose rules are written for Python, one folder each
 │   └── claude-code/       # guides on instructing Claude Code
 ├── claude-config/
 │   └── statusline/        # the status line: the script, its install guide, its images

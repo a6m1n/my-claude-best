@@ -36,13 +36,26 @@ other example is a GOOD example.
   per artifact type; never a bare file, even before the examples exist. A topic whose subjects a
   reader looks up apart, such as testing, has one rules file per subject, and its `README.md`
   says which file to read for which work.
-- Before you create a practice folder, pick its group by its rules, not by its examples. When
-  every rule holds in any language, and only the examples, commands or tool names are in one
-  language, it goes under `any-language/`. When its rules name one language's own modules,
-  libraries or tools, it goes under that language's folder, such as `python/`; a language or
-  framework with no folder yet gets one, named by it in lower case (`react/`). A group folder
-  holds practice folders and nothing else. The check: before you stage,
+- Before you create a practice folder, pick its group by what its rules cover, not by its
+  examples. A practice whose rules are written for one language's code or tools throughout goes
+  under that language's folder, such as `python/`; a language or framework with no folder yet
+  gets one, named by it in lower case (`react/`). A practice whose rules hold in any language goes
+  under `any-language/`, even when it has a section or file that applies them to one language and
+  says so (file-structure's "Python case", refactoring's section 10), and even when its examples
+  and tool names are Python. The name `any-language/` states the test a practice passes to sit
+  there, which a name like `general/`, `common/` or `shared/` would not (`core/` is
+  file-structure's word for shared application code). Before a language adds a topic another
+  language's folder already holds, move the rules that hold in any language into an
+  `any-language/` practice, in a commit of its own whose body names an answer from
+  `any-language/refactoring/refactoring.md` section 7; that practice then links each language's
+  practice on the topic for that language's case. A group folder holds practice folders and
+  nothing else. The check: before you stage,
   `find docs/engineering -maxdepth 2 -name '*.md'` prints only `docs/engineering/CLAUDE.md`.
+- When you add or remove a practice, change the practice list in the root `README.md` in the same
+  commit. When you add a group, also change the README's sentence on the groups, its tree, its
+  examples badge and every line that says the examples are only in Python. The check: before you
+  stage, every folder `ls -d docs/engineering/*/*/` prints has a link in the README list, and
+  `grep -n -i -E 'in Python|other than Python' README.md` shows nothing the change made false.
 - A rule has one owner: the practice whose topic it is, as each practice folder's `README.md` says.
   When one practice needs a rule another owns, link that practice's file and section, and never
   write the rule's conditions or its check again. Where two practices disagree, the owner's
