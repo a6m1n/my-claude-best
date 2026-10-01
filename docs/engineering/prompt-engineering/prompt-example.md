@@ -28,6 +28,7 @@ from enum import StrEnum, unique
 from typing import Literal, TypeAlias
 
 # The vendor owns the ids; this is the set this project has tested its prompts on.
+# Each id names one fixed build, never a moving alias (evals/production.md section 6).
 LlmModel: TypeAlias = Literal["acme-large-2", "acme-small-3"]
 
 
@@ -57,13 +58,17 @@ class RawReply:
     text: str
 ```
 
+`core/config.py` holds the one setting this client needs. The settings class's `model_config` and
+its other fields are left out; they are
+[python/settings-example.md](../python/settings-example.md)'s.
+
 ```python
 # core/config.py
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # DISABLE_PROMPT_CACHE=true only while debugging or measuring
+    # ACME_DISABLE_PROMPT_CACHE=true only while debugging or measuring
     disable_prompt_cache: bool = False
 ```
 
@@ -216,8 +221,9 @@ What it does for the rules:
   An SDK error becomes `ModelUnavailable`. The errors name the model, never the text, so they are
   safe in a log ([logging.md](../logging/logging.md) section 10).
 - **`AcmeAiSdk`**, the vendor's SDK object from its package `acme_ai`, is built once by the
-  adapter at startup and handed in ([file-structure.md](../file-structure/file-structure.md)
-  section 4); it is not shown.
+  adapter at startup, with the vendor's key from `Settings` as a `SecretStr`
+  ([python.md](../python/python.md) section 5), and handed in
+  ([file-structure.md](../file-structure/file-structure.md) section 4); it is not shown.
 
 ## `support/triage/consts.py`: the model and its effort
 
@@ -245,7 +251,7 @@ The names follow `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort`, so 
 from datetime import date
 from enum import StrEnum, unique
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 @unique
@@ -257,15 +263,21 @@ class TicketKind(StrEnum):
 class TicketTriage(BaseModel):
     """The answer of the triage call; the client sends its JSON schema as the response format."""
 
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
     reasoning: str  # first: the model writes top to bottom, so this leads to the kind
     kind: TicketKind
     # None is the way out: the ticket gives no date
     problem_first_occurred_on: date | None
 ```
 
-`reasoning` comes before `kind` (section 12). `kind` accepts two values and nothing else.
-`problem_first_occurred_on` has no default, so the model has to fill it, and `None` is a value
-the schema allows: the way out of section 8, with its condition in the prompt below.
+`reasoning` comes before `kind` (section 12). Strict mode is safe here because `_parse_answer`
+parses the raw text with `model_validate_json`. It also rejects a date sent as a number or as a
+date and time, which lax mode would quietly turn into a date. `kind` accepts two values and nothing else, and
+the model config rejects a key the schema does not name
+([python.md](../python/python.md) section 4). `problem_first_occurred_on` has no default, so the
+model has to fill it, and `None` is a value the schema allows: the way out of section 8, with its
+condition in the prompt below.
 
 ## `support/triage/prompts.py`: the base prompt and the layer per model
 
@@ -380,10 +392,15 @@ into four steps, each one a small diff:
    `MODEL_NOTES` is `""`. A model not yet in the project gets both lines in this step.
 2. **Run the base unchanged.** The case set runs the current setup, `acme-small-3` at `low` with
    its notes, against `acme-large-2` with the base alone, at each effort level the model offers,
-   with repeats (sections 15 and 18). The prompt text does not change in this step, so the result
-   measures the model.
+   with repeats (sections 15 and 18). Before the run, write the decision rule down: each
+   criterion's pass rate over the set, with every case run three times, falls no more than a stated
+   margin below the old model's on the same cases ([evals.md](../evals/evals.md) section 7,
+   [repeated-runs.md](../evals/repeated-runs.md) section 5). The prompt text does not change in
+   this step, so the result measures the model.
 3. **Tune only the layer.** Where the new model fails cases the old one passed, add a line to its
    entry in `MODEL_NOTES`, and run the set again. The base does not change unless every model
    needs the change; then it is a prompt change, tested as one.
 4. **Switch the constants.** One commit sets `TRIAGE_LLM_MODEL` and `TRIAGE_LLM_REASONING_EFFORT`
-   to what the case set chose. The old model's entry stays until no call site uses it.
+   to what the case set chose. Its pull request's Verification section holds each criterion's rate
+   for the new model, the old model's rate as the baseline, and whether the decision rule holds
+   ([evals.md](../evals/evals.md) section 8). The old model's entry stays until no call site uses it.

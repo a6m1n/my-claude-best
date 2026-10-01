@@ -3,10 +3,10 @@
 Each practice here is a folder named by the topic, never a bare file: the way one kind of work
 should be done, in any repository. Every folder `ls -d docs/engineering/*/` prints is one. This
 file is the contract for writing them, and a folder's `README.md` is its map; the practice docs
-are a folder's rules file and its example files. An example is anything a reader may copy: an
-`*-example.md` file, or a tree, a diagram, a code snippet or a message inside a rules file or a
-`README.md`. A BAD example is one shown as the form to avoid: labelled Bad or Before, or named
-by its rule as the wrong form. Every other example is a GOOD example.
+are a folder's rules file, or rules files, and its example files. An example is anything a reader
+may copy: an `*-example.md` file, or a tree, a diagram, a code snippet or a message inside a rules
+file or a `README.md`. A BAD example is one shown as the form to avoid: labelled Bad or Before,
+or named by its rule as the wrong form. Every other example is a GOOD example.
 
 ## The contract
 
@@ -31,7 +31,9 @@ by its rule as the wrong form. Every other example is a GOOD example.
 - Before you create a doc, run `grep -ril "<topic>" docs/`. If a doc on that topic exists,
   extend it; the diff then shows an edited file, not a second file on the same topic. A practice
   is one folder named by the topic, with a `README.md` map, a rules file and one ideal example
-  per artifact type; never a bare file, even before the examples exist.
+  per artifact type; never a bare file, even before the examples exist. A topic whose subjects a
+  reader looks up apart, such as testing, has one rules file per subject, and its `README.md`
+  says which file to read for which work.
 - A rule has one owner: the practice whose topic it is, as each folder's `README.md` says.
   When one practice needs a rule another owns, link that practice's file and section, and never
   write the rule's conditions or its check again. Where two practices disagree, the owner's
@@ -65,7 +67,7 @@ by its rule as the wrong form. Every other example is a GOOD example.
   it shows, and say next to it why it is good. Add nothing only to show another practice. Code
   it leaves out is cut with `...`, or named as left out in the sentence that introduces it;
   never shown as if it were complete. The check: before you stage, read each GOOD example the
-  diff adds or changes once per practice folder, with that folder's rules file open, and write
+  diff adds or changes once per practice folder, with that folder's rules files open, and write
   one line per folder in the closing summary: "follows" or "governs nothing here"; a GOOD with
   no sentence that says why it is good fails.
 - When you write or change a BAD example, or the GOOD that fixes one, make the BAD show one
@@ -88,4 +90,5 @@ Approach: one bullet: every rule opens with its level, Must (always, when its co
 Should (keep it when a test shows it helps). Existing practices adopt it when a change touches
 them (refactoring/refactoring.md section 7, "New and touched code").
 prompt-engineering/prompt-engineering.md section 1 is the first practice written this way.
+evals/evals.md section 1 adds a third level, Optional: add it when the need the rule names appears.
 -->

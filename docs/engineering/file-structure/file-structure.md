@@ -205,7 +205,7 @@ existing code lives, so they land as a refactoring before the change that needed
 with the change that needs them.
 
 1. **A new feature → a new module.** A new folder in the shape of section 3, one file in each
-   adapter that offers it, and `tests/unit/<module>/` for its tests (section 8). Nothing in the other
+   adapter that offers it, and `tests/<suite>/<module>/` for its tests (section 8). Nothing in the other
    modules changes, and neither does the map (section 10).
 2. **A file stops telling what is inside → it becomes a folder of the same name.** The moment is
    a file that has grown hard to follow: too much code, and a name that no longer says what is
@@ -245,7 +245,7 @@ with the change that needs them.
    joined by `:`, and the independence contract lists the modules of both, so a call from a module
    in one area to a module in the other is one more named exception there. Module names stay
    unique across the application: the second area names its modules so they do not clash with the
-   first, and adapter files (`routes_<module>.py`) and test folders (`tests/unit/<module>/`) stay
+   first, and adapter files (`routes_<module>.py`) and test folders (`tests/<suite>/<module>/`) stay
    flat.
 
 Check: a structural move (2 or 3) lands in its own commit, with no change in behavior
@@ -267,7 +267,7 @@ and touches no other module.
   with no module to own it goes to `core/` under a name that says what it does.
 - **The role comes first, then which one.** A file in a role folder, or a file that serves one module
   in an adapter, starts with its role: `prompt_<name>.py`, `service_<name>.py`,
-  `routes_<module>.py`, `test_<unit>.py`. The role is singular when the file holds one thing
+  `routes_<module>.py`, `test_<source file>.py`. The role is singular when the file holds one thing
   (`prompt_`) and plural when it holds several (`routes_`). Python already reads names this way:
   pytest collects `test_*.py`, and Django's docs split a grown `tests.py` into a `tests/` folder of
   `test_models.py` and `test_views.py`, the role in the folder and again in each file. The reason is
@@ -306,46 +306,11 @@ and touches no other module.
 
 ## 8. Tests
 
-```
-tests/
-├── conftest.py        # applies the suite marker by folder; fixtures every suite uses
-├── unit/              # offline and fast: the default run and CI
-│   └── <module>/      # one folder per module
-├── integration/       # real database, real provider: run on demand
-│   └── <subject>/     # a subject that needs its own harness gets a folder in its suite
-└── support/           # test tooling shared by the suites; no test files
-```
-
-- **Tests live outside the application package**, in `tests/` at the repository root. The pytest
-  docs call keeping them apart "often a good idea", and with the src layout (section 9) the tests
-  import the installed package, not the working copy.
-- **One folder per suite, by what it needs to run**: `unit/` needs nothing outside the process and
-  runs on every push; `integration/` needs a real database or a real provider and runs on demand.
-  Add `e2e/` when a suite drives the running application from the outside. The folder names are the
-  common ones, but the line between them is what the test touches, not a definition of "unit":
-  Martin Fowler calls those terms "rather murky" (*On the Diverse And Fantastical Shapes of
-  Testing*, 2021). A new test file goes into a suite folder, never directly under `tests/`.
-- **Tests are grouped by suite, not placed inside the modules**, so CI picks a suite by its folder
-  and a module folder holds only the code that ships. Keeping tests next to the code they test is a
-  respected alternative (the HackSoft Django Styleguide puts `tests/` in each app; Kent C. Dodds
-  argues for colocation); a framework that expects it, as Django's `startapp` does, keeps it.
-- **The suite folder applies the marker.** A hook in `tests/conftest.py` marks every test by the
-  folder it sits in, so nobody writes a suite marker by hand and none is forgotten.
-- **`support/` holds fakes and builders that more than one suite uses**, laid out by the same role
-  rules as a module. It has no `test_` files, so nothing in it is collected. Tests reach it through
-  fixtures in `tests/conftest.py`, which pytest finds by itself: under `--import-mode=importlib` a
-  test cannot import another module from `tests/` directly, and the pytest docs say fixtures
-  "should be placed in `conftest.py` files".
-- **Name a test file for the unit or the flow it pins**: `test_<unit>.py`. Run pytest with
-  `--import-mode=importlib`, which the pytest docs recommend for new projects: two test files with
-  the same name in different folders then do not collide.
-- **Unit tests have one folder per module**: `tests/unit/<module>/test_<unit>.py`. A new module gets
-  its test folder in the same commit (section 6, move 1). A reader who knows the module finds its
-  tests by path, and two modules can each have a `test_usecase.py`, which a flat folder cannot hold.
-  Home Assistant's developer docs make this the rule for thousands of test files: "Tests for each
-  integration are stored inside a directory named after the integration domain"; PyPI's Warehouse
-  mirrors its packages the same way in a `tests/unit/` of about two hundred files. Stop at the
-  module: a deeper mirror doubles every rename inside the package.
+The `tests/` tree, from its suite folders to the name of each test file, is
+[testing/layout.md](../testing/layout.md)'s. This practice supplies what that tree mirrors:
+modules whose names are unique across the application (section 6, move 6), so a module's tests
+sit where [testing/layout.md](../testing/layout.md) section 1 puts them. No module is called
+`core` or after an adapter (`api`, `cli`), so a module's test folder never collides with theirs.
 
 ## 9. The repository root
 
@@ -353,6 +318,7 @@ tests/
 <repo>/
 ├── src/<app>/          # the application package
 ├── tests/
+├── evals/              # only when the application calls a language model: case sets and eval runs
 ├── docs/
 │   ├── ARCHITECTURE.md # the map (section 10)
 │   └── guides/         # for people who call or run the application
@@ -381,6 +347,9 @@ tests/
   top folders above. Never a `.env` with real values, never a loose script.
 - **`scripts/` is for commands a person runs by hand**: seed data, a one-off upload. The application
   never imports from it; code both need lives in the package.
+- **`evals/` holds the case sets and the eval runs of the modules that call a language model**, one
+  folder per module, named as the module is. The application never imports from it. What goes
+  inside is [evals/evals.md](../evals/evals.md) section 4's.
 
 ## 10. The map: kinds and rules, not a file list
 
@@ -457,7 +426,6 @@ there, and review is what checks it.
 - Python Packaging User Guide, "src layout vs flat layout":
   https://packaging.python.org/en/latest/discussions/src-layout-vs-flat-layout/
 - Hynek Schlawack, "Testing & Packaging", 2021: https://hynek.me/articles/testing-packaging/
-- pytest docs, "Good Integration Practices": https://docs.pytest.org/en/stable/explanation/goodpractices.html
 - Python tutorial, "The Module Search Path":
   https://docs.python.org/3/tutorial/modules.html#the-module-search-path
 - import-linter docs: https://import-linter.readthedocs.io/en/stable/
@@ -476,13 +444,6 @@ there, and review is what checks it.
   the current guide: https://angular.dev/style-guide
 - Milan Jovanović, "Vertical Slice Architecture: Where Does the Shared Logic Live?", 2025:
   https://milanjovanovic.tech/blog/vertical-slice-architecture-where-does-the-shared-logic-live
-- HackSoft Django Styleguide: https://github.com/HackSoftware/Django-Styleguide
-- Kent C. Dodds, "Colocation", 2019: https://kentcdodds.com/blog/colocation
-- Home Assistant developer docs, "Integration tests file structure":
-  https://developers.home-assistant.io/docs/creating_integration_tests_file_structure/
-- PyPI Warehouse, `tests/unit/`: https://github.com/pypi/warehouse/tree/main/tests/unit
-- pytest docs, "pytest import mechanisms and sys.path/PYTHONPATH":
-  https://docs.pytest.org/en/stable/explanation/pythonpath.html
 - Angular RFC on dropping type suffixes, 2024: https://github.com/angular/angular/discussions/58412
 - zhanymkanov, "FastAPI Best Practices": https://github.com/zhanymkanov/fastapi-best-practices
 - FastAPI full-stack template: https://github.com/fastapi/full-stack-fastapi-template
@@ -490,8 +451,6 @@ there, and review is what checks it.
   `django.utils`: https://docs.djangoproject.com/en/stable/topics/testing/overview/ ,
   https://docs.djangoproject.com/en/stable/ref/utils/
 - Python docs, `logging` LogRecord attributes: https://docs.python.org/3/library/logging.html
-- Martin Fowler, "On the Diverse And Fantastical Shapes of Testing", 2021:
-  https://martinfowler.com/articles/2021-test-shapes.html
 - uv docs, "Creating projects": https://docs.astral.sh/uv/concepts/projects/init/
 - ruff rule `TID252` and the `ban-relative-imports` setting:
   https://docs.astral.sh/ruff/rules/relative-imports/

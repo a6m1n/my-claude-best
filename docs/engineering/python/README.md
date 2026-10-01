@@ -25,11 +25,16 @@ flowchart LR
 
 - [python.md](python.md) — the principles, one per section: when each fires, what you do, and
   how anyone tells. Section 2 is where a decision and a constraint live; section 3 is strict
-  types, including closed sets of values that are never a bare `str`. Read it before you add a
-  module, a type, or a check.
+  types, including closed sets of values that are never a bare `str`; section 4 is Pydantic at the
+  edge; section 5 is the application's settings. Read it before you add a module, a type, or a
+  check.
 - [explicit-constraints-example.md](explicit-constraints-example.md) — a checkout whose one
   business rule hides inside a doer, then the same checkout with the `if` in the use case and the
   rule in its own file. Read it when you apply section 2.
+- [settings-example.md](settings-example.md) — clients that each read the environment with their
+  own defaults, then one settings class built at startup, the clients that take its values, and
+  the tests of what the class itself decides. Read it when you add or change the application's
+  settings.
 
 More principles land as sections of `python.md`, each with its own example file when the
 principle needs one.
@@ -45,19 +50,24 @@ principle needs one.
    before the code runs. In a repository that already has code, the checker reaches old code the
    way [refactoring.md](../refactoring/refactoring.md) section 10 says, not by a rewrite.
 4. Re-check the lines that name a moving target: the minimum Python version in section 1, the
-   pydantic spellings in section 2's table, the mypy and pyright flags named under it, and the
-   library versions and `typing_extensions` backports named in section 3.
+   pydantic spellings in section 2's table, the mypy and pyright flags named under it, the
+   library versions and `typing_extensions` backports named in section 3, and the pydantic and
+   pydantic-settings behaviour in sections 4 and 5, checked on the versions section 1 names.
 
 ## The point to adapt
 
-Which mechanism you reach for first is yours to decide. This folder shows the standard library
-— `enum`, `dataclasses`, `typing.assert_never` — because every repository already has it and
-nothing needs installing. A repository that already depends on pydantic should use it instead:
-it checks the field values at runtime. attrs checks a field only where you declare a validator,
-and msgspec checks when it decodes, not when you construct — on those routes, as on the standard
-library route, every value check is one you state yourself, not one the annotation gives you.
+Data from outside the process becomes a Pydantic model at the edge, and a value the code builds
+itself is a standard-library type — `enum`, `dataclasses`, `typing.assert_never` — which is what
+the checkout example shows (`python.md` section 4). A repository that parses outside data and does
+not have Pydantic adds it. attrs or msgspec stay for a library or tool that must not add a
+dependency, and a hot decode path measures first (section 4): attrs checks a field only where you
+declare a validator, and
+msgspec checks when it decodes, not when you construct, so every value check there is one you state
+yourself. The settings have no such choice: every application reads them through
+pydantic-settings, added where the repository lacks it; section 5 names where it stops holding:
+layered per-environment files, and a tool that must run on the standard library alone.
 
-The mechanism is yours; the shape is not. Which function holds the decision and which holds the
+Whatever builds the types, the shape is fixed. Which function holds the decision and which holds the
 rule is section 2 of `python.md`; which file each one lives in is
 [file-structure.md](../file-structure/file-structure.md) section 3. The check in `python.md` is the
 same whichever library builds the types.

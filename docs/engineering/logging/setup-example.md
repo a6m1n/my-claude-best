@@ -153,10 +153,14 @@ def build_logging_config(
 ```
 
 The console formatter is the default, because a person reads the log while the code is written.
-`JsonFormatter` is switched on by `LOG_FORMAT=json` once the logs go to a store searched by field
-(logging.md section 6). Both read the same Filter, so a line has the same ids in either format.
+`JsonFormatter` is switched on by `ACME_LOG_FORMAT=json` once the logs go to a store searched by
+field (logging.md section 6). Both read the same Filter, so a line has the same ids in either
+format.
 
 ## `core/config.py`: the two settings
+
+The two logging fields of the application's settings class. Its `model_config` and its other
+fields are left out; they are [python/settings-example.md](../python/settings-example.md)'s.
 
 ```python
 from pydantic_settings import BaseSettings
@@ -166,7 +170,7 @@ from acme.core.logging import LogFormat, LogLevel
 
 class Settings(BaseSettings):
     log_level: LogLevel = "INFO"
-    log_format: LogFormat = "console"  # LOG_FORMAT=json in deployed environments
+    log_format: LogFormat = "console"  # ACME_LOG_FORMAT=json in deployed environments
 ```
 
 The types reject a misspelt level or format when the process starts, not at the first log call.
@@ -184,7 +188,8 @@ from acme.core.logging import build_logging_config
 def main() -> None:
     settings = Settings()
     uvicorn.run(
-        "acme.api.app:app",
+        "acme.api.app:create_app",
+        factory=True,
         host="0.0.0.0",
         port=8000,
         log_config=build_logging_config(settings.log_level, settings.log_format),
@@ -209,6 +214,9 @@ def main() -> None:
 
     sys.exit(run(sys.argv[1:]))
 ```
+
+`run` gets only the arguments because this CLI's commands call no client; a command that does gets
+it from `main()`, built from `settings`, as `build_app` does for routes.
 
 No other file calls `dictConfig`, and no test does: pytest's `caplog` keeps working.
 
@@ -259,8 +267,11 @@ class RequestIdMiddleware:
         await self.app(scope, receive, send_with_id)
 ```
 
-`create_app()` below also builds the search client once and keeps it on `app.state`; that wiring
-is not shown.
+`create_app()` below passes `Settings()` to `build_app()`, so a test builds the app from its own,
+as in [python/settings-example.md](../python/settings-example.md). `build_app()` also builds the
+search client once from `settings` and keeps it on `app.state`, and registers the handlers for
+`RequestValidationError` and `ResponseValidationError` that [python.md](../python/python.md)
+section 4 asks for; that wiring is not shown.
 
 ```python
 # api/app.py
@@ -269,6 +280,7 @@ from fastapi.responses import JSONResponse
 
 from acme.api.middleware_request_id import RequestIdMiddleware
 from acme.api.routes_report import router as report_router
+from acme.core.config import Settings
 
 
 async def internal_error(request: Request, exc: Exception) -> JSONResponse:
@@ -276,17 +288,18 @@ async def internal_error(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse({"detail": "Internal server error"}, status_code=500)
 
 
-def create_app() -> FastAPI:
+def create_app() -> RequestIdMiddleware:
+    # Outside FastAPI's own error middleware, so the id is set first and its header reaches a 500 too.
+    return RequestIdMiddleware(build_app(Settings()))
+
+
+def build_app(settings: Settings) -> FastAPI:
     app = FastAPI()
 
     app.add_exception_handler(Exception, internal_error)
     app.include_router(report_router)
 
     return app
-
-
-# Outside FastAPI's own error middleware, so the id is set first and its header reaches a 500 too.
-app = RequestIdMiddleware(create_app())
 ```
 
 `app.add_middleware(RequestIdMiddleware)` would put it inside that error middleware: the id would
@@ -318,7 +331,7 @@ class SearchClient:
                 response = await self._http.post(
                     "/sections", json={"topic": topic}, timeout=TIMEOUT_SECONDS
                 )
-                return parse_sections(response.json())
+                return parse_sections(response.content)
             except httpx.TimeoutException:
                 if attempt == MAX_ATTEMPTS:
                     # from None: the error text could repeat the request; the attempts say enough
@@ -330,6 +343,10 @@ class SearchClient:
 
                 attempt += 1
 ```
+
+`parse_sections`, not shown, validates the bytes once with a module-level `TypeAdapter`'s
+`validate_json` and replaces a `ValidationError` with the client's own error, from None
+([python.md](../python/python.md) section 4).
 
 ```python
 # reports/report/usecase.py: this code decides what a failed search means, so it logs it, once
@@ -357,7 +374,7 @@ the one `ERROR` with the traceback. The topic, which is user text, appears in no
 
 ## What it prints
 
-With `LOG_FORMAT=console`, one request that needed a retry:
+With `ACME_LOG_FORMAT=console`, one request that needed a retry:
 
 ```
 2026-09-27 14:03:11,482 INFO     uvicorn.error [-] Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
@@ -366,7 +383,7 @@ With `LOG_FORMAT=console`, one request that needed a retry:
 2026-09-27 14:03:16,021 INFO     uvicorn.access [7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12] 192.0.2.10:53211 - "POST /reports HTTP/1.1" 200
 ```
 
-The same `Report 81 generated` line with `LOG_FORMAT=json`:
+The same `Report 81 generated` line with `ACME_LOG_FORMAT=json`:
 
 ```json
 {"request_id": "7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12", "thread_id": "-", "trace_id": "-", "sections": 6, "ts": "2026-09-27T14:03:16.020+00:00", "level": "INFO", "logger": "acme.reports.report.usecase", "message": "Report 81 generated", "template": "Report %s generated"}

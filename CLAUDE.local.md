@@ -26,11 +26,13 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   requests.
 - Before you write or change Python — a module, a type, a check on data coming in — read
   `docs/engineering/python/python.md`, and
-  `docs/engineering/python/explicit-constraints-example.md` when you place a constraint. The
-  check: every constraint the change introduces is stated on the type or signature that carries
-  it, what enforces it is a runtime mechanism or a checker the CI runs and fails on, and no
-  parameter or field the change adds that carries a value of a closed set is a bare `str`
-  (`python.md` section 3).
+  `docs/engineering/python/explicit-constraints-example.md` when you place a constraint,
+  `docs/engineering/python/settings-example.md` when you add or change the application's
+  settings. The check: every constraint the change introduces is stated on the type or signature
+  that carries it, what enforces it is a runtime mechanism or a checker the CI runs and fails on,
+  no parameter or field the change adds that carries a value of a closed set is a bare `str`
+  (`python.md` section 3), and nothing the change adds reads the environment outside the
+  settings class (`python.md` section 5).
 - Before a change edits code that already exists (a feature, a fix, a move to a practice, a
   restructure), or turns on a new rule, read `docs/engineering/refactoring/refactoring.md`, and
   `docs/engineering/refactoring/adoption-example.md` when a practice change has to reach old
@@ -68,6 +70,20 @@ repo is what gets fixed, the way `docs/engineering/refactoring/refactoring.md` s
   the model a call site uses. The check: every model call the change adds or edits takes its model
   and its reasoning effort from `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort`
   constants (the effort where the model has one) and gets its answer through a response schema.
+- Before you write or change a test, a fixture, a `conftest.py` or the pytest configuration, read
+  `docs/engineering/testing/README.md` and the file it routes to for that work, and
+  `docs/engineering/testing/suite-example.md` when you set up a suite or add a module's first
+  tests. The check: every test file the change adds sits at the path `layout.md` section 3 gives
+  it and holds one `Test<Unit>` class, every fixture it adds states `scope=`, and
+  `grep -rn autouse --include='*.py' tests/` prints nothing.
+- Before you change a prompt, a tool definition, the model or its settings, the retrieval or an
+  agent's graph, or add a check on what a model answers, read `docs/engineering/evals/README.md`
+  and the file it routes to for that work, and `docs/engineering/evals/case-set-example.md` when
+  you write a module's first eval, `docs/engineering/evals/judge-example.md` when you write a judge,
+  `docs/engineering/evals/agent-eval-example.md` when you test an agent. The check: the pull
+  request's Verification holds the eval's result next to its baseline, every rate the eval reports
+  is divided by the cases it asked for, and every judge that gates has its TPR and TNR on held-back
+  labels.
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`
