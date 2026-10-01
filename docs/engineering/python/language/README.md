@@ -1,4 +1,4 @@
-# Python practices
+# Python language practices
 
 How to write Python in which the reader sees, at the line in front of them, what a value is and
 which path runs: the business decision is an `if` in the use case, the rule it asks is a named

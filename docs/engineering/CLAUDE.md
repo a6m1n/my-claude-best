@@ -1,12 +1,14 @@
 # docs/engineering — writing and editing a practice
 
 Each practice here is a folder named by the topic, never a bare file: the way one kind of work
-should be done, in any repository. Every folder `ls -d docs/engineering/*/` prints is one. This
-file is the contract for writing them, and a folder's `README.md` is its map; the practice docs
-are a folder's rules file, or rules files, and its example files. An example is anything a reader
-may copy: an `*-example.md` file, or a tree, a diagram, a code snippet or a message inside a rules
-file or a `README.md`. A BAD example is one shown as the form to avoid: labelled Bad or Before,
-or named by its rule as the wrong form. Every other example is a GOOD example.
+should be done, in any repository. It sits in a group folder: `any-language/`, or the folder of
+the one language its rules are for, such as `python/`. Every folder `ls -d docs/engineering/*/*/`
+prints is a practice. This file is the contract for writing them, and a practice folder's
+`README.md` is its map; the practice docs are a folder's rules file, or rules files, and its
+example files. An example is anything a reader may copy: an `*-example.md` file, or a tree, a
+diagram, a code snippet or a message inside a rules file or a `README.md`. A BAD example is one
+shown as the form to avoid: labelled Bad or Before, or named by its rule as the wrong form. Every
+other example is a GOOD example.
 
 ## The contract
 
@@ -34,7 +36,14 @@ or named by its rule as the wrong form. Every other example is a GOOD example.
   per artifact type; never a bare file, even before the examples exist. A topic whose subjects a
   reader looks up apart, such as testing, has one rules file per subject, and its `README.md`
   says which file to read for which work.
-- A rule has one owner: the practice whose topic it is, as each folder's `README.md` says.
+- Before you create a practice folder, pick its group by its rules, not by its examples. When
+  every rule holds in any language, and only the examples, commands or tool names are in one
+  language, it goes under `any-language/`. When its rules name one language's own modules,
+  libraries or tools, it goes under that language's folder, such as `python/`; a language or
+  framework with no folder yet gets one, named by it in lower case (`react/`). A group folder
+  holds practice folders and nothing else. The check: before you stage,
+  `find docs/engineering -maxdepth 2 -name '*.md'` prints only `docs/engineering/CLAUDE.md`.
+- A rule has one owner: the practice whose topic it is, as each practice folder's `README.md` says.
   When one practice needs a rule another owns, link that practice's file and section, and never
   write the rule's conditions or its check again. Where two practices disagree, the owner's
   text stands and the other one changes. The check: before you stage, every sentence in the

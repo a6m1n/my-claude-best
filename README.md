@@ -4,7 +4,7 @@ Engineering practices that people and AI coding agents both follow, plus a statu
 
 [![License: CC BY 4.0 for the text, MIT for the code](https://img.shields.io/badge/license-CC%20BY%204.0%20text%20%2B%20MIT%20code-blue)](#license)
 [![Works with agents that read CLAUDE.md or AGENTS.md](https://img.shields.io/badge/works%20with-CLAUDE.md%20and%20AGENTS.md%20agents-blue)](#getting-started)
-[![Code examples in Python](https://img.shields.io/badge/examples-Python-blue)](docs/engineering/python/language/)
+[![Code examples in Python](https://img.shields.io/badge/examples-Python-blue)](docs/engineering/python/)
 [![Issues welcome](https://img.shields.io/badge/issues-welcome-brightgreen)](CONTRIBUTING.md)
 
 **Navigation**
@@ -31,18 +31,18 @@ With this line in your `CLAUDE.md`, the agent opens `git.md` before its first gi
 
 It is for teams that write code with an AI coding agent. The code examples are in Python. The practices are Markdown, so there is nothing to build or install. Every name in the examples is invented.
 
-The practices, in the order to read them:
+The practices sit in two group folders. `any-language/` holds the ones whose rules work in any language; their examples are in Python. `python/` holds the ones whose rules name Python's own tools. In the order to read them:
 
-- [git](docs/engineering/any-language/git/) — branches, commits, pull requests and merging, with no rewriting of pushed history.
-- [python](docs/engineering/python/language/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
-- [refactoring](docs/engineering/any-language/refactoring/) — how old code reaches a practice without a rewrite of the whole repository.
-- [file-structure](docs/engineering/any-language/file-structure/) — where code lives in an application, and file names that say what a file holds.
-- [logging](docs/engineering/python/logging/) — how a Python application logs through the standard `logging` module.
-- [readability](docs/engineering/any-language/readability/) — how one function or class reads.
-- [static-checks](docs/engineering/python/static-checks/) — the formatter, the linter, a strict type checker and import contracts, run the same way in hooks and in CI.
-- [prompt-engineering](docs/engineering/any-language/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
-- [testing](docs/engineering/python/testing/) — which code earns a test, and how a pytest suite is laid out and written.
-- [evals](docs/engineering/any-language/evals/) — how to check what a language model does in an application, with real calls on real cases.
+- [any-language/git](docs/engineering/any-language/git/) — branches, commits, pull requests and merging, with no rewriting of pushed history.
+- [python/language](docs/engineering/python/language/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
+- [any-language/refactoring](docs/engineering/any-language/refactoring/) — how old code reaches a practice without a rewrite of the whole repository.
+- [any-language/file-structure](docs/engineering/any-language/file-structure/) — where code lives in an application, and file names that say what a file holds.
+- [python/logging](docs/engineering/python/logging/) — how a Python application logs through the standard `logging` module.
+- [any-language/readability](docs/engineering/any-language/readability/) — how one function or class reads.
+- [python/static-checks](docs/engineering/python/static-checks/) — the formatter, the linter, a strict type checker and import contracts, run the same way in hooks and in CI.
+- [any-language/prompt-engineering](docs/engineering/any-language/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
+- [python/testing](docs/engineering/python/testing/) — which code earns a test, and how a pytest suite is laid out and written.
+- [any-language/evals](docs/engineering/any-language/evals/) — how to check what a language model does in an application, with real calls on real cases.
 
 Two more parts are about Claude Code itself:
 
@@ -85,7 +85,7 @@ The steps use the git practice. Every practice is adopted the same way. Its `REA
 
    It prints a short commit id, such as `1a2b3c4`. Put it in the message of the commit that adds the folder: you compare against it later.
 
-2. Copy the practice folder into your project, at the same path:
+2. Copy the practice folder into your project, at the same path, group folder included. The links from one practice to another count on that path:
 
    ```bash
    mkdir -p ../your-project/docs/engineering/any-language
@@ -120,19 +120,21 @@ The status line keeps the numbers you would otherwise ask Claude Code for. It sh
 ```
 my-claude-best/
 ├── docs/
-│   ├── engineering/     # the practices, one folder each, and CLAUDE.md: the contract for writing one
-│   └── claude-code/     # guides on instructing Claude Code
+│   ├── engineering/       # the practices, and CLAUDE.md: the contract for writing one
+│   │   ├── any-language/  # practices whose rules work in any language, one folder each
+│   │   └── python/        # practices whose rules name Python's own tools, one folder each
+│   └── claude-code/       # guides on instructing Claude Code
 ├── claude-config/
-│   └── statusline/      # the status line: the script, its install guide, its images
-├── skills/              # planned skills to read and copy; none yet
-├── CLAUDE.local.md      # an example practices section for a project CLAUDE.md
+│   └── statusline/        # the status line: the script, its install guide, its images
+├── skills/                # planned skills to read and copy; none yet
+├── CLAUDE.local.md        # an example practices section for a project CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
-├── LICENSE              # CC BY 4.0, for the text
-└── LICENSE-CODE         # MIT, for the code
+├── LICENSE                # CC BY 4.0, for the text
+└── LICENSE-CODE           # MIT, for the code
 ```
 
-Every practice folder has the same shape. It holds a `README.md` that maps the folder and says how to adopt it, one or more rules files, and `*-example.md` files with worked examples. Run `ls docs/engineering` for the practice folders.
+Every practice folder has the same shape. It holds a `README.md` that maps the folder and says how to adopt it, one or more rules files, and `*-example.md` files with worked examples. Run `ls -d docs/engineering/*/*/` for the practice folders.
 
 ## Where to get help
 

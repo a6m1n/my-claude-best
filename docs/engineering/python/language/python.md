@@ -1,4 +1,4 @@
-# Python rules
+# Python language rules
 
 **Navigation**
 

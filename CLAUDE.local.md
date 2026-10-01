@@ -14,9 +14,9 @@ bullet per practice folder you took.
 A practice describes the practice, never this repo. Where the repo and a practice disagree, the
 repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refactoring.md` says.
 
-- Before you change anything in an area that has a folder under `docs/engineering/`, read that
-  folder's rules file first and work by it. The check: the closing summary names the practice
-  file you read.
+- Before you change anything in an area that has a practice folder under `docs/engineering/`,
+  read that practice's rules file first and work by it. The check: the closing summary names the
+  practice file you read.
 - Before any git operation (branch, commit, merge, push, pull request, conflict), read
   `docs/engineering/any-language/git/git.md`. Write the commit message by
   `docs/engineering/any-language/git/commit-example.md`, the pull request by
@@ -89,9 +89,10 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`
   defines one), read the rules on examples in `docs/engineering/CLAUDE.md` and work by them. The
   check: the closing summary has the lines that file's GOOD-example bullet asks for.
-- Every practice under `docs/engineering/` is a folder named by the topic, never a bare file.
-  Before you stage a change that adds or removes one, run `ls -d docs/engineering/*/` and
-  `ls docs/engineering/*.md`: every folder the first prints has a bullet that names it in this
-  section, in the shape above (the moment, the file, the check), and the second prints nothing
-  but `CLAUDE.md`.
+- Every practice under `docs/engineering/` is a folder named by the topic, never a bare file,
+  inside a group folder: `any-language/`, or a language's own folder such as `python/`
+  (`docs/engineering/CLAUDE.md` says which). Before you stage a change that adds or removes one,
+  run `ls -d docs/engineering/*/*/` and `find docs/engineering -maxdepth 2 -name '*.md'`: every
+  folder the first prints has a bullet that names it in this section, in the shape above (the
+  moment, the file, the check), and the second prints nothing but `docs/engineering/CLAUDE.md`.
 ```
