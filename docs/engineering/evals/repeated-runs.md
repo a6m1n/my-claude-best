@@ -101,6 +101,25 @@ with async tests and with every other plugin, and shows every answer when it fai
 
 ```python
 # tests/integration/triage/test_service_triage.py
+def kind_or_model_failure(
+    ticket_text: str, client: AcmeAiClient
+) -> TicketKind | ModelRefused | ModelOutputCutOff | ModelAnswerInvalid:
+    """One run's kind, or the model's own failure, which counts as a wrong kind.
+
+    ModelUnavailable, the provider's failure, is not caught: the test fails on it as
+    an error of the run (evals.md section 6).
+    """
+    try:
+        return triage_ticket(
+            ticket_text,
+            client,
+            model=TRIAGE_LLM_MODEL,
+            reasoning_effort=TRIAGE_LLM_REASONING_EFFORT,
+        ).kind
+    except (ModelRefused, ModelOutputCutOff, ModelAnswerInvalid) as exc:
+        return exc
+
+
 @pytest.mark.live_model
 class TestTriageTicket:
     """The triage call files a ticket under its kind."""
@@ -109,12 +128,7 @@ class TestTriageTicket:
         self, uncached_model_client: AcmeAiClient
     ) -> None:
         kinds = [
-            triage_ticket(
-                CRASH_ON_EXPORT,
-                uncached_model_client,
-                model=TRIAGE_LLM_MODEL,
-                reasoning_effort=TRIAGE_LLM_REASONING_EFFORT,
-            ).kind
+            kind_or_model_failure(CRASH_ON_EXPORT, uncached_model_client)
             for _ in range(3)
         ]
 
@@ -122,8 +136,13 @@ class TestTriageTicket:
 ```
 
 The client, the fixture and the call are those of
-[running-tests.md](../testing/running-tests.md) section 10; pytest's report prints the list of
-kinds, so a red run shows every answer. The loop always makes three calls.
+[running-tests.md](../testing/running-tests.md) section 10, and the `acme.core.errors` classes those
+of [prompt-example.md](../prompt-engineering/prompt-example.md). A refusal, an answer cut off or one
+that does not parse is the model's own answer, so `kind_or_model_failure` puts it in the list in
+place of a kind, and it counts as a wrong one. Only `ModelUnavailable`, the provider's failure,
+raises, and the test fails on it as an error of the run ([evals.md](evals.md) section 6). pytest's
+report prints the list, so a red run shows every answer, and the loop makes three calls unless the
+provider fails.
 
 **Optional.** The `flaky` plugin's decorator, `@flaky(max_runs=3, min_passes=2)`, imported with
 `from flaky import flaky`. It stops as soon as the rule is decided, so a case that passes twice

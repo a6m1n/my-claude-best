@@ -95,8 +95,10 @@ from deepeval.metrics import GEval
 from deepeval.models import OpenAIModel
 from deepeval.test_case import LLMTestCase, SingleTurnParams
 from langchain_core.messages import AnyMessage, HumanMessage, ToolMessage
+from langgraph.errors import GraphRecursionError
 
 from acme.core.config import Settings
+from acme.core.errors import ModelAnswerInvalid, ModelOutputCutOff, ModelRefused
 from acme.support.chat.graph import ChatAgent
 
 QUESTION: Final = "Where is order A-1042?"
@@ -127,6 +129,35 @@ def tool_results(messages: Iterable[AnyMessage]) -> list[str]:
     return [message.text for message in messages if isinstance(message, ToolMessage)]
 
 
+async def judged_run(agent: ChatAgent, judge: GEval) -> bool | Exception | None:
+    """One run of the agent, judged; a run the agent ended without its reply fails.
+
+    That failure comes back in place of a verdict, so a red run shows it.
+    ModelUnavailable and an error of the judge raise: errors of the run
+    (evals.md section 6).
+    """
+    try:
+        output = await agent.ainvoke(
+            {"messages": [HumanMessage(QUESTION)]}, version="v2"
+        )
+    except (
+        GraphRecursionError,
+        ModelRefused,
+        ModelOutputCutOff,
+        ModelAnswerInvalid,
+    ) as exc:
+        return exc
+
+    test_case = LLMTestCase(
+        input=QUESTION,
+        actual_output=output.value["structured_response"].text,
+        context=tool_results(output.value["messages"]),
+    )
+    await judge.a_measure(test_case)
+
+    return judge.is_successful()
+
+
 @pytest.mark.live_model
 class TestBuildAgent:
     """The support agent's replies keep to what the order store says."""
@@ -134,25 +165,19 @@ class TestBuildAgent:
     async def test_a_processing_order_gets_no_promise_of_a_date_in_two_runs_of_three(
         self, chat_agent: ChatAgent, keeps_to_order_status: GEval
     ) -> None:
-        verdicts: list[bool | None] = []
-        for _ in range(RUNS_PER_CASE):
-            output = await chat_agent.ainvoke(
-                {"messages": [HumanMessage(QUESTION)]}, version="v2"
-            )
-            test_case = LLMTestCase(
-                input=QUESTION,
-                actual_output=output.value["structured_response"].text,
-                context=tool_results(output.value["messages"]),
-            )
-            await keeps_to_order_status.a_measure(test_case)
-            verdicts.append(keeps_to_order_status.is_successful())
+        verdicts = [
+            await judged_run(chat_agent, keeps_to_order_status)
+            for _ in range(RUNS_PER_CASE)
+        ]
 
         assert verdicts.count(True) >= 2
 ```
 
 The names are those of DeepEval 4.2.7; the agent, its fixture and `REPLY_JUDGE_LLM_MODEL` are cut
 here, [agent-eval-example.md](agent-eval-example.md) builds the agent, and `openai_api_key` is the
-settings field of [logging/agent-example.md](../logging/agent-example.md). The test is async
+settings field of [logging/agent-example.md](../logging/agent-example.md); `GraphRecursionError` is
+LangGraph's, and the `acme.core.errors` classes the agent's middlewares raise are those of
+[logging/agent-example.md](../logging/agent-example.md). The test is async
 because the agent is ([agent-eval-example.md](agent-eval-example.md) says why), so it awaits the
 agent and DeepEval's `a_measure`. The judge's context is what the run's tools returned, not a copy
 of the fixture's data, so the reply is judged against the facts the agent saw
@@ -182,7 +207,11 @@ follow the method:
   ([running-tests.md](../testing/running-tests.md) section 10).
 - **Should. Three runs, and the passes counted** ([repeated-runs.md](repeated-runs.md) section 5):
   one run of one case decides nothing, and `assert_test` decides one case on one run. The metric
-  stays advisory, never alone in a gate, until [judges.md](judges.md) sections 6 and 9 hold.
+  stays advisory, never alone in a gate, until [judges.md](judges.md) sections 6 and 9 hold. A run
+  the agent ended without its reply, at its step limit, on a refusal, or on an answer cut off or
+  one that does not parse, is a failed run, not an error ([evals.md](evals.md) section 6):
+  `judged_run` puts it in the list in place of a verdict. `ModelUnavailable` and an error of the
+  judge raise, and the test fails on them as errors of the run.
 - **Should. Run it with `deepeval test run <file>`**, the documented entry point, and pin a release
   after April 2026, when a fix made it pass pytest's failing exit codes through to CI.
 - **Must. Validate the metric** on your labels before it gates ([judges.md](judges.md) section 6):

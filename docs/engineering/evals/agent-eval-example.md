@@ -281,10 +281,10 @@ successful run lowers them in the pull request that shows it. Its seconds are th
 of the case's successful runs at `CHAT_EVAL_MAX_CONCURRENCY`, never the fastest run.
 
 ```python
-# evals/chat/schemas.py, next to Verdict, Split, PromiseVerdict and LabelledReply
-# of judge-example.md, with PositiveInt, NonNegativeInt, PositiveFloat and
-# model_validator imported from pydantic, OrderStatus from acme.core.order_store_client,
-# Self from typing, and dataclass from dataclasses
+# evals/chat/schemas.py, next to Verdict, Split, NoVerdict, PromiseVerdict and
+# LabelledReply of judge-example.md, with PositiveInt, NonNegativeInt,
+# PositiveFloat and model_validator imported from pydantic, OrderStatus from
+# acme.core.order_store_client, Self from typing, and dataclass from dataclasses
 @unique
 class ToolName(StrEnum):
     FIND_ORDER = "find_order"

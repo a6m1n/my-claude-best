@@ -122,6 +122,14 @@ class Split(StrEnum):
     TEST = "test"  # held back: the judge is measured on these only
 
 
+@unique
+class NoVerdict(StrEnum):
+    """Why the judge gave no verdict on a labelled reply (evals.md section 6)."""
+
+    JUDGE_FAILED = "judge_failed"  # refused, cut off or unparsable: a wrong verdict
+    PROVIDER_FAILED = "provider_failed"  # an error of the run, never a verdict
+
+
 class PromiseVerdict(BaseModel):
     """The judge's answer; the client sends its JSON schema as the response format."""
 
@@ -148,8 +156,8 @@ class LabelledReply(BaseModel):
 `evidence` comes before `verdict`, and it is a quote, not free reasoning: citing the evidence before
 the verdict is what held judges to it ([judges.md](judges.md) section 4), and the reasoning field
 comes first ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 12). The
-verdict and the split are closed sets, so they are enums, and the order's status is the store's
-closed set, so it is typed as the store client's `OrderStatus`
+verdict, the split and the reason for no verdict are closed sets, so they are enums, and the order's
+status is the store's closed set, so it is typed as the store client's `OrderStatus`
 ([python.md](../python/python.md) section 3), and `None` marks a reply the agent gave when it saw no
 order's status.
 
@@ -245,7 +253,7 @@ from evals.chat.consts import (
     UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT,
 )
 from evals.chat.judge_unsupported_promise import judge_unsupported_promise
-from evals.chat.schemas import LabelledReply, Split, Verdict
+from evals.chat.schemas import LabelledReply, NoVerdict, Split, Verdict
 
 LABELS_FILE: Final = Path(__file__).with_name("labels_unsupported_promise.jsonl")
 # The gate's needs: at least 0.9 of real passes passed and of real fails failed, a
@@ -255,8 +263,9 @@ MIN_TPR: Final = 0.9
 MIN_TNR: Final = 0.9
 MIN_LABELS_PER_VERDICT: Final = 30
 
-# A judged reply lands in one of these: the label, then the judge's verdict, or None on an error.
-Outcome: TypeAlias = tuple[Verdict, Verdict | None]
+# A judged reply lands in one of these: the label, then the judge's verdict or why it
+# gave none.
+Outcome: TypeAlias = tuple[Verdict, Verdict | NoVerdict]
 
 logger = logging.getLogger(__name__)
 
@@ -306,16 +315,17 @@ def _judge(labelled: LabelledReply, client: AcmeAiClient) -> Outcome:
             model=UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL,
             reasoning_effort=UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT,
         )
-    except (
-        ModelUnavailable,
-        ModelRefused,
-        ModelOutputCutOff,
-        ModelAnswerInvalid,
-    ) as exc:
-        # Counted apart, never dropped: a judge that fails on hard replies must not look better.
+    except (ModelRefused, ModelOutputCutOff, ModelAnswerInvalid) as exc:
+        # The judge's own answer: a wrong verdict, counted against TPR or TNR.
         # The error names only the model, never the reply (logging.md section 10).
+        logger.warning("Reply %s got no verdict: %s", labelled.reply_id, exc)
+
+        return (labelled.label, NoVerdict.JUDGE_FAILED)
+    except ModelUnavailable as exc:
+        # The provider's failure: an error of the run, which fails the check.
         logger.warning("Reply %s not judged: %s", labelled.reply_id, exc)
-        return (labelled.label, None)
+
+        return (labelled.label, NoVerdict.PROVIDER_FAILED)
 
     return (labelled.label, judged.verdict)
 
@@ -333,7 +343,11 @@ def _scores(outcomes: Counter[Outcome]) -> JudgeScores:
     return JudgeScores(
         real_passes=real_passes,
         real_fails=real_fails,
-        errors=sum(count for (_, judged), count in outcomes.items() if judged is None),
+        errors=sum(
+            count
+            for (_, judged), count in outcomes.items()
+            if judged is NoVerdict.PROVIDER_FAILED
+        ),
         tpr=passed_passes / real_passes if real_passes else 0.0,
         tnr=failed_fails / real_fails if real_fails else 0.0,
     )
@@ -353,7 +367,8 @@ def _may_gate(scores: JudgeScores) -> bool:
 def _report(outcomes: Counter[Outcome], scores: JudgeScores) -> str:
     lines = [
         f"label {label}: judge pass {outcomes[(label, Verdict.PASS)]}, "
-        f"judge fail {outcomes[(label, Verdict.FAIL)]}"
+        f"judge fail {outcomes[(label, Verdict.FAIL)]}, "
+        f"no verdict {outcomes[(label, NoVerdict.JUDGE_FAILED)]}"
         for label in Verdict
     ]
     lines.append(
@@ -374,11 +389,14 @@ Why it looks like this:
   on the dev split, so a score on it would flatter the judge.
 - **The two-by-two table, TPR and TNR**, not raw agreement: a judge that passes everything has high
   agreement when most replies pass, and a TNR of zero.
-- **Every label counted**: a judge call that fails is an error of the run, reported by count and
-  failing the check, never dropped ([evals.md](evals.md) section 6). `_judge` decides to set the
-  reply aside, so it logs it once, with the reply's id ([logging.md](../logging/logging.md)
-  section 5). The errors are the client's named errors, which carry no reply text
-  ([logging.md](../logging/logging.md) section 10), and the printout holds counts only.
+- **Every label counted** ([evals.md](evals.md) section 6): a refusal, an answer cut off or one that
+  does not parse is the judge's own answer on that reply, so it is a wrong verdict. It counts
+  against TPR or TNR, and the report shows it as "no verdict". Only `ModelUnavailable`, the
+  provider's failure, is an error of the run: it is counted apart and fails the check, never
+  dropped. `_judge` decides both, so it logs each once, with the reply's id
+  ([logging.md](../logging/logging.md) section 5). The errors are the client's named errors, which
+  carry no reply text ([logging.md](../logging/logging.md) section 10), and the printout holds
+  counts only.
 - **Counting, deciding and reporting are three functions**: `_scores` counts, `_may_gate` decides,
   `_report` writes the text ([readability.md](../readability/readability.md) section 2). The report
   is the command's output, so it goes to stdout through the one `print`, whose suppression names its
@@ -428,4 +446,5 @@ it. A judge that fails the bar is not rescued by a lower bar: change its prompt 
 or its model, or leave the criterion to a person.
 Thirty labels per verdict, the lower end of [judges.md](judges.md) section 6, still leave a wide
 error: one miss moves a rate by about 0.03, so a team that lets this judge gate a change labels
-more outputs.
+more outputs. The gate counts the held-back labels only; the dev split's 30 to 50 of each verdict
+is kept by whoever labels, and no code here checks it or the upper bound of 50.
