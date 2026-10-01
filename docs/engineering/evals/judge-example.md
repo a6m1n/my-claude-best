@@ -21,7 +21,7 @@ What each part does:
 
 ```python
 # evals/chat/consts.py
-"""The settings of the chat module's eval and its judges."""
+"""The settings of the chat module's judges; they change together, when a judge's model changes."""
 
 from typing import Final
 
@@ -76,10 +76,8 @@ USER: Final = """\
 Judge this reply."""
 
 # Stands in <order_status> when the agent saw no order's status: it looked up none,
-# or the id matched none.
-NO_ORDER_STATUS: Final = (
-    "No order found: none was looked up, or the id matched no order."
-)
+# the id matched none, or the store did not answer.
+NO_ORDER_STATUS: Final = "No order status: the agent saw none."
 ```
 
 Why it looks like this:
@@ -218,10 +216,12 @@ both well represented, split into examples, dev and test; the dev and the test s
 to 90 of them, about 40 of each verdict, inside the 30 to 50 of each verdict that
 [judges.md](judges.md) section 6 asks for.
 
-A reply the agent gave when it found no order has `order_status` null; the judge reads
+A reply the agent gave when it saw no order's status has `order_status` null; the judge reads
 `NO_ORDER_STATUS` for it, as it does in [agent-eval-example.md](agent-eval-example.md). The test
 split holds such replies of both verdicts, because the agent's eval gates on them
-([judges.md](judges.md) section 6).
+([judges.md](judges.md) section 6). The two null labels shown answer an order not found; a real set
+also labels replies given when the agent looked up no order or the store was down, which the
+agent's `no-order-id` and `store-down` cases produce.
 
 ## `evals/chat/experiment_judge_unsupported_promise.py`: is the judge good enough?
 

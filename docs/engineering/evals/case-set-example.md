@@ -22,7 +22,7 @@ What each part does:
 ## `evals/triage/cases_triage.jsonl`: the cases
 
 ```json
-{"case_id": "crash-on-export", "ticket_text": "Since 2 March the CSV export fails with error 500.", "kind": "bug", "problem_first_occurred_on": "2026-03-02"}
+{"case_id": "crash-on-export", "ticket_text": "Since 2 March 2026 the CSV export fails with error 500.", "kind": "bug", "problem_first_occurred_on": "2026-03-02"}
 {"case_id": "dark-mode-wish", "ticket_text": "Please add a dark mode to the dashboard.", "kind": "feature_request", "problem_first_occurred_on": null}
 {"case_id": "excel-called-a-bug", "ticket_text": "Bug: export does not support Excel, only CSV.", "kind": "feature_request", "problem_first_occurred_on": null}
 {"case_id": "vague-date", "ticket_text": "About a week ago the totals on invoices started to be wrong.", "kind": "bug", "problem_first_occurred_on": null}
@@ -388,8 +388,9 @@ name: evals
 on:
   pull_request:
     paths:
-      - "src/acme/support/triage/prompts.py"
-      - "src/acme/support/triage/consts.py"
+      - "src/acme/support/triage/**"
+      - "src/acme/core/acme_ai_client.py"
+      - "evals/rate_gate.py"
       - "evals/triage/**"
   schedule:
     - cron: "0 3 * * *"
@@ -410,20 +411,25 @@ jobs:
         env:
           # A key of its own, in a project with a monthly spend limit (evals.md section 8).
           ACME_ACME_AI_API_KEY: ${{ secrets.EVALS_ACME_AI_API_KEY }}
-          ACME_LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
-          ACME_LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          # The keys of a Langfuse project for evals only, never production's.
+          ACME_LANGFUSE_PUBLIC_KEY: ${{ secrets.EVALS_LANGFUSE_PUBLIC_KEY }}
+          ACME_LANGFUSE_SECRET_KEY: ${{ secrets.EVALS_LANGFUSE_SECRET_KEY }}
           ACME_LANGFUSE_BASE_URL: ${{ vars.LANGFUSE_BASE_URL }}
           ACME_GIT_COMMIT: ${{ github.sha }}
 ```
 
-A pull request that changes the triage prompt or its model runs the eval, and so does every night:
-the schedule catches a change on the vendor's side that no pull request made
-([evals.md](evals.md) section 8). A `RegressionError` ends the module with an error, so the job
-fails. The key belongs to a project with a spend limit, because nobody watches the nightly run.
+A pull request that changes what the triage call sends or how its run is graded runs the eval: the
+triage module (its prompt, its response schema, its model), the one client, the rate gate or the
+case set. So does every night: the schedule catches a change on the vendor's side that no pull
+request made ([evals.md](evals.md) section 8). A `RegressionError` ends the module with an error,
+so the job fails. The key belongs to a project with a spend limit, because nobody watches the
+nightly run. The Langfuse keys belong to a project of their own, because a project's keys read
+every trace in it, and this job runs the pull request's code.
 `Settings` reads each field from `ACME_` plus the field's name in upper case
 ([python/settings-example.md](../python/settings-example.md)), so `acme_ai_api_key` comes from
 `ACME_ACME_AI_API_KEY`. The job must also set every other required field of the application's
-`Settings`, such as the database and payments fields of that example; this snippet leaves them out.
+`Settings`, such as the database and payments fields of that example, with throwaway values, never
+the real secrets; this snippet leaves them out.
 The checkout, the uv setup and the read-only token are those of
 [static-checks/setup-example.md](../static-checks/setup-example.md): the job holds a paid key, so
 the token does not stay in `.git/config`.

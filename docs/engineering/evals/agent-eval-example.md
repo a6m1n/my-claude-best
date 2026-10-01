@@ -278,7 +278,7 @@ order's id. The last case has no order id: the right action is to ask for one, s
 The budget's counts are those of the shortest successful run known for the case: one model call
 that asks for the tool, one tool call, and one model call that writes the reply; a shorter
 successful run lowers them in the pull request that shows it. Its seconds are the 90th percentile
-of the case's successful runs at `CHAT_EVAL_MAX_CONCURRENCY`, never the fastest run.
+of the case's successful runs at the eval's `MAX_CONCURRENCY`, never the fastest run.
 
 ```python
 # evals/chat/schemas.py, next to Verdict, Split, NoVerdict, PromiseVerdict and
@@ -401,13 +401,6 @@ judge a status the agent never saw. How a run ended is a closed set, so `RunEnd`
 ([python.md](../python/python.md) section 3), and a run that did not end on its reply is still a
 `ChatRun`, so it is graded, never dropped ([evals.md](evals.md) section 6).
 
-```python
-# evals/chat/consts.py, below the judge's model constants
-# How many runs of the eval run at once. The seconds of a run are wall-clock at this
-# concurrency, so a time budget is compared only with runs at the same concurrency.
-CHAT_EVAL_MAX_CONCURRENCY: Final = 5
-```
-
 ## `evals/chat/experiment_chat.py`: the agent's eval
 
 ```python
@@ -445,7 +438,6 @@ from acme.core.order_store_client import OrderStatus
 from acme.support.chat.consts import SUPPORT_CHAT_LLM_MODEL
 from acme.support.chat.graph import build_agent
 from evals.chat.consts import (
-    CHAT_EVAL_MAX_CONCURRENCY,
     UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL,
     UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT,
 )
@@ -465,6 +457,10 @@ from tests.support.fake_order_store import FakeOrderStore
 
 CASES_FILE: Final = Path(__file__).with_name("cases_chat.jsonl")
 RUNS_PER_CASE: Final = 3
+# How many runs are in flight at once in the one event loop. A run's seconds are
+# wall-clock at this concurrency, so a time budget is compared only with runs at the same
+# concurrency.
+MAX_CONCURRENCY: Final = 5
 # The pass rates of the version on main, the headline first. The pull request that changes them
 # explains why.
 BASELINE: Final[Mapping[Criterion, float]] = {
@@ -513,7 +509,7 @@ def run_chat_eval(context: RunnerContext, settings: Settings) -> ExperimentResul
         ],
         composite_evaluator=task_succeeded,
         run_evaluators=[within_budget, tokens_per_success],
-        max_concurrency=CHAT_EVAL_MAX_CONCURRENCY,
+        max_concurrency=MAX_CONCURRENCY,
         # The prompts are in git, so the commit is their version (evals.md section 9).
         metadata={
             "model": SUPPORT_CHAT_LLM_MODEL,
@@ -721,7 +717,10 @@ def within_budget(
 def tokens_per_success(
     *, item_results: list[ExperimentItemResult], **kwargs: object
 ) -> Evaluation:
-    """The tokens of every run, divided by the runs that succeeded."""
+    """Tokens of the runs that replied, divided by the runs that succeeded.
+
+    A run the model ended early carries no token count, so the figure is a floor.
+    """
     runs = [run.output for run in item_results if isinstance(run.output, ChatRun)]
     tokens = sum(run.usage.tokens for run in runs)
     successes = len(_successful_runs(item_results))
@@ -787,16 +786,22 @@ Why it looks like this:
 - **Task success first** ([agents.md](agents.md) section 2): `task_succeeded` is a composite
   evaluator, which Langfuse runs after the item evaluators with their results. A run succeeds when
   every criterion was graded and passed, and its rate leads the baseline. The other rates show where
-  a failed run went wrong.
+  a failed run went wrong. `BASELINE` holds the rates of main's last run, not of the old version run
+  again in this job, which departs from [evals.md](evals.md) section 7; why is under
+  [What this example does not claim](#what-this-example-does-not-claim).
 - **Budget and cost, read under the headline** ([agents.md](agents.md) section 2): each case carries
   a budget, the counts of its shortest successful run and the 90th percentile of its successful
   runs' seconds, and `_run_agent` counts the model calls, tool calls, tokens and seconds from the
   run's messages and the clock it is given; the duration is part of what it returns, so the clock
-  is a parameter ([readability.md](../readability/readability.md) section 6). Two run evaluators, which Langfuse runs once over all the results, report the share of
-  successful runs inside their budget and the tokens per successful run against main's figure.
+  is a parameter ([readability.md](../readability/readability.md) section 6). Two run evaluators,
+  which Langfuse runs once over all the results, report the share of successful runs inside their
+  budget and the tokens per successful run against main's figure.
   They are reported, not gated, and they stay out of `Criterion`, so they never enter the headline
   or the count `check_rates` makes. Tokens stand in for money: multiply by the model's price for
-  the cost per successful case.
+  the cost per successful case. A run the model ended early raises before its messages come back,
+  so it adds no tokens, and the cost per success is a floor; a usage callback on the run would
+  count the calls that came back, but not a call the SDK stopped at the output limit or the
+  content filter.
 - **The task returns what the agent did**, not only its reply ([agents.md](agents.md) section 9): an
   item evaluator in Langfuse sees the task's output and never the trace, so the tool calls travel in
   `ChatRun`.
@@ -812,18 +817,23 @@ Why it looks like this:
   ([agents.md](agents.md) section 2).
 - **Code first, then the judge** ([evals.md](evals.md) section 5): whether the status word is in the
   reply is a string check; whether the reply promises more than the status supports is the
-  validated judge of [judge-example.md](judge-example.md), given the status the agent actually saw as
-  its reference, and gating here because this is an offline run on the team's own cases
-  ([judges.md](judges.md) section 9). Its quoted evidence goes into the score's comment, so a failure
-  shows the words that failed it. Together the two check that the answer keeps to what the tool
-  returned ([agents.md](agents.md) section 2).
+  validated judge of [judge-example.md](judge-example.md), given the status the agent actually saw
+  as its reference, and gating here because this is an offline run on the team's own cases
+  ([judges.md](judges.md) section 9). That section also asks for known-bad replies that must fail,
+  and [evals.md](evals.md) section 5 for an agent that does nothing; this example leaves both out
+  ([What this example does not claim](#what-this-example-does-not-claim)). Its quoted evidence goes
+  into the score's comment, so a failure shows the words that failed it. Together the two check that
+  the reply names the status the tool returned and promises nothing beyond it
+  ([agents.md](agents.md) section 2). The string check does not catch a reply that names the status
+  and denies it, such as "has not shipped yet"; a stricter eval gives `ChatReply` a status field and
+  compares it by code.
 - **The judge in a thread, the runs at a set concurrency**: Langfuse runs the experiment's runs in
   one event loop, 50 at once by default, and calls each evaluator inside that loop, so a sync judge
   call would block the loop, and the seconds of every other run would grow by its wait.
   `reply_keeps_to_the_status` is async and hands the sync judge to `asyncio.to_thread`; the lambda
-  that binds the client returns its coroutine, which Langfuse awaits. `max_concurrency` sets how
-  many runs share the loop, from `CHAT_EVAL_MAX_CONCURRENCY`: a run's seconds are wall-clock at
-  that concurrency, so a time budget is compared only with runs at the same concurrency.
+  that binds the client returns its coroutine, which Langfuse awaits. `max_concurrency` caps how
+  many runs are in flight at once, from `MAX_CONCURRENCY`: a run's seconds are wall-clock at that
+  concurrency, so a time budget is compared only with runs at the same concurrency.
 - **A clean environment per run** ([agents.md](agents.md) section 6): each of the three runs of a case
   builds a new store and a new agent around the one chat model, which keeps no state; the model is
   the real one, through the application's one client with the cache switch on.

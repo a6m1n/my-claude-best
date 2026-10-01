@@ -154,8 +154,8 @@ description or arguments runs the eval, as
 [prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 14 asks.
 
 **Most of an agent's testing needs the real model.** The unit layer runs on every push because it is
-cheap, and it tests the code around the model. What goes wrong in an agent is mostly the model's own
-choice: which tool it calls, with which arguments, and when it stops. LangChain's docs put it
+cheap, and it tests the code around the model. What it cannot see is the model's own choice: which
+tool it calls, with which arguments, and when it stops. LangChain's docs put it
 plainly: "Many agent behaviors only emerge when using a real LLM", and agentic applications "tend to
 lean more on integration"; a Red Hat team writes that unit tests that mock the LLM "test your
 scaffolding, not your agent". So an agent gets the real-model layers of this table on top of the unit
