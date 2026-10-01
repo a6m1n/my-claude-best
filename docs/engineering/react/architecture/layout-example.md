@@ -39,30 +39,30 @@ vitals is in [performance-example.md](../performance/performance-example.md).
 │   │   ├── invoice.keys.ts              # the key root of every invoice read, for both modules
 │   │   ├── invoice.schema.ts            # the invoice both modules parse
 │   │   ├── iso-date.ts                  # a date as YYYY-MM-DD in the user's time zone
-│   │   ├── link-url.rules.ts            # hasAllowedProtocol: which addresses a link may point to
-│   │   ├── link-url.rules.test.ts       # the rule's test, beside it
 │   │   ├── money.format.ts              # cents as currency text
 │   │   ├── report-error.ts              # createErrorReporter(reportUrl): the function React calls for every error
 │   │   ├── report-web-vitals.ts         # reportWebVitals(reportUrl): sends the visit's web vitals to the URL it is given
 │   │   ├── send-report.ts               # sendReport(reportUrl, report): one small report with no session cookie
 │   │   └── ui/                          # design-system components with no business words
 │   │       ├── button.tsx
-│   │       ├── external-link.tsx        # the one link to an address that comes from outside
-│   │       ├── sanitized-html.tsx
 │   │       └── screen-pending.tsx       # the router's default pending screen; needs no router
 │   ├── billing/                         # the domain folder
 │   │   ├── list-invoices/               # module: see the invoices and the state of each
+│   │   │   ├── external-link.tsx        # the one link to an address that comes from outside
 │   │   │   ├── invoice-list.tsx         # InvoiceList; takes its pay link from the route
 │   │   │   ├── invoice-status-badge.tsx # InvoiceStatusBadge
 │   │   │   ├── invoice-status.schema.ts # InvoiceStatus: paid, overdue or due
 │   │   │   ├── invoice-status.rules.ts  # invoiceStatus: which of the three an invoice is
 │   │   │   ├── invoice-status.rules.test.ts  # the rule's test, beside it
-│   │   │   └── invoices.queries.ts      # invoicesQueryOptions
+│   │   │   ├── invoices.queries.ts      # invoicesQueryOptions
+│   │   │   ├── link-url.rules.ts        # hasAllowedProtocol: which addresses a link may point to
+│   │   │   └── link-url.rules.test.ts   # the rule's test, beside it
 │   │   └── pay-invoice/                 # module: pay one invoice
 │   │       ├── invoice.queries.ts       # invoiceQueryOptions: the invoice being paid
 │   │       ├── pay-invoice-form.tsx     # PayInvoiceForm; takes its navigation from the route
 │   │       ├── pay-invoice.mutations.ts # payInvoiceMutationOptions
-│   │       └── payment.schema.ts        # the payment method and the receipt
+│   │       ├── payment.schema.ts        # the payment method and the receipt
+│   │       └── sanitized-html.tsx
 │   └── routes/                          # the adapter: one file per route
 │       ├── __root.tsx                   # the shell every screen renders in
 │       ├── -screen-error.tsx            # the router's default error screen; "-": not a route
@@ -94,12 +94,16 @@ What to notice:
   read invoices, and neither imports the other.
 - **`core/` holds what both modules need**: the invoice schema, the key root, the API client class and
   the query client ([architecture.md](architecture.md) sections 3 and 6). The status badge knows about
-  invoices, so it stays in its module and not in `core/ui/`.
+  invoices, so it stays in its module and not in `core/ui/`. The link, its rule and the sanitised
+  HTML each have one module that uses them, so each sits in that module and moves down to `core/`
+  only when a second module needs it
+  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 4, and
+  section 6, move 3).
 - **Every file name is kebab-case, with its role as a suffix** where the role recurs:
   `.queries.ts`, `.mutations.ts`, `.schema.ts`, `.rules.ts`, `.format.ts`, `.keys.ts`, `.test.ts`
   ([architecture.md](architecture.md) section 4). The files in `routes/` take the router's names.
 - **The test sits beside the rule it tests** ([architecture.md](architecture.md) section 3).
-  `vitest run` found both test files, in `list-invoices/` and in `core/`, with no test settings in
+  `vitest run` found both test files, both in `list-invoices/`, with no test settings in
   `vite.config.ts`.
 - **`routes/` holds the route files and the adapter's own error screen.** The `-` prefix keeps the
   error screen out of the route tree. The route files, the error screen and `main.tsx` are the only
@@ -425,6 +429,12 @@ const router = createRouter({
   defaultErrorComponent: ScreenError,
 });
 
+// A deploy removed the chunks this open tab still points to. A reload fetches the new
+// index.html, which points to the new chunks (Vite, "Load error handling").
+window.addEventListener("vite:preloadError", () => {
+  window.location.reload();
+});
+
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
@@ -477,6 +487,8 @@ Why it is good:
   `core/send-report.ts` sends it with `fetch`, `keepalive: true` and `credentials: "omit"`: no
   session cookie goes with it, so the endpoint takes anonymous reports and needs neither the
   session nor the custom header of the API client ([security-example.md](../security/security-example.md)'s).
+- **A reload on `vite:preloadError`** keeps an open tab working after a deploy removed the chunks
+  it points to ([performance.md](../performance/performance.md) section 5).
 - **The missing root element is a guard clause**, and blank lines split the stages: build, declare,
   find the root, render, report
   ([readability.md](../../any-language/readability/readability.md) sections 3 and 5).
@@ -680,19 +692,19 @@ import type { ApiClient } from "@/core/api-client.ts";
 import { invoiceKeys } from "@/core/invoice.keys.ts";
 import { invoiceSchema } from "@/core/invoice.schema.ts";
 
-const invoicesSchema = z.array(invoiceSchema);
-
 export function invoicesQueryOptions(apiClient: ApiClient) {
   return queryOptions({
     queryKey: invoiceKeys.all,
-    queryFn: ({ signal }) => apiClient.request("/invoices", { schema: invoicesSchema, signal }),
+    queryFn: ({ signal }) => apiClient.request("/invoices", { schema: z.array(invoiceSchema), signal }),
   });
 }
 ```
 
-Why it is good: the list's schema is built from the shared one and stays in the module, because
-only this module reads a list. The key is the root itself, so a payment that invalidates the root
-refreshes the list ([architecture.md](architecture.md) section 6).
+Why it is good: the list's schema is built from the shared one at the call, so the file declares
+no schema of its own: a file holds one kind of thing
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 3). The key is
+the root itself, so a payment that invalidates the root refreshes the list
+([architecture.md](architecture.md) section 6).
 
 `src/billing/pay-invoice/payment.schema.ts`:
 
@@ -767,7 +779,7 @@ export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormP
   const { data: invoice } = useSuspenseQuery(invoiceQueryOptions(apiClient, invoiceId));
   const payment = useMutation(payInvoiceMutationOptions(apiClient, invoiceId));
 
-  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
+  function payInvoice(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const method = paymentMethodSchema.parse(new FormData(event.currentTarget).get("method"));
@@ -786,7 +798,7 @@ Why it is good:
   ([architecture.md](architecture.md) section 11). The navigation the route handed in runs in the
   call's own `onSuccess`, the place for an effect on the screen ([architecture.md](architecture.md)
   section 9).
-- **`handleSubmit` has three stages, split by blank lines**: stop the browser's submit, parse,
+- **`payInvoice` has three stages, split by blank lines**: stop the browser's submit, parse,
   send ([readability.md](../../any-language/readability/readability.md) section 5).
 
 Every read and write above goes through the one `ApiClient` in `src/core/api-client.ts`. The class

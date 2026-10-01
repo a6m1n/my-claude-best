@@ -42,20 +42,26 @@ billing-app/
     │   ├── api-client.ts         the one way to reach the backend
     │   ├── config.ts             public settings only
     │   ├── invoice.schema.ts     marks the fields that carry outside HTML and an outside address
-    │   ├── link-url.rules.ts     the scheme allowlist for an address from outside
     │   ├── report-error.ts       an error report with the error's name and the path, no message
     │   ├── report-web-vitals.ts  sends the path, never the query string
-    │   ├── send-report.ts        sends a report with no cookie
-    │   └── ui/
-    │       ├── external-link.tsx   a link for an address from outside, as text when the rule refuses it
-    │       └── sanitized-html.tsx  the one place HTML enters the page
+    │   └── send-report.ts        sends a report with no cookie
     ├── billing/
     │   ├── list-invoices/
-    │   │   └── invoice-list.tsx   the caller of ExternalLink, for the customer's address
+    │   │   ├── external-link.tsx     a link for an address from outside, as text when the rule refuses it
+    │   │   ├── invoice-list.tsx      the one caller of ExternalLink, for the customer's address
+    │   │   └── link-url.rules.ts     the scheme allowlist for an address from outside
     │   └── pay-invoice/
-    │       └── pay-invoice-form.tsx   the one caller of SanitizedHtml
+    │       ├── pay-invoice-form.tsx  the one caller of SanitizedHtml
+    │       └── sanitized-html.tsx    the one place HTML enters the page
     └── main.tsx                      builds the API client and the error reporter, reads the settings
 ```
+
+The link, its rule and the HTML sink each sit in the one module that uses them, not in `core/`:
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 4 moves code to
+`core/` only when a second module needs it. When a second module needs one of them,
+file-structure.md section 6, move 3, decides where it goes. The sink then moves down to `core/ui/`
+and is never copied: a copy would be a second place that sets `dangerouslySetInnerHTML`, and
+security.md section 4 asks for one component and one lint suppression.
 
 ## 1. The API client
 
@@ -192,7 +198,7 @@ Why it is good:
 
 ## 3. The link
 
-The rule that decides which address may become a link, `src/core/link-url.rules.ts`.
+The rule that decides which address may become a link, `src/billing/list-invoices/link-url.rules.ts`.
 
 ```ts
 // React refuses `javascript:` URLs and nothing else. An allowlist also stops `data:` and any
@@ -208,12 +214,12 @@ export function hasAllowedProtocol(href: string): boolean {
 }
 ```
 
-The component that uses it, `src/core/ui/external-link.tsx`.
+The component that uses it, `src/billing/list-invoices/external-link.tsx`.
 
 ```tsx
 import type { ReactNode } from "react";
 
-import { hasAllowedProtocol } from "@/core/link-url.rules.ts";
+import { hasAllowedProtocol } from "@/billing/list-invoices/link-url.rules.ts";
 
 type ExternalLinkProps = {
   href: string;
@@ -228,6 +234,7 @@ export function ExternalLink({ href, children }: ExternalLinkProps) {
   }
 
   return (
+    // `noreferrer` keeps this page's address, which can name an invoice, from the linked site.
     <a href={href} rel="noreferrer" className="underline underline-offset-2">
       {children}
     </a>
@@ -284,7 +291,7 @@ cut.
       {invoice.noteHtml === null ? null : <SanitizedHtml html={invoice.noteHtml} />}
 ```
 
-`src/core/ui/sanitized-html.tsx`
+`src/billing/pay-invoice/sanitized-html.tsx`
 
 ```tsx
 import DOMPurify from "dompurify";
@@ -360,7 +367,7 @@ function reads no setting.
       // The path only: a query string can hold what the user typed.
       path: window.location.pathname,
       // The backend groups visits into device classes by this width.
-      viewportWidth: window.innerWidth,
+      viewportWidthPx: window.innerWidth,
     });
   }
 
@@ -418,7 +425,7 @@ The policy rests on what the build writes. The built `dist/index.html`, from the
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="module" crossorigin src="/assets/index-BnXHXF34.js"></script>
+    <script type="module" crossorigin src="/assets/index-XsSBP8Id.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-CbXtAM7H.js">
     <link rel="modulepreload" crossorigin href="/assets/preload-helper-C1JRZSNY.js">
     <link rel="stylesheet" crossorigin href="/assets/index-n5Li4O4A.css">

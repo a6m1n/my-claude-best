@@ -356,7 +356,7 @@ Good — the same complaint, with the patterns named:
 ```text
 The screen looks generic. The first version used a card for each invoice, a gradient behind the
 heading and a coloured pill for each status. Instead, show each invoice as one table row, keep
-the page's background role behind the heading, and show each status as its word in its role
+the screen's background role behind the heading, and show each status as its word in its role
 colour.
 ```
 
@@ -392,8 +392,8 @@ Bad — `CLAUDE.md` lists the components:
 ```markdown
 ## UI components
 - Button (`src/core/ui/button.tsx`): the primary action.
-- ExternalLink (`src/core/ui/external-link.tsx`): a link that leaves the application.
-- SanitizedHtml (`src/core/ui/sanitized-html.tsx`): HTML that came from the server.
+- ExternalLink (`src/billing/list-invoices/external-link.tsx`): a link that leaves the application.
+- SanitizedHtml (`src/billing/pay-invoice/sanitized-html.tsx`): HTML that came from the server.
 - ScreenPending (`src/core/ui/screen-pending.tsx`): a screen that is loading.
 ```
 

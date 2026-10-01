@@ -55,7 +55,7 @@ export function reportWebVitals(reportUrl: URL): void {
       // The path only: a query string can hold what the user typed.
       path: window.location.pathname,
       // The backend groups visits into device classes by this width.
-      viewportWidth: window.innerWidth,
+      viewportWidthPx: window.innerWidth,
     });
   }
 
@@ -75,7 +75,7 @@ Why it is good:
   `web-vitals` 6; other browsers report the first screen only (read 2026-10-01).
 - **It loads the attribution build and sends the path with each value**, so the backend can read
   each metric at the 75th percentile per route. The body carries `target`, the element the value
-  comes from (performance.md section 3, attribution), and `viewportWidth`, which the backend uses
+  comes from (performance.md section 3, attribution), and `viewportWidthPx`, which the backend uses
   to group visits into device classes. The full attribution object is not sent: when a metric
   fails and `target` is not enough, the fields that split it into parts are added in
   `reportMetric`, one place (section 4).
@@ -98,9 +98,8 @@ Why it is good:
 render call passes the error reporter, `reportError`, to `createRoot` as `onCaughtError` and
 `onUncaughtError`, and the report holds the error's name and the path, never its message. The
 router's error screen, `ScreenError`, is in `src/routes/-screen-error.tsx`: it imports the router,
-so it sits with the routes, and the `-` prefix keeps it out of the route tree. The reference
-application has no `vite:preloadError` listener; performance.md section 5 shows the one that
-belongs in this file, next to the router.
+so it sits with the routes, and the `-` prefix keeps it out of the route tree. The
+`vite:preloadError` listener of performance.md section 5 is in this file, after the router.
 
 ```tsx
 // Settings are read here, once, and handed on as values: nothing below this file reads them.
@@ -120,6 +119,12 @@ const router = createRouter({
   defaultErrorComponent: ScreenError,
 });
 
+// A deploy removed the chunks this open tab still points to. A reload fetches the new
+// index.html, which points to the new chunks (Vite, "Load error handling").
+window.addEventListener("vite:preloadError", () => {
+  window.location.reload();
+});
+
 ...
 
 reportWebVitals(new URL("/web-vitals", config.apiBaseUrl));
@@ -137,6 +142,9 @@ Why it is good:
   goes into the router context next to the query client, so a loader and a route component read it
   from there and no module imports the settings. The reporter starts in the same file, with its
   URL, so every visit is measured from its first screen.
+- **The `vite:preloadError` listener reloads the page** when a tab opened before a deploy asks for
+  a chunk the host has deleted, so the user gets the new build and not a broken screen
+  ([performance.md](performance.md) section 5).
 
 ## The loaders
 
@@ -244,11 +252,11 @@ The production build of the reference application printed these files (Vite 8.3.
 dist/index.html                                    0.53 kB │ gzip:  0.30 kB
 dist/assets/index-n5Li4O4A.css                     8.83 kB │ gzip:  2.60 kB
 dist/assets/rolldown-runtime-CbXtAM7H.js           0.58 kB │ gzip:  0.36 kB
-dist/assets/invoices.index-B8_TIIWC.js             3.53 kB │ gzip:  1.43 kB
+dist/assets/invoices.index-CWBaH8Bg.js             3.53 kB │ gzip:  1.42 kB
 dist/assets/money.format-CUDBypya.js               8.07 kB │ gzip:  3.00 kB
-dist/assets/invoices._invoiceId.pay-DMnWst0W.js   33.96 kB │ gzip: 13.49 kB
+dist/assets/invoices._invoiceId.pay-DNgE7RqY.js   33.96 kB │ gzip: 13.49 kB
 dist/assets/preload-helper-C1JRZSNY.js           123.77 kB │ gzip: 37.88 kB
-dist/assets/index-BnXHXF34.js                    301.18 kB │ gzip: 96.77 kB
+dist/assets/index-XsSBP8Id.js                    301.26 kB │ gzip: 96.79 kB
 ```
 
 The built `index.html` asks for the entry chunk and preloads two shared chunks:
@@ -259,7 +267,7 @@ The built `index.html` asks for the entry chunk and preloads two shared chunks:
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="module" crossorigin src="/assets/index-BnXHXF34.js"></script>
+    <script type="module" crossorigin src="/assets/index-XsSBP8Id.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-CbXtAM7H.js">
     <link rel="modulepreload" crossorigin href="/assets/preload-helper-C1JRZSNY.js">
     <link rel="stylesheet" crossorigin href="/assets/index-n5Li4O4A.css">
@@ -280,7 +288,7 @@ Why it is good:
   The build output lists sizes, not contents; a bundle analyser (section 3) is how to confirm
   what each chunk holds.
 - **The first screen's JavaScript is small.** The entry and the two chunks `index.html` preloads
-  come to 135.01 kB after gzip. The budget of section 3 counts compressed bytes, so this is the
+  come to 135.03 kB after gzip. The budget of section 3 counts compressed bytes, so this is the
   figure to compare: 0.62 MiB, about 650 kB, is the budget for a page that is mostly JavaScript,
   and this application is well under it. The uncompressed sizes in the first column are not
   comparable. That is a size from the build, not a measured LCP. The reference application has no size gate, so the CI job of
@@ -309,7 +317,7 @@ are [security.md](../security/security.md) section 5's.
 Why it is good:
 
 - **Built assets are cached for a year.** Vite puts a hash of the content in every asset name
-  (`index-BnXHXF34.js`), so a new build changes the name and a returning user downloads only what
+  (`index-XsSBP8Id.js`), so a new build changes the name and a returning user downloads only what
   changed. This serves the LCP of a repeat visit (performance.md section 5, caching).
 - **`index.html` is revalidated on every visit**, so a deploy reaches users at once and a new
   page load never points to chunks the host has deleted; the Vite guide recommends `no-cache` on
@@ -336,6 +344,5 @@ and was not built or run:
 <link rel="preload" href="/fonts/brand-sans.woff2" as="font" type="font/woff2" crossorigin>
 ```
 
-Three more parts of the practice are not here: the `vite:preloadError` listener (section 5), the
-size gate in CI (section 3), and sections 7 and 8, which do not apply to screens behind a login
-with nothing a crawler must read.
+Two more parts of the practice are not here: the size gate in CI (section 3), and sections 7
+and 8, which do not apply to screens behind a login with nothing a crawler must read.

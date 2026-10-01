@@ -525,8 +525,8 @@ export function ScreenError() {
   const router = useRouter();
   const queryErrorResetBoundary = useQueryErrorResetBoundary();
 
-  // A failed query stays failed until it is reset; without this the retry below would show
-  // the same cached error again.
+  // TanStack Query keeps a failed query failed until it is reset; without this the retry
+  // below would show the same cached error again.
   useEffect(() => {
     queryErrorResetBoundary.reset();
   }, [queryErrorResetBoundary]);
@@ -567,7 +567,7 @@ useEffect(() => {
   }
 }, [method, payment, onPaid]);
 
-function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
+function payInvoice(event: SyntheticEvent<HTMLFormElement>) {
   event.preventDefault();
 
   setMethod(paymentMethodSchema.parse(new FormData(event.currentTarget).get("method")));
@@ -577,7 +577,7 @@ function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
 The GOOD sends the payment from the submit handler, `src/billing/pay-invoice/pay-invoice-form.tsx`:
 
 ```tsx
-  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
+  function payInvoice(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const method = paymentMethodSchema.parse(new FormData(event.currentTarget).get("method"));
@@ -691,7 +691,7 @@ the versions, are [layout-example.md](../architecture/layout-example.md) and
 // Bad: a hand-written useCallback in new code under the compiler. The compiler
 // memoises the handler by itself, so the hook only adds a dependency list to
 // keep right.
-const handleSubmit = useCallback(
+const payInvoice = useCallback(
   (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -737,7 +737,7 @@ there is one thing less to keep right.
 const payment = useMutation(payInvoiceMutationOptions(apiClient, invoiceId));
 const [isPaying, setIsPaying] = useState(false);
 
-function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
+function payInvoice(event: SyntheticEvent<HTMLFormElement>) {
   event.preventDefault();
 
   const method = paymentMethodSchema.parse(new FormData(event.currentTarget).get("method"));
@@ -758,7 +758,7 @@ The GOOD reads the mutation's own state, `src/billing/pay-invoice/pay-invoice-fo
 lines between the handler and the button cut:
 
 ```tsx
-  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
+  function payInvoice(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const method = paymentMethodSchema.parse(new FormData(event.currentTarget).get("method"));

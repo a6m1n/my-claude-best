@@ -109,7 +109,7 @@ origins good, against 77% for INP and 81% for CLS.
   2026-10-01).
 - **Read each metric at the 75th percentile, per route and per device class**, the way the
   thresholds are set: an average hides the slowest quarter of visits. The example's report
-  carries `viewportWidth`, and the backend groups visits into device classes by that width; the
+  carries `viewportWidthPx`, and the backend groups visits into device classes by that width; the
   report holds no other device field.
 - **When an interaction waits for the network, also report the time from the interaction to its
   result.** INP stops at the next paint, so a spinner drawn at once passes INP while the user

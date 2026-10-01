@@ -22,8 +22,9 @@ read when a payment succeeds. `payment.schema.ts` holds the Zod schemas of the p
 the receipt. In `core/`, `invoice.schema.ts` holds the `Invoice` type both modules read (`id`,
 `customerName`, `customerUrl` or `null`, `amountCents`, `dueOn`, `paidOn` or `null`, `noteHtml` or
 `null`), `money.format.ts` holds `formatCents`, and `ui/` holds `Button` (shown in
-[components.md](components.md) section 3), `ExternalLink` (shown in
-[components.md](components.md) section 9) and `SanitizedHtml`. How those files are written is
+[components.md](components.md) section 3). `list-invoices/external-link.tsx` holds `ExternalLink`,
+shown in [security-example.md](../security/security-example.md) section 3, and
+`pay-invoice/sanitized-html.tsx` holds `SanitizedHtml`. How those files are written is
 [architecture.md](../architecture/architecture.md) section 8 (server data), and
 [security.md](../security/security.md) section 4 (sanitising HTML).
 
@@ -180,13 +181,13 @@ Why it is good:
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
+import { ExternalLink } from "@/billing/list-invoices/external-link.tsx";
 import { InvoiceStatusBadge } from "@/billing/list-invoices/invoice-status-badge.tsx";
 import { invoiceStatus } from "@/billing/list-invoices/invoice-status.rules.ts";
 import { invoicesQueryOptions } from "@/billing/list-invoices/invoices.queries.ts";
 import type { ApiClient } from "@/core/api-client.ts";
 import type { Invoice } from "@/core/invoice.schema.ts";
 import { formatCents } from "@/core/money.format.ts";
-import { ExternalLink } from "@/core/ui/external-link.tsx";
 
 type InvoiceListProps = {
   // The route hands the client in, like `today`: the component reaches nothing by itself.
@@ -339,10 +340,10 @@ import type { SyntheticEvent } from "react";
 import { invoiceQueryOptions } from "@/billing/pay-invoice/invoice.queries.ts";
 import { payInvoiceMutationOptions } from "@/billing/pay-invoice/pay-invoice.mutations.ts";
 import { paymentMethodSchema } from "@/billing/pay-invoice/payment.schema.ts";
+import { SanitizedHtml } from "@/billing/pay-invoice/sanitized-html.tsx";
 import type { ApiClient } from "@/core/api-client.ts";
 import { formatCents } from "@/core/money.format.ts";
 import { Button } from "@/core/ui/button.tsx";
-import { SanitizedHtml } from "@/core/ui/sanitized-html.tsx";
 
 type PayInvoiceFormProps = {
   apiClient: ApiClient;
@@ -354,7 +355,7 @@ export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormP
   const { data: invoice } = useSuspenseQuery(invoiceQueryOptions(apiClient, invoiceId));
   const payment = useMutation(payInvoiceMutationOptions(apiClient, invoiceId));
 
-  function handleSubmit(event: SyntheticEvent<HTMLFormElement>) {
+  function payInvoice(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const method = paymentMethodSchema.parse(new FormData(event.currentTarget).get("method"));
@@ -367,7 +368,7 @@ export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormP
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+    <form onSubmit={payInvoice} className="flex max-w-md flex-col gap-4">
       <p>
         Amount due: <span className="font-medium tabular-nums">{formatCents(invoice.amountCents)}</span>
       </p>
@@ -377,6 +378,7 @@ export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormP
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium">Payment method</legend>
         <label className="flex items-center gap-2">
+          {/* One method is always chosen, so `payInvoice` never parses an empty choice. */}
           <input type="radio" name="method" value="card" defaultChecked />
           Card
         </label>
@@ -417,7 +419,9 @@ Why it is good:
 - **The component keeps no state of its own** ([components.md](components.md) section 4). The
   invoice is in the query cache, and the payment method stays in the radio buttons until the form
   is read on submit. How a form reads and checks its values is
-  [architecture.md](../architecture/architecture.md) section 11.
+  [architecture.md](../architecture/architecture.md) section 11. The comment above the checked
+  radio button ([readability.md](../../any-language/readability/readability.md) section 4) guards
+  that read: a form with no method chosen would hand `parse` an empty value.
 - **What happens after a payment is the caller's choice.** `onPaid` is a prop, so the route decides
   where to go, and the module needs no router ([components.md](components.md) section 3).
 - **HTML from outside reaches the page only through `SanitizedHtml`**; why, and how, is

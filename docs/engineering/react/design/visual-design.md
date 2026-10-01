@@ -437,14 +437,14 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
   ```tsx
   // Bad: arbitrary values, so this form gets its own width and gap and the
   // next form gets others.
-  <form onSubmit={handleSubmit} className="flex max-w-[450px] flex-col gap-[18px]">
+  <form onSubmit={payInvoice} className="flex max-w-[450px] flex-col gap-[18px]">
   ```
 
   Each value in square brackets is off the scale, and the next screen will pick a third value. The
   application's form, cut to its opening tag:
 
   ```tsx
-  <form onSubmit={handleSubmit} className="flex max-w-md flex-col gap-4">
+  <form onSubmit={payInvoice} className="flex max-w-md flex-col gap-4">
   ```
 
   Why it is good: the width and the gap are named steps of the stack's scales (`gap-4` is 16 px), so

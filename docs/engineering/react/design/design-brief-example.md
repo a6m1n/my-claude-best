@@ -18,9 +18,9 @@ src/
 ├── styles.css                        the theme: colour and radius roles, both colour schemes
 ├── core/ui/
 │   ├── button.tsx                    Button: the one button every screen uses
-│   ├── external-link.tsx             ExternalLink: a link that leaves the application
 │   └── screen-pending.tsx            ScreenPending: the loading state
 ├── billing/list-invoices/
+│   ├── external-link.tsx             ExternalLink: a link that leaves the application
 │   ├── invoice-list.tsx              InvoiceList: the table and its empty state
 │   └── invoice-status-badge.tsx      InvoiceStatusBadge: a status as a word in its role colour
 └── routes/
@@ -106,7 +106,7 @@ the order the work happens, and each ends with how anyone can tell it was done.
    the list itself. Check: each state has its screenshots in step 8.
 7. Where your first idea is one of these, do what follows the arrow instead:
    - a card for each invoice -> one table row for each invoice;
-   - a gradient or a tinted panel behind the heading -> the page's background role;
+   - a gradient or a tinted panel behind the heading -> the screen's background role;
    - a coloured pill for each status -> the status word in its role colour;
    - an icon-only Pay button -> the text link "Pay".
    Check: the reviewer in step 9 finds none of the four.
@@ -326,13 +326,13 @@ Why it is good:
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
+import { ExternalLink } from "@/billing/list-invoices/external-link.tsx";
 import { InvoiceStatusBadge } from "@/billing/list-invoices/invoice-status-badge.tsx";
 import { invoiceStatus } from "@/billing/list-invoices/invoice-status.rules.ts";
 import { invoicesQueryOptions } from "@/billing/list-invoices/invoices.queries.ts";
 import type { ApiClient } from "@/core/api-client.ts";
 import type { Invoice } from "@/core/invoice.schema.ts";
 import { formatCents } from "@/core/money.format.ts";
-import { ExternalLink } from "@/core/ui/external-link.tsx";
 
 type InvoiceListProps = {
   // The route hands the client in, like `today`: the component reaches nothing by itself.
@@ -481,8 +481,8 @@ export function ScreenError() {
   const router = useRouter();
   const queryErrorResetBoundary = useQueryErrorResetBoundary();
 
-  // A failed query stays failed until it is reset; without this the retry below would show
-  // the same cached error again.
+  // TanStack Query keeps a failed query failed until it is reset; without this the retry
+  // below would show the same cached error again.
   useEffect(() => {
     queryErrorResetBoundary.reset();
   }, [queryErrorResetBoundary]);

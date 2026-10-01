@@ -553,6 +553,7 @@ cut:
 <fieldset className="flex flex-col gap-2">
   <legend className="text-sm font-medium">Payment method</legend>
   <label className="flex items-center gap-2">
+    {/* One method is always chosen, so `payInvoice` never parses an empty choice. */}
     <input type="radio" name="method" value="card" defaultChecked />
     Card
   </label>

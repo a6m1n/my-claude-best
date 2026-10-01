@@ -935,7 +935,7 @@ The note is HTML typed by whoever issued the invoice. An `<img src=x onerror=…
 script in the session of every user who opens the invoice. `react/no-danger` reports the line.
 
 Good: the same line in `src/billing/pay-invoice/pay-invoice-form.tsx`, and the component it calls,
-`src/core/ui/sanitized-html.tsx`, whole, since all of it is new. The page that calls it is in
+`src/billing/pay-invoice/sanitized-html.tsx`, whole, since all of it is new. The page that calls it is in
 [security-example.md](security-example.md) section 4.
 
 ```tsx
@@ -991,9 +991,10 @@ OWASP still lists `data:` URLs as a React gap, and versions before React 19 do n
 `javascript:` either. `no-script-url` does not report this line: it sees a `javascript:` string
 written in the code, not a value that arrives as data.
 
-Good: the rule in `src/core/link-url.rules.ts`, the whole file, which is new, and the changed
-part of the component that uses it, `src/core/ui/external-link.tsx`. The props type and the
-returned link are cut, and they are the same as in the Bad; the whole file is in
+Good: the rule in `src/billing/list-invoices/link-url.rules.ts`, the whole file, which is new, and
+the changed part of the component that uses it, `src/billing/list-invoices/external-link.tsx`.
+The props type and the returned link are cut. The link is the Bad's, with one comment above the
+`<a>` that says why `rel="noreferrer"` is there; the whole file is in
 [security-example.md](security-example.md) section 3.
 
 ```ts
@@ -1011,7 +1012,7 @@ export function hasAllowedProtocol(href: string): boolean {
 ```
 
 ```tsx
-import { hasAllowedProtocol } from "@/core/link-url.rules.ts";
+import { hasAllowedProtocol } from "@/billing/list-invoices/link-url.rules.ts";
 
 ...
 
