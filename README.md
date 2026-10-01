@@ -2,6 +2,11 @@
 
 Engineering practices that people and AI coding agents both follow, plus a status line for Claude Code.
 
+[![License: CC BY 4.0 for the text, MIT for the code](https://img.shields.io/badge/license-CC%20BY%204.0%20text%20%2B%20MIT%20code-blue)](#license)
+[![Works with agents that read CLAUDE.md or AGENTS.md](https://img.shields.io/badge/works%20with-CLAUDE.md%20and%20AGENTS.md%20agents-blue)](#getting-started)
+[![Code examples in Python](https://img.shields.io/badge/examples-Python-blue)](docs/engineering/python/)
+[![Issues welcome](https://img.shields.io/badge/issues-welcome-brightgreen)](CONTRIBUTING.md)
+
 **Navigation**
 
 - [What it does](#what-it-does)
@@ -144,7 +149,7 @@ Issues are welcome. Pull requests are open only to collaborators, the people wit
 
 ## License
 
-The text and the code have different licenses. GitHub's sidebar lists both, but a license badge or the GitHub API shows only CC BY 4.0.
+The text and the code have different licenses. GitHub's sidebar lists both, but the GitHub API, and any tool that reads it, reports only CC BY 4.0.
 
 | Part | License | File |
 | --- | --- | --- |
