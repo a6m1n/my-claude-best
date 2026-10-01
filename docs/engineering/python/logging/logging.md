@@ -19,8 +19,8 @@
 ## 1. Purpose and the one rule
 
 This file is for everyone who writes or changes Python code that logs: people and AI agents alike.
-Read it before you add a log call, set up logging for a process, or wire logging into a web
-service or an agent.
+Read it before you add a log call, set up logging for a process, or wire logging or tracing into
+a web service or an agent.
 
 One rule holds the rest together: **the log tells a person what the application did; the trace
 store keeps what it said.** A log line is an event with ids: a service started, a request
@@ -259,10 +259,11 @@ happened, and the trace, which keeps what was said.
 - **Link each line to its trace.** The Filter reads the trace id when the record is written:
   `opentelemetry.trace.get_current_span()` for OpenTelemetry and Langfuse, or
   `langsmith.get_current_run_tree().trace_id` for LangSmith. With no tracer running, the field
-  is `-`. Open the run's span around the use case call (with Langfuse,
-  `start_as_current_observation`), so every line of the run carries the id. Never call a trace
-  store's `get_url()` for a log line, because it may call the backend.
-- **Put the request id into the run's `metadata`,** so a trace leads back to its log lines too.
+  is `-`. The request's root span (below) is open while the run works, so every line of the run
+  carries the id. Never call a trace store's `get_url()` for a log line, because it may call the
+  backend.
+- **Put the request id into the root span's `metadata`,** so a trace leads back to its log lines
+  too.
 - **Do not use the OpenTelemetry `gen_ai.*` names for log fields.** Those conventions are still
   in Development and moved to a new repository in 2026. Name your own fields, with units.
 - **Log a handled tool error once, at `WARNING`, where it is handled:** in the agent's
@@ -276,6 +277,75 @@ happened, and the trace, which keeps what was said.
   formatter.
 - **Callback handlers do not log.** A sync handler in an async run runs in a copy of the context
   unless it sets `run_inline = True`, and whatever it writes to a `ContextVar` is lost.
+
+**One request, one trace.** A trace is one unit of work, such as one chatbot turn that retrieves
+context, calls the model and returns the answer (Langfuse, "What does a good trace look like?").
+LangChain's handler does not group calls by itself: "each invocation will end up on its own
+trace" (Langfuse's LangChain docs). An endpoint that retrieves documents, runs an agent and writes
+a summary leaves three traces, and nothing in them shows that they answered one request.
+
+- **The adapter opens one root span per request, around the use case call.** Every model call
+  of the request then runs inside it: the handler's runs, `@observe` functions and spans you open
+  by hand nest under it by themselves. With Langfuse it is
+  `start_as_current_observation(as_type="span", ...)`, called in `core/langfuse_client.py`. Open
+  it for a request with one model call too: the same span puts the trace id on the log lines, and
+  a second call added later lands in the same trace. A CLI command or a worker's job opens its root
+  the same way, at its own entry point. An eval run opens none: the experiment runner gives each
+  case its own trace ([evals.md](../evals/evals.md) section 9).
+- **Set the input and the output on the root span, never on the trace.** Langfuse SDK v4 marks
+  `set_current_trace_io()` deprecated and takes the trace's input and output from the root span,
+  and on Langfuse Cloud the LLM judges that read trace-level input stop on 16 November 2026. Set
+  them to what a reviewer needs at a glance: the question the user sent and the answer the
+  request returns. Never the raw request, a dependency object or the function's arguments.
+  `@observe` on a route records exactly those, so the route opens the root through
+  `core/langfuse_client.py` with an explicit input, never with `@observe`.
+- **Right after the root span opens, pass the trace's attributes with
+  `propagate_attributes(...)`.** The root, which is open when the block starts, and every span
+  created inside the block get them; any other span created earlier does not, and Langfuse counts cost per
+  user only over the spans that carry the user id. Pass ids, not text: a value
+  over 200 characters is dropped with only a warning. Pass them in this one place, never also as
+  the run's `langfuse_*` metadata keys; in async LangChain runs those reach only the run's first
+  span (langfuse issue #16177).
+- **The environment and the release belong to the trace client, not to a request.** Pass them
+  once, where the client is built (`Langfuse(environment=..., release=...)`), from the settings
+  ([python.md](../language/python.md) section 5); given nothing, the SDK reads its own variables.
+  When the prompts live in the code, the commit is the release, and so the prompts' version.
+- **A route that streams its answer opens the root span and passes its attributes inside the
+  generator that yields the body.** Starlette sends a `StreamingResponse` body after the route has
+  returned, so a span the route opened has closed before the stream makes its first model call.
+- **A `BackgroundTasks` function is a trace of its own.** It runs after the request's root span
+  has closed, so it opens its own root span with the request's id in its metadata and the same
+  `session_id` and `user_id`: the request id ties it to the request, the session to the dialogue.
+  Do not join it to the request's trace with `trace_context`: its cost and duration would land in
+  a request that has already answered, and Langfuse users report the last span overwriting the
+  trace's name and output (discussion #11127). A task started with `asyncio.create_task` is
+  different: it copies the request's context, so its spans stay in the request's trace, even after
+  the root has closed; work that must outlive the response goes through `BackgroundTasks` or a
+  worker instead.
+- **Run blocking work inside a request with `asyncio.to_thread`,** which copies the context. A bare
+  `loop.run_in_executor` does not, and the model calls it makes start traces of their own.
+- **Shut the trace client down when the service stops,** from the app's lifespan, so the spans
+  still in its buffer are sent. Langfuse registers an exit hook for this, and still asks
+  long-running services to call `shutdown()` when they get a shutdown signal.
+
+What to set on the root span:
+
+| What | Value | Where | Why |
+|---|---|---|---|
+| name | the operation, verb first, the same on every call: `answer-ticket`, from the module's `consts.py` ([file-structure.md](../../any-language/file-structure/file-structure.md) section 3) | the span's `name` | evaluators, dashboards and saved filters find spans by name; an id or a model name in it makes a new name on every trace |
+| input | what the user sent, such as the question | the span's `input`, when it opens | the trace list shows it as the trace's input |
+| output | what the request returns, such as the answer | the span's `output`, before it closes | the trace list shows it as the trace's output |
+| request id | the id from section 7 | the span's `metadata` | the trace leads back to its log lines |
+| trace name | the span's name | `propagate_attributes(trace_name=...)` | the SDK puts it on every span of the request; without it, only Langfuse's server falls back to the root span's name |
+| session | the dialogue's `thread_id` | `propagate_attributes(session_id=...)` | the requests of one dialogue show as one session |
+| user | the user's id in your own system, never an email | `propagate_attributes(user_id=...)` | cost and quality per user |
+| tags | values known before the run, such as the channel | `propagate_attributes(tags=[...])` | a tag is fixed when its span is created |
+
+A LangGraph run that stops for a person (an interrupt) and resumes in a later request gives one
+trace per request; the shared `session_id` shows them as one dialogue. `request_trace`, the one
+function that opens the root span and passes its attributes, is in `core/langfuse_client.py` in
+[agent-example.md](agent-example.md); a request with three model calls under one root, and a
+streaming route, are in [trace-example.md](trace-example.md).
 
 **Optional: one line per model call and per tool call.** To see an agent's pace in the terminal
 without opening the trace store, add one agent middleware that logs, at `INFO`:
@@ -381,6 +451,13 @@ mechanical half goes to the linter and not to more prose.
   `RuntimeError` outside a run). It reads one agent module's graph, so it lives in that module
   (file-structure.md section 4), never in `core/logging.py`, which every process imports, the CLI
   included.
+- **An APM or an OpenTelemetry HTTP instrumentation in the same process,** such as
+  `opentelemetry-instrumentation-fastapi`, or Sentry's SDK where it runs on OpenTelemetry (Python
+  `sentry_sdk` 3 and later): its server span becomes the parent of the request's
+  root span, and Langfuse's spans take that trace's id and its sampling decision. Requests can
+  then merge into one trace, or none reach Langfuse when the incoming trace is not sampled. Read
+  Langfuse's FAQ on an existing OpenTelemetry or Sentry setup before you add one; it shows how to
+  give Langfuse a tracer provider of its own.
 - **A handler that must block,** such as a file you are required to keep: put it behind a
   `QueueHandler`. Start and stop the listener yourself, give the queue a limit, put the
   formatter on the `QueueHandler`, and set logging up again in each forked worker.
@@ -404,6 +481,13 @@ Tietz-Sokolskaya, "The only two log levels you need are INFO and ERROR" (2024); 
 OpenTelemetry Python API source (1.45) and the GenAI semantic conventions repository. LangChain
 core source (1.4 to 1.6), LangChain agents middleware (1.4.2), LangGraph source (1.2) and
 langgraph-prebuilt (`ToolNode`), the LangSmith SDK (0.14) and docs, Langfuse's docs and
-repository. ruff's rule reference (0.16.9). LiteLLM issue #35699 (2026) for the f-string
+repository. For the root span, read 2026-10-01: Langfuse's "What does a good trace look like?",
+"Instrumentation", the LangChain integration page, "Upgrade path Python v3 to v4", the FAQs
+"Why are the input and output of my trace empty?", "LLM-as-a-judge migration", "Existing
+OpenTelemetry setup", "Existing Sentry setup" and "Dashboard changes in v4", and the Python SDK
+4.16.0 source (`propagate_attributes`, `start_as_current_observation`, the LangChain
+`CallbackHandler`); langfuse issues #16177 and #13590 and discussion #11127 (2025–2026);
+Starlette 1.7 `StreamingResponse` and `BackgroundTask` source; CPython's `asyncio.to_thread` and
+`loop.run_in_executor`. ruff's rule reference (0.16.9). LiteLLM issue #35699 (2026) for the f-string
 measurement; Ouatiti, Sayagh, Li and Hassan, arXiv:2604.09409 (2026), on agents and logging
 instructions.

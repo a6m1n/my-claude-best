@@ -767,6 +767,9 @@ def main() -> None:
         settings.langfuse_public_key,
         settings.langfuse_secret_key,
         settings.langfuse_base_url,
+        environment=settings.langfuse_environment,
+        release=settings.git_commit,
+        enabled=settings.langfuse_tracing_enabled,
     )
     langfuse = get_client()
 
@@ -852,9 +855,9 @@ those of [prompt-example.md](../../any-language/prompt-engineering/prompt-exampl
 `judge_unsupported_promise`, its model constants and `Verdict` those of
 [judge-example.md](judge-example.md). Of the settings fields, `openai_api_key` is the logging
 example's, `log_level` and `log_format` are those of
-[python/logging/setup-example.md](../logging/setup-example.md), and `acme_ai_api_key`, `git_commit` and the
-Langfuse keys and URL stand for the fields the examples leave out, as in
-[case-set-example.md](case-set-example.md).
+[python/logging/setup-example.md](../logging/setup-example.md), and `acme_ai_api_key`, `git_commit`,
+`langfuse_environment`, `langfuse_tracing_enabled` and the Langfuse keys and URL stand for the
+fields the examples leave out, as in [case-set-example.md](case-set-example.md).
 
 ## What this example does not claim
 

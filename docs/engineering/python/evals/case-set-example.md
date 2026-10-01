@@ -238,6 +238,9 @@ def main() -> None:
         settings.langfuse_public_key,
         settings.langfuse_secret_key,
         settings.langfuse_base_url,
+        environment=settings.langfuse_environment,
+        release=settings.git_commit,
+        enabled=settings.langfuse_tracing_enabled,
     )
     langfuse = get_client()
 
@@ -356,8 +359,9 @@ Why it looks like this:
 [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), `build_logging_config` and the
 settings fields `log_level` and `log_format` those of
 [python/logging/setup-example.md](../logging/setup-example.md), and `start_tracing` that of
-[python/logging/agent-example.md](../logging/agent-example.md); `acme_ai_api_key`, `git_commit` and the
-Langfuse keys and URL stand for the settings fields those examples leave out.
+[python/logging/agent-example.md](../logging/agent-example.md); `acme_ai_api_key`, `git_commit`,
+`langfuse_environment`, `langfuse_tracing_enabled` and the Langfuse keys and URL stand for the
+settings fields those examples leave out.
 
 ## With LangChain
 

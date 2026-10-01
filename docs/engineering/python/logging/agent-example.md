@@ -7,10 +7,10 @@ module, `support/chat/`, answers a customer's question with an agent made by Lan
 
 What each part does for the log:
 
-- the use case marks the run with its dialogue (`thread_id`), hands the request id to the trace,
-  and writes the one summary line;
-- the HTTP adapter opens the run's span around the use case, so every line the run writes carries
-  the trace id, and `core/langfuse_client.py` is the one place that knows Langfuse;
+- the use case marks the run with its dialogue (`thread_id`) and writes the one summary line;
+- the HTTP adapter opens the request's root span around the use case, with the question, the
+  answer, the request id and the dialogue on it, so every line the run writes carries the trace
+  id, and `core/langfuse_client.py` is the one place that knows Langfuse;
 - `core/openai_client.py`, the one client of the model provider, replaces a provider's error and
   an answer that does not parse with a safe error that names the model, so neither the provider's
   text nor the answer's text reaches the log;
@@ -37,7 +37,7 @@ from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 
-from acme.core.logging import request_id, thread_id
+from acme.core.logging import thread_id
 from acme.support.chat.graph import ChatAgent
 from acme.support.chat.schemas import Answer, Question
 
@@ -52,8 +52,6 @@ async def answer(
 
     config: RunnableConfig = {
         "configurable": {"thread_id": question.thread_id},
-        # The trace leads back to these log lines.
-        "metadata": {"request_id": request_id.get()},
         # The prompt, the answer and the tool results go to Langfuse.
         "callbacks": [tracing],
     }
@@ -101,21 +99,23 @@ parse, such as rejecting an empty `reply.text`.
 
 `thread_id`, not the run's `run_id`, is the key: the dialogue keeps its `thread_id` across runs,
 and LangGraph does not persist `run_id`. The `trace_id` field needs no code here: the HTTP
-adapter opens the run's span around this call (next section). Every line inside that span, the
-use case's summary line included, carries its trace id. Langfuse's handler nests its spans under
-the current span, and its trace id is the OpenTelemetry one, so the id on a line opens the run's
-trace.
+adapter opens the request's root span around this call (next section). Every line inside that
+span, the use case's summary line included, carries its trace id. Langfuse's handler nests its
+spans under the current span, and its trace id is the OpenTelemetry one, so the id on a line opens
+the request's trace.
 
 `answer` times the run with `time.perf_counter()` in place: the duration feeds only the log line
 ([readability.md](../../any-language/readability/readability.md) section 6).
 
-## `api/routes_chat.py`: the run's span around the use case
+## `api/routes_chat.py`: the request's root span around the use case
 
 ```python
 from fastapi import APIRouter, Request
 
 from acme.api.schemas import ChatRequest, ChatResponse
-from acme.core.langfuse_client import run_span
+from acme.core.langfuse_client import request_trace
+from acme.core.logging import request_id
+from acme.support.chat.consts import SUPPORT_CHAT_TRACE_NAME
 from acme.support.chat.schemas import Question
 from acme.support.chat.usecase import answer
 
@@ -125,14 +125,29 @@ router = APIRouter()
 @router.post("/chat")
 async def chat(body: ChatRequest, request: Request) -> ChatResponse:
     question = Question(thread_id=body.thread_id, text=body.text)
-    # The run's span: every line inside it, the use case's summary line included, carries its trace id.
-    with run_span("chat answer"):
+    # The request's root span: the run's model and tool calls nest under it, and every line
+    # inside it, the use case's summary line included, carries its trace id.
+    with request_trace(
+        SUPPORT_CHAT_TRACE_NAME,
+        request_input=question.text,
+        request_id=request_id.get(),
+        session_id=question.thread_id,
+    ) as trace:
         reply = await answer(
             question, request.app.state.chat_agent, tracing=request.app.state.tracing
         )
+        trace.record_output(reply.text)
 
     return ChatResponse(thread_id=reply.thread_id, text=reply.text)
 ```
+
+The root span carries what logging.md section 8 asks for: a stable name from the module's
+`consts.py`, the customer's question as its input and the reply as its output, the request id in
+its metadata, and the dialogue's `thread_id` as the session. The chat has no signed-in user, so it
+passes no `user_id`. A failure inside the block leaves the output unset and propagates as before;
+OpenTelemetry records the exception on the root span and sets its status to error, which Langfuse
+shows as level `ERROR`. A test builds the app from its own `Settings` with
+`langfuse_tracing_enabled=False`: the client then records nothing, and the route runs the same.
 
 `create_app()` passes `Settings()` to `build_app(settings)`, as in
 [setup-example.md](setup-example.md), and `build_app` builds the chat model once with
@@ -140,45 +155,98 @@ async def chat(body: ChatRequest, request: Request) -> ChatResponse:
 `build_agent(llm, orders, model=SUPPORT_CHAT_LLM_MODEL, disable_prompt_cache=settings.disable_prompt_cache, new_request_uuid=uuid.uuid4)`,
 where `orders` is the order store's client and `settings` is the `Settings` of
 [setup-example.md](setup-example.md), which gains `openai_api_key: SecretStr`, the Langfuse keys
-and URL (not shown; the secret key is a `SecretStr` with no default) and
+and URL, `langfuse_environment: TracingEnvironment`, `langfuse_tracing_enabled: bool = True` and
+`git_commit` (not shown; the secret key is a `SecretStr` with no default) and
 `disable_prompt_cache: bool = False`
 ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 17). The adapter
 reads the model constant and the setting in this one place and hands them on, so a test can pass a
 `ChatOpenAI` with an `httpx.MockTransport` inside and a fixed UUID
 ([readability.md](../../any-language/readability/readability.md) section 6). `build_app` also calls
-`start_tracing` with the Langfuse keys and URL from `settings`, then builds the Langfuse handler
-once with `callback_handler()`, and keeps the agent and the handler on `app.state` as `chat_agent`
-and `tracing`; that wiring is not shown.
+`start_tracing` with the Langfuse keys and URL from `settings`, the environment, the tracing switch,
+and the commit as the release (the prompts are in git, so the commit is their version), then
+builds the Langfuse handler once with `callback_handler()`, and keeps the agent and the handler on
+`app.state` as `chat_agent` and `tracing`; the app's lifespan calls `stop_tracing()` when the
+service stops. That wiring is not shown.
 
 ## `core/langfuse_client.py`: the one client of Langfuse
 
 ```python
-"""The one client of Langfuse: every other file reaches the trace store through these three functions."""
+"""The one client of Langfuse: every other file reaches the trace store through these functions."""
 
-from contextlib import AbstractContextManager
+from collections.abc import Iterator
+from contextlib import contextmanager
+from typing import Literal, TypeAlias
 
 from langchain_core.callbacks import BaseCallbackHandler
-from langfuse import Langfuse, get_client
+from langfuse import Langfuse, LangfuseSpan, get_client, propagate_attributes
 from langfuse.langchain import CallbackHandler
 from pydantic import SecretStr
 
+# This application's deployments; Langfuse keeps test traces out of production's views by it.
+TracingEnvironment: TypeAlias = Literal["development", "staging", "production"]
 
-def start_tracing(public_key: str, secret_key: SecretStr, base_url: str) -> None:
-    # get_client() and CallbackHandler() reuse this client; without it the SDK reads its own variables.
+
+def start_tracing(
+    public_key: str,
+    secret_key: SecretStr,
+    base_url: str,
+    *,
+    environment: TracingEnvironment,
+    release: str,
+    enabled: bool,
+) -> None:
+    # get_client() and CallbackHandler() reuse this client and the values passed here.
     Langfuse(
         public_key=public_key,
         secret_key=secret_key.get_secret_value(),
         base_url=base_url,
+        environment=environment,
+        release=release,
+        tracing_enabled=enabled,
     )
 
 
-def run_span(name: str) -> AbstractContextManager[object]:
-    return get_client().start_as_current_observation(name=name, as_type="span")
+def stop_tracing() -> None:
+    # Sends the spans still in the buffer; Langfuse asks services to call it when they stop.
+    get_client().shutdown()
+
+
+class RequestTrace:
+    """The root span of one request, as the adapter sees it: the place its answer is recorded."""
+
+    def __init__(self, root: LangfuseSpan) -> None:
+        self._root = root
+
+    def record_output(self, output: str) -> None:
+        # Langfuse takes the trace's output from its root span.
+        self._root.update(output=output)
+
+
+@contextmanager
+def request_trace(
+    name: str,
+    *,
+    request_input: str,
+    request_id: str,
+    session_id: str | None = None,
+    user_id: str | None = None,
+) -> Iterator[RequestTrace]:
+    with get_client().start_as_current_observation(
+        as_type="span", name=name, input=request_input, metadata={"request_id": request_id}
+    ) as root:
+        # The root and every span created inside this block get the attributes; any other span
+        # created earlier does not, so the block opens before any model call.
+        with propagate_attributes(trace_name=name, session_id=session_id, user_id=user_id):
+            yield RequestTrace(root)
 
 
 def callback_handler() -> BaseCallbackHandler:
     return CallbackHandler()
 ```
+
+`request_trace` is the one place that opens a request's root span: the adapter passes the values
+and gets back only `record_output`, so no adapter calls Langfuse itself. The root is a plain
+`span`, because it holds steps of several kinds; the handler gives each step under it its own type.
 
 ## `core/openai_client.py`: the one client of the model provider
 
@@ -332,7 +400,7 @@ class ModelAnswerInvalid(Exception):
         self.model = model
 ```
 
-## `support/chat/consts.py` and `support/chat/schemas.py`: the model and the reply's shape
+## `support/chat/consts.py` and `support/chat/schemas.py`: the model, the trace name and the reply's shape
 
 ```python
 # support/chat/consts.py
@@ -346,6 +414,9 @@ SUPPORT_CHAT_LLM_MODEL: Final[ChatModel] = "gpt-4.1-mini-2025-04-14"
 # One LangGraph step per model call and one per round of tool calls, so 12 allows
 # several tool rounds.
 SUPPORT_CHAT_MAX_STEPS: Final = 12
+# Evaluators, dashboards and saved filters find the request's trace by this name, so it stays
+# the same: verb first, no ids, no model name.
+SUPPORT_CHAT_TRACE_NAME: Final = "answer-chat"
 ```
 
 ```python
