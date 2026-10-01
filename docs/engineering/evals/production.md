@@ -52,7 +52,9 @@ quality score:
 
 - **Explicit feedback**, such as a thumbs up or down, is rare and skewed: in one study of a coding
   assistant it covered 0.6% of turns and 2% of conversations. Who clicks, and on what, differs from
-  product to product, so measure your own split before you read the rate.
+  product to product, so measure your own split before you read the rate. A satisfied user is not a
+  solved task either: across 25 agents, satisfaction did not correlate with verified task success,
+  and 57.5% of the conversations users were satisfied with had failed the task.
 - **What users do**: asking the same question again in other words, asking for a person, leaving
   mid-task, editing a draft before sending it. These are more frequent than clicks and need reading
   to interpret.
@@ -62,18 +64,35 @@ id that stops a double click from counting twice, or from the backend with
 `create_score(trace_id=..., name=..., value=...)`. Filter the traces by a low score and add them to a
 dataset or an annotation queue; the traces where a judge and the user disagree are the first to read.
 
+**Optional, when the agent pauses for a person's approval** ([agents.md](agents.md) section 5).
+Record each decision as a score on the trace: approve, edit, reject or respond, the decisions
+LangChain's `HumanInTheLoopMiddleware` takes. Edits and rejections choose traces to read, like a low
+user score. Read an approval rate near 100% as a question about the checkpoint's design, never as
+proof that it can go: people approve without reading. Anthropic reports that users approve 93% of
+Claude Code's permission prompts, and in its own test people refused a dangerous command placed
+into a real prompt only 13.6% of the time. Both numbers come from one vendor and from a coding
+agent, where a permission prompt is not a business approval step. OpenAI also tracks approval and
+rejection rates for Codex, and names no threshold that acts on them.
+
 ## 5. Checks on live traffic
 
 **Should.** Run the cheap code checks of your eval on live traces: the answer's shape, the tool-call
-rules of [agents.md](agents.md) section 3, the share of retrievals that found nothing
-([rag.md](rag.md) section 2), the refusal rate, the cost and the latency of a run. They are free,
-fast and have no false alarms of their own.
+rules of [agents.md](agents.md) section 3, the share of tool calls that returned an error, the share
+of retrievals that found nothing ([rag.md](rag.md) section 2), the refusal rate, the cost and the
+latency of a run. They are free, fast and have no false alarms of their own. A rise in tool errors
+points at a tool that broke or at a model that now calls it wrong.
 
 **Should.** Run an LLM judge on a sample of live traces only when it is validated and pinned
 ([judges.md](judges.md) sections 4 and 6), and read its score as a trend over days, never as an alert
 on one trace. In one production system with 21 judges, 0.6% of the failures they flagged at first
 were real; unanimous panels and softer rubrics raised that to 48.9%. A vendor's model update dropped
 one judge's pass rate from 97% to 11% in a day.
+
+For an agent whose end state cannot be checked on live traffic, a judge of whether the task was done
+sees the tool calls and their results, not only the final answer, and it picks traces to read; it
+never counts a task as done ([agents.md](agents.md) section 1). On injected faults, a judge that saw
+the trajectory caught 77% of the silent ones with no false alarms, against 45% with 33% false alarms
+for one that saw only the outcome.
 
 **Must.** Alert when an online evaluator stops writing scores: a check that silently stops running
 looks like a system with no failures. Langfuse raises alerts on a score, on cost and on latency
@@ -159,7 +178,7 @@ prompts from elsewhere. A rule-based guardrail is tested like any code
 |---|---|---|
 | 2 | Must | Is every production run traced with the model and prompt versions? |
 | 3 | Must | Does a person read a sample every week, and do the failures become cases? |
-| 4 | Should | Do feedback and user actions choose what gets read? |
+| 4 | Should, approvals Optional | Do feedback and user actions choose what gets read? Are approval decisions recorded, and is a near-100% approval rate read as a design question? |
 | 5 | Must, judges Should | Do code checks run on live traces, is an online judge validated and read as a trend, and does an evaluator that stops scoring raise an alert? |
 | 6 | Must | Is the model a dated version, and does a new version run the eval first? |
 | 7 | Must, tests Should | Does no session combine untrusted input, sensitive access and outside effects without a person's approval? Is there an injection regression set? |
@@ -176,6 +195,14 @@ prompts from elsewhere. A rule-based guardrail is tested like any code
   changelog "Monitors" (2026-06-19) and "Boolean scores in monitors" (2026-07-21); Langfuse guide,
   "From user feedback to evaluation datasets", 2026-09; Langfuse blog, "Evals", 2025-11-12 (updated
   2026-07); Langfuse pricing, read 2026-09-30; langfuse issues #12958, #15681.
+- Satisfaction and completion judges: GAUGE, arXiv:2609.12191, 2026; trajectory vs outcome judges on
+  injected faults, arXiv:2609.00038, 2026.
+- Live agent checks: Langfuse, "AI agent evaluation"
+  (langfuse.com/resources/engineering/ai-agent-evaluation, read 2026-09-30), tool error rate;
+  Microsoft Foundry, "Agent evaluators", 2026-09-25, Tool Call Success.
+- Approval decisions: LangChain docs, "Human in the loop" (read 2026-09-30); Anthropic, "Claude Code
+  auto mode", 2026-03-25 (93% of permission prompts approved); Simon Willison, "Auto mode",
+  2026-08-08, on Anthropic's test (13.6%); OpenAI, "Auto-review" for Codex, 2026-04-30.
 - Meta, "Practical AI agent security" (Agents Rule of Two), 2025-10-31; Beurer-Kellner et al.,
   "Design patterns for securing LLM agents against prompt injections", arXiv:2506.08837, 2025;
   Simon Willison, "The lethal trifecta", 2025-06-16, and "New prompt injection papers", 2025-11-02;

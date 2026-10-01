@@ -51,7 +51,7 @@ python_version = "3.11"
 strict = true
 enable_error_code = ["ignore-without-code", "exhaustive-match"]  # static-checks section 6, python section 2
 plugins = ["pydantic.mypy"]  # python section 5
-files = ["src", "tests"]
+files = ["src", "tests"]  # add "evals" when the repository has an evals/ folder (evals section 4)
 mypy_path = "src"
 explicit_package_bases = true
 
@@ -75,7 +75,7 @@ init_typed = true
 | `strict = true` | the strict mode [static-checks.md](static-checks.md) section 2 asks for; it includes `warn_unused_ignores` |
 | `enable_error_code` | two checks outside `--strict`: a bare `# type: ignore`, and a `match` that misses a member |
 | `plugins = ["pydantic.mypy"]` | lets mypy read pydantic models the way pydantic builds them, so a settings class whose fields have no default type-checks when `main()` builds it with no arguments ([python.md](../python/python.md) section 5); only in a repository that depends on pydantic, since mypy imports the plugin from it |
-| `files`, `mypy_path`, `explicit_package_bases` | what to check, and how to name the modules: the package under `src/`, and test files that share a name in different folders ([testing/layout.md](../testing/layout.md) section 6) without a clash; `tests/` must hold at least one `.py` file, or mypy stops with an error |
+| `files`, `mypy_path`, `explicit_package_bases` | what to check, and how to name the modules: the package under `src/`, and test files that share a name in different folders ([testing/layout.md](../testing/layout.md) section 6) without a clash; `tests/` must hold at least one `.py` file, or mypy stops with an error; `evals/` joins the list only in a repository that has one ([evals/evals.md](../evals/evals.md) section 4), for the same reason |
 | `[[tool.mypy.overrides]]` | the one untyped library, silenced by name; every other missing import still fails |
 | `[tool.pydantic-mypy]` | `init_typed` types the arguments of the `__init__` the plugin writes, so a wrong type passed to a model fails the check; `init_forbid_extra` stays off, because it rejects the aliases third-party models accept, such as `ChatOpenAI(model=...)` |
 

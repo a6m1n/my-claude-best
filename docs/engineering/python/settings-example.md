@@ -273,7 +273,7 @@ from typing import Final
 import pytest
 from pydantic import ValidationError
 
-from acme.core.config import Settings
+from acme.core.config import PLACEHOLDER_SECRET, Settings
 
 VALID_ENVIRONMENT: Final = {
     "ACME_DATABASE_HOST": "db.example.com",
@@ -330,15 +330,19 @@ class TestSettings:
     def test_a_failed_start_prints_no_secret(
         self, environment: pytest.MonkeyPatch
     ) -> None:
-        # The error text shows each input cut to 50 characters. With the key as the
-        # only value set, the input is short enough to show whole without the flag.
+        # Without the flag, each error line shows the repr of the input it read, cut to
+        # its first 25 and last 24 bytes when it is over 50. With the key as the only
+        # value set, the repr is short enough to show the key whole.
         for name in VALID_ENVIRONMENT.keys() - {"ACME_PAYMENTS_API_KEY"}:
             environment.delenv(name)
 
-        with pytest.raises(ValidationError, match="Field required") as caught:
+        with pytest.raises(ValidationError) as caught:
             Settings(_env_file=None)
 
+        errors = caught.value.errors(include_input=False)
+        assert {error["type"] for error in errors} == {"missing"}, errors
         assert "payments-key-for-tests" not in str(caught.value)
+        assert "input_value" not in str(caught.value)
 
     @pytest.mark.parametrize(
         "name",
@@ -350,7 +354,7 @@ class TestSettings:
     def test_a_placeholder_secret_stops_the_start(
         self, environment: pytest.MonkeyPatch, name: str
     ) -> None:
-        environment.setenv(name, "changethis")
+        environment.setenv(name, PLACEHOLDER_SECRET)
 
         with pytest.raises(ValidationError, match="placeholder"):
             Settings(_env_file=None)
@@ -366,8 +370,10 @@ into a tuple: the library's own tests cover that, and such a test here would tur
 library changes or a field is renamed or retyped on purpose
 ([testing/what-to-test.md](../testing/what-to-test.md) section 3). The missing-value test takes its
 rows from `VALID_ENVIRONMENT`, so a required variable gets its row when it joins the valid
-environment. The no-secret test sets the key alone: pydantic cuts each input in the error text to 50
-characters, and a longer input could hide the key even without the flag.
+environment. The no-secret test sets the key alone and keeps it short: without the flag, a test
+value of 27 or more characters makes the input's repr longer than 50 bytes, pydantic shows only its
+first 25 and last 24 bytes, and the key check passes while the key's tail is on screen. The
+`input_value` check does not depend on the value: without the flag it fails at any length.
 
 The tests close both sources the class reads: each passes `_env_file=None`, which keeps a
 developer's `.env` out, and the fixture removes every `ACME_` variable of the machine before it
@@ -406,10 +412,14 @@ empty-value test too; `repr(Settings(...))` prints both secrets as `**********`.
   that keeps its secrets there adds that source to the class, and nothing else changes. The
   `.env.example` file that holds the placeholder is not shown. The `.gitignore` and `.dockerignore`
   that list `.env` are not shown either.
-- **That the error never carries a secret.** `hide_input_in_errors=True` keeps the values out of
-  the error's text only; `errors()` and `json()` still carry them, which is why the tests read
-  `errors(include_input=False)` and why [python.md](python.md) section 5 lets the error end the
-  process and logs neither.
+- **That the error never carries a secret.** `SecretStr` does not replace the flag: the error
+  holds the raw text it read, not a `SecretStr` (pydantic issue #9139).
+  `hide_input_in_errors=True` keeps the values out of the error's text only; `errors()` and
+  `json()` still carry them, which is why the tests read `errors(include_input=False)` and why
+  [python.md](python.md) section 5 lets the error end the process and logs neither. A traceback
+  printer that shows each frame's local variables prints what the flag hides: structlog's
+  `RichTracebackFormatter` has `show_locals=True` by default, and a password leaked that way in
+  langflow (pull request #15147).
 - **The names of the values with a default.** A misspelt or renamed `ACME_LOG_LEVEL`,
   `ACME_LOG_FORMAT` or `ACME_ALLOWED_ORIGINS` leaves the default in place and fails no test; those
   names are a contract with the deployment that review keeps.

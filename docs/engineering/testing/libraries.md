@@ -21,7 +21,7 @@ from the first test, and lists them in `required_plugins`.
 | Need | Library | What it does | Watch for |
 |---|---|---|---|
 | a unit suite that never reaches the network | pytest-socket | `--disable-socket` blocks every socket a test opens; the `enable_socket` mark opens it again, set here by folder ([fakes-and-boundaries.md](fakes-and-boundaries.md) section 4) | since 0.8 it blocks DNS lookups too, so the error may name `getaddrinfo` |
-| tests that pass in any order | pytest-randomly | shuffles the order on every run, reseeds `random` for each test, prints the seed | 4.0 changed how seeds are derived, so a seed noted before 4.0 does not repeat that order |
+| tests that pass in any order | pytest-randomly | shuffles the order on every run, reseeds `random` for each test, prints the seed | 4.0 changed the seed `random` gets in each test, and 5.0 changed the order a given seed produces, so a seed noted on an older version may not repeat that run |
 | async tests | pytest-asyncio, or anyio's own plugin | runs `async def` tests and fixtures in auto mode, with no mark ([running-tests.md](running-tests.md) section 7) | one plugin in auto mode, never both; anyio's key needs anyio 4.11 or newer |
 
 ## 2. Add when the need appears
@@ -36,7 +36,7 @@ it, not before.
 | a hung test fails instead of stalling | pytest-timeout | ends a test after a set time | the integration suite, from its first test that calls something outside | the time covers fixture setup too; the `signal` method clashes with code that uses `SIGALRM` |
 | retries for a test that asks a real model | pytest-rerunfailures | reruns a failed test, `--reruns N` | the first `live_model` test ([running-tests.md](running-tests.md) section 10) | never on a test that does not call a real model; a rerun keeps the wider fixtures |
 | code you do not own reads the clock | time-machine | moves the process clock for the length of a block | a library reads `datetime.now()` itself; your own code takes the time as a value | does not move `time.monotonic()` since 3.0 |
-| a rule over a large space of inputs | Hypothesis | generates inputs from a description of them, and shrinks a failing one to the smallest | parsing, money, dates, anything with edge cases you cannot list | slower than a table; name the test for the property it checks |
+| a property that holds for every input | Hypothesis | generates inputs from a description of them, and shrinks a failing one to the smallest | a property holds for every input: a round trip such as parse and format, agreement with a simpler implementation | slower than a table; name the test for the property it checks |
 | a large output checked by eye | syrupy | stores the output in a file next to the test and compares later runs with it | a rendered email, an API response of many fields | a snapshot passes whatever it first recorded: review each update like code. Its `__snapshots__/` folders hold no `__init__.py`, so the two `find` checks of [layout.md](layout.md) sections 4 and 6 skip them |
 | test data for models with many fields | polyfactory | builds dataclasses, Pydantic models and `TypedDict`s from their type hints | a builder function ([fixtures.md](fixtures.md) section 7) grows past a handful of fields | its values are random: set every field the test is about |
 | which lines the tests reach | pytest-cov | measures coverage for the run, and combines the workers of pytest-xdist | you want the report in CI | coverage says what ran, not what a test checked |
@@ -62,6 +62,7 @@ team may weigh differently.
 | factory-boy | factories for ORM models | built around ORM models, and its last release was in early 2025; polyfactory builds typed models. A Django project that already uses it keeps it |
 | vcrpy, pytest-recording | record real HTTP traffic to a file and replay it | a recording can keep request headers, keys included, and replays whatever the partner said on the day it was made; pytest-recording has not been released since May 2025 |
 | dirty-equals | matchers such as `IsNow` and `IsPartialDict` for `==` | it changes how every assertion reads; a team choice, not a default. [assertions.md](assertions.md) section 1 asks for the exact value |
+| mutmut, cosmic-ray | changes the code in many small ways, reruns the tests on each change, and lists every change no test caught | steps 1 and 5 of [what-to-test.md](what-to-test.md) section 4 already name one breaking edit for each new test and watch the test fail on it. mutmut starts pytest with `-p no:randomly`, which the `required_plugins` of [running-tests.md](running-tests.md) section 1 rejects with exit code 4. cosmic-ray reruns the whole test command for each change: by its own docs, a 10-second suite with 1,000 changes takes about 2.7 hours |
 
 ## 4. Sources
 
@@ -70,4 +71,5 @@ pytest-randomly, pytest-asyncio, anyio ("Testing with AnyIO" and its version his
 pytest-xdist, testcontainers-python, pytest-timeout, pytest-rerunfailures, time-machine,
 Hypothesis, syrupy, polyfactory, pytest-cov and coverage.py, httpx ("Transports"), pytest's 9.0
 changelog (`subtests`), pytest-mock, respx, pytest-httpx, pytest-env, inline-snapshot,
-factory-boy, vcrpy, pytest-recording, dirty-equals.
+factory-boy, vcrpy, pytest-recording, dirty-equals, mutmut (README and source), cosmic-ray
+(documentation).

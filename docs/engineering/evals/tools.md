@@ -71,7 +71,7 @@ never fails a test; on the cloud, trace retention was capped at 180 days from 14
 | RAG metrics | Ragas | faithfulness, context precision and recall, test set generation | only with its maintenance risk accepted | no release since January 2026; 0.4.3 fails to import next to current LangChain packages; drops failed rows from averages ([rag.md](rag.md) section 7) | Optional |
 | benchmark-style evals with repeats and sandboxes | Inspect AI (UK AI Security Institute) | tasks, solvers and scorers; `epochs` with reducers such as `at_least_2`; sandboxed agents | an eval needs many repeats per case, a sandbox, or "k of n" per case ([repeated-runs.md](repeated-runs.md) section 5) | its own runner, not pytest; exit status covers errors, not scores, so a gate reads the log; testing a LangGraph agent needs its model routed through Inspect | Optional |
 | prompt comparisons and red teaming from YAML | promptfoo | test cases and assertions in YAML, `promptfoo eval`, a red-team module with OWASP presets | comparing prompts or models side by side, or scheduled red teaming ([production.md](production.md) section 7) | needs Node.js 22; the pip wrapper runs `npx promptfoo@latest` unless `PROMPTFOO_VERSION` pins it; OpenAI announced it was buying promptfoo in March 2026 | Optional |
-| evals for a Pydantic AI app | Pydantic Evals | `Dataset`, `Case`, evaluators, `LLMJudge`, `evaluate_sync(task, repeat=n)` | the application is built on Pydantic AI | no gate of its own; `repeat` reports averages | Optional |
+| typed cases and evaluators in Python, any framework | Pydantic Evals | `Dataset`, `Case`, evaluators, `LLMJudge`, `evaluate_sync(task, repeat=n)` with `case_groups()`, span-based evaluators | you want typed cases, `repeat=` with case groups, or evaluators on OpenTelemetry spans, with any framework | no gate of its own; `repeat` reports averages; span-based evaluators need the logfire SDK installed and configured, with no Logfire account | Optional |
 | "k of n" in pytest | flaky | `@flaky(max_runs=n, min_passes=k)` | you accept the limits in [repeated-runs.md](repeated-runs.md) section 5 | no release since 2024; false greens with pytest-rerunfailures; breaks async tests | Optional |
 
 Platforms, one line each: **Arize Phoenix** (Elastic License 2.0, not an open-source licence;
@@ -87,14 +87,18 @@ the test counts the passes:
 
 ```python
 # tests/integration/chat/test_graph.py
+from collections.abc import Iterable
 from typing import Final
 
 import pytest
 from deepeval.metrics import GEval
 from deepeval.models import OpenAIModel
 from deepeval.test_case import LLMTestCase, SingleTurnParams
+from langchain_core.messages import AnyMessage, HumanMessage, ToolMessage
+from langgraph.errors import GraphRecursionError
 
 from acme.core.config import Settings
+from acme.core.errors import ModelAnswerInvalid, ModelOutputCutOff, ModelRefused
 from acme.support.chat.graph import ChatAgent
 
 QUESTION: Final = "Where is order A-1042?"
@@ -113,34 +117,76 @@ def keeps_to_order_status() -> GEval:
         ],
         evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT, SingleTurnParams.CONTEXT],
         model=OpenAIModel(
-            model=REPLY_JUDGE_LLM_MODEL, api_key=settings.openai_api_key.get_secret_value()
+            model=REPLY_JUDGE_LLM_MODEL,
+            api_key=settings.openai_api_key.get_secret_value(),
         ),
         strict_mode=True,
     )
+
+
+def tool_results(messages: Iterable[AnyMessage]) -> list[str]:
+    """What the run's tools returned: the facts the reply must keep to."""
+    return [message.text for message in messages if isinstance(message, ToolMessage)]
+
+
+async def judged_run(agent: ChatAgent, judge: GEval) -> bool | Exception | None:
+    """One run of the agent, judged; a run the agent ended without its reply fails.
+
+    That failure comes back in place of a verdict, so a red run shows it.
+    ModelUnavailable and an error of the judge raise: errors of the run
+    (evals.md section 6).
+    """
+    try:
+        output = await agent.ainvoke(
+            {"messages": [HumanMessage(QUESTION)]}, version="v2"
+        )
+    except (
+        GraphRecursionError,
+        ModelRefused,
+        ModelOutputCutOff,
+        ModelAnswerInvalid,
+    ) as exc:
+        return exc
+
+    test_case = LLMTestCase(
+        input=QUESTION,
+        actual_output=output.value["structured_response"].text,
+        context=tool_results(output.value["messages"]),
+    )
+    await judge.a_measure(test_case)
+
+    return judge.is_successful()
 
 
 @pytest.mark.live_model
 class TestBuildAgent:
     """The support agent's replies keep to what the order store says."""
 
-    def test_a_processing_order_gets_no_promise_of_a_date_in_two_runs_of_three(
+    async def test_a_processing_order_gets_no_promise_of_a_date_in_two_runs_of_three(
         self, chat_agent: ChatAgent, keeps_to_order_status: GEval
     ) -> None:
-        verdicts: list[bool | None] = []
-        for _ in range(RUNS_PER_CASE):
-            reply = ...  # the agent's real reply to QUESTION, cut here
-            test_case = LLMTestCase(
-                input=QUESTION, actual_output=reply, context=["order A-1042: processing"]
-            )
-            keeps_to_order_status.measure(test_case)
-            verdicts.append(keeps_to_order_status.is_successful())
+        verdicts = [
+            await judged_run(chat_agent, keeps_to_order_status)
+            for _ in range(RUNS_PER_CASE)
+        ]
 
         assert verdicts.count(True) >= 2
 ```
 
 The names are those of DeepEval 4.2.7; the agent, its fixture and `REPLY_JUDGE_LLM_MODEL` are cut
 here, [agent-eval-example.md](agent-eval-example.md) builds the agent, and `openai_api_key` is the
-settings field of [logging/agent-example.md](../logging/agent-example.md). What makes this snippet
+settings field of [logging/agent-example.md](../logging/agent-example.md); `GraphRecursionError` is
+LangGraph's, and the `acme.core.errors` classes the agent's middlewares raise are those of
+[logging/agent-example.md](../logging/agent-example.md). The test is async
+because the agent is ([agent-eval-example.md](agent-eval-example.md) says why), so it awaits the
+agent and DeepEval's `a_measure`. The judge's context is what the run's tools returned, not a copy
+of the fixture's data, so the reply is judged against the facts the agent saw
+([agents.md](agents.md) section 2). The judge's model here has no reasoning effort to set; one that
+has one gets it from its `<purpose>_llm_reasoning_effort` constant through `OpenAIModel`'s
+`generation_kwargs` ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md)
+section 15). `OpenAIModel` keeps the snippet on the one key the logging example has;
+[judges.md](judges.md) section 4 asks for a judge of another family than the agent's, so a real
+suite passes DeepEval's model class for that family. What makes this snippet
 follow the method:
 
 - **Should. `evaluation_steps` instead of `criteria`** ([judges.md](judges.md) section 7): DeepEval's
@@ -161,7 +207,11 @@ follow the method:
   ([running-tests.md](../testing/running-tests.md) section 10).
 - **Should. Three runs, and the passes counted** ([repeated-runs.md](repeated-runs.md) section 5):
   one run of one case decides nothing, and `assert_test` decides one case on one run. The metric
-  stays advisory, never alone in a gate, until [judges.md](judges.md) sections 6 and 9 hold.
+  stays advisory, never alone in a gate, until [judges.md](judges.md) sections 6 and 9 hold. A run
+  the agent ended without its reply, at its step limit, on a refusal, or on an answer cut off or
+  one that does not parse, is a failed run, not an error ([evals.md](evals.md) section 6):
+  `judged_run` puts it in the list in place of a verdict. `ModelUnavailable` and an error of the
+  judge raise, and the test fails on them as errors of the run.
 - **Should. Run it with `deepeval test run <file>`**, the documented entry point, and pin a release
   after April 2026, when a fix made it pass pytest's failing exit codes through to CI.
 - **Must. Validate the metric** on your labels before it gates ([judges.md](judges.md) section 6):
@@ -210,7 +260,8 @@ follow the method:
 - Inspect AI docs (options, scorers, eval logs, agent bridge) and changelog, version 0.3.273.
 - promptfoo docs (command line, CI/CD, assertions, telemetry, red team); "Promptfoo is joining
   OpenAI", 2026-03-09; issue #9968.
-- Pydantic Evals docs (multi-run); box/flaky README and issues; the pytest-rerunfailures README.
+- Pydantic Evals docs (overview, multi-run, span-based evaluators) and its PyPI page, version
+  2.52.0, read 2026-10-01; box/flaky README and issues; the pytest-rerunfailures README.
 - Arize, "A new chapter with Dynatrace", 2026-08-13.
 - Practitioners: Hamel Husain's evals FAQ (hamel.dev), on generic library metrics that "measure
   abstract qualities that may not matter"; Rhesis pull request #2759, which removed Ragas as

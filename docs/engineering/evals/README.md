@@ -24,11 +24,8 @@ work.
 
 ## Levels
 
-Every rule opens with its level, defined in [evals.md](evals.md) section 1:
-
-- **Must**: what every application that calls a model needs, when the rule's condition holds.
-- **Should**: what pays in most applications; the rule says when to start it and what shows it pays.
-- **Optional**: add it when the need the rule names appears.
+Every rule opens with its level, Must, Should or Optional, as [evals.md](evals.md) section 1
+defines them.
 
 The terms of the next section are what a reader needs to know before the rules.
 
