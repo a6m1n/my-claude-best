@@ -191,6 +191,9 @@ prompts from elsewhere. A rule-based guardrail is tested like any code
 - Production judges: MagicSchool, arXiv:2609.28478, 2026; a production ordering agent,
   arXiv:2606.10315, 2026; "Who drifted", arXiv:2606.15474, 2026; a vendor alias over 19 months,
   arXiv:2608.11803, 2026; Anthropic, "A postmortem of three recent issues", 2025-09-17.
+- Trace-level judges: Langfuse FAQ, "How do I upgrade trace-level evaluators to observation-level
+  evaluators?" (langfuse.com/faq/all/llm-as-a-judge-migration), read 2026-10-01: on Langfuse Cloud
+  they stop at the v4 cutover on 2026-11-16.
 - Eugene Yan, "An LLM eval process", 2025-04; Hamel Husain and Shreya Shankar, evals FAQ, "How often
   should I run my evals".
 - User feedback: Nam et al., arXiv:2509.18361, 2025; Langfuse docs, "User feedback", "Alerts",

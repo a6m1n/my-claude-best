@@ -19,14 +19,14 @@
 ## 1. Purpose and the one rule
 
 This file is for everyone who writes or changes Python code that logs: people and AI agents alike.
-Read it before you add a log call, set up logging for a process, or wire logging or tracing into
-a web service or an agent.
+Read it before you add a log call, set up logging for a process, wire logging or tracing into a
+service or an agent, or add an HTTP route, a CLI command or a worker's job that calls a model.
 
 One rule holds the rest together: **the log tells a person what the application did; the trace
 store keeps what it said.** A log line is an event with ids: a service started, a request
 finished, a call was retried, an operation failed. The text of prompts, answers, tool results and
 documents never goes into the log. An application that calls a language model keeps that text in
-a trace store, which has its own access control and retention (section 8).
+a trace store, which needs its own access control, masking and retention (section 8).
 
 The code assumes Python 3.11 or newer and the standard library's `logging` module. Two cases get
 their own rules: a FastAPI service served by uvicorn, and an agent built with LangChain or
@@ -290,22 +290,41 @@ a summary leaves three traces, and nothing in them shows that they answered one 
   `start_as_current_observation(as_type="span", ...)`, called in `core/langfuse_client.py`. Open
   it for a request with one model call too: the same span puts the trace id on the log lines, and
   a second call added later lands in the same trace. A CLI command or a worker's job opens its root
-  the same way, at its own entry point. An eval run opens none: the experiment runner gives each
-  case its own trace ([evals.md](../evals/evals.md) section 9).
+  the same way, at its own entry point. An eval run on Langfuse's experiment runner opens none:
+  the runner gives each case its own trace; an eval loop of your own opens one root per case, the
+  way a worker's job does ([evals.md](../evals/evals.md) section 9). The adapter, not a middleware
+  and not the use case: a middleware runs before routing and authentication, so it knows neither
+  the question, the answer, the user nor whether the route calls a model, and it would open a trace
+  for every request it wraps; a use case can run twice in one request, or under an eval runner that
+  already gave the case its trace, and the request id, the session and the user are the adapter's
+  to know.
 - **Set the input and the output on the root span, never on the trace.** Langfuse SDK v4 marks
   `set_current_trace_io()` deprecated and takes the trace's input and output from the root span,
-  and on Langfuse Cloud the LLM judges that read trace-level input stop on 16 November 2026. Set
-  them to what a reviewer needs at a glance: the question the user sent and the answer the
-  request returns. Never the raw request, a dependency object or the function's arguments.
-  `@observe` on a route records exactly those, so the route opens the root through
-  `core/langfuse_client.py` with an explicit input, never with `@observe`.
+  and Langfuse Cloud is retiring the LLM judges that read trace-level input
+  ([production.md](../evals/production.md) section 5). Set them to what a reviewer needs at a
+  glance: the question the user sent and the answer the request returns. Never the raw request, a
+  dependency object or the function's arguments. `@observe` on a route records exactly those, so
+  the route opens the root through `core/langfuse_client.py` with an explicit input, never with
+  `@observe`.
+- **Decide what the trace store may keep before the first route sends it user text, and set it in
+  the one client.** The root span's input and output, and every prompt, answer and tool result
+  under it, reach the trace store as they are. To keep a value out, pass a `mask_otel_spans`
+  function to `Langfuse(...)` in `core/langfuse_client.py`: it deletes or replaces span attributes
+  before this client exports them, the handler's spans included; another exporter on the same
+  tracer provider, such as an APM's, gets its own unmasked copy (section 12). If the function
+  raises, Langfuse drops the batch rather than send it unmasked. Set the project's data retention
+  too: with no policy, Langfuse deletes nothing (Langfuse's Data Retention page says which plans
+  have one; self-hosted, it needs an enterprise key, [tools.md](../evals/tools.md) section 2).
+  Where the plan has no retention policy, delete the traces older than your window on a schedule
+  through Langfuse's public API (`DELETE /api/public/traces`; Langfuse's Data Deletion page).
 - **Right after the root span opens, pass the trace's attributes with
   `propagate_attributes(...)`.** The root, which is open when the block starts, and every span
   created inside the block get them; any other span created earlier does not, and Langfuse counts cost per
   user only over the spans that carry the user id. Pass ids, not text: a value
   over 200 characters is dropped with only a warning. Pass them in this one place, never also as
   the run's `langfuse_*` metadata keys; in async LangChain runs those reach only the run's first
-  span (langfuse issue #16177).
+  span (langfuse issue #16177, closed by its reporter in August 2026 with no fix: the SDK 4.16.0
+  handler still sets no `run_inline`).
 - **The environment and the release belong to the trace client, not to a request.** Pass them
   once, where the client is built (`Langfuse(environment=..., release=...)`), from the settings
   ([python.md](../language/python.md) section 5); given nothing, the SDK reads its own variables.
@@ -339,7 +358,7 @@ What to set on the root span:
 | trace name | the span's name | `propagate_attributes(trace_name=...)` | the SDK puts it on every span of the request; without it, only Langfuse's server falls back to the root span's name |
 | session | the dialogue's `thread_id` | `propagate_attributes(session_id=...)` | the requests of one dialogue show as one session |
 | user | the user's id in your own system, never an email | `propagate_attributes(user_id=...)` | cost and quality per user |
-| tags | values known before the run, such as the channel | `propagate_attributes(tags=[...])` | a tag is fixed when its span is created |
+| tags | values your code sets, known before the run, such as the channel the route serves; never a value read from the request | `propagate_attributes(tags=[...])` | a tag is fixed when its span is created, and Langfuse's evaluation rules select traces by tag |
 
 A LangGraph run that stops for a person (an interrupt) and resumes in a later request gives one
 trace per request; the shared `session_id` shows them as one dialogue. `request_trace`, the one
@@ -455,9 +474,11 @@ mechanical half goes to the linter and not to more prose.
   `opentelemetry-instrumentation-fastapi`, or Sentry's SDK where it runs on OpenTelemetry (Python
   `sentry_sdk` 3 and later): its server span becomes the parent of the request's
   root span, and Langfuse's spans take that trace's id and its sampling decision. Requests can
-  then merge into one trace, or none reach Langfuse when the incoming trace is not sampled. Read
-  Langfuse's FAQ on an existing OpenTelemetry or Sentry setup before you add one; it shows how to
-  give Langfuse a tracer provider of its own.
+  then merge into one trace, or none reach Langfuse when the incoming trace is not sampled. Its
+  exporter also receives Langfuse's spans, prompts and answers included, which `mask_otel_spans`
+  does not mask. Read Langfuse's FAQ on an existing OpenTelemetry or Sentry setup before you add
+  one, and before you open root spans in a process that already runs one; it shows how to give
+  Langfuse a tracer provider of its own.
 - **A handler that must block,** such as a file you are required to keep: put it behind a
   `QueueHandler`. Start and stop the listener yourself, give the queue a limit, put the
   formatter on the `QueueHandler`, and set logging up again in each forked worker.
@@ -482,12 +503,12 @@ OpenTelemetry Python API source (1.45) and the GenAI semantic conventions reposi
 core source (1.4 to 1.6), LangChain agents middleware (1.4.2), LangGraph source (1.2) and
 langgraph-prebuilt (`ToolNode`), the LangSmith SDK (0.14) and docs, Langfuse's docs and
 repository. For the root span, read 2026-10-01: Langfuse's "What does a good trace look like?",
-"Instrumentation", the LangChain integration page, "Upgrade path Python v3 to v4", the FAQs
-"Why are the input and output of my trace empty?", "LLM-as-a-judge migration", "Existing
-OpenTelemetry setup", "Existing Sentry setup" and "Dashboard changes in v4", and the Python SDK
-4.16.0 source (`propagate_attributes`, `start_as_current_observation`, the LangChain
-`CallbackHandler`); langfuse issues #16177 and #13590 and discussion #11127 (2025–2026);
-Starlette 1.7 `StreamingResponse` and `BackgroundTask` source; CPython's `asyncio.to_thread` and
-`loop.run_in_executor`. ruff's rule reference (0.16.9). LiteLLM issue #35699 (2026) for the f-string
-measurement; Ouatiti, Sayagh, Li and Hassan, arXiv:2604.09409 (2026), on agents and logging
-instructions.
+"Instrumentation", "Masking", "Data Retention", "Data Deletion", the LangChain integration page,
+"Upgrade path Python v3 to v4", the FAQs "Why are the input and output of my trace empty?",
+"LLM-as-a-judge migration", "Existing OpenTelemetry setup", "Existing Sentry setup" and
+"Dashboard changes in v4", and the Python SDK 4.16.0 source (`propagate_attributes`,
+`start_as_current_observation`, `mask_otel_spans`, the LangChain `CallbackHandler`); langfuse
+issues #16177 and #13590 and discussion #11127 (2025–2026); Starlette 1.7 `StreamingResponse`
+and `BackgroundTask` source; CPython's `asyncio.to_thread` and `loop.run_in_executor`. ruff's
+rule reference (0.16.9). LiteLLM issue #35699 (2026) for the f-string measurement; Ouatiti,
+Sayagh, Li and Hassan, arXiv:2604.09409 (2026), on agents and logging instructions.

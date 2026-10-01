@@ -143,10 +143,11 @@ async def chat(body: ChatRequest, request: Request) -> ChatResponse:
 
 The root span carries what logging.md section 8 asks for: a stable name from the module's
 `consts.py`, the customer's question as its input and the reply as its output, the request id in
-its metadata, and the dialogue's `thread_id` as the session. The chat has no signed-in user, so it
-passes no `user_id`. A failure inside the block leaves the output unset and propagates as before;
-OpenTelemetry records the exception on the root span and sets its status to error, which Langfuse
-shows as level `ERROR`. A test builds the app from its own `Settings` with
+its metadata, and the dialogue's `thread_id` as the session. `ChatRequest` (`api/schemas.py`, not
+shown) bounds `thread_id` as `TicketRequest` does in [trace-example.md](trace-example.md). The
+chat has no signed-in user, so it passes no `user_id`. A failure inside the block leaves the output
+unset and propagates as before; OpenTelemetry records the exception on the root span and sets its
+status to error, which Langfuse shows as level `ERROR`. A test builds the app from its own `Settings` with
 `langfuse_tracing_enabled=False`: the client then records nothing, and the route runs the same.
 
 `create_app()` passes `Settings()` to `build_app(settings)`, as in
@@ -221,6 +222,12 @@ class RequestTrace:
         # Langfuse takes the trace's output from its root span.
         self._root.update(output=output)
 
+    def mark_cut(self) -> None:
+        # The client left before the end: the output is partial, and the root's level says so.
+        self._root.update(
+            level="WARNING", status_message="client disconnected before the end"
+        )
+
 
 @contextmanager
 def request_trace(
@@ -245,11 +252,18 @@ def callback_handler() -> BaseCallbackHandler:
 ```
 
 `request_trace` is the one place that opens a request's root span: the adapter passes the values
-and gets back only `record_output`, so no adapter calls Langfuse itself. The root is a plain
-`span`, because it holds steps of several kinds; the handler gives each step under it its own type.
-The example passes no tags. A service with a value known before the run, such as the channel, adds
-`tags=[...]` to the same `propagate_attributes` call, because a tag is fixed when its span is
-created ([logging.md](logging.md) section 8).
+and gets back only `record_output` and `mark_cut`, so no adapter calls Langfuse itself. The root is
+a plain `span`, because it holds steps of several kinds; the handler gives each step under it its
+own type. The example passes no tags. A service that sets them adds `tags=[...]` to the same
+`propagate_attributes` call; [logging.md](logging.md) section 8 says which values qualify.
+
+`request_trace` and `stop_tracing` reach the client through `get_client()` instead of taking it as
+a parameter, which departs from
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 4: Langfuse's
+handler and `@observe` read the client from `get_client()` by themselves, and `get_client()` builds
+it from the one configuration `start_tracing` registered, so a handle passed in would add nothing.
+`start_tracing` is also where a `mask_otel_spans` function goes when a service keeps some values
+out of the trace store ([logging.md](logging.md) section 8); this example masks nothing.
 
 ## `core/openai_client.py`: the one client of the model provider
 
@@ -417,8 +431,8 @@ SUPPORT_CHAT_LLM_MODEL: Final[ChatModel] = "gpt-4.1-mini-2025-04-14"
 # One LangGraph step per model call and one per round of tool calls, so 12 allows
 # several tool rounds.
 SUPPORT_CHAT_MAX_STEPS: Final = 12
-# Evaluators, dashboards and saved filters find the request's trace by this name, so it stays
-# the same: verb first, no ids, no model name.
+# Evaluators and dashboards find the request's trace by this name, so keep it stable
+# (logging.md section 8).
 SUPPORT_CHAT_TRACE_NAME: Final = "answer-chat"
 ```
 

@@ -22,7 +22,8 @@ What each part does for the trace:
 # support/ticket/consts.py
 from typing import Final
 
-# The request's trace name; logging.md section 8 says how to pick one.
+# Evaluators and dashboards find the request's trace by this name, so keep it stable
+# (logging.md section 8).
 SUPPORT_TICKET_TRACE_NAME: Final = "answer-ticket"
 ```
 
@@ -40,6 +41,11 @@ they are not shown. The step names are a closed set, so they are a `Literal` ali
 strings ([python.md](../language/python.md) section 3).
 
 ## `support/ticket/usecase.py`: three steps, one handler
+
+The use case leaves out two parts that [agent-example.md](agent-example.md) shows or names for
+`answer`: the run's summary line ([logging.md](logging.md) section 9) and the check of the parsed
+values ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md)
+section 11), such as rejecting an empty reply or note.
 
 ```python
 from langchain_core.callbacks import BaseCallbackHandler
@@ -88,12 +94,9 @@ metadata keys, because the root span already carries the trace's attributes (log
 
 `graph.py` builds `TicketFlow` once, at start-up: the retriever, the agent made by `create_agent`
 with an `articles` field in its state, and the chain that writes the note. Each model call in it
-takes its model from a `<purpose>_llm_model` constant and returns its answer through a response
-schema ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md)
-sections 11 and 15). The rest of `schemas.py` holds `Ticket` (`customer_id`, `thread_id`,
-`text`) and `TicketAnswer` (`reply`, `note`). The run's summary line ([logging.md](logging.md) section 9) is the
-same as in [agent-example.md](agent-example.md) and is left out here; so are `graph.py` and
-the rest of `schemas.py`.
+follows [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md)
+sections 11 and 15. The rest of `schemas.py` holds `Ticket` (`customer_id`, `thread_id`, `text`)
+and `TicketAnswer` (`reply`, `note`). `graph.py` and the rest of `schemas.py` are left out.
 
 ## `api/routes_ticket.py`: the root span around the use case
 
@@ -140,8 +143,10 @@ The root span's input is the ticket text and its output the reply the customer r
 reviewer needs at a glance in the trace list, not the request body or the route's arguments. The
 note keeps its own output on the step that wrote it. The customer id comes from the caller's
 authentication (`api/auth.py`, not shown), never from the body, and it is the shop's own id, not an
-email. `build_app` keeps the flow on `app.state` as `ticket_flow`, next to the handler of
-[agent-example.md](agent-example.md).
+email. `TicketRequest` (`api/schemas.py`, not shown) bounds `thread_id` with a pattern: the
+customer controls it, and Langfuse drops a session id over 200 characters
+([python.md](../language/python.md) section 4). `build_app` keeps the flow on `app.state` as
+`ticket_flow`, next to the handler of [agent-example.md](agent-example.md).
 
 ## What the trace shows
 
@@ -162,9 +167,8 @@ Every span in it carries the trace name, the session (the dialogue's `thread_id`
 because `request_trace` passes them with `propagate_attributes` before the first step starts. The
 trace id on every log line of the run opens the trace, and the request id in the root span's
 metadata leads from the trace back to the log lines. With the release that `start_tracing` sets
-on the client as the prompts' version, the trace carries all three things
-[production.md](../evals/production.md) section 2 asks for: the model's version on each
-generation, the prompts' version and the user's session.
+on the client as the prompts' version, the trace carries what
+[production.md](../evals/production.md) section 2 asks a production trace to carry.
 
 Without the root span, the same request leaves three traces, `find-articles`, `answer-customer`
 and `write-ticket-note`, each with only its own input and output, and nothing that shows they
@@ -176,6 +180,7 @@ The generator that yields the body opens the root span; [logging.md](logging.md)
 why the route cannot.
 
 ```python
+import asyncio
 from collections.abc import AsyncIterator
 from typing import Annotated
 
@@ -223,8 +228,14 @@ async def _traced_reply(
             async for chunk in stream_ticket_reply(ticket, flow, tracing=tracing):
                 yielded.append(chunk)
                 yield chunk
+        except (GeneratorExit, asyncio.CancelledError):
+            # The stream stopped early: the root is marked, so a judge's rule and a
+            # reviewer can tell a cut reply.
+            trace.mark_cut()
+            raise
         finally:
-            # A client that disconnects stops the stream early; the root still records what was yielded.
+            # Runs on every exit: the end, a client that disconnects, a failure.
+            # The root records what the customer received.
             trace.record_output("".join(yielded))
 ```
 
@@ -238,3 +249,11 @@ placed after the loop would never run, and the trace would show no output at all
 closed later is closed in another task: by the source of Langfuse SDK 4.16.0 and OpenTelemetry, the
 root then ends late and OpenTelemetry logs `Failed to detach context` at `ERROR` (langfuse issue
 #13590, no released fix as of 1 October 2026).
+
+The root of a cut stream is at level `WARNING`, and the steps under it are at `ERROR`: LangChain
+reports a cancelled step as failed, and the handler maps that to `ERROR`. The root's level is what
+tells a cut reply from a short answer. A judge on the root span
+([production.md](../evals/production.md) section 5) skips these replies when its rule leaves out a
+root at level `WARNING`. A count of observations at `ERROR` still counts their steps, and no filter
+on the root removes them, because each observation is filtered on its own level; count root spans
+at `ERROR` when a client that left should not count as a failure.

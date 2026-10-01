@@ -794,7 +794,8 @@ goes at the very start of the system prompt, followed by a newline;
 and where the vendor or a gateway in between has its own switch to skip a cache, the setting turns
 that on too. Apply it in the one client every model call goes through
 ([file-structure.md](../file-structure/file-structure.md) section 4). A request id for tracing
-goes into the request's metadata, never into the prompt.
+never goes into the prompt; it goes on the request's root span
+([logging.md](../../python/logging/logging.md) section 8 for Python).
 
 Why: the vendors' prompt caches do not change the answer. Anthropic's and OpenAI's docs both state
 that a cached request returns the same output as an uncached one; the cache saves cost and time
@@ -810,7 +811,8 @@ only. The switch is for the caches that do change what you get, and for measurin
 Caches match the request from its start, so a first line that differs on every request matches
 nothing after it; one report measured a changing UUID in a system prompt missing the whole cached
 prefix. A UUID later in the request would leave the part before it cached. A request id
-in the prompt would change the prompt itself on every call, which is why it goes into metadata.
+in the prompt would change the prompt itself on every call, which is why it goes on the root span
+instead.
 The switch is also visible in the environment, off unless it says otherwise, so it cannot be left
 on by a forgotten edit.
 

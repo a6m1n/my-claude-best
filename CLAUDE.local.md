@@ -44,14 +44,15 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   module, `docs/engineering/any-language/file-structure/package-map-example.md` when you write a package map.
   The check: every file the diff adds sits where the practice's role table puts its kind, its name
   says what it holds (no `utils.py`), and every import in it is absolute.
-- Before you add a log call, set up logging for a process, or wire logging or tracing into a
-  service or an agent, read `docs/engineering/python/logging/logging.md`, and
+- Before you add a log call, set up logging for a process, wire logging or tracing into a service
+  or an agent, or add an HTTP route, a CLI command or a worker's job that calls a model, read
+  `docs/engineering/python/logging/logging.md`, and
   `docs/engineering/python/logging/setup-example.md` when you set up logging for a process,
   `docs/engineering/python/logging/agent-example.md` when an agent's runs should appear in the log,
-  `docs/engineering/python/logging/trace-example.md` when one request makes more than one model
-  call. The check: the ruff rules in `logging.md` section 11 pass on the change, no line it adds
-  logs a prompt, an answer or a secret, and every HTTP route the change adds that calls a model
-  opens the request's root span (`logging.md` section 8).
+  `docs/engineering/python/logging/trace-example.md` when you add a route that calls a model, or
+  one request makes more than one model call. The check: the ruff rules in `logging.md` section 11
+  pass on the change, no line it adds logs a prompt, an answer or a secret, and every HTTP route
+  the change adds that calls a model opens the request's root span (`logging.md` section 8).
 - Before you write or change a function or a class, or review one, read
   `docs/engineering/any-language/readability/readability.md`, and
   `docs/engineering/any-language/readability/module-example.md` when you write a new module's use case, its
