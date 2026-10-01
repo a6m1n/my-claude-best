@@ -13,13 +13,13 @@ or named by its rule as the wrong form. Every other example is a GOOD example.
 - **A practice is the source; the code is the consumer.** A doc here says how the work should
   be done, never how this repository does it today. This repository may be behind a practice,
   or plain wrong. That is a gap in the code, never a reason to soften the doc: leave the doc as
-  it is. What the code does about the gap, and when, is in `refactoring/refactoring.md`.
+  it is. What the code does about the gap, and when, is in `any-language/refactoring/refactoring.md`.
 - **Reading a practice is mandatory before working in its area.** This file loads only when a
   file under this folder is read, so the mandate cannot fire from here: the project `CLAUDE.md`
   carries it, one routing line per practice — the moment it fires, the file to read, the check
   — and owns the rule that a new practice folder gets its line in the same change. Copying a
   practice folder into another repository does not carry the mandate; that repository adds the
-  line to its own `CLAUDE.md` (`git/README.md` § "How to adopt", step 2). In this library that
+  line to its own `CLAUDE.md` (`any-language/git/README.md` § "How to adopt", step 2). In this library that
   file is local and not committed; `CLAUDE.local.md` is the committed example of the section.
 
 ## Writing or editing a practice
@@ -41,10 +41,10 @@ or named by its rule as the wrong form. Every other example is a GOOD example.
   diff that uses a rule another practice owns links that practice's file and section, and none
   repeats the rule's conditions or its check.
 - Before you write a practice file, or add, rename or remove one of its `##` headings, read
-  `git/git.md` section 9: it says which files open with a navigation block and how the block is
+  `any-language/git/git.md` section 9: it says which files open with a navigation block and how the block is
   kept in step. In a file that has one, the diff shows each heading change next to its line.
 - When you add a practice, or change a rule in one, write in the commit body how existing code
-  responds, using one of the answers `refactoring/refactoring.md` section 7 lists. In the same
+  responds, using one of the answers `any-language/refactoring/refactoring.md` section 7 lists. In the same
   commit, change every example under `docs/engineering/` that the new or changed rule governs
   and does not yet follow; an example never waits for a change to touch it.
   The check: the commit body names one of the answers, and before you stage,
@@ -88,7 +88,7 @@ decides to give every rule a level.
 Fix location: this section.
 Approach: one bullet: every rule opens with its level, Must (always, when its condition holds) or
 Should (keep it when a test shows it helps). Existing practices adopt it when a change touches
-them (refactoring/refactoring.md section 7, "New and touched code").
-prompt-engineering/prompt-engineering.md section 1 is the first practice written this way.
-evals/evals.md section 1 adds a third level, Optional: add it when the need the rule names appears.
+them (any-language/refactoring/refactoring.md section 7, "New and touched code").
+any-language/prompt-engineering/prompt-engineering.md section 1 is the first practice written this way.
+any-language/evals/evals.md section 1 adds a third level, Optional: add it when the need the rule names appears.
 -->

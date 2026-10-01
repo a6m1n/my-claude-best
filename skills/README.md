@@ -11,6 +11,6 @@ Planned:
 - `pr/` — the step-by-step procedure for writing a pull request description.
 - `commit/` — the step-by-step procedure for writing a commit message.
 
-Both follow the rules in [docs/engineering/git/git.md](../docs/engineering/git/git.md), which
+Both follow the rules in [docs/engineering/any-language/git/git.md](../docs/engineering/any-language/git/git.md), which
 holds what a good pull request and a good commit contain. The skills add the procedure, not
 new rules.
