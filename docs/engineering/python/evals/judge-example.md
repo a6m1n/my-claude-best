@@ -238,6 +238,8 @@ from pathlib import Path
 from typing import Final, TypeAlias
 
 from acme_ai import AcmeAiSdk
+from langfuse import Evaluation, get_client
+from langfuse.experiment import ExperimentItemResult, LocalExperimentItem
 
 from acme.core.acme_ai_client import AcmeAiClient
 from acme.core.config import Settings
@@ -247,6 +249,7 @@ from acme.core.errors import (
     ModelRefused,
     ModelUnavailable,
 )
+from acme.core.langfuse_client import start_tracing
 from acme.core.logging import build_logging_config
 from evals.chat.consts import (
     UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL,
@@ -271,6 +274,14 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
+class JudgedReply:
+    """One label's result, which the run records as the case's output."""
+
+    outcome: Outcome
+    evidence: str  # the judge's quote; "" when it gave no verdict
+
+
+@dataclass(frozen=True)
 class JudgeScores:
     """The judge on the held-back labels: the labels of each kind, the errors, TPR and TNR."""
 
@@ -287,6 +298,15 @@ def main() -> int:
     logging.config.dictConfig(
         build_logging_config(settings.log_level, settings.log_format, stream="stderr")
     )
+    start_tracing(
+        settings.langfuse_public_key,
+        settings.langfuse_secret_key,
+        settings.langfuse_base_url,
+        environment=settings.langfuse_environment,
+        release=settings.git_commit,
+        enabled=settings.langfuse_tracing_enabled,
+    )
+    langfuse = get_client()
     client = AcmeAiClient(
         AcmeAiSdk(api_key=settings.acme_ai_api_key.get_secret_value()),
         disable_prompt_cache=True,
@@ -298,15 +318,67 @@ def main() -> int:
         for line in LABELS_FILE.read_text().splitlines()
     ]
     held_back = [labelled for labelled in labels if labelled.split is Split.TEST]
-    outcomes = Counter(_judge(labelled, client) for labelled in held_back)
+    result = langfuse.run_experiment(
+        name="unsupported-promise-judge",
+        data=[_item(labelled) for labelled in held_back],
+        task=lambda *, item, **kwargs: _judge(item["expected_output"], client),
+        evaluators=[verdict_matches_label],
+        # The prompt is in git, so the commit is its version (evals.md section 9).
+        metadata={
+            "judge_model": UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL,
+            "judge_reasoning_effort": UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT,
+            "commit": settings.git_commit,
+        },
+    )
+    langfuse.flush()
 
+    # run_experiment leaves out a label whose task raised: name it, and report no rate
+    # (evals.md section 6).
+    judged = {_reply_id(run) for run in result.item_results}
+    missing = [
+        labelled.reply_id for labelled in held_back if labelled.reply_id not in judged
+    ]
+    if missing:
+        logger.error("Replies with no outcome: %s", missing)
+
+        return 1
+
+    outcomes = Counter(run.output.outcome for run in result.item_results)
     scores = _scores(outcomes)
     print(_report(outcomes, scores))  # noqa: T201  # the report is this command's output
 
     return 0 if _may_gate(scores) else 1
 
 
-def _judge(labelled: LabelledReply, client: AcmeAiClient) -> Outcome:
+def verdict_matches_label(
+    *,
+    output: JudgedReply,
+    expected_output: LabelledReply,
+    **kwargs: object,
+) -> Evaluation:
+    _, judged = output.outcome
+    return Evaluation(
+        name="verdict_matches_label",
+        value=judged is expected_output.label,
+        comment=output.evidence or None,
+    )
+
+
+def _item(labelled: LabelledReply) -> LocalExperimentItem:
+    return LocalExperimentItem(
+        input=labelled.reply,
+        expected_output=labelled,
+        metadata={"reply_id": labelled.reply_id},
+    )
+
+
+def _reply_id(run: ExperimentItemResult) -> str:
+    """The reply id `_item` put into the item's metadata."""
+    metadata = run.item["metadata"] if isinstance(run.item, dict) else run.item.metadata
+    return str((metadata or {})["reply_id"])
+
+
+def _judge(labelled: LabelledReply, client: AcmeAiClient) -> JudgedReply:
     try:
         judged = judge_unsupported_promise(
             labelled.reply,
@@ -320,14 +392,20 @@ def _judge(labelled: LabelledReply, client: AcmeAiClient) -> Outcome:
         # The error names only the model, never the reply (logging.md section 10).
         logger.warning("Reply %s got no verdict: %s", labelled.reply_id, exc)
 
-        return (labelled.label, NoVerdict.JUDGE_FAILED)
+        return JudgedReply(
+            outcome=(labelled.label, NoVerdict.JUDGE_FAILED), evidence=""
+        )
     except ModelUnavailable as exc:
         # The provider's failure: an error of the run, which fails the check.
         logger.warning("Reply %s not judged: %s", labelled.reply_id, exc)
 
-        return (labelled.label, NoVerdict.PROVIDER_FAILED)
+        return JudgedReply(
+            outcome=(labelled.label, NoVerdict.PROVIDER_FAILED), evidence=""
+        )
 
-    return (labelled.label, judged.verdict)
+    return JudgedReply(
+        outcome=(labelled.label, judged.verdict), evidence=judged.evidence
+    )
 
 
 def _scores(outcomes: Counter[Outcome]) -> JudgeScores:
@@ -397,6 +475,15 @@ Why it looks like this:
   ([logging.md](../logging/logging.md) section 5). The errors are the client's named errors, which
   carry no reply text ([logging.md](../logging/logging.md) section 10), and the printout holds
   counts only.
+- **One trace per held-back label** ([evals.md](evals.md) section 9): `run_experiment` runs each
+  labelled reply as one case with its own trace, so a reviewer can open the case behind a wrong
+  verdict. The trace holds the reply as its input and the label, the judge's verdict and its
+  evidence as its output, with a `verdict_matches_label` score, so the experiment's view lists the
+  wrong verdicts and each shows the words the judge took for a promise; the judge's prompt and raw
+  answer are not in it, because `AcmeAiClient` sends no spans. The run's metadata names the judge's
+  model, its effort and the commit, which versions the prompt. `run_experiment` leaves out a label
+  whose task raised, so the command checks that every held-back label came back, and names the
+  ones that did not, before it reports a rate ([evals.md](evals.md) section 6).
 - **Counting, deciding and reporting are three functions**: `_scores` counts, `_may_gate` decides,
   `_report` writes the text ([readability.md](../../any-language/readability/readability.md) section 2). The report
   is the command's output, so it goes to stdout through the one `print`, whose suppression names its
@@ -409,10 +496,12 @@ Why it looks like this:
   and a cheaper one by changing the two constants, and keep the cheapest that clears the bar.
 
 `AcmeAiClient`, `AcmeAiSdk`, `Settings` and the `acme.core.errors` classes are those of
-[prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), and `build_logging_config` and the
+[prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), `build_logging_config` and the
 settings fields `log_level` and `log_format` those of
-[python/logging/setup-example.md](../logging/setup-example.md); `acme_ai_api_key` stands for a settings
-field the examples leave out.
+[python/logging/setup-example.md](../logging/setup-example.md), and `start_tracing` that of
+[python/logging/agent-example.md](../logging/agent-example.md); `acme_ai_api_key`, `git_commit`,
+`langfuse_environment`, `langfuse_tracing_enabled` and the Langfuse keys and URL stand for the
+settings fields the examples leave out, as in [case-set-example.md](case-set-example.md).
 
 Once it clears the bar, the judge joins the agent's eval as one grader among the code checks
 ([agent-eval-example.md](agent-eval-example.md)), and gates only there, offline, on the team's own
