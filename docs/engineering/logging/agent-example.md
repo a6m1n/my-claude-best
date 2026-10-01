@@ -343,6 +343,9 @@ from openai.types import ChatModel
 # A dated version, not a moving alias (evals/production.md section 6).
 # gpt-4.1-mini has no reasoning effort to set (prompt-engineering.md section 15).
 SUPPORT_CHAT_LLM_MODEL: Final[ChatModel] = "gpt-4.1-mini-2025-04-14"
+# One LangGraph step per model call and one per round of tool calls, so 12 allows
+# several tool rounds.
+SUPPORT_CHAT_MAX_STEPS: Final = 12
 ```
 
 ```python
@@ -389,6 +392,7 @@ from acme.core.openai_client import (
 )
 from acme.core.order_store_client import OrderStore
 from acme.support.chat.call_logging import CallLoggingMiddleware
+from acme.support.chat.consts import SUPPORT_CHAT_MAX_STEPS
 from acme.support.chat.prompts import SYSTEM
 from acme.support.chat.schemas import ChatReply
 from acme.support.chat.services.service_orders import order_tools
@@ -407,6 +411,7 @@ def build_agent(
     disable_prompt_cache: bool,
     new_request_uuid: Callable[[], uuid.UUID],
 ) -> ChatAgent:
+    # The run stops at the application's own step limit, never LangGraph's default.
     return create_agent(
         llm,
         tools=order_tools(orders),
@@ -428,7 +433,7 @@ def build_agent(
             AnswerErrorMiddleware(model),
             ProviderErrorMiddleware(model),
         ],
-    )
+    ).with_config(recursion_limit=SUPPORT_CHAT_MAX_STEPS)
 ```
 
 `ProviderStrategy(ChatReply, strict=True)` asks for the provider's own strict structured output:

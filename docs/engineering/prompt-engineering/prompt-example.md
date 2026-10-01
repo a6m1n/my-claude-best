@@ -28,6 +28,7 @@ from enum import StrEnum, unique
 from typing import Literal, TypeAlias
 
 # The vendor owns the ids; this is the set this project has tested its prompts on.
+# Each id names one fixed build, never a moving alias (evals/production.md section 6).
 LlmModel: TypeAlias = Literal["acme-large-2", "acme-small-3"]
 
 

@@ -178,12 +178,10 @@ What the evidence says:
 
 ## 8. An error is not an answer
 
-**Must.** A timeout, a rate limit or a server error is reported as an error of the run, by case id,
-apart from wrong answers; the errored cases are run again, and a run with errors left does not pass
-its gate ([evals.md](evals.md) section 6). The vendors' SDKs already retry these errors twice by
-default, so an error that reaches the eval is not a flake of the answer. Where a pytest rerun is
-allowed, and what it lets through, is [running-tests.md](../testing/running-tests.md) sections 9
-and 10's.
+A timeout, a rate limit or a server error is a failure of the provider, not a flake of the answer:
+the vendors' SDKs already retry these twice by default. Which failures are errors of the run and
+which are failed cases is [evals.md](evals.md) section 6's rule. Where a pytest rerun is allowed,
+and what it lets through, is [running-tests.md](../testing/running-tests.md) sections 9 and 10's.
 
 ## 9. Sources
 

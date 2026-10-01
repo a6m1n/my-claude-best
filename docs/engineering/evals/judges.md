@@ -119,9 +119,9 @@ your own labels (section 6) settle it for your case.
 1. **One person who knows the domain labels the outputs**, pass or fail with a one-line reason, for
    the criterion the judge will grade. Labels from real outputs of the system under test, including
    the hard cases.
-2. **About 100 labelled outputs per criterion**, with passes and fails both well represented.
-   Husain splits them: 10 to 20% as examples the judge's prompt may show, 40 to 45% to tune the
-   prompt on, and 40 to 45% held back as the test set.
+2. **100 to 200 labelled outputs per criterion**, with 30 to 50 of each verdict in both the set you
+   tune on and the held-back test set. Husain splits them: 10 to 20% as examples the judge's
+   prompt may show, 40 to 45% to tune the prompt on, and 40 to 45% held back as the test set.
 3. **Report on the held-back set**: the two-by-two table of judge verdict against label with its
    count, the true-positive rate (TPR: of the real passes, how many the judge passed) and the
    true-negative rate (TNR: of the real fails, how many it failed), and the pass rate of each side.

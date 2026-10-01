@@ -23,30 +23,44 @@ from collections.abc import Mapping
 
 from typing_extensions import override
 
-from acme.core.order_store_client import Order, OrderStore
+from acme.core.order_store_client import Order, OrderStatus, OrderStore
 
 
 class FakeOrderStore(OrderStore):
     """An OrderStore that answers from a dict of statuses, and keeps the ids it was asked for."""
 
-    def __init__(self, statuses: Mapping[str, str]) -> None:
+    def __init__(
+        self,
+        statuses: Mapping[str, OrderStatus],
+        *,
+        unavailable: frozenset[str] = frozenset(),
+    ) -> None:
         # No super().__init__(): the fake reaches no store.
         self._statuses = statuses
+        self._unavailable = unavailable
         self.asked: list[str] = []
 
     @override
     def get(self, order_id: str) -> Order | None:
         self.asked.append(order_id)
 
+        if order_id in self._unavailable:
+            # The error the real tool catches when the store is down.
+            raise ConnectionError("order store unavailable")
+
         status = self._statuses.get(order_id)
         return None if status is None else Order(order_id=order_id, status=status)
 ```
 
-The real store's client and its `Order` record are not shown in the logging example; the fake
-overrides the one method the tool calls ([testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md)
-section 1). An unknown id returns `None`, as the real store does, so the agent's "no such order" path
-runs against the fake too ([agents.md](agents.md) section 6). The unit tests and the eval use the
-same fake, so both agree on how the store behaves; each builds a new one per run.
+The real store's client, its `Order` record and its `OrderStatus` are not shown in the logging
+example; the fake overrides the one method the tool calls
+([testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 1).
+An unknown id returns `None`, as the real store does, so the agent's "no such order" path
+runs against the fake too. An id listed as unavailable raises `ConnectionError`, the error
+`find_order` catches when the store is down, so the tool's failure path runs too:
+[agents.md](agents.md) section 6 asks a fake tool to "return the real tool's timeouts and errors".
+The unit tests and the eval use the same fake, so both agree on how the store behaves; each builds
+a new one per run.
 
 ## `tests/unit/chat/test_graph.py`: the agent's code, with no model
 
@@ -65,7 +79,8 @@ from langchain_openai import ChatOpenAI
 from langgraph.errors import GraphRecursionError
 from pydantic import SecretStr
 
-from acme.support.chat.consts import SUPPORT_CHAT_LLM_MODEL
+from acme.core.order_store_client import OrderStatus
+from acme.support.chat.consts import SUPPORT_CHAT_LLM_MODEL, SUPPORT_CHAT_MAX_STEPS
 from acme.support.chat.graph import ChatAgent, build_agent
 from acme.support.chat.schemas import ChatReply
 from tests.support.fake_order_store import FakeOrderStore
@@ -146,10 +161,10 @@ def agent_on(provider: ScriptedProvider, orders: FakeOrderStore) -> ChatAgent:
 
 
 class TestBuildAgent:
-    """The support agent's own code, run against a scripted model."""
+    """The support agent does what the model asks, through the pinned tools, within a step limit."""
 
     async def test_an_order_question_is_answered_from_the_store(self) -> None:
-        orders = FakeOrderStore({"A-1042": "shipped"})
+        orders = FakeOrderStore({"A-1042": OrderStatus.SHIPPED})
         agent = agent_on(
             ScriptedProvider(iter([ASK_FOR_A_1042, SHIPPED_REPLY])), orders
         )
@@ -164,7 +179,11 @@ class TestBuildAgent:
         )
 
     async def test_the_model_is_offered_find_order_as_pinned(self) -> None:
-        """Pins: the name, description and argument schema of every tool the model is offered."""
+        """Pins: the name, description and argument schema of every tool the model is offered.
+
+        A change to any of them changes how the model picks and fills the tool, so the agent's
+        eval runs before this test is updated (prompt-engineering.md section 14).
+        """
         provider = ScriptedProvider(iter([SHIPPED_REPLY]))
 
         await agent_on(provider, FakeOrderStore({})).ainvoke(
@@ -194,13 +213,14 @@ class TestBuildAgent:
         self,
     ) -> None:
         endless = ScriptedProvider(repeat(ASK_FOR_A_1042))
-        agent = agent_on(endless, FakeOrderStore({"A-1042": "shipped"}))
+        agent = agent_on(endless, FakeOrderStore({"A-1042": OrderStatus.SHIPPED}))
 
-        with pytest.raises(GraphRecursionError, match="Recursion limit of 8 reached"):
+        with pytest.raises(
+            GraphRecursionError,
+            match=f"Recursion limit of {SUPPORT_CHAT_MAX_STEPS} reached",
+        ):
             await agent.ainvoke(
-                {"messages": [HumanMessage("Where is order A-1042?")]},
-                {"recursion_limit": 8},
-                version="v2",
+                {"messages": [HumanMessage("Where is order A-1042?")]}, version="v2"
             )
 ```
 
@@ -226,8 +246,11 @@ Why it looks like this:
   ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 14). The raw bodies
   are kept as bytes and parsed in `offered_tools`, so the `Any` that `json.loads` returns stays
   inside the parser ([python.md](../python/python.md) section 3).
-- **The step limit is asserted by its error and its message**, so LangGraph's default limit cannot
-  pass for the one the test set, and not by a count of calls, which is LangGraph's own detail.
+- **The step limit is the application's**: `build_agent` sets it from `SUPPORT_CHAT_MAX_STEPS`, and
+  the test passes no limit of its own, so it turns red when someone removes the limit or sets it
+  to a value other than the constant's; raising the constant is a decision, not a bug, and stays
+  green ([testing/what-to-test.md](../testing/what-to-test.md) section 3). The test asserts the
+  error and its message, not a count of calls, which is LangGraph's own detail.
 - **`version="v2"`**, as the logging example's use case calls the agent, so the output is typed
   and `structured_response` is a `ChatReply`.
 - **One class for the unit, names that state the guarantee, a fresh agent and a fresh store in each
@@ -236,29 +259,46 @@ Why it looks like this:
   by this file alone, so it stays here
   ([testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 1).
 
-`build_agent`, `ChatReply` and `SUPPORT_CHAT_LLM_MODEL` are those of the logging example; its
-`build_agent` asks for `ChatOpenAI`, which is what the test passes.
+`build_agent`, `ChatAgent`, `ChatReply`, `SUPPORT_CHAT_LLM_MODEL` and `SUPPORT_CHAT_MAX_STEPS` are
+those of the logging example; its `build_agent` asks for `ChatOpenAI`, which is what the test
+passes.
 
 ## `evals/chat/cases_chat.jsonl`: the cases
 
 ```json
 {"case_id": "shipped-order", "question": "Where is my order A-1042?", "order_statuses": {"A-1042": "shipped"}, "required_tools": ["find_order"], "allowed_tools": ["find_order"], "status_in_reply": "shipped", "budget": {"model_calls": 2, "tool_calls": 1, "seconds": 8}}
 {"case_id": "unknown-order", "question": "What happened to order B-9?", "order_statuses": {}, "required_tools": ["find_order"], "allowed_tools": ["find_order"], "status_in_reply": null, "budget": {"model_calls": 2, "tool_calls": 1, "seconds": 8}}
+{"case_id": "store-down", "question": "Where is my order C-3071?", "order_statuses": {}, "unavailable_order_ids": ["C-3071"], "required_tools": ["find_order"], "allowed_tools": ["find_order"], "status_in_reply": null, "budget": {"model_calls": 2, "tool_calls": 1, "seconds": 8}}
 {"case_id": "no-order-id", "question": "Can I change my delivery address?", "order_statuses": {}, "required_tools": [], "allowed_tools": [], "status_in_reply": null, "budget": {"model_calls": 1, "tool_calls": 0, "seconds": 4}}
 ```
 
 Each case names the tools the agent must call and the tools it may call, the store it runs
-against, and its budget ([agents.md](agents.md) section 2). The last case has no order id: the right
-action is to ask for one, so no tool may run. The budget is the shortest successful run known for
-the case: one model call that asks for the tool, one tool call, and one model call that writes the
-reply; a new best run lowers it in the pull request that shows it.
+against, and its budget ([agents.md](agents.md) section 2). In `store-down` the store fails on the
+order's id. The last case has no order id: the right action is to ask for one, so no tool may run.
+The budget's counts are those of the shortest successful run known for the case: one model call
+that asks for the tool, one tool call, and one model call that writes the reply; a shorter
+successful run lowers them in the pull request that shows it. Its seconds are the 90th percentile
+of the case's successful runs at `CHAT_EVAL_MAX_CONCURRENCY`, never the fastest run.
 
 ```python
-# evals/chat/schemas.py, next to Verdict, Split, PromiseVerdict and LabelledReply,
-# with PositiveInt, NonNegativeInt and PositiveFloat imported from pydantic
+# evals/chat/schemas.py, next to Verdict, Split, PromiseVerdict and LabelledReply
+# of judge-example.md, with PositiveInt, NonNegativeInt, PositiveFloat and
+# model_validator imported from pydantic, OrderStatus from acme.core.order_store_client,
+# Self from typing, and dataclass from dataclasses
 @unique
 class ToolName(StrEnum):
     FIND_ORDER = "find_order"
+
+
+@unique
+class RunEnd(StrEnum):
+    """How one run of the agent ended; only a run that ended on its reply can pass."""
+
+    REPLY = "reply"
+    STEP_LIMIT = "step_limit"
+    REFUSED = "refused"
+    CUT_OFF = "cut_off"
+    INVALID_ANSWER = "invalid_answer"
 
 
 @unique
@@ -282,7 +322,11 @@ class RunMeasure(StrEnum):
 
 
 class Budget(BaseModel):
-    """The most a successful run of one case may use: the shortest successful run known."""
+    """The most a successful run of one case may use (agents.md section 2).
+
+    The counts are those of its shortest successful run; the seconds are the 90th
+    percentile of its successful runs.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
@@ -298,18 +342,35 @@ class ChatCase(BaseModel):
 
     case_id: str
     question: str
-    order_statuses: dict[str, str]
+    order_statuses: dict[str, OrderStatus]
+    # The ids the fake store fails on, as the real one does when it is down.
+    unavailable_order_ids: frozenset[str] = frozenset()
     required_tools: frozenset[ToolName]
     allowed_tools: frozenset[ToolName]
     # The status word the reply must state, when the order exists.
-    status_in_reply: str | None
+    status_in_reply: OrderStatus | None
     budget: Budget
 
+    @model_validator(mode="after")
+    def required_tools_are_allowed(self) -> Self:
+        """A case allows every tool it requires."""
+        if self.required_tools - self.allowed_tools:
+            raise ValueError("a required tool is not in allowed_tools")
 
-class RunUsage(BaseModel):
+        return self
+
+    @model_validator(mode="after")
+    def unavailable_orders_have_no_status(self) -> Self:
+        """A case gives no status to an order the store fails on."""
+        if self.unavailable_order_ids & self.order_statuses.keys():
+            raise ValueError("an id in unavailable_order_ids also has a status")
+
+        return self
+
+
+@dataclass(frozen=True)
+class RunUsage:
     """What one run of the agent used."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True)
 
     model_calls: int
     tool_calls: int
@@ -317,17 +378,34 @@ class RunUsage(BaseModel):
     seconds: float
 
 
-class ChatRun(BaseModel):
-    """What one run of the agent did: its reply, the tools it called and what it used."""
+@dataclass(frozen=True)
+class ChatRun:
+    """What one run of the agent did: how it ended, its reply, its tools, what it used."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
+    ended: RunEnd
     reply: str
     # The names the model asked for, which can include a tool that does not exist: not ToolName.
     tools_called: frozenset[str]
-    order_status_seen: str | None
+    order_status_seen: OrderStatus | None
     usage: RunUsage
     within_budget: bool
+```
+
+`Budget` and `ChatCase` come from the case file through `model_validate_json`, so they are strict
+models, as the triage case is. `RunUsage` and `ChatRun` are built by the eval's own code from values
+it already holds, so they are frozen dataclasses, like `JudgeScores`
+([python.md](../python/python.md) section 4). Two rules are validators on `ChatCase`, so a case
+that breaks one fails the load: a case allows every tool it requires, and it gives no status to an
+order the store fails on. The fake records that id too, so `_first_status_seen` would hand the
+judge a status the agent never saw. How a run ended is a closed set, so `RunEnd` is an enum
+([python.md](../python/python.md) section 3), and a run that did not end on its reply is still a
+`ChatRun`, so it is graded, never dropped ([evals.md](evals.md) section 6).
+
+```python
+# evals/chat/consts.py, below the judge's model constants
+# How many runs of the eval run at once. The seconds of a run are wall-clock at this
+# concurrency, so a time budget is compared only with runs at the same concurrency.
+CHAT_EVAL_MAX_CONCURRENCY: Final = 5
 ```
 
 ## `evals/chat/experiment_chat.py`: the agent's eval
@@ -336,6 +414,7 @@ class ChatRun(BaseModel):
 # evals/chat/experiment_chat.py
 """The support agent's eval: each case three times against the real model, graded on what the agent did."""
 
+import asyncio
 import logging.config
 import time
 import uuid
@@ -354,15 +433,19 @@ from langfuse.experiment import (
     ExperimentResult,
     LocalExperimentItem,
 )
+from langgraph.errors import GraphRecursionError
 
 from acme.core.acme_ai_client import AcmeAiClient
 from acme.core.config import Settings
+from acme.core.errors import ModelAnswerInvalid, ModelOutputCutOff, ModelRefused
 from acme.core.langfuse_client import callback_handler, start_tracing
 from acme.core.logging import build_logging_config
 from acme.core.openai_client import chat_model
+from acme.core.order_store_client import OrderStatus
 from acme.support.chat.consts import SUPPORT_CHAT_LLM_MODEL
 from acme.support.chat.graph import build_agent
 from evals.chat.consts import (
+    CHAT_EVAL_MAX_CONCURRENCY,
     UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL,
     UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT,
 )
@@ -372,6 +455,7 @@ from evals.chat.schemas import (
     ChatCase,
     ChatRun,
     Criterion,
+    RunEnd,
     RunMeasure,
     RunUsage,
     Verdict,
@@ -429,6 +513,7 @@ def run_chat_eval(context: RunnerContext, settings: Settings) -> ExperimentResul
         ],
         composite_evaluator=task_succeeded,
         run_evaluators=[within_budget, tokens_per_success],
+        max_concurrency=CHAT_EVAL_MAX_CONCURRENCY,
         # The prompts are in git, so the commit is their version (evals.md section 9).
         metadata={
             "model": SUPPORT_CHAT_LLM_MODEL,
@@ -458,7 +543,7 @@ async def _run_agent(
     clock: Callable[[], float],
 ) -> ChatRun:
     # A new store and a new agent for every run: nothing carries over (agents.md section 6).
-    orders = FakeOrderStore(case.order_statuses)
+    orders = FakeOrderStore(case.order_statuses, unavailable=case.unavailable_order_ids)
     agent = build_agent(
         llm,
         orders,
@@ -468,19 +553,45 @@ async def _run_agent(
     )
 
     started = clock()
-    output = await agent.ainvoke(
-        {"messages": [HumanMessage(case.question)]},
-        {"callbacks": [tracing]},
-        version="v2",
-    )
+    # The model's own failure ends the run as a failed case. ModelUnavailable, the
+    # provider's, is not caught: it is an error of the run (evals.md section 6).
+    try:
+        output = await agent.ainvoke(
+            {"messages": [HumanMessage(case.question)]},
+            {"callbacks": [tracing]},
+            version="v2",
+        )
+    except GraphRecursionError:
+        return _ended_early(RunEnd.STEP_LIMIT, seconds=clock() - started)
+    except ModelRefused:
+        return _ended_early(RunEnd.REFUSED, seconds=clock() - started)
+    except ModelOutputCutOff:
+        return _ended_early(RunEnd.CUT_OFF, seconds=clock() - started)
+    except ModelAnswerInvalid:
+        return _ended_early(RunEnd.INVALID_ANSWER, seconds=clock() - started)
+
     usage = _usage(output.value["messages"], seconds=clock() - started)
 
     return ChatRun(
+        ended=RunEnd.REPLY,
         reply=output.value["structured_response"].text,
         tools_called=_tools_called(output.value["messages"]),
         order_status_seen=_first_status_seen(orders.asked, case.order_statuses),
         usage=usage,
         within_budget=_within(usage, case.budget),
+    )
+
+
+def _ended_early(ended: RunEnd, *, seconds: float) -> ChatRun:
+    """A run the model ended without its reply: every grader fails it."""
+    # The exception carries no messages, so the run's calls and tokens are not counted.
+    return ChatRun(
+        ended=ended,
+        reply="",
+        tools_called=frozenset(),
+        order_status_seen=None,
+        usage=RunUsage(model_calls=0, tool_calls=0, tokens=0, seconds=seconds),
+        within_budget=False,
     )
 
 
@@ -515,7 +626,9 @@ def _tools_called(messages: Iterable[AnyMessage]) -> frozenset[str]:
     )
 
 
-def _first_status_seen(asked: Iterable[str], statuses: Mapping[str, str]) -> str | None:
+def _first_status_seen(
+    asked: Iterable[str], statuses: Mapping[str, OrderStatus]
+) -> OrderStatus | None:
     """The status of the first order the agent asked for that exists, or None."""
     found = [statuses[order_id] for order_id in asked if order_id in statuses]
     return found[0] if found else None
@@ -524,6 +637,9 @@ def _first_status_seen(asked: Iterable[str], statuses: Mapping[str, str]) -> str
 def required_tools_called(
     *, output: ChatRun, expected_output: ChatCase, **kwargs: object
 ) -> Evaluation:
+    if output.ended is not RunEnd.REPLY:
+        return _failed_run(Criterion.REQUIRED_TOOLS_CALLED, output.ended)
+
     called_all = expected_output.required_tools <= output.tools_called
     return Evaluation(name=Criterion.REQUIRED_TOOLS_CALLED, value=called_all)
 
@@ -531,6 +647,9 @@ def required_tools_called(
 def only_allowed_tools_called(
     *, output: ChatRun, expected_output: ChatCase, **kwargs: object
 ) -> Evaluation:
+    if output.ended is not RunEnd.REPLY:
+        return _failed_run(Criterion.ONLY_ALLOWED_TOOLS_CALLED, output.ended)
+
     called_only_allowed = output.tools_called <= expected_output.allowed_tools
     return Evaluation(
         name=Criterion.ONLY_ALLOWED_TOOLS_CALLED, value=called_only_allowed
@@ -540,17 +659,25 @@ def only_allowed_tools_called(
 def reply_states_the_status(
     *, output: ChatRun, expected_output: ChatCase, **kwargs: object
 ) -> Evaluation:
+    if output.ended is not RunEnd.REPLY:
+        return _failed_run(Criterion.REPLY_STATES_THE_STATUS, output.ended)
+
     expected = expected_output.status_in_reply
     states_it = expected is None or expected in output.reply.lower()
     return Evaluation(name=Criterion.REPLY_STATES_THE_STATUS, value=states_it)
 
 
-def reply_keeps_to_the_status(
+async def reply_keeps_to_the_status(
     *, output: ChatRun, judge_client: AcmeAiClient, **kwargs: object
 ) -> Evaluation:
-    judged = judge_unsupported_promise(
+    if output.ended is not RunEnd.REPLY:
+        return _failed_run(Criterion.REPLY_KEEPS_TO_THE_STATUS, output.ended)
+
+    # The judge's client is sync: in a thread, its wait does not stop the other runs.
+    judged = await asyncio.to_thread(
+        judge_unsupported_promise,
         output.reply,
-        output.order_status_seen or "no order found",
+        output.order_status_seen,
         judge_client,
         model=UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL,
         reasoning_effort=UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT,
@@ -560,6 +687,11 @@ def reply_keeps_to_the_status(
         value=judged.verdict is Verdict.PASS,
         comment=judged.evidence,
     )
+
+
+def _failed_run(criterion: Criterion, ended: RunEnd) -> Evaluation:
+    """A run that ended without its reply fails every criterion; the comment says how."""
+    return Evaluation(name=criterion, value=False, comment=f"run ended: {ended}")
 
 
 def task_succeeded(*, evaluations: list[Evaluation], **kwargs: object) -> Evaluation:
@@ -578,6 +710,7 @@ def within_budget(
     succeeded = _successful_runs(item_results)
     within = sum(run.within_budget for run in succeeded)
     share = within / len(succeeded) if succeeded else 0.0
+
     return Evaluation(
         name=RunMeasure.WITHIN_BUDGET,
         value=share,
@@ -592,6 +725,7 @@ def tokens_per_success(
     runs = [run.output for run in item_results if isinstance(run.output, ChatRun)]
     tokens = sum(run.usage.tokens for run in runs)
     successes = len(_successful_runs(item_results))
+
     if not successes:
         return Evaluation(
             name=RunMeasure.TOKENS_PER_SUCCESS,
@@ -638,6 +772,7 @@ def main() -> None:
     langfuse = get_client()
 
     run_chat_eval(RunnerContext(client=langfuse), settings)
+
     langfuse.flush()
 
 
@@ -654,10 +789,10 @@ Why it looks like this:
   every criterion was graded and passed, and its rate leads the baseline. The other rates show where
   a failed run went wrong.
 - **Budget and cost, read under the headline** ([agents.md](agents.md) section 2): each case carries
-  the budget of its shortest successful run, and `_run_agent` counts the model calls, tool calls,
-  tokens and seconds from the run's messages and the clock it is given; the duration is part of what
-  it returns, so the clock is a parameter ([readability.md](../readability/readability.md)
-  section 6). Two run evaluators, which Langfuse runs once over all the results, report the share of
+  a budget, the counts of its shortest successful run and the 90th percentile of its successful
+  runs' seconds, and `_run_agent` counts the model calls, tool calls, tokens and seconds from the
+  run's messages and the clock it is given; the duration is part of what it returns, so the clock
+  is a parameter ([readability.md](../readability/readability.md) section 6). Two run evaluators, which Langfuse runs once over all the results, report the share of
   successful runs inside their budget and the tokens per successful run against main's figure.
   They are reported, not gated, and they stay out of `Criterion`, so they never enter the headline
   or the count `check_rates` makes. Tokens stand in for money: multiply by the model's price for
@@ -670,8 +805,10 @@ Why it looks like this:
   names the agent's model, the judge's model and effort, and the commit. The agent's model has no
   effort to set, as the logging example's constant says.
 - **Tool calls checked as sets** ([agents.md](agents.md) section 3): the required tools are among
-  the calls, and nothing outside the allowed set ran. No order is asserted, because none is the
-  guarantee here. The case with no order id makes "no tool" a case of its own
+  the calls, and nothing outside the allowed set ran; their arguments are not checked, a Must of
+  [agents.md](agents.md) section 2 that this example leaves out
+  ([What this example does not claim](#what-this-example-does-not-claim)). No order is asserted,
+  because none is the guarantee here. The case with no order id makes "no tool" a case of its own
   ([agents.md](agents.md) section 2).
 - **Code first, then the judge** ([evals.md](evals.md) section 5): whether the status word is in the
   reply is a string check; whether the reply promises more than the status supports is the
@@ -680,22 +817,54 @@ Why it looks like this:
   ([judges.md](judges.md) section 9). Its quoted evidence goes into the score's comment, so a failure
   shows the words that failed it. Together the two check that the answer keeps to what the tool
   returned ([agents.md](agents.md) section 2).
+- **The judge in a thread, the runs at a set concurrency**: Langfuse runs the experiment's runs in
+  one event loop, 50 at once by default, and calls each evaluator inside that loop, so a sync judge
+  call would block the loop, and the seconds of every other run would grow by its wait.
+  `reply_keeps_to_the_status` is async and hands the sync judge to `asyncio.to_thread`; the lambda
+  that binds the client returns its coroutine, which Langfuse awaits. `max_concurrency` sets how
+  many runs share the loop, from `CHAT_EVAL_MAX_CONCURRENCY`: a run's seconds are wall-clock at
+  that concurrency, so a time budget is compared only with runs at the same concurrency.
 - **A clean environment per run** ([agents.md](agents.md) section 6): each of the three runs of a case
   builds a new store and a new agent around the one chat model, which keeps no state; the model is
   the real one, through the application's one client with the cache switch on.
-- **Every run counted** ([evals.md](evals.md) section 6): `check_rates` fails a run that has fewer
-  grades than criteria, which also catches a judge call that raised, and names its case.
+- **Every run counted** ([evals.md](evals.md) section 6): a run the model ended without its reply,
+  at the step limit, on a refusal, or on an answer cut off or one that does not parse, comes back
+  as a `ChatRun` with its `RunEnd`. Every grader fails it with that ending as its comment, and the
+  judge is not called for it. Only `ModelUnavailable`, the provider's failure, raises:
+  `run_experiment` leaves that run out, and `check_rates` fails a run that has fewer grades than
+  criteria, which also catches a judge call that raised, and names its case.
 
-`chat_model`, `callback_handler` and `openai_api_key` are those of the logging example's
-`core/openai_client.py`, `core/langfuse_client.py` and settings, `build_logging_config` that of
-[logging/setup-example.md](../logging/setup-example.md), and `git_commit` the settings field of
+`build_agent`, `SUPPORT_CHAT_LLM_MODEL`, `chat_model`, `callback_handler`, `start_tracing` and the
+`acme.core.errors` classes the agent's middlewares raise are those of
+[logging/agent-example.md](../logging/agent-example.md), `build_logging_config` that of
+[logging/setup-example.md](../logging/setup-example.md), `AcmeAiClient`, `AcmeAiSdk` and `Settings`
+those of [prompt-example.md](../prompt-engineering/prompt-example.md), and
+`judge_unsupported_promise`, its model constants and `Verdict` those of
+[judge-example.md](judge-example.md). Of the settings fields, `openai_api_key` is the logging
+example's, `log_level` and `log_format` are those of
+[logging/setup-example.md](../logging/setup-example.md), and `acme_ai_api_key`, `git_commit` and the
+Langfuse keys and URL stand for the fields the examples leave out, as in
 [case-set-example.md](case-set-example.md).
 
 ## What this example does not claim
 
-The baseline rates and the margin are example values. Three cases and three runs show the shape,
+The baseline rates and the margin are example values. Four cases and three runs show the shape,
 not a set: a real one starts from 20 to 50 cases drawn
 from the agent's real failures ([evals.md](evals.md) section 4), and pass^k for the critical flow runs
 on the schedule ([repeated-runs.md](repeated-runs.md) section 6). The eval imports the fake store from
 `tests/support/`, so the store the eval runs against is the one the unit tests trust; a team that
 keeps `evals/` and `tests/` apart copies it instead.
+
+A run that gates on a judge also judges a fixed set of known-bad replies, which must fail
+([judges.md](judges.md) section 9), and every grader first fails an agent that does nothing
+([evals.md](evals.md) section 5); this example leaves both out.
+
+The eval checks which tools ran, not their arguments, which [agents.md](agents.md) section 2 lists
+as a Must ("each required call's arguments, exact where they matter"): a case would carry the order
+ids it expects, and a criterion would compare them with the ids the run asked for.
+
+[evals.md](evals.md) section 7 asks to run the old version and the new one on the same cases and to
+list every case that passed before and fails now; this example compares with stored rates
+instead, `BASELINE` and `TOKENS_PER_SUCCESS_BEFORE`, which saves the second set of calls. Between
+refreshes of those two, a change on the vendor's side moves the rates with no change in the code;
+the scheduled run on main shows it ([evals.md](evals.md) section 8).

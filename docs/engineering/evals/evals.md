@@ -29,9 +29,8 @@ pass rules in [repeated-runs.md](repeated-runs.md), judges in [judges.md](judges
 laid out and run is [testing/](../testing/README.md)'s. How a prompt is written and what changes it
 triggers is [prompt-engineering.md](../prompt-engineering/prompt-engineering.md)'s.
 
-The one rule: **behaviour that comes from a model is checked by running the model on cases taken
-from real use, graded by code wherever code can decide, and a change ships only after it is
-compared with the version before on the same cases.**
+The one rule of this folder is in its [README](README.md#the-one-rule); every section below serves
+it.
 
 Every rule in this folder opens with its level:
 
@@ -182,8 +181,10 @@ of ten, and an audit of ten agent benchmarks found all ten could be passed witho
 **Must.** The pass rate is the number of passes divided by the number of cases times the number of
 runs in the set, never by the number of results that came back. A case whose system call or grader
 raised an error is reported by its id, apart from the wrong answers, and a run with such a case does
-not pass its gate. Before the run reports a rate, it checks that it has one result per case, run and
-grader.
+not pass its gate. An exception that carries the model's own answer (a refusal, an answer cut off or
+one that does not parse, a run stopped at its step limit) is a failed case, graded like a wrong
+answer; only a failure of the provider or of a grader is an error of the run. Before the run
+reports a rate, it checks that it has one result per case, run and grader.
 
 Why: eval tools drop failures quietly, and each drop makes a broken run look better. In a local run
 of Langfuse's `run_experiment` (SDK 4.16.0), a case whose task raised was missing from the results,

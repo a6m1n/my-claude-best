@@ -58,15 +58,21 @@ before any step-level diagnostic, and teams that run support agents at scale rep
 rate first. Counted under policy, completion on one web-agent benchmark fell from 24.3% to 15.0%.
 
 **Should. The fastest path is a budget, not a reference path.** Give each case a budget of steps,
-tool calls and time, taken from the shortest successful run known for it: the reference solution or
-the best earlier run. Check it by code, on runs that succeeded only: a short run that misses the goal
-is not efficient. The optimal path of a task cannot be computed, a reference path fails valid routes
-(section 3), and no efficiency score has been checked against outcomes. LangChain's evals of its Deep
-Agents set no efficiency threshold, and Langfuse checks a step budget by code.
+tool calls and time. The counts come from the shortest successful run known for it: the reference
+solution or the best earlier run. The time comes from a high percentile of the case's successful
+runs, such as the 90th, measured at the eval's own concurrency, never from the fastest run: a new
+run beats the fastest of n earlier runs only about once in n + 1. Check the budget by code, on runs
+that succeeded only: a short run that misses the goal is not efficient. The optimal path of a task
+cannot be computed, a reference path fails valid routes (section 3), and no efficiency score has
+been checked against outcomes. LangChain's evals of its Deep Agents check correctness first, then
+report the ratios of observed to ideal steps, tool calls and latency, where the ideal run reaches
+the correct answer with the fewest necessary tool calls and no unnecessary turns; they set no
+threshold on those ratios. Langfuse checks a step budget by code.
 
-Why: an outcome check alone hides a broken procedure. On τ-bench, 16 to 78% of passes broke
-procedure or policy, and 8 to 17% of agents that reached the right state skipped a required check on
-the way. In repeated runs of one agent, different actions got the same failing verdict in 22 of 43
+Why: an outcome check alone hides a broken procedure. On τ-bench, 27 to 78% of the reported
+successes broke procedure or policy, depending on the model; in 8 to 17% of the runs with
+state-changing calls, the end state was right but a required check was skipped on the way.
+In repeated runs of one agent, different actions got the same failing verdict in 22 of 43
 groups. The reverse also holds: rule-based checkers missed 44% of real successes, so a failing check
 gets read by a person before the set is trusted. A model that scored 71.8% overall got 19.5% of the
 cases right where it should have refused; decisions not to act need their own cases. Where a
@@ -86,14 +92,17 @@ run; tool order is not.
 one. A missing trajectory can pass a subset check: openevals' matcher turned a missing trajectory
 into an empty one, which passes (pull request #237, open at the time of writing).
 
-With plain Python, on the messages a LangGraph run returns:
+With plain Python, on the messages a LangGraph run returns; `output` is what
+`ainvoke(..., version="v2")` returns, and `REQUIRED_TOOLS` and `ALLOWED_TOOLS` are the case's two
+sets of tool names, left out here ([agent-eval-example.md](agent-eval-example.md) shows them in a
+whole eval):
 
 ```python
 from langchain_core.messages import AIMessage
 
 called = {
     call["name"]
-    for message in result["messages"]
+    for message in output.value["messages"]
     if isinstance(message, AIMessage)
     for call in message.tool_calls
 }
@@ -186,9 +195,10 @@ that takes these parts:
   `ToolRetryMiddleware` retried a payment-like tool after a timeout, up to three times. In tests,
   set its delay to almost nothing, as LangChain's own tests do (`initial_delay=0.01`,
   `jitter=False`), so the suite stays fast.
-- **Must. The step limit holds**: a scripted model that always asks for a tool, run with
-  `config={"recursion_limit": 8}`, raises `GraphRecursionError`. Assert the error, not the number of
-  calls, which is LangGraph's internal detail.
+- **Must. The step limit holds**: the application sets the limit from a named constant when it
+  builds the graph (`.with_config(recursion_limit=...)`), and a scripted model that always asks for
+  a tool raises `GraphRecursionError` at that limit, with no limit passed by the test. Assert the
+  error, not the number of calls, which is LangGraph's internal detail.
 - **Must, with `ToolStrategy`**: assert that `"structured_response"` is in the result. When the model
   answers without the tool call, the structured response is missing and nothing fails (LangChain
   issue #36349, open at the time of writing).
@@ -293,7 +303,7 @@ with both.
 | Section | Level | Ask |
 |---|---|---|
 | 2 | Must | Are there cases for required and forbidden tools, arguments, the end state, and asking, refusing or confirming? Is a policy enforced and tested in the tool's code? |
-| 2 | Should | Is task success under policy reported first, and does each case carry a budget from its shortest successful run? Is the cost per successful case read next to the pass rate? |
+| 2 | Should | Is task success under policy reported first, and does each case carry a budget: counts from its shortest successful run, time from a high percentile of its successful runs at the eval's concurrency? Is the cost per successful case read next to the pass rate? |
 | 3 | Must | Are the tool calls checked as sets, with order only where it is the guarantee, and a non-empty trajectory asserted? |
 | 3 | Should | Does a case that has one right tool require it and forbid the others, and allow every tool that serves it equally? |
 | 4 | Must | Does a change to a tool's name, description or arguments run the eval, and does the agent's behaviour get real-model runs on top of the unit tests? |
@@ -347,4 +357,6 @@ with both.
   (Tables 3 and 4); "To call or not to call", arXiv:2605.00737, 2026; TRACE, arXiv:2510.02837,
   2025; RedundancyBench, arXiv:2605.29893, 2026; DeepEval docs, `ToolCorrectnessMetric` and
   `StepEfficiencyMetric`; Arize Phoenix, tool-selection evaluator and path convergence (read
-  2026-09-30).
+  2026-09-30); LangChain, "How we build evals for Deep Agents", 2026-03-26
+  (langchain.com/blog/how-we-build-evals-for-deep-agents), read 2026-10-01: correctness first,
+  then step, tool-call and latency ratios against an ideal run.

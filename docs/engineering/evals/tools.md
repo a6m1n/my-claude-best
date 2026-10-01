@@ -71,7 +71,7 @@ never fails a test; on the cloud, trace retention was capped at 180 days from 14
 | RAG metrics | Ragas | faithfulness, context precision and recall, test set generation | only with its maintenance risk accepted | no release since January 2026; 0.4.3 fails to import next to current LangChain packages; drops failed rows from averages ([rag.md](rag.md) section 7) | Optional |
 | benchmark-style evals with repeats and sandboxes | Inspect AI (UK AI Security Institute) | tasks, solvers and scorers; `epochs` with reducers such as `at_least_2`; sandboxed agents | an eval needs many repeats per case, a sandbox, or "k of n" per case ([repeated-runs.md](repeated-runs.md) section 5) | its own runner, not pytest; exit status covers errors, not scores, so a gate reads the log; testing a LangGraph agent needs its model routed through Inspect | Optional |
 | prompt comparisons and red teaming from YAML | promptfoo | test cases and assertions in YAML, `promptfoo eval`, a red-team module with OWASP presets | comparing prompts or models side by side, or scheduled red teaming ([production.md](production.md) section 7) | needs Node.js 22; the pip wrapper runs `npx promptfoo@latest` unless `PROMPTFOO_VERSION` pins it; OpenAI announced it was buying promptfoo in March 2026 | Optional |
-| evals for a Pydantic AI app | Pydantic Evals | `Dataset`, `Case`, evaluators, `LLMJudge`, `evaluate_sync(task, repeat=n)` | the application is built on Pydantic AI | no gate of its own; `repeat` reports averages | Optional |
+| typed cases and evaluators in Python, any framework | Pydantic Evals | `Dataset`, `Case`, evaluators, `LLMJudge`, `evaluate_sync(task, repeat=n)` with `case_groups()`, span-based evaluators | you want typed cases, `repeat=` with case groups, or evaluators on OpenTelemetry spans, with any framework | no gate of its own; `repeat` reports averages; span-based evaluators need the logfire SDK installed and configured, with no Logfire account | Optional |
 | "k of n" in pytest | flaky | `@flaky(max_runs=n, min_passes=k)` | you accept the limits in [repeated-runs.md](repeated-runs.md) section 5 | no release since 2024; false greens with pytest-rerunfailures; breaks async tests | Optional |
 
 Platforms, one line each: **Arize Phoenix** (Elastic License 2.0, not an open-source licence;
@@ -159,7 +159,9 @@ of the fixture's data, so the reply is judged against the facts the agent saw
 ([agents.md](agents.md) section 2). The judge's model here has no reasoning effort to set; one that
 has one gets it from its `<purpose>_llm_reasoning_effort` constant through `OpenAIModel`'s
 `generation_kwargs` ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md)
-section 15). What makes this snippet
+section 15). `OpenAIModel` keeps the snippet on the one key the logging example has;
+[judges.md](judges.md) section 4 asks for a judge of another family than the agent's, so a real
+suite passes DeepEval's model class for that family. What makes this snippet
 follow the method:
 
 - **Should. `evaluation_steps` instead of `criteria`** ([judges.md](judges.md) section 7): DeepEval's
@@ -229,7 +231,8 @@ follow the method:
 - Inspect AI docs (options, scorers, eval logs, agent bridge) and changelog, version 0.3.273.
 - promptfoo docs (command line, CI/CD, assertions, telemetry, red team); "Promptfoo is joining
   OpenAI", 2026-03-09; issue #9968.
-- Pydantic Evals docs (multi-run); box/flaky README and issues; the pytest-rerunfailures README.
+- Pydantic Evals docs (overview, multi-run, span-based evaluators) and its PyPI page, version
+  2.52.0, read 2026-10-01; box/flaky README and issues; the pytest-rerunfailures README.
 - Arize, "A new chapter with Dynatrace", 2026-08-13.
 - Practitioners: Hamel Husain's evals FAQ (hamel.dev), on generic library metrics that "measure
   abstract qualities that may not matter"; Rhesis pull request #2759, which removed Ragas as

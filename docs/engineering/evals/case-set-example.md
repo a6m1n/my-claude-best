@@ -57,6 +57,15 @@ class Criterion(StrEnum):
     DATE_MATCHES = "date_matches"
 
 
+@unique
+class ModelFailure(StrEnum):
+    """How the model failed a run instead of answering; the run is graded as failed."""
+
+    REFUSED = "refused"
+    CUT_OFF = "cut_off"
+    INVALID_ANSWER = "invalid_answer"
+
+
 class TriageCase(BaseModel):
     """One line of cases_triage.jsonl: a ticket and the triage it must get."""
 
@@ -70,9 +79,10 @@ class TriageCase(BaseModel):
 
 A line of the file is data from outside the code, so it becomes a model once, when it is read
 ([python.md](../python/python.md) section 4). A misspelt kind or a key the model does not name fails
-the load, not the grading. `kind` is the application's own `TicketKind`, so a case cannot expect a
-kind the application does not have. The criteria are a closed set, so they are an enum, not strings
-([python.md](../python/python.md) section 3).
+the load, not the grading. `kind` is the application's own `TicketKind`, that of
+[prompt-example.md](../prompt-engineering/prompt-example.md), so a case cannot expect a kind the
+application does not have. The criteria and the model's failures are closed sets, so they are
+enums, not strings ([python.md](../python/python.md) section 3).
 
 ## `evals/triage/experiment_triage.py`: the run and its gate
 
@@ -93,13 +103,14 @@ from langfuse.experiment import ExperimentResult, LocalExperimentItem
 
 from acme.core.acme_ai_client import AcmeAiClient
 from acme.core.config import Settings
+from acme.core.errors import ModelAnswerInvalid, ModelOutputCutOff, ModelRefused
 from acme.core.langfuse_client import start_tracing
 from acme.core.logging import build_logging_config
 from acme.support.triage.consts import TRIAGE_LLM_MODEL, TRIAGE_LLM_REASONING_EFFORT
 from acme.support.triage.schemas import TicketTriage
 from acme.support.triage.services.service_triage import triage_ticket
 from evals.rate_gate import check_rates
-from evals.triage.schemas import Criterion, TriageCase
+from evals.triage.schemas import Criterion, ModelFailure, TriageCase
 
 CASES_FILE: Final = Path(__file__).with_name("cases_triage.jsonl")
 RUNS_PER_CASE: Final = 3
@@ -150,20 +161,36 @@ def run_triage_eval(context: RunnerContext, settings: Settings) -> ExperimentRes
 
 
 def kind_matches(
-    *, output: TicketTriage, expected_output: TriageCase, **kwargs: object
+    *,
+    output: TicketTriage | ModelFailure,
+    expected_output: TriageCase,
+    **kwargs: object,
 ) -> Evaluation:
+    matches = isinstance(output, TicketTriage) and output.kind is expected_output.kind
     return Evaluation(
-        name=Criterion.KIND_MATCHES, value=output.kind is expected_output.kind
+        name=Criterion.KIND_MATCHES, value=matches, comment=_failure_comment(output)
     )
 
 
 def date_matches(
-    *, output: TicketTriage, expected_output: TriageCase, **kwargs: object
+    *,
+    output: TicketTriage | ModelFailure,
+    expected_output: TriageCase,
+    **kwargs: object,
 ) -> Evaluation:
     expected = expected_output.problem_first_occurred_on
-    return Evaluation(
-        name=Criterion.DATE_MATCHES, value=output.problem_first_occurred_on == expected
+    matches = (
+        isinstance(output, TicketTriage)
+        and output.problem_first_occurred_on == expected
     )
+    return Evaluation(
+        name=Criterion.DATE_MATCHES, value=matches, comment=_failure_comment(output)
+    )
+
+
+def _failure_comment(output: TicketTriage | ModelFailure) -> str | None:
+    """The model's failure, as the comment of a failed grade; an answer needs none."""
+    return f"model failure: {output}" if isinstance(output, ModelFailure) else None
 
 
 def _item(case: TriageCase) -> LocalExperimentItem:
@@ -172,13 +199,24 @@ def _item(case: TriageCase) -> LocalExperimentItem:
     )
 
 
-def _triage(item: LocalExperimentItem, client: AcmeAiClient) -> TicketTriage:
-    return triage_ticket(
-        item["input"],
-        client,
-        model=TRIAGE_LLM_MODEL,
-        reasoning_effort=TRIAGE_LLM_REASONING_EFFORT,
-    )
+def _triage(
+    item: LocalExperimentItem, client: AcmeAiClient
+) -> TicketTriage | ModelFailure:
+    # The model's own failure is a failed case. ModelUnavailable, the provider's, is not
+    # caught: it is an error of the run (evals.md section 6).
+    try:
+        return triage_ticket(
+            item["input"],
+            client,
+            model=TRIAGE_LLM_MODEL,
+            reasoning_effort=TRIAGE_LLM_REASONING_EFFORT,
+        )
+    except ModelRefused:
+        return ModelFailure.REFUSED
+    except ModelOutputCutOff:
+        return ModelFailure.CUT_OFF
+    except ModelAnswerInvalid:
+        return ModelFailure.INVALID_ANSWER
 
 
 def _uncached_client(settings: Settings) -> AcmeAiClient:
@@ -204,6 +242,7 @@ def main() -> None:
     langfuse = get_client()
 
     run_triage_eval(RunnerContext(client=langfuse), settings)
+
     langfuse.flush()
 
 
@@ -239,6 +278,7 @@ def check_rates(
     graded = [
         run for run in result.item_results if len(run.evaluations) == len(baseline)
     ]
+
     # run_experiment leaves out a run whose task raised, so the runs are checked against the cases.
     missing = runs_asked - Counter(_case_id(run) for run in graded)
     if missing:
@@ -284,13 +324,18 @@ Why it looks like this:
   never requires each case to pass three times in three.
 - **Graded by code** ([evals.md](evals.md) section 5): the kind and the date have one right value,
   so no judge is needed. One grader per criterion, each with its own rate.
-- **Every run counted** ([evals.md](evals.md) section 6): `run_experiment` leaves a run out when its
-  task raised, so the gate compares the graded runs with the runs each case asked for, and a missing
-  grade fails the gate with the case ids instead of raising the rate. The rate is divided by the
-  runs the case set asked for, never by the results that came back.
-- **The version before is the baseline** ([evals.md](evals.md) section 7): `BASELINE` holds the
-  rates of the version on main, so a change is judged against it, and a pull request that moves
-  them has to say why.
+- **Every run counted** ([evals.md](evals.md) section 6): a refusal, an answer cut off or one that
+  does not parse is the model's own answer, so `_triage` returns it as a `ModelFailure`, and each
+  grader fails the run with the failure as its comment. Only `ModelUnavailable`, the provider's
+  failure, raises. `run_experiment` leaves a run out when its task raised, so the gate compares the
+  graded runs with the runs each case asked for, and a missing grade fails the gate with the case
+  ids instead of raising the rate. The rate is divided by the runs the case set asked for, never by
+  the results that came back.
+- **The baseline is main's last run**, which departs from [evals.md](evals.md) section 7: `BASELINE`
+  holds the rates from the last run of the version on main on the same cases, not from the old
+  version run again in this job. Why, and what it costs, is under
+  [What this example does not claim](#what-this-example-does-not-claim). A change is judged against
+  these rates, and a pull request that moves them has to say why.
 - **Every run reaches the model**: the client's cache switch
   ([prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 17) puts a fresh
   UUID first in each prompt, so a response cache in front of the model cannot answer a run from an
@@ -299,18 +344,20 @@ Why it looks like this:
 - **Traced, with what produced it** ([evals.md](evals.md) section 9): `run_experiment` records a
   trace per run, linked from its result in Langfuse, with the case id in its metadata; the run's
   metadata names the model, its effort and the commit, which versions the prompt.
-- **Run as a module** (`uv run python -m evals.triage.experiment_triage`): `main()` reads
+- **Run as a module** (`uv run --locked python -m evals.triage.experiment_triage`): `main()` reads
   `Settings()` once, as the application's own entry points do ([python.md](../python/python.md)
   section 5), sets up logging as the CLI of [logging/setup-example.md](../logging/setup-example.md)
   does, and gives Langfuse its keys through `start_tracing`, the one client of Langfuse of
   [logging/agent-example.md](../logging/agent-example.md). The `langfuse/experiment-action` GitHub
   Action calls `experiment(context)` instead, and adds a comment to the pull request.
 
-`AcmeAiClient`, `Settings` and `triage_ticket` are those of
-[prompt-example.md](../prompt-engineering/prompt-example.md), `build_logging_config` that of
+`AcmeAiClient`, `AcmeAiSdk`, `Settings`, `triage_ticket`, `TicketTriage`, `TRIAGE_LLM_MODEL`,
+`TRIAGE_LLM_REASONING_EFFORT` and the `acme.core.errors` classes are those of
+[prompt-example.md](../prompt-engineering/prompt-example.md), `build_logging_config` and the
+settings fields `log_level` and `log_format` those of
 [logging/setup-example.md](../logging/setup-example.md), and `start_tracing` that of
 [logging/agent-example.md](../logging/agent-example.md); `acme_ai_api_key`, `git_commit` and the
-Langfuse keys stand for the settings fields those examples leave out.
+Langfuse keys and URL stand for the settings fields those examples leave out.
 
 ## With LangChain
 
@@ -347,14 +394,19 @@ on:
   schedule:
     - cron: "0 3 * * *"
 
+permissions:
+  contents: read
+
 jobs:
   triage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v10.2.0
       - run: uv sync --locked
-      - run: uv run python -m evals.triage.experiment_triage
+      - run: uv run --locked python -m evals.triage.experiment_triage
         env:
           # A key of its own, in a project with a monthly spend limit (evals.md section 8).
           ACME_ACME_AI_API_KEY: ${{ secrets.EVALS_ACME_AI_API_KEY }}
@@ -372,6 +424,9 @@ fails. The key belongs to a project with a spend limit, because nobody watches t
 ([python/settings-example.md](../python/settings-example.md)), so `acme_ai_api_key` comes from
 `ACME_ACME_AI_API_KEY`. The job must also set every other required field of the application's
 `Settings`, such as the database and payments fields of that example; this snippet leaves them out.
+The checkout, the uv setup and the read-only token are those of
+[static-checks/setup-example.md](../static-checks/setup-example.md): the job holds a paid key, so
+the token does not stay in `.git/config`.
 
 ## The contract of single cases
 
@@ -387,3 +442,9 @@ the prompt.
 The baseline rates and the margin are example values. A real margin comes from your own set's size
 and rates ([repeated-runs.md](repeated-runs.md) section 7), and a real case set starts from reading
 real traces ([evals.md](evals.md) section 3).
+
+[evals.md](evals.md) section 7 asks to run the old version and the new one on the same cases and to
+list every case that passed before and fails now; this example compares with stored rates
+instead, which saves the second set of calls. Between refreshes of `BASELINE`, a change on the
+vendor's side moves the rates with no change in the code; the scheduled run on main shows it
+([evals.md](evals.md) section 8).
