@@ -127,7 +127,13 @@ rest of the screen cut:
 
 ```tsx
 renderPayLink={(invoice) => (
-  <Link to="/invoices/$invoiceId/pay" params={{ invoiceId: invoice.id }} className="underline underline-offset-2">
+  // min-h-6: the 24 px floor of a target; pointer-coarse:min-h-11: 44 px on a touch screen
+  // (ux.md section 8).
+  <Link
+    to="/invoices/$invoiceId/pay"
+    params={{ invoiceId: invoice.id }}
+    className="inline-flex min-h-6 items-center underline underline-offset-2 pointer-coarse:min-h-11"
+  >
     Pay<span className="sr-only"> the invoice of {invoice.customerName}</span>
   </Link>
 )}
@@ -137,7 +143,9 @@ Why it is good: the router's `Link` renders an `<a href>`, the native link, whic
 reaches and a crawler follows (Google crawls a link only when it is an `<a>` element with an
 `href`). The eye sees "Pay" in a row whose customer it can see; a screen reader that lists the
 links says the customer too. Tailwind's `sr-only` class hides the text from sight and keeps it in
-the accessibility tree.
+the accessibility tree. The link is at least 24 px tall, the floor of 2.5.8, and 44 px on a coarse
+pointer such as a finger (`min-h-6`, `pointer-coarse:min-h-11`); the comment above it gives the
+reason ([ux.md](ux.md) section 8).
 
 ### Data in a table
 
@@ -161,15 +169,20 @@ table cut:
     </tr>
   </thead>
   <tbody>
-    {invoices.map((invoice) => (
-      <tr key={invoice.id} className="border-b border-border">
-        <th scope="row" className="py-2 font-medium">
-          {invoice.customerUrl === null ? (
-            invoice.customerName
-          ) : (
-            <ExternalLink href={invoice.customerUrl}>{invoice.customerName}</ExternalLink>
-          )}
-        </th>
+    {invoices.map((invoice) => {
+      // One source for "paid": the badge and the link read the same rule
+      // (components.md section 1).
+      const status = invoiceStatus(invoice, today);
+
+      return (
+        <tr key={invoice.id} className="border-b border-border">
+          <th scope="row" className="py-2 font-medium">
+            {invoice.customerUrl === null ? (
+              invoice.customerName
+            ) : (
+              <ExternalLink href={invoice.customerUrl}>{invoice.customerName}</ExternalLink>
+            )}
+          </th>
         ...
 ```
 
@@ -177,7 +190,7 @@ Why it is good: the `<caption>` names the table; `scope="col"` makes each header
 and `scope="row"` makes the customer name its row, so a screen reader can say which column and
 which customer a cell belongs to. The last column has no visible header, so it gets a hidden one;
 an empty header cell would leave that column with no name. The customer's name is a link only
-when the invoice has an address, through the shared `ExternalLink`; otherwise it is plain text.
+when the invoice has an address, through the module's `ExternalLink`; otherwise it is plain text.
 
 ### ARIA and ids in JSX
 
@@ -306,7 +319,8 @@ export function Button({ children, type = "button", disabled = false, onClick }:
       disabled={disabled}
       onClick={onClick}
       // focus-visible:outline-*: an outline, not a shadow, because forced-colours mode removes
-      // shadows. pointer-coarse:min-h-11: 44 px tall on a touch screen; 36 px is for a mouse.
+      // shadows (accessibility.md section 5). pointer-coarse:min-h-11: 44 px tall on a touch
+      // screen; 36 px is for a mouse (ux.md section 8).
       className="min-h-9 rounded-control bg-primary px-4 text-sm font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60 pointer-coarse:min-h-11"
     >
       {children}
@@ -339,8 +353,9 @@ The other focus rules:
   the new screen after a route change (section 6), to the first error after a failed submit
   ([ux.md](ux.md) section 4). A status message never moves focus (4.1.3, section 7).
 - **A skip link** when the same block of links comes before `<main>` on every screen: the first
-  Tab stop is a link to the main content. W3C's Easy Checks list a skip link, and the 2019 user
-  test in section 6 recommends one.
+  Tab stop is a link to the main content, so a keyboard user does not tab through the same links
+  on every screen. W3C's Easy Checks list a skip link, and the 2019 user test in section 6
+  recommends one.
 
 ## 6. Route changes in a single-page app
 
@@ -379,7 +394,8 @@ const APPLICATION_NAME = "Acme Billing";
 ...
 
 function AppShell() {
-  // The deepest matched route is the screen on show; it names itself in its `staticData`.
+  // The deepest matched route is the screen on show; it names itself in its `staticData`
+  // (accessibility.md section 6).
   const screenTitle = useMatches({ select: (matches) => matches.at(-1)?.staticData.title ?? APPLICATION_NAME });
   const screenStatus = useMatches({ select: (matches) => matches.at(-1)?.status });
 
@@ -389,7 +405,8 @@ function AppShell() {
       {/* A route change loads no page, so a screen reader says nothing by itself. <output> is
           the native element with the `status` role. It stays in the page from the first render
           and only its text changes: a region that arrives together with its text is often not
-          announced, so the loading and error screens say their message here. */}
+          announced, so the loading and error screens say their message here
+          (accessibility.md section 6). */}
       <output className="sr-only">{screenAnnouncement(screenStatus, screenTitle)}</output>
       <header>
         <p className="text-lg font-semibold">{APPLICATION_NAME}</p>
@@ -466,11 +483,29 @@ says why in a comment. From `src/core/ui/screen-pending.tsx`, whole:
 
 ```tsx
 // No live-region role here: this component arrives in the page together with its text, and a
-// screen reader often skips such a region. The shell's status region announces the loading.
+// screen reader often skips such a region. The shell's status region announces the loading
+// (accessibility.md section 7).
 export function ScreenPending() {
-  return <p className="text-muted-foreground">Loading…</p>;
+  return (
+    <p className="flex items-center gap-2 text-muted-foreground">
+      {/* The router shows this screen after its pending delay, so the wait is already about a
+          second: a wait of that length gets a spinner (ux.md section 3). motion-safe: keeps it
+          still for a user who asked for less motion (visual-design.md section 8). rounded-full
+          draws the circle, which has no corner for a radius role (visual-design.md section 7). */}
+      <span
+        aria-hidden="true"
+        className="size-4 rounded-full border-2 border-muted-foreground border-t-transparent motion-safe:animate-spin"
+      />
+      Loading…
+    </p>
+  );
 }
 ```
+
+The spinner next to the word is there because the router shows this screen after its pending
+delay, a wait of about a second, and a wait of that length gets one ([ux.md](ux.md) section 3).
+It is `aria-hidden` because the word "Loading…" already says it, and `motion-safe:` keeps it still
+for a user who asked for less motion ([visual-design.md](visual-design.md) section 8).
 
 `src/routes/-screen-error.tsx`, the router's error screen, has no `role="alert"` for the same
 reason and says so in a comment. Not verified: nothing was run with a screen reader, so whether
@@ -507,7 +542,7 @@ Good, the same message in a region that is in the form from the first render. Fr
 ```tsx
 {/* The region is in the page before the error is: a screen reader announces text that
     appears inside an existing live region, and often misses a region that arrives with
-    its text. */}
+    its text (accessibility.md section 7). */}
 <p role="alert" className="text-sm text-destructive">
   {payment.isError ? "We could not confirm the payment. Check the invoice list before you try again." : null}
 </p>
@@ -538,13 +573,14 @@ submit, is [ux.md](ux.md) section 4. This section is what the markup carries.
   says neither (1.4.1).
 - Announce an error through a region that is already in the page (section 7), or by moving focus to
   the first field in error ([ux.md](ux.md) section 4).
-- Give a field about the user its `autoComplete` token, such as `email` or `postal-code` (1.3.5,
-  AA). Oxlint's `jsx-a11y/autocomplete-valid` rule checks the token when the rule is on
-  (section 10).
+- Give a field about the user its `autoComplete` token, such as `email` or `postal-code`, so the
+  browser can fill it in for the user (1.3.5, AA). Oxlint's `jsx-a11y/autocomplete-valid` rule
+  checks the token when the rule is on (section 10).
 - Let each login step work without a cognitive function test, "such as remembering a password or
-  solving a puzzle", unless the step offers an alternative or a mechanism that does it for the user
-  (3.3.8, AA).
-- Do not ask, in the same process, for data the user already entered (3.3.7, A).
+  solving a puzzle", unless the step offers an alternative or a mechanism that does it for the user,
+  so a user who cannot remember a password or solve a puzzle can still log in (3.3.8, AA).
+- Do not ask, in the same process, for data the user already entered, so the user does not have to
+  remember it and type it again (3.3.7, A).
 
 The payment method group, from `src/billing/pay-invoice/pay-invoice-form.tsx`, the rest of the form
 cut:
@@ -552,12 +588,14 @@ cut:
 ```tsx
 <fieldset className="flex flex-col gap-2">
   <legend className="text-sm font-medium">Payment method</legend>
-  <label className="flex items-center gap-2">
+  {/* min-h-6: the 24 px floor of a target; pointer-coarse:min-h-11: 44 px on a touch screen
+      (ux.md section 8). */}
+  <label className="flex min-h-6 items-center gap-2 pointer-coarse:min-h-11">
     {/* One method is always chosen, so `payInvoice` never parses an empty choice. */}
     <input type="radio" name="method" value="card" defaultChecked />
     Card
   </label>
-  <label className="flex items-center gap-2">
+  <label className="flex min-h-6 items-center gap-2 pointer-coarse:min-h-11">
     <input type="radio" name="method" value="bank_transfer" />
     Bank transfer
   </label>
@@ -567,7 +605,8 @@ cut:
 Why it is good: the `<legend>` names the group once, and each `<label>` wraps its radio button, so
 the text is the button's name, a click on the text selects it, and no `id` or `htmlFor` is needed.
 The radio buttons share one `name`, so the browser gives them arrow-key movement inside the group
-with no code.
+with no code. Each label is at least 24 px tall, the floor of 2.5.8, and 44 px on a coarse pointer;
+the comment above the first one gives the reason ([ux.md](ux.md) section 8).
 
 ## 9. The numbers
 
@@ -606,7 +645,8 @@ the import, the two lookup tables and the props type cut:
 
 ```tsx
 export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
-  // The word carries the status. The colour repeats it and is never the only signal.
+  // The word carries the status. The colour repeats it and is never the only signal
+  // (accessibility.md section 9).
   return <span className={`text-sm font-medium ${STATUS_COLOR[status]}`}>{STATUS_LABEL[status]}</span>;
 }
 ```
@@ -819,8 +859,9 @@ WebAIM's 2026 scan, is set in the markup with `lang="en"`.
 
 ## 14. Review checklist
 
-One question per section. A single red flag is something to raise with the author; a screen that
-shows two or more is not ready.
+One question per section. A red flag that fails a WCAG 2.2 A or AA criterion means the screen is
+not ready. Any other single red flag is something to raise with the author; a screen that shows
+two or more is not ready.
 
 | Section | Ask | Red flag |
 |---|---|---|

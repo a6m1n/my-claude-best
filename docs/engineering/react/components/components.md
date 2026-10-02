@@ -131,7 +131,7 @@ the early return to the top.
 // Bad: the mutation hook sits after the early return. It runs for an unpaid
 // invoice and not for a paid one, so the set of hooks changes from one render
 // to the next: after a payment, the refetched invoice has `paidOn` set and the
-// next render calls one hook fewer.
+// next render calls one hook fewer (components.md section 2).
 export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormProps) {
   const { data: invoice } = useSuspenseQuery(invoiceQueryOptions(apiClient, invoiceId));
 
@@ -175,9 +175,13 @@ Another break is the clock read during render.
 ```tsx
 // Bad: the list reads the clock while it renders. Two renders with the same
 // props can show different statuses around midnight, and a test of the list
-// has to freeze time.
+// has to freeze time (components.md section 2).
 type InvoiceListProps = {
-  // The route supplies the link, so this module needs no router and no path of another module.
+  // The route hands the client in: the component reaches nothing by itself
+  // (architecture.md section 8).
+  apiClient: ApiClient;
+  // The route supplies the link, so this module needs no router and no path of another module
+  // (architecture.md section 6).
   renderPayLink: (invoice: Invoice) => ReactNode;
 };
 
@@ -194,16 +198,18 @@ among the calls it rejects, and Oxlint reported the impure call in the reference
 control file with it.
 
 The GOOD reads the clock in the route's loader, `src/routes/invoices.index.tsx`, and passes the
-date down. The pay link the screen passes to the list is cut.
+date down. The pay link the screen passes to the list is cut, and so is `toIsoDate`, the route's
+own function at the end of the file.
 
 ```tsx
 export const Route = createFileRoute("/invoices/")({
   // The loader runs as soon as the URL matches, in parallel with the download of this route's
-  // code, so the request never waits for a component to render first.
+  // code, so the request never waits for a component to render first (architecture.md section 8).
   loader: async ({ context }) => {
     await context.queryClient.query(invoicesQueryOptions(context.apiClient));
 
-    // The clock is read here, once per visit, and passed down as a value: rendering stays pure.
+    // The clock is read here, once per visit, and passed down as a value: rendering stays pure
+    // (components.md section 2).
     return { today: toIsoDate(new Date()) };
   },
   staticData: { title: "Invoices" },
@@ -232,10 +238,12 @@ cut.
 
 ```tsx
 type InvoiceListProps = {
-  // The route hands the client in, like `today`: the component reaches nothing by itself.
+  // The route hands the client in, like `today`: the component reaches nothing by itself
+  // (architecture.md section 8).
   apiClient: ApiClient;
   today: string;
-  // The route supplies the link, so this module needs no router and no path of another module.
+  // The route supplies the link, so this module needs no router and no path of another module
+  // (architecture.md section 6).
   renderPayLink: (invoice: Invoice) => ReactNode;
 };
 
@@ -265,9 +273,14 @@ not an import ([architecture.md](../architecture/architecture.md) section 8 owns
   again", but he still prefers annotating props directly, which is simpler and easier to turn into
   a generic component. So the choice is style, not safety. react.dev's TypeScript page types props
   on plain functions, with a `type` or an `interface`; keep one of the two across the code base.
-- *Advice.* **Type `children` as `ReactNode`, an event as the element's event type
-  (`SyntheticEvent<HTMLFormElement>`), and a state that holds one of several values with its union
-  (`useState<PaymentMethod | null>(null)`)** (react.dev, "Using TypeScript").
+- *Advice.* **Type `children` as `ReactNode`**, so a caller can pass anything JSX accepts as a
+  child and nothing React cannot render (react.dev, "Using TypeScript").
+- *Advice.* **Type an event as the element's event type, such as
+  `SyntheticEvent<HTMLFormElement>`**, so `event.currentTarget` has the element's own type, which
+  `new FormData(event.currentTarget)` needs (react.dev, "Using TypeScript").
+- *Advice.* **Type a state that holds one of several values with its union, such as
+  `useState<PaymentMethod | null>(null)`**, so its setter takes each value of the set and rejects
+  any other (react.dev, "Using TypeScript").
 - *Advice.* **A wrapper that passes native props through takes them as
   `ComponentProps<"input">`, or `ComponentProps<typeof DatePicker>` for a component you do not
   control, instead of a copied list of attributes** (Matt Pocock). Every attribute the element
@@ -301,7 +314,8 @@ not an import ([architecture.md](../architecture/architecture.md) section 8 owns
 
 ```tsx
 // Bad: two booleans for three states that exclude each other. A caller can pass
-// isPaid and isOverdue together, and the badge has to guess which one wins.
+// isPaid and isOverdue together, and the badge has to guess which one wins
+// (components.md section 3).
 type InvoiceStatusBadgeProps = {
   isPaid: boolean;
   isOverdue: boolean;
@@ -331,7 +345,8 @@ type InvoiceStatusBadgeProps = {
 };
 
 export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
-  // The word carries the status. The colour repeats it and is never the only signal.
+  // The word carries the status. The colour repeats it and is never the only signal
+  // (accessibility.md section 9).
   return <span className={`text-sm font-medium ${STATUS_COLOR[status]}`}>{STATUS_LABEL[status]}</span>;
 }
 ```
@@ -363,7 +378,8 @@ export function Button({ children, type = "button", disabled = false, onClick }:
       disabled={disabled}
       onClick={onClick}
       // focus-visible:outline-*: an outline, not a shadow, because forced-colours mode removes
-      // shadows. pointer-coarse:min-h-11: 44 px tall on a touch screen; 36 px is for a mouse.
+      // shadows (accessibility.md section 5). pointer-coarse:min-h-11: 44 px tall on a touch
+      // screen; 36 px is for a mouse (ux.md section 8).
       className="min-h-9 rounded-control bg-primary px-4 text-sm font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60 pointer-coarse:min-h-11"
     >
       {children}
@@ -395,7 +411,8 @@ server data. This section is about the state one component keeps.
   state!" The effect form costs a second render, and the first render shows the old value. A
   costly computation is memoised by the compiler (section 7).
 - *Advice.* **Keep state in the lowest component that uses it. When two components need it, lift
-  it to their closest common parent, which then owns it alone** (react.dev, "Sharing State Between
+  it to their closest common parent, which then owns it alone**, so each state has one owner close
+  to the code that uses it, and no copy of it can fall behind (react.dev, "Sharing State Between
   Components"; Kent C. Dodds on colocation).
 - *Advice.* **To start a component fresh when what it shows changes, give it a `key`**, such as
   `<InvoiceNoteEditor key={invoice.id} invoice={invoice} />`, instead of an effect that clears its
@@ -418,7 +435,7 @@ server data. This section is about the state one component keeps.
 ```tsx
 // Bad: whether the invoice is paid is copied into state and kept in step by an
 // effect. The first render shows the payment form for a paid invoice, and the
-// effect's second render replaces it.
+// effect's second render replaces it (components.md section 4).
 export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormProps) {
   const { data: invoice } = useSuspenseQuery(invoiceQueryOptions(apiClient, invoiceId));
   const payment = useMutation(payInvoiceMutationOptions(apiClient, invoiceId));
@@ -496,6 +513,9 @@ When an effect is the right tool:
   for a dependency you do not want, change the code: move the value out of the component, move it
   into the effect, or split the effect in two. Oxlint's `react/exhaustive-deps` reports the missing
   dependency ([libraries.md](../architecture/libraries.md) section 4).
+- *Advice.* **Give every `useEffect` a comment that names the outside system it keeps in step
+  with**, so a later reader can tell an effect that belongs from one that copies state
+  ([readability.md](../../any-language/readability/readability.md) section 4).
 - *Advice.* **Return a cleanup that undoes what the setup started**: close the connection, remove
   the listener, clear the timer, ignore a response that arrives late. In development, Strict Mode
   runs setup, cleanup and setup again, so a missing cleanup shows at once.
@@ -526,17 +546,18 @@ export function ScreenError() {
   const queryErrorResetBoundary = useQueryErrorResetBoundary();
 
   // TanStack Query keeps a failed query failed until it is reset; without this the retry
-  // below would show the same cached error again.
+  // below would show the same cached error again (architecture.md section 12).
   useEffect(() => {
     queryErrorResetBoundary.reset();
   }, [queryErrorResetBoundary]);
 
   // No `role="alert"` here: this component arrives in the page together with its text. The
-  // shell's status region, which is already in the page, announces the failure.
+  // shell's status region, which is already in the page, announces the failure
+  // (accessibility.md section 7).
   return (
     <div className="flex flex-col items-start gap-3">
-      {/* The message says what to do. The error's own text stays out of the page: it can
-          carry details of the server. */}
+      {/* The message says what to do (ux.md section 2). The error's own text stays out of the
+          page: it can carry details of the server (security.md section 13). */}
       <p>This screen did not load. Check your connection and try again.</p>
       <Button onClick={() => void router.invalidate()}>Try again</Button>
     </div>
@@ -558,7 +579,7 @@ One misuse react.dev names is an effect that does what an event handler should d
 // Bad: the payment is sent by an effect that watches a state value, not by the
 // submit that causes it. An effect runs when its dependencies change: here it
 // runs again whenever `payment` or `onPaid` is a new value while `method` is
-// set, and each run sends the payment again.
+// set, and each run sends the payment again (components.md section 5).
 const [method, setMethod] = useState<PaymentMethod | null>(null);
 
 useEffect(() => {
@@ -690,7 +711,7 @@ the versions, are [layout-example.md](../architecture/layout-example.md) and
 ```tsx
 // Bad: a hand-written useCallback in new code under the compiler. The compiler
 // memoises the handler by itself, so the hook only adds a dependency list to
-// keep right.
+// keep right (components.md section 7).
 const payInvoice = useCallback(
   (event: SyntheticEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -733,7 +754,7 @@ there is one thing less to keep right.
 ```tsx
 // Bad: a second copy of the mutation's pending state, kept by hand. It repeats
 // payment.isPending, and it is right only while every path that starts a
-// payment sets it and every path that ends one clears it.
+// payment sets it and every path that ends one clears it (components.md section 8).
 const payment = useMutation(payInvoiceMutationOptions(apiClient, invoiceId));
 const [isPaying, setIsPaying] = useState(false);
 
@@ -797,7 +818,11 @@ second submit while the first is on its way.
   component under the same name, so a search finds every use; that reason is the practice's choice.
 - *Advice.* **Export no plain function or hook from a file that exports a component**, so Fast
   Refresh can update the component in place while you work. Oxlint's `react/only-export-components`
-  reports a file that mixes them ([libraries.md](../architecture/libraries.md) section 4 for its setting).
+  reports a file that mixes them, but the example's `.oxlintrc.json` does not turn it on: the lint
+  rule reports any file with a component that exports anything else, and a TanStack Router file
+  route exports `Route` next to an unexported screen component, so it reported the reference
+  application's three route files ([libraries.md](../architecture/libraries.md) section 4 for its
+  setting).
   The rule a component reads goes to its own role file, such as `invoice-status.rules.ts`.
 
 The badge in [component-example.md](component-example.md) shows a file with one exported component.
@@ -808,7 +833,9 @@ The file that shows one exported component beside a rule in its own role file is
 
 Each row is one problem. "Reported by" names the lint rule that reported the problem in the
 reference application's negative controls (Oxlint 1.85.0, read 2026-10-01), a rule that exists but
-was not run as a control, or "review" when no linter catches it and a reviewer has to.
+was not run as a control, or "review" when no linter catches it and a reviewer has to. A rule is
+named as Oxlint prints it, such as `react-hooks(rules-of-hooks)`; the key that turns it on in
+`.oxlintrc.json` is `react/rules-of-hooks` ([libraries.md](../architecture/libraries.md) section 4).
 
 | Mistake | Fix | Kind | Reported by |
 |---|---|---|---|
@@ -822,7 +849,7 @@ was not run as a control, or "review" when no linter catches it and a reviewer h
 | a list keyed by index or by a random value | key by the item's id (section 4) | Advice | review |
 | an effect that clears fields when an id changes | a `key` on the component (section 4) | Advice | review |
 | work a click causes, run by an effect | run it in the event handler (section 5) | Advice | review |
-| a silenced `exhaustive-deps` | change the code: move the value, or split the effect (section 5) | Advice | `react/exhaustive-deps` once the silencing comment is gone; not run as a control |
+| a silenced `exhaustive-deps` | change the code: move the value, or split the effect (section 5) | Advice | `react-hooks(exhaustive-deps)` once the silencing comment is gone; not run as a control |
 | an effect that starts something and returns no cleanup | return the cleanup (section 5) | Advice | review; Strict Mode shows it in development |
 | server data fetched in an effect | the query cache ([architecture.md](../architecture/architecture.md) section 8) | Advice | review |
 | a lifecycle wrapper hook such as `useMount` | a hook named for its purpose, or the effect itself (section 6) | Advice | review |

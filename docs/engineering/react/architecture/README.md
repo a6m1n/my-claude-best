@@ -49,8 +49,9 @@ flowchart LR
    screen, read `docs/engineering/react/architecture/architecture.md`; before you add a dependency,
    read `libraries.md` in the same folder." Without it an agent never opens the files.
 3. The practice is the React case of `any-language/file-structure` and links it for every rule it
-   owns. It also links `any-language/readability`, `any-language/refactoring` and the other folders
-   under `react/`. Copy those folders too, or replace each link with your own rule for that topic.
+   owns. It also links `any-language/readability`, `any-language/refactoring`, `python/testing` (its
+   `layout.md` and `what-to-test.md`) and the other folders under `react/`. Copy those folders too,
+   or replace each link with your own rule for that topic.
 4. Set up the checks of [layout-example.md](layout-example.md) section 3 with the first module, not
    later: the `@/` alias in `tsconfig.app.json` and `vite.config.ts`, the boundary rule, the ban on
    relative imports, the two rules that keep the router in `src/routes/` and `core/config.ts` in

@@ -53,8 +53,9 @@ The examples come from one invented application, the billing screens of Acme Cor
 React 19 and Tailwind CSS 4 (versions read 2026-10-01). The blocks quoted from the application were
 type-checked, linted, unit-tested and built. The blocks that are not from it say so where they
 stand: the motion and reduced-motion CSS in section 8 and the theme switch in section 9; the
-application has no motion and no switch yet. Nothing was run in a browser. The contrast numbers in
-section 4 were computed from the token values with the WCAG 2 formula, not measured on a screen.
+application has one motion, the loading spinner, and no switch yet. Nothing was run in a browser.
+The contrast numbers in section 4 were computed from the token values with the WCAG 2 formula, not
+measured on a screen.
 
 ## 2. Product mode and brand mode
 
@@ -100,7 +101,8 @@ different words for the same shape: a raw value, then a role, then a component.
 - **When a component needs a colour, a radius or a shadow, use a role, never a raw value,** so a new
   theme or a rebrand is an edit to one file. Primer says base tokens are never used directly in
   code or design, and that its functional tokens are the ones used most. Carbon gives the payoff:
-  with tokens, a change made in one place shows across the whole system.
+  with tokens, a change made in one place shows across the whole system. A circle or a pill is the
+  one exception (section 7).
 - **Pick the role by what the thing means, not by how it looks.** Error text takes `destructive`
   even when another role has a similar red. Atlassian's rule is to choose a token by its meaning,
   not by its value.
@@ -130,7 +132,8 @@ The token file of the billing application, in full:
 @import "tailwindcss";
 
 /* Roles, not colours: a component names a role and the theme supplies the value.
-   Every surface role has a -foreground role that keeps text readable on it. */
+   Every surface role has a -foreground role that keeps text readable on it
+   (visual-design.md section 3). */
 :root {
   color-scheme: light dark;
 
@@ -139,6 +142,9 @@ The token file of the billing application, in full:
   --muted: light-dark(oklch(0.96 0 0), oklch(0.24 0 0));
   --muted-foreground: light-dark(oklch(0.45 0 0), oklch(0.74 0 0));
   --border: light-dark(oklch(0.88 0 0), oklch(0.34 0 0));
+  /* The edge of a control, 3:1 on the background: `border` is decorative and may stay faint
+     (visual-design.md section 4). */
+  --input: light-dark(oklch(0.6 0 0), oklch(0.55 0 0));
   --primary: light-dark(oklch(0.45 0.16 255), oklch(0.74 0.13 255));
   --primary-foreground: light-dark(oklch(0.99 0 0), oklch(0.16 0 0));
   --destructive: light-dark(oklch(0.5 0.19 27), oklch(0.74 0.15 27));
@@ -148,18 +154,23 @@ The token file of the billing application, in full:
 
 @theme inline {
   /* Clearing the default palette leaves the roles below as the only colours: `bg-blue-500`
-     produces no style at all. */
+     produces no style at all (visual-design.md section 3). */
   --color-*: initial;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --color-input: var(--input);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-ring: var(--ring);
+
+  /* One family, chosen and set once: the system face, so no font file loads (visual-design.md
+     section 5; performance.md section 5). */
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
 
   --radius-control: 0.375rem;
   --radius-surface: 0.75rem;
@@ -182,8 +193,12 @@ Why it is good:
   later. The comment keeps that reason at the line, because the line looks removable.
 - Every text role has the surface it sits on, and each pair's contrast is computed in both themes
   (section 4).
+- `input`, the edge of a control, is a role apart from `border`, so a field's edge can meet 3:1
+  while the lines between table rows stay faint (section 7).
 - The two radii are named by role (`control`, `surface`), not by size, and sit at the small values
   product screens use (section 7).
+- The family is chosen and set once, as the `--font-sans` token: the system face, so no font file
+  loads (section 5; [performance.md](../performance/performance.md) section 5).
 - `color-scheme: light dark` lets the browser draw its own parts, such as scrollbars and form
   controls, in the matching theme (section 9).
 
@@ -215,7 +230,8 @@ export function Button({ children, type = "button", disabled = false, onClick }:
       disabled={disabled}
       onClick={onClick}
       // focus-visible:outline-*: an outline, not a shadow, because forced-colours mode removes
-      // shadows. pointer-coarse:min-h-11: 44 px tall on a touch screen; 36 px is for a mouse.
+      // shadows (accessibility.md section 5). pointer-coarse:min-h-11: 44 px tall on a touch
+      // screen; 36 px is for a mouse (ux.md section 8).
       className="min-h-9 rounded-control bg-blue-600 px-4 text-sm font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 disabled:opacity-60 pointer-coarse:min-h-11"
     >
       {children}
@@ -249,7 +265,8 @@ export function Button({ children, type = "button", disabled = false, onClick }:
       disabled={disabled}
       onClick={onClick}
       // focus-visible:outline-*: an outline, not a shadow, because forced-colours mode removes
-      // shadows. pointer-coarse:min-h-11: 44 px tall on a touch screen; 36 px is for a mouse.
+      // shadows (accessibility.md section 5). pointer-coarse:min-h-11: 44 px tall on a touch
+      // screen; 36 px is for a mouse (ux.md section 8).
       className="min-h-9 rounded-control bg-primary px-4 text-sm font-medium text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-60 pointer-coarse:min-h-11"
     >
       {children}
@@ -297,12 +314,13 @@ The ratio is a threshold and is not rounded: 4.49:1 fails 4.5:1.
   destructive on background            light 6.44 dark 7.90 floor 4.5:1 ok
   success on background                light 6.84 dark 9.88 floor 4.5:1 ok
   ring on background                   light 4.77 dark 10.35 floor 3:1 ok
+  input on background                  light 3.84 dark 4.00 floor 3:1 ok
   border on background                 light 1.39 dark 1.65 decorative, no floor
   ```
 
   Why it is good: every pair a screen can use is listed with the floor it must meet, in both
-  themes. The focus ring is held to 3:1, and the border is marked decorative, so nobody uses it
-  as the only edge of a control (section 7).
+  themes. The focus ring and the `input` role, the edge of a field, are held to 3:1, and the
+  border is marked decorative, so nobody uses it as the only edge of a control (section 7).
 
   Check: when the token file changes, is every pair's ratio, in both themes, at or above its
   floor?
@@ -312,9 +330,9 @@ The ratio is a threshold and is not rounded: 4.49:1 fails 4.5:1.
 - **Never let colour be the only signal** (SC 1.4.1, level A). A status, an error or a required
   field also carries a word or an icon.
 - **Build the palette in a perceptual colour space from a few inputs.** Tailwind 4's default
-  palette and shadcn/ui's themes are OKLCH, and `oklch()` is Baseline widely available since May
-  2023 (read 2026-10-01). Linear rebuilt its theming in LCH and went from 98 theme variables to 3:
-  a base colour, an accent and a contrast level (read as a snippet only).
+  palette and shadcn/ui's themes are OKLCH, and `oklch()` is Baseline widely available since
+  2025-11-09 (webstatus.dev, read 2026-10-02). Linear rebuilt its theming in LCH and went from 98
+  theme variables to 3: a base colour, an accent and a contrast level (read as a snippet only).
 - **No pure black, and no grey text on a coloured surface.** Text on a coloured surface takes that
   surface's foreground role, which has its contrast computed. Two sources name both mistakes:
   Refactoring UI by Adam Wathan and Steve Schoger, read only through second-hand summaries, and
@@ -361,7 +379,8 @@ type InvoiceStatusBadgeProps = {
 };
 
 export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
-  // The word carries the status. The colour repeats it and is never the only signal.
+  // The word carries the status. The colour repeats it and is never the only signal
+  // (accessibility.md section 9).
   return <span className={`text-sm font-medium ${STATUS_COLOR[status]}`}>{STATUS_LABEL[status]}</span>;
 }
 ```
@@ -397,7 +416,8 @@ smaller badge.
 - **Choose one family for the application and set it once, as a `--font-*` token.** Atlassian keeps
   its brand face for marketing and its product faces for the app. Linear's product UI uses Inter for
   body text and Inter Display for headings, so the face itself is not the problem; the mistake is
-  the default nobody chose (section 11).
+  the default nobody chose (section 11). The billing application's token file sets `--font-sans`
+  to the system face (section 3).
 - **Keep running text at 45 to 75 characters a line,** with about 66 as the ideal, which web.dev
   sets with `max-inline-size: 66ch`. WCAG's limit of 80 characters is SC 1.4.8, level AAA, not AA.
   Anthropic's frontend-design skill says the same in its own words: "Default to line lengths of
@@ -450,12 +470,14 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
   Why it is good: the width and the gap are named steps of the stack's scales (`gap-4` is 16 px), so
   every form of the application has the same rhythm, and a value in square brackets stands out in
   review as one that left the scale.
-- **Lay a screen out in one column first, and add columns as the space grows.** web.dev starts
-  macro layouts single-column and builds them with Grid.
+- **Lay a screen out in one column first, and add columns as the space grows,** so the screen
+  already works at the narrow width that reflow asks for ([accessibility.md](accessibility.md)
+  section 9). web.dev starts macro layouts single-column and builds them with Grid.
 - **Use media queries for the page and container queries for a component,** so a component adapts
   to its own width wherever it is placed. web.dev's layout modules give the split and the CSS:
   `container-type: inline-size` on the parent and `@container (min-width: 25em)` on the rule.
-  Container size queries are Baseline widely available since February 2023 (read 2026-10-01).
+  Container size queries are Baseline widely available since 2025-08-14 (webstatus.dev, read
+  2026-10-02).
 - **Keep a task screen dense: tight rows, small type, few boxes, alignment and spacing to group
   things.** Linear's 2024 redesign set out to "reduce visual noise, maintain visual alignment, and
   increase the hierarchy and density of navigation elements"; its 2026 refresh kept "that rich
@@ -474,6 +496,10 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
 
   The billing application's token file has two: `--radius-control` (6 px) and `--radius-surface`
   (12 px).
+- **A full circle or a pill, such as a status dot or a spinner ring, takes `rounded-full`,**
+  because a radius role stands for the size of a corner, and a circle has no corner. `full` is not
+  a role: Primer's table above lists "full (pill)" as the last step of its radius scale, and
+  Tailwind 4's `rounded-full` is a fixed value, `calc(infinity * 1px)`.
 - **Draw a border only where it tells the reader something.** Anthropic's frontend-design skill:
   "Structural devices like outlines, borders, numbering, eyebrows, dividers, labels, etc., encode
   useful information about the content rather than decorate it." Linear's 2026 refresh removed
@@ -483,10 +509,11 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
 - **A divider may be decorative; the edge of a control may not.** The application's `border` role
   is 1.39:1 in the light theme, which is fine for the line between table rows. When the edge is
   what shows the user where a text field is, it needs 3:1 (SC 1.4.11). Give that edge a role of its
-  own, as shadcn/ui does with `input`, and compute it against 3:1.
-- **Keep surfaces in the page flat and give floating layers the shadow.** Geist puts minimal shadow
-  on surfaces in the page and progressively stronger shadows on layers that float above it, such as
-  a menu or a dialog.
+  own, as shadcn/ui does with `input`, and compute it against 3:1. The application's theme now has
+  that role, `input`, at 3.84:1 in the light theme and 4.00:1 in the dark one (section 4).
+- **Keep surfaces in the page flat and give floating layers the shadow,** so a shadow means one
+  thing: this layer sits above the page. Geist puts minimal shadow on surfaces in the page and
+  progressively stronger shadows on layers that float above it, such as a menu or a dialog.
 - **Define elevation as a pair of tokens, a surface and its shadow, and always use them together.**
   Atlassian asks that a surface token always go with its matching shadow token, so a raised layer
   looks right in both themes. Carbon steps surfaces up as layers: `$layer-01` sits on
@@ -529,8 +556,14 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
   only). What animation costs at run time is [performance.md](../performance/performance.md) section 6.
 
   The motion blocks of this section (the two below and the reduced-motion one after them) are not
-  part of the reference application, which has no motion yet; the two custom properties join its
-  token file with the first component that moves.
+  part of the reference application, which has no transition yet. The application's one motion is
+  the loading spinner: Tailwind's `animate-spin` behind `motion-safe:`. Its duration and curve come
+  from Tailwind's default `--animate-spin` token (`spin 1s linear infinite`), a step of the stack's
+  theme the way `gap-4` is a step of its spacing scale, so the rule on tokens holds without a line
+  in the application's file. It answers the person's navigation with a loop that shows a wait, not
+  a change of a size, so the duration table does not reach it; when a wait gets a spinner is
+  [ux.md](ux.md) section 3. The two custom properties join the application's token file with the
+  first transition.
 
   ```css
   :root {
@@ -555,6 +588,8 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
   }
 
   .invoice-details {
+    /* Only `opacity` and `transform`, listed: a layout property is costly to animate
+       (visual-design.md section 8). */
     transition:
       opacity var(--motion-duration-small) var(--motion-ease-enter),
       transform var(--motion-duration-small) var(--motion-ease-enter);
@@ -568,13 +603,14 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
   accelerating curve and a shorter time on its way out (the rules above).
 - **Honour `prefers-reduced-motion`: keep the fade, drop the movement.** MDN advises replacing
   scaling and panning with opacity fades, and the media query is Baseline widely available since
-  January 2020 (read 2026-10-01). WCAG asks for it only at level AAA (SC 2.3.3); Vercel's guidelines
-  and Josh Comeau ask for it with no level attached. The block below is not from the reference
-  application either; it uses the two tokens of the block above.
+  2022-07-15 (webstatus.dev, read 2026-10-02). WCAG asks for it only at level AAA (SC 2.3.3);
+  Vercel's guidelines and Josh Comeau ask for it with no level attached. The block below is not
+  from the reference application either; it uses the two tokens of the block above.
 
   ```css
   @media (prefers-reduced-motion: reduce) {
     .invoice-details {
+      /* Keep the fade, drop the movement (visual-design.md section 8). */
       transition: opacity var(--motion-duration-small) var(--motion-ease-enter);
     }
   }
@@ -599,6 +635,8 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
   reference application, which has no switch yet:
 
   ```css
+  /* The switch sets `color-scheme` only; every role follows through `light-dark()`
+     (visual-design.md section 9). */
   :root[data-theme="light"] {
     color-scheme: light;
   }
@@ -615,8 +653,8 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
   (section 4). Linear makes text and neutral icons darker in the light theme and lighter in the dark
   one, and Primer inverts its neutral scales in dark mode, so components share one set of roles.
 - **Set `color-scheme` on the root element,** so the browser draws scrollbars, form controls and the
-  page canvas in the matching theme. `color-scheme` is Baseline widely available since January 2022
-  (read 2026-10-01); Vercel's guidelines ask for it too.
+  page canvas in the matching theme. `color-scheme` is Baseline widely available since 2024-08-03
+  (webstatus.dev, read 2026-10-02); Vercel's guidelines ask for it too.
 
 ## 10. Design styles and their fit
 
@@ -690,17 +728,18 @@ is the mode and the token file, not a list of banned fonts.
 
 ## 13. Review checklist
 
-A review question per section. A single red flag is something to raise with the author; a screen
-that shows two or more is not ready.
+A review question per section. A red flag that fails a WCAG 2.2 A or AA criterion means the screen
+is not ready. Any other single red flag is something to raise with the author; a screen that shows
+two or more is not ready.
 
 | Section | Ask | Red flag |
 |---|---|---|
 | 2. Mode | Is this a task screen, and does it look like one? | Brand-size type, a gradient hero or expressive motion on a screen behind the login |
-| 3. Tokens | Does every colour, radius and shadow name a role? | A palette class (`bg-blue-600`), a hex value, or a role picked because its colour looked right |
+| 3. Tokens | Does every colour, radius and shadow name a role, with `rounded-full` only on a circle or a pill? | A palette class (`bg-blue-600`), a hex value, or a role picked because its colour looked right |
 | 4. Colour and contrast | Does every text-on-surface pair have its ratio in both themes? | A new pair with no ratio; colour as the only signal; grey text on a coloured surface |
 | 5. Type | Are sizes steps of the scale, and does the hierarchy use weight and colour first? | A size in square brackets; running text wider than 75 characters; numbers in a column without `tabular-nums` |
 | 6. Spacing and layout | Is every space a step of the 4 px scale? | A value in square brackets; a component that only adapts to the viewport |
-| 7. Shape and borders | Are radii small and named by role, and does each border carry meaning? | A border around every box; a decorative border as the only edge of a field |
+| 7. Shape and borders | Are radii small and named by role (a circle or a pill takes `rounded-full`), and does each border carry meaning? | A border around every box; a decorative border as the only edge of a field |
 | 8. Motion | Does motion answer an action, at a duration that fits its size? | `transition: all`; an animated `width` or `height`; no reduced-motion rule |
 | 9. Themes | Was the dark theme looked at, not only computed? | A component that checks which theme is on; a colour set outside the token file |
 | 10. Styles | Does the style keep sections 3 to 9? | Glass under text, soft shadows on controls, a style chosen because it is in fashion |
@@ -851,3 +890,9 @@ that shows two or more is not ready.
     — the broadsheet look; a secondary reading of the skill.
 48. Hacker News, "Tells of a Slop UI": https://news.ycombinator.com/item?id=49867038 — heavy
     borders among the tells several commenters name; anecdote.
+
+### Baseline dates
+
+49. webstatus.dev: https://webstatus.dev — the "Baseline widely available since" dates of
+    `oklch()`, container size queries, `prefers-reduced-motion` and `color-scheme` (read
+    2026-10-02).

@@ -19,7 +19,7 @@ the developer's machine, and leave every access decision to the server.
   the browser exposes, and the lint rules and scanners; then the common mistakes as bad and good
   pairs, where the rules stop holding, a review checklist and the sources. Read it before you put
   data from outside the application on the page, handle a session or a token, add a setting or a
-  dependency, add a third-party script, or change the headers, the dev server or CI.
+  dependency, add a third-party script, or change the headers, the dev server or the CI workflow.
 - [security-example.md](security-example.md) — the security-relevant parts of one billing
   application, each with the threat it stops and what it does not stop: the API client, the
   public settings, the link, the one HTML sink, the web-vitals report, the headers file, the lint
@@ -28,10 +28,10 @@ the developer's machine, and leave every access decision to the server.
 ## How to adopt
 
 1. Copy this folder into your repository at `docs/engineering/react/security/`.
-2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you put data from outside the
-   application on the page, handle a session or a token, add a dependency or a `VITE_` setting,
-   or change the headers, the dev server or CI, read
-   `docs/engineering/react/security/security.md`." Without it an agent never opens the file.
+2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "In a React application, before you put data
+   from outside the application on the page, handle a session or a token, add a setting or a
+   dependency, add a third-party script, or change the headers, the dev server or the CI workflow,
+   read `docs/engineering/react/security/security.md`." Without it an agent never opens the file.
 3. In the same change, turn on the lint rules of section 14 and the package manager settings of
    section 10, so the rules are checked from the first commit on.
 4. Use section 17's checklist as the security part of your review template.
@@ -48,8 +48,10 @@ the developer's machine, and leave every access decision to the server.
    until it is read again. List the lines to re-check with
    `grep -rnE '2026-10-0[12]' docs/engineering/react/security/`; each line in security.md that names
    a moving target carries the date it was read. For the advisories of React's server packages,
-   your framework, your router, Vite and DOMPurify, do not wait for a re-check: subscribe, since a
-   critical one is patched within the day.
+   your framework, your router, Vite and DOMPurify, do not wait for a re-check: turn on the host's
+   dependency alerts (Dependabot alerts on GitHub) and watch the advisory sources security.md
+   cites, as [security.md](security.md) section 10 says, since a critical one is patched within
+   the day.
 
 ## The points to adapt
 

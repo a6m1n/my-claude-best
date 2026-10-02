@@ -32,8 +32,8 @@ A default with no public source behind it is marked as this practice's own choic
 
 The version column is the registry's `latest` on 2026-10-01. The example application in
 [layout-example.md](layout-example.md) was installed a week behind that date and checked with the
-versions in section 8. In places it trails this column by a patch, and its Vitest is a major
-behind.
+versions in section 8. In places it trails this column by a patch or a minor version, and its
+Vitest is a major behind.
 
 Section 9 gives two kinds of usage evidence. Neither one picks a library:
 
@@ -117,10 +117,13 @@ ESLint rule that Oxlint already checks, so each problem is reported once. ESLint
 life on 2026-08-06, so the ESLint half is ESLint 10. Both config files are in
 [layout-example.md](layout-example.md) section 3.
 
-When you write `.oxlintrc.json`, name the `react`, `jsx-a11y` and `import` plugins in `plugins`,
-and turn on `import/no-cycle` and `oxc/no-barrel-file` by name: by default Oxlint loads only its
-`eslint`, `typescript`, `unicorn` and `oxc` plugins and the `correctness` category, so a rule that
-exists in Oxlint is not yet a rule that runs. Upgrade `oxlint` and `eslint-plugin-oxlint` together,
+When you write `.oxlintrc.json`, name in `plugins` every plugin to run: the list replaces Oxlint's
+default set instead of adding to it (Oxlint's plugins page, source 39). The example names six,
+`eslint` first, then `typescript`, `react`, `jsx-a11y`, `import` and `oxc`, because every rule
+the config turns on belongs to a plugin in the list. Then turn on `import/no-cycle` and
+`oxc/no-barrel-file` by name: by default Oxlint loads only its `eslint`, `typescript`, `unicorn`
+and `oxc` plugins and the `correctness` category, so a rule that exists in Oxlint is not yet a rule
+that runs. Upgrade `oxlint` and `eslint-plugin-oxlint` together,
 because the plugin's version tracks Oxlint's and its peer range is `oxlint ~1.86.0`.
 
 Which tool checks what (versions read 2026-10-01; Oxlint 1.86.0, ESLint 10.11.0):
@@ -130,12 +133,12 @@ Which tool checks what (versions read 2026-10-01; Oxlint 1.86.0, ESLint 10.11.0)
 | Rules of Hooks, effect dependencies | Oxlint `react/rules-of-hooks`, `react/exhaustive-deps` | the hooks rules sit under `react/`; there is no separate hooks plugin. Set `rules-of-hooks` to `error` by name, as create-vite's config does |
 | React Compiler diagnostics | Oxlint: 22 compiler rules in `correctness` (announced 2026-08-18) | Oxlint lacks the compiler's `config` and `gating` checks. `eslint-plugin-react-hooks` 7.1.1 has them and runs on ESLint 10; the example keeps its `recommended` preset in ESLint and lets `eslint-plugin-oxlint` turn off what Oxlint repeats |
 | Accessibility in JSX | Oxlint `jsx-a11y` | implements every rule of `eslint-plugin-jsx-a11y`'s `recommended` set. It checks static code only; a rendered page gets axe (section 6) |
-| Import cycles, barrel files | Oxlint `import/no-cycle`, `oxc/no-barrel-file` | `no-barrel-file` fires when a file re-exports more modules than its threshold, 100 by default |
+| Import cycles, barrel files | Oxlint `import/no-cycle`, `oxc/no-barrel-file` | `no-barrel-file` fires on a barrel of `export *` lines when the modules its imports load exceed its threshold, 100 by default |
 | Relative imports | `no-restricted-imports` with patterns; ESLint core has it, and so does Oxlint | the rule that asks for absolute imports belongs to [file-structure.md](../../any-language/file-structure/file-structure.md) section 7 |
 | Import direction between folders | `eslint-plugin-boundaries` 7.2.0, rule `boundaries/dependencies` | stays in ESLint: nothing read names it as working under Oxlint's JS plugins, which are in alpha, and an open issue on the plugin asks for docs on it. It reads the `@/` alias through `eslint-import-resolver-typescript`. The plugin's 7.x README writes the rule's entries under `policies`; the older `rules` key and `mode: "folder"` still work in 7.2.0 and print a deprecation warning |
 | File and folder names | `eslint-plugin-check-file` 3.3.2 | flat config only from 3.x |
 | Type-aware rules | typescript-eslint 8.71.0, the `strictTypeChecked` preset with `projectService: true`, the one the example uses | its docs advise `strictTypeChecked` only when "a nontrivial percentage of its developers are highly proficient in TypeScript"; step down to `recommendedTypeChecked` when that is not true of your team |
-| Fast Refresh | Oxlint `react/only-export-components` | create-vite's config sets it to `warn` with `allowConstantExport: true` |
+| Fast Refresh | Oxlint `react/only-export-components` | create-vite's config sets it to `warn` with `allowConstantExport: true`. The example does not turn it on: it reports a file with a component that also exports anything else, and TanStack Router's file routes export `Route` next to an unexported screen component. Tried in the example, it reported all three route files |
 | `eval`, `javascript:` URLs, `dangerouslySetInnerHTML` | Oxlint core rules and `react/no-danger` | which rules and why: [security.md](../security/security.md) sections 3 and 14 |
 
 Oxlint's limits on 2026-10-01:
@@ -161,7 +164,7 @@ ESLint plugins and ESLint 10, by the peer ranges on the registry (read 2026-10-0
 | `@vitest/eslint-plugin` | 1.6.27 | yes (open-ended peer) | rules for Vitest test files |
 | `eslint-plugin-playwright` | 2.12.0 | yes (open-ended peer) | rules for end-to-end test files |
 | `eslint-plugin-import-x` | 4.17.1 | yes | when an import rule is needed that Oxlint lacks |
-| `eslint-plugin-react-refresh` | 0.5.7 | yes | only where Oxlint does not check Fast Refresh |
+| `eslint-plugin-react-refresh` | 0.5.7 | yes | not in the example: it runs no Fast Refresh check (the Fast Refresh row above says why) and does not add this plugin either |
 | `eslint-config-prettier` | 10.1.8 | yes (open-ended peer) | optional here: once `eslint-plugin-oxlint` has turned off the duplicates, the ESLint half runs type-aware, import, naming and compiler rules, not style rules. That is an inference from this setup, not an owner statement |
 
 ## 5. Format
@@ -176,11 +179,19 @@ ESLint plugins and ESLint 10, by the peer ranges on the registry (read 2026-10-0
 
 What earns a test is the rule of [what-to-test.md](../../python/testing/what-to-test.md), whose
 rules hold in any language; this file does not restate it. Until React has a testing practice of
-its own, this practice's minimum is its own choice, built on the rows below: every rule file has a
-unit test, as the example's two rule files do; a component with behaviour of its own gets one test
-in Vitest Browser Mode, found by role and driven with `user-event`; the network is replaced with
-MSW handlers; and each flow the business cannot lose gets one end-to-end path in Playwright. The
-reference application holds only the first kind: no component test was written for it.
+its own, this practice's minimum is its own choice, built on the rows below:
+
+- Give every rule file a unit test, as the example's two rule files do: rules are where a test
+  finds bugs ([what-to-test.md](../../python/testing/what-to-test.md) section 2).
+- Give a component with behaviour of its own one test in Vitest Browser Mode, found by its role and
+  driven with `user-event`: it runs in a real browser, where jsdom and happy-dom only simulate one,
+  and it finds and drives the component the way a user does.
+- Replace the network with MSW handlers, so the same handlers serve development, tests and demos.
+- Give each flow the business cannot lose one end-to-end path in Playwright: the path runs the
+  whole application in a real browser, and one path per flow keeps the large tests, the flaky
+  kind, few.
+
+The reference application holds only the first kind: no component test was written for it.
 
 One line per kind of test. Versions are the registry's `latest`, read 2026-10-01.
 

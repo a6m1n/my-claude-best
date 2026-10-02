@@ -86,7 +86,7 @@ what to show.
       Should the user try again, or call someone? */}
   {/* The region is in the page before the error is: a screen reader announces text that
       appears inside an existing live region, and often misses a region that arrives with
-      its text. */}
+      its text (accessibility.md section 7). */}
   <p role="alert" className="text-sm text-destructive">
     {payment.isError ? "Something went wrong." : null}
   </p>
@@ -98,7 +98,7 @@ what to show.
   ```tsx
   {/* The region is in the page before the error is: a screen reader announces text that
       appears inside an existing live region, and often misses a region that arrives with
-      its text. */}
+      its text (accessibility.md section 7). */}
   <p role="alert" className="text-sm text-destructive">
     {payment.isError ? "We could not confirm the payment. Check the invoice list before you try again." : null}
   </p>
@@ -170,29 +170,36 @@ A field labelled only by its placeholder:
 <input
   name="reference"
   placeholder="Payment reference"
-  // 16 px: a smaller input makes iOS Safari zoom the page in on focus.
-  className="text-base"
+  // 16 px: a smaller input makes iOS Safari zoom the page in on focus (ux.md section 4).
+  // border-input: the field's edge at 3:1 (visual-design.md section 4); min-h-9 and
+  // pointer-coarse:min-h-11: the target heights of ux.md section 8.
+  className="min-h-9 rounded-control border border-input px-3 text-base pointer-coarse:min-h-11"
 />
 ```
 
 Once the user types, nothing on the screen says what the field is for. The same field with a
 visible label (not from the reference application, which has no such field; type-checked and
-linted in a temporary file):
+linted in a temporary file). The `input` role its border uses is in the application's theme for
+this field ([visual-design.md](visual-design.md) section 3):
 
 ```tsx
 <label className="flex flex-col gap-1">
   <span className="text-sm font-medium">Payment reference</span>
   <input
     name="reference"
-    // 16 px: a smaller input makes iOS Safari zoom the page in on focus.
-    className="text-base"
+    // 16 px: a smaller input makes iOS Safari zoom the page in on focus (ux.md section 4).
+    // border-input: the field's edge at 3:1 (visual-design.md section 4); min-h-9 and
+    // pointer-coarse:min-h-11: the target heights of ux.md section 8.
+    className="min-h-9 rounded-control border border-input px-3 text-base pointer-coarse:min-h-11"
   />
 </label>
 ```
 
 Why it is good: the label stays on screen above the field while the user types, and the `<label>`
 around the input names it. The input keeps 16 px, with its reason at the line, because a reader
-who wants the field to match the 14 px label would otherwise shrink it.
+who wants the field to match the 14 px label would otherwise shrink it. Its edge is the `input`
+role at 3:1, so the user can see where to type, and it is 36 px high with a mouse and 44 px with a
+finger (section 8).
 
 The billing application's payment form uses visible labels for a group of choices. It is cut to
 the group:
@@ -200,12 +207,14 @@ the group:
 ```tsx
 <fieldset className="flex flex-col gap-2">
   <legend className="text-sm font-medium">Payment method</legend>
-  <label className="flex items-center gap-2">
+  {/* min-h-6: the 24 px floor of a target; pointer-coarse:min-h-11: 44 px on a touch screen
+      (ux.md section 8). */}
+  <label className="flex min-h-6 items-center gap-2 pointer-coarse:min-h-11">
     {/* One method is always chosen, so `payInvoice` never parses an empty choice. */}
     <input type="radio" name="method" value="card" defaultChecked />
     Card
   </label>
-  <label className="flex items-center gap-2">
+  <label className="flex min-h-6 items-center gap-2 pointer-coarse:min-h-11">
     <input type="radio" name="method" value="bank_transfer" />
     Bank transfer
   </label>
@@ -213,8 +222,9 @@ the group:
 ```
 
 Why it is good: the group has a visible name, "Payment method", and each choice has visible text
-the user can click as well as the small radio button. One choice is set at the start, so the form
-has no empty state to validate.
+the user can click as well as the small radio button. Each label is at least 24 px tall and 44 px
+on a coarse pointer, the target sizes of section 8, with the reason at the line. One choice is set
+at the start, so the form has no empty state to validate.
 
 Zoom switched off:
 
@@ -258,7 +268,8 @@ stays and how it is announced is [accessibility.md](accessibility.md) section 7.
 ## 6. Empty states
 
 **When a list or a screen has nothing to show, say so in words: tell empty apart from still
-loading, say what will appear here, and give a direct path to the task that fills it** (NN/g).
+loading, say what will appear here, and give a direct path to the task that fills it** (NN/g),
+**where the user can do that task.**
 
 ```tsx
 // Bad: an empty list renders nothing. The user sees a heading over a blank
@@ -278,9 +289,8 @@ if (invoices.length === 0) {
 
 Why it is good: the message says the list is empty and what will appear in it, and when. It can
 never show during loading: the list reads its data with `useSuspenseQuery`, so it renders only once
-the data has arrived, and until then the route shows its loading state. It has no button because a
-user of this screen does not issue invoices; where the user can create the thing the list holds,
-the empty state carries the action that does it.
+the data has arrived, and until then the route shows its loading state. A user of this screen does
+not issue invoices, so it has no action.
 
 ## 7. State in the URL
 
@@ -308,7 +318,7 @@ go into a URL is [security.md](../security/security.md) section 13.
   // screen has no hover, and a keyboard user tabs to a link they cannot see.
   <tr key={invoice.id} className="group border-b border-border">
     ...
-    <td className="opacity-0 group-hover:opacity-100">{invoice.paidOn === null ? renderPayLink(invoice) : null}</td>
+    <td className="opacity-0 group-hover:opacity-100">{status === "paid" ? null : renderPayLink(invoice)}</td>
   </tr>
   ```
 
@@ -318,17 +328,20 @@ go into a URL is [security.md](../security/security.md) section 13.
   ```tsx
   <tr key={invoice.id} className="border-b border-border">
     ...
-    <td>{invoice.paidOn === null ? renderPayLink(invoice) : null}</td>
+    <td>{status === "paid" ? null : renderPayLink(invoice)}</td>
   </tr>
   ```
 
   Why it is good: every unpaid row shows its Pay link on every device, and a paid row shows none,
   so the action is where the user looks for it and nothing appears or disappears under the pointer.
+  The link the cell renders is at least 24 px tall, the floor below, and 44 px on a coarse pointer
+  (`min-h-6` and `pointer-coarse:min-h-11` in the route's `renderPayLink`, which
+  [accessibility.md](accessibility.md) section 3 shows).
 - **Make every target at least 24 by 24 CSS px, and larger on a touch screen.** The floor, its
-  exceptions and its check are [accessibility.md](accessibility.md) sections 9 and 11, and the
+  exceptions and its check are [accessibility.md](accessibility.md) sections 9 and 14, and the
   sizes a designer works with (the 24 px floor, Apple's 44 pt, Google's 48 dp) are in the table of
-  section 9. Vercel's guidelines add a number of their own: at least 24 px, 44 px on mobile, and a
-  larger hit area where the visible part is smaller.
+  accessibility.md section 9. Vercel's guidelines add a number of their own: at least 24 px, 44 px
+  on mobile, and a larger hit area where the visible part is smaller.
 
 - **Grow targets when the main pointer is coarse,** so a desktop screen keeps its density and a
   finger still hits the control. web.dev treats a finger on a touch screen as a coarse pointer and
@@ -386,8 +399,9 @@ should not be the only reviewer, is [designing-with-claude-code.md](designing-wi
 
 ## 11. Review checklist
 
-A review question per section. A single red flag is something to raise with the author; a screen
-that shows two or more is not ready.
+A review question per section. A red flag that fails a WCAG 2.2 A or AA criterion means the screen
+is not ready. Any other single red flag is something to raise with the author; a screen that shows
+two or more is not ready.
 
 | Section | Ask | Red flag |
 |---|---|---|

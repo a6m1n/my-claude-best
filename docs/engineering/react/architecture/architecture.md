@@ -51,9 +51,10 @@ shows it whole. Its code was type-checked, linted, unit-tested and built; nothin
 browser.
 
 The one rule: **every kind of thing has one home, and its kind decides where.** A screen lives in
-its route file. One thing the user does lives in its module. Code no module owns lives in `core/`.
-Data the server owns lives in the query cache. State a link should carry lives in the URL. A reader
-who knows what kind of thing they want knows where to find it, and no value has a second copy that
+its route file. One thing the user does lives in its module. Code moves into `core/` when a second
+module needs it ([file-structure.md](../../any-language/file-structure/file-structure.md)
+section 4). Data the server owns lives in the query cache. State a link should carry lives in the
+URL. A reader who knows what kind of thing they want knows where to find it, and no value has a second copy that
 drifts away from the first.
 
 Why it matters:
@@ -111,7 +112,7 @@ src/
 ├── route-tree.gen.ts     # written by the router plugin; never edited by hand
 ├── core/                 # code no module owns; imports no module and no route
 │   ├── ui/               # design-system components with no business words: button, dialog
-│   ├── api-client.ts     # the ApiClient class: the one way to reach the backend
+│   ├── api-client.ts     # the ApiClient class: the one way to reach the API
 │   ├── config.ts         # reads import.meta.env once; only main.tsx imports it
 │   ├── query-client.ts   # the query cache and its defaults
 │   ├── invoice.keys.ts   # the query-key root of data two modules read
@@ -132,8 +133,10 @@ src/
 
 - **`routes/` is the adapter, and the router is its framework.** A route file turns a URL into a
   screen: its loader starts the fetches of the modules, and its component places their components.
-  It holds no business rule, as file-structure section 5 says of every adapter. Nothing outside
-  `routes/` and `main.tsx` imports the router, because file-structure section 2 keeps a framework
+  It holds no business rule, as
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 5 says of every
+  adapter. Nothing outside `routes/` and `main.tsx` imports the router, because
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 2 keeps a framework
   in its adapter; section 6 below says how a module gets a link without it. The router's default
   error screen calls the router to retry, so it sits in `routes/`, named with the `-` prefix that
   tells TanStack Router the file is not a route: `routes/-screen-error.tsx`. A pending screen that
@@ -145,36 +148,40 @@ src/
   ([layout-example.md](layout-example.md) section 3).
 - **Shared UI goes to `core/ui/`, and only UI with no business word in it**: a button, a dialog, a
   field. A component that knows about invoices stays in its module, even when a second module could
-  use it; file-structure section 6, move 3, decides whether it moves down or is copied. Robin
+  use it; [file-structure.md](../../any-language/file-structure/file-structure.md) section 6,
+  move 3, decides whether it moves down or is copied. Robin
   Wieruch promotes code that two features use to a shared folder. Here that folder is `core/`,
-  because file-structure section 7 bans the name `shared`.
+  because [file-structure.md](../../any-language/file-structure/file-structure.md) section 7 bans
+  the name `shared`.
 - **A module keeps its components next to its data code.** Its components, queries, mutations,
   schemas and rules sit in one folder, so a change to paying an invoice stays in `pay-invoice/`.
   Kent C. Dodds' rule: "Place code as close to where it's relevant as possible"; he credits Dan
   Abramov with "Things that change together should be located as close as reasonable."
 - **A test sits beside the file it tests**, as `<file>.test.ts` or `<file>.test.tsx`. This is the
-  React case, and it departs from file-structure section 8, which takes the `tests/` tree of
+  React case, and it departs from
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 8, which takes the
+  `tests/` tree of
   [python/testing/layout.md](../../python/testing/layout.md). The colocation reason above holds: a
   test changes with its file, and a reader who opens the folder sees both. The test imports by the
   same `@/` path as every other file. The evidence is one practitioner's principle, Kent C. Dodds'
   essay on colocation; no tool owner in the sources read says where a test file sits.
 - **`main.tsx` builds each shared object once**, at startup: the API client, the query client and
   the router. It hands both clients to the router's context, so every loader reads the same cache,
-  as TanStack Router's guide to external data loading does. This is file-structure section 4's
+  as TanStack Router's guide to external data loading does. This is
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 4's
   client, built once at startup and handed in. Only `main.tsx` imports `core/config.ts`: it reads
   the settings and passes values on, such as the API's base URL, and nothing below it reads them.
 - **A generated file is never edited.** The router plugin writes `route-tree.gen.ts` on every dev
   run and every build, and both linters skip it. The plugin's default name is `routeTree.gen.ts`;
   the example sets a kebab-case name, so section 4 holds for this file too.
-- **Scalability: the tree grows by the moves of file-structure section 6**, which this file does
-  not restate. What grows is the number of modules, the size of the team, and the time the lint
-  and the build take. Two rules carry that growth: no module imports another, which the boundary
-  tool of section 5 checks, and the moves of
-  [file-structure.md](../../any-language/file-structure/file-structure.md) section 6, where a new
-  feature is a new module and shared code moves down to `core/`. The React case adds two things. A
-  second domain is a second folder beside the first (`reports/` beside `billing/`), and a module
-  that grows splits by role files first, before it is split into two modules. Section 16 says
-  where this shape stops holding.
+- **Scalability: the tree grows by the moves of
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 6**, which this
+  file does not restate. What grows is the number of modules, the size of the team, and the time
+  the lint and the build take. Two rules carry that growth: no module imports another, which the
+  boundary tool of section 5 checks, and the moves of
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 6. A module that
+  grows splits by role files first, before it is split into two modules. Section 16 says where this
+  shape stops holding.
 
 ## 4. File names
 
@@ -190,8 +197,8 @@ src/
   extension**: `invoices.queries.ts`, `pay-invoice.mutations.ts`, `payment.schema.ts`,
   `invoice-status.rules.ts`, `money.format.ts`, `invoice.keys.ts`, and
   `invoice-status.rules.test.ts` for a test. This is the TypeScript form of the role in the file
-  name, file-structure section 7; its NestJS example in section 12, `<name>.controller.ts`, has the
-  same shape.
+  name, [file-structure.md](../../any-language/file-structure/file-structure.md) section 7; its
+  NestJS example in section 12 there, `<name>.controller.ts`, has the same shape.
 - **A component file is named for its component, and a hook file for its hook**:
   `pay-invoice-form.tsx` holds `PayInvoiceForm`, and `use-invoice-filters.ts` would hold
   `useInvoiceFilters`. A file that is the only one of its kind is named for what it holds:
@@ -199,8 +206,11 @@ src/
   [components.md](../components/components.md)'s.
 - **Query options, mutation options, schemas and key factories keep their role word in the
   exported name**: `invoicesQueryOptions`, `payInvoiceMutationOptions`, `paymentMethodSchema`,
-  `invoiceKeys`. This is the React case of file-structure section 7, which keeps the role out of the
-  names inside a file. A named import drops the file name at the line that uses it,
+  `invoiceKeys`. This departs from
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 7, which keeps
+  the role out of the names inside a file. Section 12 there lets a language keep its own file
+  names; keeping the role word in the exported name is this practice's own choice. A named import
+  drops the file name at the line that uses it,
   `useSuspenseQuery(invoicesQueryOptions(apiClient))`, and a schema shares its subject with the type inferred
   from it, `paymentMethodSchema` and `PaymentMethod`: the role word tells them apart. The ecosystem
   names them the same way: TanStack Router's guide calls a query's options `postsQueryOptions`, and a
@@ -211,8 +221,8 @@ src/
   `invoices.$invoiceId.pay.tsx`. The router plugin reads meaning from them: `$` makes a parameter,
   `.` nests a route, and a `-` prefix leaves a file out of the route tree. Kebab-case does not apply
   in `routes/`.
-- **Never `utils`, `helpers`, `common` or `shared`**, as a file or a folder (file-structure
-  section 7).
+- **Never `utils`, `helpers`, `common` or `shared`**, as a file or a folder
+  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 7).
 
 With `ignoreMiddleExtensions`, the name check below reads the name before the role suffix, so
 `invoice-status.rules.test.ts` passes it.
@@ -222,8 +232,9 @@ is not kebab-case ([layout-example.md](layout-example.md) section 3).
 
 ## 5. Imports: absolute, direct, one way
 
-file-structure owns the import rules: absolute imports in section 7, one direction in section 2, and
-a tool that checks the direction in section 11. This section gives each its React form.
+[file-structure.md](../../any-language/file-structure/file-structure.md) owns the import rules:
+absolute imports in section 7 there, one direction in section 2 there, and a tool that checks the
+direction in section 11 there. This section gives each its React form.
 
 - **Import a name from the file that holds it. Never write an `index.ts` that only re-exports.** A
   barrel file makes the tools load every file it lists when one name is imported. Vite's guide says
@@ -240,8 +251,8 @@ a tool that checks the direction in section 11. This section gives each its Reac
   check below has a threshold, so a barrel that loads few modules passes it, and review catches
   those.
 
-  Check: Oxlint's `oxc/no-barrel-file` fails on a barrel whose imports load more than 100 modules,
-  its default threshold.
+  Check: Oxlint's `oxc/no-barrel-file` fails on a barrel of `export *` lines whose imports load
+  more than 100 modules, its default threshold.
 - **Import every file by its absolute path through `@/`**, the alias for `src/`:
   `import { invoiceKeys } from "@/core/invoice.keys.ts"`. Declare the alias once, as `paths` in
   `tsconfig.app.json` with no `baseUrl` (TypeScript 6.0 deprecates `baseUrl`), and let the bundler
@@ -259,8 +270,9 @@ a tool that checks the direction in section 11. This section gives each its Reac
 
   Check: ESLint's `no-restricted-imports`, with the patterns `./*` and `../*`, fails on every
   relative import ([layout-example.md](layout-example.md) section 3).
-- **Imports point one way: routes, then modules, then `core/`.** The direction
-  is file-structure section 2; its React check is `eslint-plugin-boundaries` and its rule
+- **Imports point one way: routes, then modules, then `core/`.** The direction is
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 2; its React
+  check is `eslint-plugin-boundaries` and its rule
   `boundaries/dependencies`. The config names three kinds of element by folder, `core`, `routes`
   and `module`, and captures each module's domain and module folder names, so a module may import
   another module only when both names match its own, which means only itself. In the example
@@ -270,8 +282,9 @@ a tool that checks the direction in section 11. This section gives each its Reac
 
   Version notes (read 2026-10-01): the rule was called `boundaries/element-types` before version 6,
   so a guide that uses that name is for version 5 or older. In version 7.2 the allowed imports sit
-  under the key `policies`; the key `rules`, which the plugin's docs show, printed a deprecation
-  warning when the example was checked. What the rule cannot see: it reads imports through
+  under the key `policies`, and the plugin's README and docs write them there. The older key
+  `rules` still works in 7.2.0 and printed a deprecation warning when the example was checked. What
+  the rule cannot see: it reads imports through
   `eslint-import-resolver-typescript`, and only those that resolver can resolve. How it treats
   `import type` and a dynamic `import()` was not verified.
 
@@ -286,11 +299,13 @@ a tool that checks the direction in section 11. This section gives each its Reac
   level." Robin Wieruch gives the second reason: composition at the parent level lets the data
   fetches run in parallel. The route's loader starts the fetches of both modules at once, where a
   component that rendered another module's component would start that fetch only once it rendered.
-  Each module stays deletable on its own, and the rule of file-structure section 2 that modules do
+  Each module stays deletable on its own, and the rule of
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 2 that modules do
   not import each other holds.
 - **A module gets a link or a navigation from the route.** A link comes in as a render prop
   (`renderPayLink`), a navigation as a callback (`onPaid`). The module then names no URL and imports
-  no router. No owner states this; it is this practice's design, built on file-structure section 2:
+  no router. No owner states this; it is this practice's design, built on
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 2:
   a framework stays in its adapter. The reason is coupling that nothing shows. A module that writes
   `<Link to="/invoices/$invoiceId/pay">` depends on the pay screen through the router's registered
   types, with no import between the two modules for the boundary rule to see. The cost is one prop
@@ -299,14 +314,16 @@ a tool that checks the direction in section 11. This section gives each its Reac
 - **When a write in one module must refresh what another module reads, the root of their query
   keys lives in `core/`** (`core/invoice.keys.ts`), and each module builds its own `queryOptions` on
   it. Paying an invoice changes the list too, and the payment module may not import the list
-  module's options. file-structure section 4 puts data two modules share in `core/`, and a key root
+  module's options. [file-structure.md](../../any-language/file-structure/file-structure.md)
+  section 4 puts data two modules share in `core/`, and a key root
   is such data. The rest of each key stays with its query in the module, where a TanStack Query
   maintainer keeps keys. This is this practice's own design, tested in the example application: it
   type-checks, lints and builds, but nobody watched a payment refresh the list in a browser. A
   common form, a write that invalidates with the reading module's own options, is fine inside one
   module and is a cross-module import here (section 15, mistake 3).
 - **A schema that two modules parse lives in `core/`** (`core/invoice.schema.ts`), by the same rule
-  of file-structure section 4. A schema one module uses stays in that module.
+  of [file-structure.md](../../any-language/file-structure/file-structure.md) section 4. A schema
+  one module uses stays in that module.
 
 ## 7. Where state lives
 
@@ -388,14 +405,16 @@ that reads it.
   the sources read states this; it is this practice's choice. A TypeScript type is a claim the
   compiler cannot check against data that arrives at run time. A cast lets a changed response
   through to a component that fails far from the cause; a parse fails at the boundary and names the
-  field. The API client is the one client per external system of file-structure section 4; what it
+  field. The API client is the one client per external system of
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 4; what it
   must do for the session and its headers is [security.md](../security/security.md)'s.
 
 ## 9. Server data: writes
 
 - **Write one `mutationOptions` per write, in the module's `<name>.mutations.ts`**, beside the
   module's queries. `mutationOptions` is the twin of `queryOptions` in TanStack Query 5, and a file
-  per role keeps the reads and the writes apart (file-structure section 3).
+  per role keeps the reads and the writes apart
+  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 3).
 - **Call `mutate`, and react in its callbacks.** Use `mutateAsync` only when a second write waits
   for the result of the first: `mutate` returns nothing, and `mutateAsync` throws on an error that
   the caller then has to catch (TkDodo; TanStack Query's mutations guide).
@@ -411,8 +430,9 @@ that reads it.
   stale. TanStack Query's invalidation guide "prescribes **targeted invalidation,
   background-refetching and ultimately atomic updates**".
 - **Write a response into the cache with `setQueryData` only when it is the full updated item**,
-  and write it immutably. Otherwise invalidate. A payment returns a receipt, not the invoice, so the
-  example invalidates.
+  and write it immutably, so the cache never holds a partial item, and every reader sees a new
+  reference and renders again. Otherwise invalidate. A payment returns a receipt, not the
+  invoice, so the example invalidates.
 - **Update optimistically only where the server's answer is predictable.** TkDodo: optimistic
   updates come "with the drawback of having to know exactly what will happen on the server". A
   payment can be declined, so its screen waits for the answer.
@@ -464,7 +484,8 @@ example.
   convenience; access control stays on the server
   ([security.md](../security/security.md) section 2).
 - **Hand the session state to the router through its context**, next to the API client and the
-  query client: the same guide says to pass authentication state "using `router.context` option"
+  query client, so a guard reads the session it is given and has no input a caller cannot see
+  (section 8): the same guide says to pass authentication state "using `router.context` option"
   (read 2026-10-02). How the application learns who is signed in when the cookie is `HttpOnly`: no
   source read says; this practice's choice is one query to the server for the current session,
   read in that guard.
@@ -543,8 +564,9 @@ When section 2 sends some routes to a framework that renders on the server, or t
 application to a framework in single-page mode, the tree keeps its shape, and the adapter moves to
 the framework's routes folder. In single-page mode the tree (section 3), state (section 7), server
 data (sections 8 and 9) and the components still hold. The framework's own conventions replace the
-routes folder and the loaders. No source read states this split; it follows from file-structure
-section 2, which keeps a framework in its adapter.
+routes folder and the loaders. No source read states this split; it follows from
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 2, which keeps a
+framework in its adapter.
 
 - **The framework's routes folder is the adapter.** In Next.js that folder is `app/`. A folder in it
   becomes a public route only when it holds a `page` or a `route` file, and the Next.js docs allow
@@ -613,8 +635,8 @@ removes one line and one import.
 `src/billing/list-invoices/index.ts`:
 
 ```ts
-export { InvoiceList } from "@/billing/list-invoices/invoice-list.tsx";
-export { invoicesQueryOptions } from "@/billing/list-invoices/invoices.queries.ts";
+export * from "@/billing/list-invoices/invoice-list.tsx";
+export * from "@/billing/list-invoices/invoices.queries.ts";
 ```
 
 The imports of `src/routes/invoices.index.tsx`:
@@ -622,9 +644,7 @@ The imports of `src/routes/invoices.index.tsx`:
 ```tsx
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { InvoiceList } from "@/billing/list-invoices/invoice-list.tsx";
-import { invoicesQueryOptions } from "@/billing/list-invoices/invoices.queries.ts";
-import { toIsoDate } from "@/core/iso-date.ts";
+import { InvoiceList, invoicesQueryOptions } from "@/billing/list-invoices/index.ts";
 ```
 
 Each name now has two import paths, and an import of one name loads every file the barrel lists, in
@@ -640,7 +660,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { InvoiceList } from "@/billing/list-invoices/invoice-list.tsx";
 import { invoicesQueryOptions } from "@/billing/list-invoices/invoices.queries.ts";
-import { toIsoDate } from "@/core/iso-date.ts";
 ```
 
 Why it is good: each import line names the file, so a reader and a search find the code from it,
@@ -671,7 +690,7 @@ export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: strin
       }),
     // The invalidation sits here, not in the form: a callback passed to `mutate` is dropped
     // when the form unmounts. The promise is returned so the mutation stays pending until
-    // every invoice read on screen is fresh.
+    // every invoice read on screen is fresh (architecture.md section 9).
     onSuccess: (_receipt, _method, _onMutateResult, context) =>
       context.client.invalidateQueries({ queryKey: invoicesQueryOptions(apiClient).queryKey }),
   });
@@ -679,8 +698,10 @@ export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: strin
 ```
 
 `pay-invoice` now imports `list-invoices`: a rename in the list breaks the payment, and neither
-module can be deleted on its own (file-structure section 2). `boundaries/dependencies` fails on such
-an import; in the example application its message named the captured folders of both modules.
+module can be deleted on its own
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 2).
+`boundaries/dependencies` fails on such an import; in the example application its message named
+the captured folders of both modules.
 
 **Good**: both modules build their keys on a root in `core/` (section 6), so the payment module
 imports no other module. The key root moves to `core/invoice.keys.ts`, and the mutation key changes
@@ -705,7 +726,7 @@ export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: strin
       }),
     // The invalidation sits here, not in the form: a callback passed to `mutate` is dropped
     // when the form unmounts. The promise is returned so the mutation stays pending until
-    // every invoice read on screen is fresh.
+    // every invoice read on screen is fresh (architecture.md section 9).
     onSuccess: (_receipt, _method, _onMutateResult, context) =>
       context.client.invalidateQueries({ queryKey: invoiceKeys.all }),
   });
@@ -725,7 +746,8 @@ the file:
 import type { InvoiceStatus } from "./invoice-status.schema.ts";
 ```
 
-The line no longer names the module the type comes from, the problem file-structure section 7
+The line no longer names the module the type comes from, the problem
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 7
 describes. `no-restricted-imports` fails on it with the message the config gives: "Import by the
 absolute path: @/<folder>/<file>."
 
@@ -756,10 +778,11 @@ src/
 
 The top of the tree says nothing about what the application does. A change to paying an invoice
 spreads over `features/`, `components/` and `hooks/`, and `utils/` and `shared/` collect whatever
-nobody placed. file-structure rejects each folder: a domain folder is named for the business
-(section 2), role folders sit inside a module (section 3), and `utils` and `shared` are banned names
-(section 7). Many React guides start here: bulletproof-react's top level has `components/`, `hooks/`
-and `utils/` beside `features/`. No linter in the example reports it.
+nobody placed. [file-structure.md](../../any-language/file-structure/file-structure.md) rejects
+each folder: a domain folder is named for the business (section 2 there), role folders sit inside
+a module (section 3 there), and `utils` and `shared` are banned names (section 7 there). Many React
+guides start here: bulletproof-react's top level has `components/`, `hooks/` and `utils/` beside
+`features/`. No linter in the example reports it.
 
 **Good**: the top of the example application's tree.
 
@@ -780,9 +803,11 @@ the module that uses them, what no module owns is in `core/`, and shared UI is i
 ## 16. Where the rules stop holding
 
 - **A prototype or a one-screen tool.** Below two modules the three kinds of folder are ceremony
-  (file-structure section 12). Start with one folder, and move to this shape at the second module.
+  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 12). Start with
+  one folder, and move to this shape at the second module.
 - **A component library published as a package.** Its entry file is its public API, and its users
-  import from it by name. This practice is for applications, as file-structure section 12 says of
+  import from it by name. This practice is for applications, as
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 12 says of
   libraries.
 - **A framework that owns its layout.** Keep the framework's names for what it owns (section 14).
 - **React Router with actions.** Section 9's rules for TanStack Query mutations give way to actions

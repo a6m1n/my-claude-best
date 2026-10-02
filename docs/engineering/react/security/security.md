@@ -203,8 +203,8 @@ A Content-Security-Policy (CSP) tells the browser which scripts, styles, connect
 the page may use. It does not prevent an injection; it limits what an injected script can do when
 one gets through. Most deployed policies give that limit up: the 2025 Web Almanac (HTTP Archive
 crawl) found a CSP on 21.9% of sites, and 92% of those policies allow `'unsafe-inline'`, which
-lets an injected inline script run. A 2016 Google study found 94.72% of distinct allowlist-style
-policies open to bypass.
+lets an injected inline script run. A 2016 Google study found bypasses in 94.72% of all distinct
+policies, and 75.81% of distinct policies used script allowlists an attacker could get around.
 
 ### The policy for a static single-page application
 
@@ -241,19 +241,21 @@ An injected `<script>` element or an `onerror=` attribute now runs, which is the
 policy is there to stop. Next.js's CSP guide shows this form as its example without nonces;
 web.dev's strict CSP leaves it out.
 
-Good: the policy line of `public/_headers` in the reference application, as written there. The
-other headers of the file are cut; the whole file is in
-[security-example.md](security-example.md).
+Good: the policy line of `public/_headers` in the reference application, as written there, with
+the comment that says why. The rest of the file, the Trusted Types lines and the other headers,
+is cut; the whole file is in [security-example.md](security-example.md).
 
 ```text
 /*
+  # No 'unsafe-inline' in script-src: the build puts no script into the page itself, so an
+  # injected one stays blocked (security.md section 5).
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.example.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  ...
 ```
 
 It fixes the one problem: only script files from the application's own origin run, so an
-injected inline script or event handler is blocked. It was checked by the type checker and the
-linters only; nothing was run in a browser, so the policy has not been tested against a running
-page.
+injected inline script or event handler is blocked. The policy was checked only against the built
+`index.html` (no inline script, no inline style); no tool and no browser evaluated it.
 
 ### The policy for a server-rendered application
 
@@ -335,7 +337,7 @@ The values are OWASP's HTTP Headers cheat sheet's unless the row says otherwise.
 | `Cross-Origin-Resource-Policy` | `same-site` | another site loading this site's files into its own pages | no |
 | `Cross-Origin-Embedder-Policy` | `require-corp` | part of cross-origin isolation; it blocks every file from another origin that does not opt in, so test it on its own before you send it | no |
 | `X-XSS-Protection` | `0` | turns off the XSS filter old browsers had, which OWASP advises against relying on | no |
-| `Cache-Control` | `no-store` on responses that carry personal data or a session id | a shared cache keeping one user's data for the next user (OWASP's Session Management cheat sheet) | the API's responses, not this file |
+| `Cache-Control` | `no-store` on any response that carries personal data or a session id, HTML included | a shared cache keeping one user's data for the next user (OWASP's Session Management cheat sheet) | the API's responses, not this file |
 
 ## 6. Sessions and tokens
 
@@ -360,15 +362,18 @@ security" (section 6):
   frontend reads, stores and sends no token: it sends requests with `credentials: "include"`, and
   the browser adds the cookie. Section 15 shows the BAD and the GOOD. Where the route guard and
   the sign-out handler live is [architecture.md](../architecture/architecture.md) section 10; the
-  guard is for the user's convenience, and access control stays on the server (section 2).
+  guard is for the user's convenience, and access control stays on the server (section 2 of this
+  file).
 - **Know what a BFF does not stop.** A script on the page can still send requests to the BFF
   through the user's session: the RFC's fourth scenario, "Proxying Requests via the User's
   Browser". And a cookie session brings CSRF back (Auth0, 2026), so section 7 is part of the same
   choice.
 - **If you choose a browser-only client for a lower-risk application, use the authorization code
-  flow with PKCE, never the implicit grant** (RFC 9700; oauth.net).
+  flow with PKCE, never the implicit grant** (RFC 9700; oauth.net), so no access token travels in
+  a redirect URL, where it can leak and be replayed.
 - **Use a maintained library or the provider's SDK for the OAuth flow, never your own code**
-  (OWASP's Authentication cheat sheet).
+  (OWASP's Authentication cheat sheet), so the flow's checks come from code that others review and
+  keep patched.
 - **Set the SDK's token storage option explicitly.** Vendors' defaults differ: Auth0's SPA SDK
   keeps tokens in memory, MSAL.js in `sessionStorage`, Okta's auth-js in `localStorage` (vendors'
   docs read through search summaries, 2026-10-01; re-check them).
@@ -410,10 +415,10 @@ The session cookie the BFF sets:
 
 | Attribute | Value | Why |
 |---|---|---|
-| name prefix | `__Host-` | the browser accepts the cookie only with `Secure`, no `Domain` and `Path=/`, so it stays bound to this one host (MDN; OWASP) |
+| name prefix | `__Host-Http-` (RFC 10017 section 6.1.3.2) | it keeps every `__Host-` rule: the browser accepts the cookie only with `Secure`, no `Domain` and `Path=/`, so it stays bound to this one host (MDN; OWASP); `Http` marks it as set over HTTP (RFC 10017) |
 | `Secure` | set | sent over HTTPS only |
 | `HttpOnly` | set | `document.cookie` cannot read it, and `fetch` still sends it (MDN) |
-| `SameSite` | `Strict` (OWASP's preference) or `Lax`, always written out | left out, it means `Lax` only in Chromium, and even there a cross-site POST within two minutes of setting still carries the cookie (MDN) |
+| `SameSite` | `Strict` (RFC 10017 section 6.1.3.2; OWASP's preference) or `Lax`, always written out | left out, it means `Lax` only in Chromium, and even there a cross-site POST within two minutes of setting still carries the cookie (MDN) |
 
 The server's part of the session, such as a new session id after login, and idle and absolute
 timeouts, is in OWASP's Session Management cheat sheet.
@@ -440,13 +445,14 @@ The browser side:
 
 - **Send the custom header on every API request, from the one API client.** A header such as
   `X-Requested-With` makes the browser send a CORS preflight first, and the server allows it only
-  for its own origin, so another site cannot send the request from a form (OWASP, item 4; MDN on
-  which headers start a preflight). The server rejects a request without the header. The
-  reference API client is in section 15 and in [security-example.md](security-example.md).
+  for the application's origin (`https://app.example.com`), so another site cannot send the
+  request from a form (OWASP, item 4; MDN on which headers start a preflight). The server rejects
+  a request without the header. The reference API client is in section 15 and in
+  [security-example.md](security-example.md).
   The one boundary: a report the application sends about itself (web vitals, errors) goes without
-  a cookie, through `core/send-report.ts`, to an endpoint that takes anonymous reports. It carries
-  no session to forge, so it needs no header. An endpoint that did read the session would need
-  the API client.
+  a cookie, through the `report` method of the API client, to the report intake, a separate
+  endpoint that takes anonymous reports. It carries no session to forge, so it needs no header. An
+  endpoint that did read the session would need the client's `request` method.
 - **Never change state on a `GET`.** OWASP notes that `SameSite=Lax` does not cover a state change
   made with `GET`, since the cookie still goes with a top-level `GET` from another site.
 - **Send the CSRF token the server issues, where it uses one,** in a header of each
@@ -458,9 +464,10 @@ The browser side:
   through such related domains on 887 of the top 50,000 sites. Filippo Valsorda (2025) writes that
   the rollout of `Lax` by default has mostly failed and recommends `Sec-Fetch-Site`, which Go 1.25
   ships as `CrossOriginProtection`.
-- **Next.js Server Actions: behind a reverse proxy, list the proxy's origins in
-  `serverActions.allowedOrigins`.** The framework compares `Origin` with the host on every action
-  and uses no CSRF token (Next.js data security guide, read 2026-10-01).
+- **Next.js Server Actions: when a reverse proxy does not forward the public host in
+  `x-forwarded-host`, list the host the browser shows in
+  `experimental.serverActions.allowedOrigins`.** The framework compares `Origin` with the host on
+  every action and uses no CSRF token (Next.js data security guide, read 2026-10-01).
 
 CORS:
 
@@ -593,16 +600,18 @@ updates only, never to security updates (read 2026-10-01).
 
 - **Turn on the install-script block and a release cooldown in the repository's own config file,
   so every install obeys them:** a person's, CI's and an agent's. A setting on one laptop protects
-  one laptop. The settings for npm 12 and pnpm are in [security-example.md](security-example.md).
+  one laptop. The settings for npm 12, npm 11.10 or later, and pnpm are in
+  [security-example.md](security-example.md).
 - **Set the cooldown to at least one day.** One day covered the short-lived hijacks above; CISA
   advised seven after the axios compromise. A longer wait delays every normal update by as much;
   that is the trade.
   `min-release-age` exists since npm 11.10.0 (2026-02-11); npm 10 has neither it nor
-  `min-release-age-exclude`. On npm 10, `--before=<date>` on the install command installs only
-  versions that were available on or before that date (npm's config page, read 2026-10-02). It
-  takes a fixed date that the person running the install has to choose each time, where
-  `min-release-age` is a rolling window set once in the repository. The reference application was
-  installed this way (npm 10.8, `--before=2026-09-24`); it is a command flag, not repository config.
+  `min-release-age-exclude`. On npm before 11.10.0, `--before=<date>` on the install command
+  installs only versions that were available on or before that date (npm's config page, read
+  2026-10-02). It takes a fixed date that the person running the install has to choose each time,
+  where `min-release-age` is a rolling window set once in the repository. The reference
+  application was installed this way (npm 10.8, `--before=2026-09-24`); it is a command flag, not
+  repository config.
 - **Write the emergency path next to the cooldown.** A one-day pnpm cooldown blocked the
   React2Shell patch the day after disclosure, and the developer got it through with
   `minimumReleaseAgeExclude` (a practitioner's account, 2025). The path names the setting that
@@ -612,10 +621,16 @@ updates only, never to security updates (read 2026-10-01).
   Check: when you set a cooldown, ask: if a critical fix ships today, which line do we change? If
   no line next to the setting answers, the path is missing.
 - **Allow a dependency's build script only after someone has read it,** by adding that package to
-  `allowBuilds` or `allowScripts`.
+  `allowBuilds` or `allowScripts`. The script runs with your rights when the package is installed,
+  which is how Shai-Hulud stole npm and GitHub tokens.
 - **Treat provenance as one layer, never as proof.** pnpm recommends `trustPolicy: no-downgrade`
   and npm checks attestations with `npm audit signatures`, yet the TanStack and AsyncAPI versions
   carried valid ones.
+- **Have every security advisory of your dependencies reach you on the day it is published:**
+  turn on the host's dependency alerts for the repository, such as Dependabot alerts on GitHub,
+  and watch the advisory sources section 18 lists for React's server packages, the framework, the
+  router, Vite and DOMPurify. A critical fix can then go in through the emergency path on the day
+  it ships, not at the next dated re-check or CI run.
 
 Before an AI coding agent installs a package:
 
@@ -636,8 +651,11 @@ Before an AI coding agent installs a package:
 
 The lockfile:
 
-- **Commit the lockfile, and install in CI with the command that refuses to change it:** `npm ci`,
-  or Yarn's immutable install (npm's and Yarn's docs).
+- **Commit the lockfile,** so every install takes the same versions and a change to them shows in
+  a pull request.
+- **Install in CI with the command that refuses to change the lockfile:** `npm ci`, or Yarn's
+  immutable install (npm's and Yarn's docs), so CI builds exactly what the lockfile says and an
+  install that would change it fails.
 - **Review a lockfile change in a pull request like code.** A pull request can point a `resolved`
   URL and its integrity hash at another tarball, and `npm ci` installs it; `lockfile-lint` checks
   that every package comes from the hosts you allow.
@@ -654,10 +672,12 @@ CI (GitHub Actions; the rules are GitHub's own, from its secure-use reference):
   Check: `grep -rhn "uses:" .github/workflows/ | grep -vE "@[0-9a-f]{40}|uses: \./"` prints
   nothing.
 - **Set the default `GITHUB_TOKEN` permission to read the repository contents, and raise it per
-  job only where a job needs more.**
-- **Never check out pull request code from a fork in a `pull_request_target` workflow, and pass
-  pull request fields to a script through an environment variable, never through `${{ }}` inside
-  the script.** The Nx and TanStack attacks each used one of these.
+  job only where a job needs more.** A workflow that runs an attacker's input, as the Nx one did,
+  then holds a token that cannot write.
+- **Never check out pull request code from a fork in a `pull_request_target` workflow.** The
+  TanStack attack used such a workflow to run fork code.
+- **Pass pull request fields to a script through an environment variable, never through `${{ }}`
+  inside the script.** The Nx attack ran a pull request title as part of a script.
 - **Share no cache between workflows that run fork code and workflows that publish** (TanStack's
   post-mortem).
 
@@ -703,7 +723,8 @@ the reference application sets no `server` block, so the defaults hold there.
 
 ```ts
 server: {
-  // Only the tunnel's domain: `true` would let any site reach this server through DNS rebinding.
+  // Only the tunnel's domain: `true` would let any site reach this server through DNS rebinding
+  // (security.md section 11).
   allowedHosts: ["billing-dev.tunnel.example.com"],
 },
 ```
@@ -732,7 +753,8 @@ Third-party scripts:
 
 postMessage:
 
-- **Add a `message` listener only when the page expects messages from another window** (MDN).
+- **Add a `message` listener only when the page expects messages from another window** (MDN),
+  since any window can send the page a message and the listener is where it gets in.
 - **In the listener, compare `event.origin` with the one exact origin you expect, then check the
   message's shape before you use it.** Never check `event.source` instead, and never accept a whole
   domain with a wildcard. Microsoft's security team found both mistakes, and messages sent to
@@ -748,8 +770,12 @@ iframes, redirects and service workers:
 - **Redirect after login only to a target from an allowlist, or to one the server maps from a
   short id.** A `?next=` value used as it is sends the user to any site from a link that shows your
   domain (OWASP's Unvalidated Redirects cheat sheet).
-- **Register a service worker only from your own origin and over HTTPS, and cache no response that
-  carries personal data in it** (OWASP's HTML5 Security cheat sheet).
+- **Register a service worker only from your own origin and over HTTPS** (OWASP's HTML5 Security
+  cheat sheet), since the worker sits between the page and the network for every request in its
+  scope.
+- **Cache no response that carries personal data in a service worker** (the same cheat sheet),
+  since that cache stays on the device until code deletes it, and any script on the origin can
+  read it.
 - No rule is spent on `rel="noopener"`: browsers already treat `target="_blank"` as `noopener`
   (MDN, read 2026-10-01).
 
@@ -762,11 +788,15 @@ iframes, redirects and service workers:
   error report.** OWASP's Logging cheat sheet lists what logs should not record, and an error
   report is a log that leaves the user's machine. The same list for server logs is
   [logging.md](../../python/logging/logging.md) section 10.
+- **On a screen that failed, show a message of your own, never the error's own message or its
+  stack.** A message or a stack can carry what the server answered or how it is built. OWASP's
+  Error Handling cheat sheet asks that "a generic response is returned by the application but the
+  error details are logged server side for investigation, and not returned to the user".
 - **Send the path, not the full URL, to analytics and metrics.** The query string can hold what the
   user typed, and MDN's referrer guide names URL parameters as a common leak of sensitive data.
-  The reference application's web-vitals report sends `window.location.pathname` only
-  ([security-example.md](security-example.md)); what to measure is
-  [performance.md](../performance/performance.md) section 3.
+  The reference application's web-vitals report sends the path of the URL the metric belongs to,
+  `metric.navigationURL`, and never the query string ([security-example.md](security-example.md));
+  what to measure is [performance.md](../performance/performance.md) section 3.
 - **Keep session replay masking on.** Sentry's replay masks all text and all input values by
   default, and its docs say to turn that off only on a site with no sensitive data; PostHog masks
   inputs but not page text by default, so turn on text masking there (vendors' docs, read
@@ -778,8 +808,8 @@ iframes, redirects and service workers:
 - **Never block paste in the username, password or one-time-code fields.** OWASP's
   Authentication cheat sheet and the UK's NCSC both ask services to allow it, so people can use
   password managers.
-- **Send `Cache-Control: no-store` on API responses that carry personal data or a session id**
-  (OWASP), so no shared cache keeps one user's data for the next one.
+- **Send `Cache-Control: no-store` on any response that carries personal data or a session id,
+  HTML included** (OWASP), so no shared cache keeps one user's data for the next one.
 
 ## 14. Automation: lint rules and header scanners
 
@@ -797,9 +827,9 @@ The lint rules that catch the sinks of section 3 are mostly off in the default p
 Biome has rules of the same kind; they were not compared here.
 
 - **Turn these rules on by name, as errors.** The reference application's `.oxlintrc.json` names
-  them, and its negative controls show `react/no-danger` and `no-script-url` reporting a file
-  that broke each ([security-example.md](security-example.md)). Which linter, and which version,
-  is [libraries.md](../architecture/libraries.md) section 4.
+  them, and its negative controls show `react/no-danger`, `no-script-url` and `no-eval` reporting
+  a file that broke each ([security-example.md](security-example.md)). Which linter, and which
+  version, is [libraries.md](../architecture/libraries.md) section 4.
 - **Know what the rules miss.** `no-script-url` reports a `javascript:` string written in the
   code, not a URL that arrives as data, so the scheme allowlist of section 3 stays. `no-danger`
   reports every sink, sanitised or not, so the one allowed sink carries a suppression that names
@@ -851,13 +881,14 @@ cut; the whole file is in [security-example.md](security-example.md) section 1.
 async request<TSchema extends z.ZodType>(path: string, request: ApiRequest<TSchema>): Promise<z.infer<TSchema>> {
   const response = await fetch(new URL(path, this.#baseUrl), {
     method: request.method ?? "GET",
-    // The session is an HttpOnly cookie, so no token is read or stored in JavaScript.
+    // The session is an HttpOnly cookie, so no token is read or stored in JavaScript
+    // (security.md section 6).
     credentials: "include",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
       // A custom header forces a CORS preflight, so another site cannot send this request from
-      // a plain form. The server rejects a request without it.
+      // a plain form. The server rejects a request without it (security.md section 7).
       "X-Requested-With": "billing-app",
     },
     body: request.body === undefined ? undefined : JSON.stringify(request.body),
@@ -906,7 +937,7 @@ section 2.
 
 ```ts
 // Vite inlines every VITE_ value into the bundle, so this schema holds public settings only.
-// A secret never goes here: anyone can read it in the browser.
+// A secret never goes here: anyone can read it in the browser (security.md section 9).
 const publicEnvSchema = z.object({
   ...
 });
@@ -935,8 +966,8 @@ The note is HTML typed by whoever issued the invoice. An `<img src=x onerror=…
 script in the session of every user who opens the invoice. `react/no-danger` reports the line.
 
 Good: the same line in `src/billing/pay-invoice/pay-invoice-form.tsx`, and the component it calls,
-`src/billing/pay-invoice/sanitized-html.tsx`, whole, since all of it is new. The page that calls it is in
-[security-example.md](security-example.md) section 4.
+`src/billing/pay-invoice/sanitized-html.tsx`, whole, since all of it is new. The whole form is in
+[component-example.md](../components/component-example.md), "The form".
 
 ```tsx
       {invoice.noteHtml === null ? null : <SanitizedHtml html={invoice.noteHtml} />}
@@ -950,11 +981,13 @@ type SanitizedHtmlProps = {
 };
 
 // The one place in the application that writes HTML into the page. Every other component
-// renders text, which React escapes.
+// renders text, which React escapes (security.md section 4).
 export function SanitizedHtml({ html }: SanitizedHtmlProps) {
   // Cleaned here, next to the sink, on every render: a string cleaned earlier can be changed
-  // or joined with another one on its way to this line.
-  const cleanHtml = DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+  // or joined with another one on its way to this line (security.md section 4).
+  // RETURN_TRUSTED_TYPE: in a browser with Trusted Types the result is a TrustedHTML, so the
+  // sink passes `require-trusted-types-for 'script'` (security.md section 4).
+  const cleanHtml = DOMPurify.sanitize(html, { USE_PROFILES: { html: true }, RETURN_TRUSTED_TYPE: true });
 
   // oxlint-disable-next-line react/no-danger -- the one allowed sink; `cleanHtml` is sanitised on the line above
   return <div dangerouslySetInnerHTML={{ __html: cleanHtml }} />;
@@ -963,7 +996,10 @@ export function SanitizedHtml({ html }: SanitizedHtmlProps) {
 
 It fixes the one problem: the note passes DOMPurify at the sink, in the same render, with the
 HTML profile, and the component is the one place the lint suppression sits, with its reason
-(section 4). It does not stop a DOMPurify bypass found later: keep the library current.
+(section 4). With `RETURN_TRUSTED_TYPE: true`, DOMPurify returns a `TrustedHTML` where the browser
+has Trusted Types, so the sink also passes `require-trusted-types-for 'script'` (section 4, "Make
+the policy sanitise"); this was type-checked, not run in a browser. It does not stop a DOMPurify
+bypass found later: keep the library current.
 
 ### A link that takes its href from data with no scheme check
 
@@ -979,6 +1015,7 @@ type ExternalLinkProps = {
 
 export function ExternalLink({ href, children }: ExternalLinkProps) {
   return (
+    // `noreferrer` keeps this page's address, which can name an invoice, from the linked site.
     <a href={href} rel="noreferrer" className="underline underline-offset-2">
       {children}
     </a>
@@ -993,13 +1030,12 @@ written in the code, not a value that arrives as data.
 
 Good: the rule in `src/billing/list-invoices/link-url.rules.ts`, the whole file, which is new, and
 the changed part of the component that uses it, `src/billing/list-invoices/external-link.tsx`.
-The props type and the returned link are cut. The link is the Bad's, with one comment above the
-`<a>` that says why `rel="noreferrer"` is there; the whole file is in
+The props type and the returned link are cut. The link is the Bad's; the whole file is in
 [security-example.md](security-example.md) section 3.
 
 ```ts
 // React refuses `javascript:` URLs and nothing else. An allowlist also stops `data:` and any
-// scheme added to browsers later.
+// scheme added to browsers later (security.md section 3).
 const ALLOWED_PROTOCOLS: ReadonlySet<string> = new Set(["https:", "mailto:"]);
 
 export function hasAllowedProtocol(href: string): boolean {
@@ -1017,7 +1053,7 @@ import { hasAllowedProtocol } from "@/billing/list-invoices/link-url.rules.ts";
 ...
 
 // For an address that came from outside the application. An address the rule refuses is shown
-// as plain text, never as a link.
+// as plain text, never as a link (security.md section 3).
 export function ExternalLink({ href, children }: ExternalLinkProps) {
   if (!hasAllowedProtocol(href)) {
     return <span>{children}</span>;
@@ -1076,7 +1112,8 @@ type InvoiceStatusBadgeProps = {
 };
 
 export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
-  // The word carries the status. The colour repeats it and is never the only signal.
+  // The word carries the status. The colour repeats it and is never the only signal
+  // (accessibility.md section 9).
   return <span className={`text-sm font-medium ${STATUS_COLOR[status]}`}>{STATUS_LABEL[status]}</span>;
 }
 ```
@@ -1126,14 +1163,15 @@ choice.
 | 10. Supply chain | Does every install obey the cooldown and the script block, with a named emergency path? | a new dependency nobody checked on the registry; an action pinned by tag; fork code in `pull_request_target` |
 | 11. Dev server | Does the dev server answer only localhost? | `allowedHosts: true`; `cors: true`; `host` open on a network you do not trust |
 | 12. Edges | Does each `message` listener check one exact origin? | `postMessage(…, "*")`; a sandbox with both `allow-scripts` and `allow-same-origin`; a redirect to a raw `?next=` |
-| 13. Data exposure | Can a URL, a log line or a replay carry a credential? | a token in a query string; replay masking turned off; paste blocked |
+| 13. Data exposure | Can a URL, a log line or a replay carry a credential, and does a failed screen show a message of its own, not the error's text? | a token in a query string; replay masking turned off; paste blocked; the error's own text on a failed screen |
 | 14. Automation | Are the sink rules on, as errors? | a suppression with no reason |
 
 ## 18. Sources
 
-Every source below except RFC 10017 was read through a summarising tool, so this file quotes none
-of them; each is the place to look for the rule it backs. RFC 10017 was read as raw text, and its
-quotes are verbatim. Read 2026-10-01 unless a date is given.
+Every source below except RFC 10017 and OWASP's Error Handling cheat sheet was read through a
+summarising tool, so this file quotes none of them; each is the place to look for the rule it
+backs. Those two were read as raw text, and their quotes are verbatim. Read 2026-10-01 unless a
+date is given.
 
 Standards and access control
 
@@ -1391,18 +1429,21 @@ Third-party code and data exposure
 84. MDN, `autocomplete`:
     https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete; NCSC,
     password guidance: https://www.ncsc.gov.uk/collection/passwords/updating-your-approach
+85. OWASP Error Handling cheat sheet (read as raw text 2026-10-02):
+    https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html — a generic
+    response to the user, the details in the server's log.
 
 Automation
 
-85. ESLint's recommended set, raw:
+86. ESLint's recommended set, raw:
     https://raw.githubusercontent.com/eslint/eslint/main/packages/js/src/configs/eslint-recommended.js
-86. eslint-plugin-react README:
+87. eslint-plugin-react README:
     https://github.com/jsx-eslint/eslint-plugin-react/blob/master/README.md; @eslint-react rules:
     https://www.eslint-react.xyz/docs/rules/overview; typescript-eslint `no-implied-eval`:
     https://typescript-eslint.io/rules/no-implied-eval/
-87. eslint-plugin-no-unsanitized README:
+88. eslint-plugin-no-unsanitized README:
     https://raw.githubusercontent.com/mozilla/eslint-plugin-no-unsanitized/master/README.md
-88. Biome rules: https://biomejs.dev/linter/rules/no-dangerously-set-inner-html/ and its sibling
+89. Biome rules: https://biomejs.dev/linter/rules/no-dangerously-set-inner-html/ and its sibling
     pages for `noGlobalEval`
-89. CSP Evaluator: https://csp-evaluator.withgoogle.com/; MDN HTTP Observatory:
+90. CSP Evaluator: https://csp-evaluator.withgoogle.com/; MDN HTTP Observatory:
     https://developer.mozilla.org/en-US/observatory

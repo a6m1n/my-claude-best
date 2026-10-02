@@ -109,8 +109,8 @@ file, and the code it is told to follow. A brief (section 4) adds what is partic
   needed only for some tasks goes in a skill or a doc that loads when the task needs it (Claude
   Code's best-practices page). Write each line with its moment, its act and its check, as
   [claude-md.md](../../../claude-code/claude-md.md#how-to-write-a-line-an-agent-can-follow) says.
-- **Write the component rule as an act: build from the shared components, and put a new shared one
-  in the shared folder.** Where that folder sits is
+- **Write the component rule as an act: use a native element, a component from the shared folder or
+  one of the module's own; a new shared one goes in the shared folder.** Where that folder sits is
   [architecture.md](../architecture/architecture.md) section 3.
   Practitioners report that a fixed component set with CSS tokens stopped off-brand variants, and
   that a component library to anchor on gave better screens than free generation (anecdotes from two
@@ -152,8 +152,11 @@ in a named tag; each requirement once, as what to do.
   decides, and the brief does not ask.
   Claude Design and the `/design` canvas (section 5) are other places to explore before code.
 - **Name the looks to avoid, each with what to do instead, and extend the list after the first
-  result.** This is the Opus 5.5 guide's method. The table below lists the defaults sources
-  reported; they move with each model, so use it as a first list, not a complete one.
+  result.** Naming the patterns and extending the list is the Opus 5.5 guide's method; the
+  "instead" for each is section 3's, with
+  [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 9.
+  The table below lists the defaults sources reported; they move with each model, so use it as a
+  first list, not a complete one.
 - **Say how the model will see its work**: how to start the app, the route, the widths, both
   themes, and how to produce each state. Claude Code's best-practices page: "Give Claude a check it
   can run: tests, a build, a screenshot to compare." Section 6 says who judges what it sees.
@@ -268,9 +271,10 @@ in section 2 supports.
   Sonnet 5.5 guide gives its line, not to start reviewer subagents unless the user asked for a
   review, for the `xhigh` and `max` effort levels, to save cost.
   Claude Code's best-practices page and the Fable 5 guide recommend a fresh-context reviewer. This
-  practice reads them together: those two prompt guides remove a review baked into every prompt,
-  one for a model that checks itself and one to save cost at two effort levels, Claude Code's docs
-  ask for a reviewer when the work needs one, and a review the brief asks for fits both.
+  practice reads them together: the Opus 5 and Sonnet 5.5 guides remove a review baked into every
+  prompt, one for a model that checks itself and one to save cost at two effort levels; Claude
+  Code's docs ask for a reviewer when the work needs one. A review the brief asks for fits both
+  sides.
 - **The reviewer reads the code first, then the screenshots.** A model judge did better on the code
   than on the screenshot (WebDevJudge), and a model reading screenshots for usability problems found
   21% of what human experts found, with false findings of its own (GPT-4o, an older model). So a
@@ -303,7 +307,7 @@ the screen did, it has not been reviewed.
   confirmed 157 malicious ones, more than half of them from one author (accepted to USENIX Security
   2026).
 - **For a design tool, prefer the owner's own version** when one exists, such as Figma's own MCP
-  server (section 5).
+  server, so a flaw in a community copy does not reach your machine (section 5 names one).
 
 To review a plugin before you accept it, read its hooks, MCP servers and skills on the install
 screen. Install it at project scope, so the team shares one reviewed set. Where auto-update is on,
@@ -313,7 +317,9 @@ brings are dependencies, and their rules are [security.md](../security/security.
 ## 8. Common mistakes
 
 Each pair shows one problem, then the same example with that problem fixed. All four are about the
-invoices screen of [design-brief-example.md](design-brief-example.md).
+invoices screen of [design-brief-example.md](design-brief-example.md). Each Good shows only the
+part of the brief or of `CLAUDE.md` its problem is about; the whole brief and the design lines of
+`CLAUDE.md` are in that file.
 
 ### A prompt made of adjectives
 
@@ -378,12 +384,14 @@ Good — the same check, by a reviewer with a fresh context:
 
 ```text
 When the screen builds, take screenshots of the four states. Then start a reviewer subagent
-with a fresh context; give it the diff, the screenshots and the checklist in <review_checklist>,
-and tell it to report only the items the screen fails. Fix what it reports.
+with a fresh context; give it the brief in <brief>, the diff in <diff>, the screenshot file names
+in <screenshots> and the checklist in <review_checklist>, and tell it to report only the items
+the screen fails. Fix what it reports.
 ```
 
 The same checklist and screenshots, now judged by a reviewer that did not write the screen and
-reports only failures (section 6).
+reports only failures (section 6). A fresh context holds only what it is given, so the brief the
+checklist points at goes with them.
 
 ### A component list pasted into the instruction file
 
@@ -392,8 +400,6 @@ Bad — `CLAUDE.md` lists the components:
 ```markdown
 ## UI components
 - Button (`src/core/ui/button.tsx`): the primary action.
-- ExternalLink (`src/billing/list-invoices/external-link.tsx`): a link that leaves the application.
-- SanitizedHtml (`src/billing/pay-invoice/sanitized-html.tsx`): HTML that came from the server.
 - ScreenPending (`src/core/ui/screen-pending.tsx`): a screen that is loading.
 ```
 
@@ -405,8 +411,9 @@ Good — one rule in place of the list:
 
 ```markdown
 ## UI
-- Before you add a control to a screen, use a component from `src/core/ui/`; a new shared one
-  goes there too. The diff adds no second button, link or dialog.
+- Before you add a control to a screen, use a native element, a component from `src/core/ui/` or
+  one of the module's own; a new shared one goes in `src/core/ui/`. The diff adds no second
+  button, link or dialog.
 ```
 
 The folder is the list, `ls` shows it, and a Storybook manifest serves it to the agent where the

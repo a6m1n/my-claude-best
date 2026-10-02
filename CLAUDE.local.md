@@ -60,7 +60,8 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   red flags from `readability.md` section 9's table, and the closing summary names each single red
   flag left in place and why.
 - Before you add or change a static check (the formatter, the linter, the type checker or an import
-  contract), a pre-commit hook, the CI job that runs them, or a comment that silences one, read
+  contract), a pre-commit hook, the CI job that runs them, or a comment that silences one, in a
+  Python repository, read
   `docs/engineering/python/static-checks/static-checks.md`, and
   `docs/engineering/python/static-checks/setup-example.md` when you set the checks up in a repository.
   The check: every check the change adds is one command, run from the one pinned version of its
@@ -73,7 +74,8 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   the model a call site uses. The check: every model call the change adds or edits takes its model
   and its reasoning effort from `<purpose>_llm_model` and `<purpose>_llm_reasoning_effort`
   constants (the effort where the model has one) and gets its answer through a response schema.
-- Before you write or change a test, a fixture, a `conftest.py` or the pytest configuration, read
+- Before you write or change a test, a fixture, a `conftest.py` or the pytest configuration in a
+  Python repository, read
   `docs/engineering/python/testing/README.md` and the file it routes to for that work, and
   `docs/engineering/python/testing/suite-example.md` when you set up a suite or add a module's first
   tests. The check: every test file the change adds sits at the path `layout.md` section 3 gives
@@ -105,13 +107,14 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   one, or ask an agent to build a screen, read `docs/engineering/react/design/README.md` and the
   file it routes to for that work, and `docs/engineering/react/design/design-brief-example.md` when
   you write the brief for a screen. The check: every colour, radius and space the change adds is a
-  token role or a step of the scale (`visual-design.md` section 3), the closing summary says which
+  token role or a step of the scale (`visual-design.md` sections 3 and 6), the closing summary says which
   steps of the manual accessibility pass were run (`accessibility.md` section 11), and someone other
   than the author of the screen answered its review checklist (`designing-with-claude-code.md`
   section 6).
-- Before you render a value from outside as HTML or as a URL in a React application, keep or send a
-  credential in one, or add an environment variable, a dependency, a third-party script, a response
-  header or a CI step to one, read `docs/engineering/react/security/security.md`, and
+- Before you render a value from outside as HTML or as a URL in a React application, spread an
+  object from outside as props, keep or send a credential in one, or add an environment variable, a
+  dependency, a third-party script, a response header or a CI step to one, or change the dev
+  server's settings, read `docs/engineering/react/security/security.md`, and
   `docs/engineering/react/security/security-example.md` when you set these up in an application. The
   check: `grep -rln dangerouslySetInnerHTML src/` prints one file, the one that sanitises
   (`security.md` section 4), `grep -rnE 'localStorage|sessionStorage' src/` prints no line that

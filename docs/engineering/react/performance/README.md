@@ -25,10 +25,10 @@ largest, and the rules for loading, runtime, the server-rendered case and, in br
 ## How to adopt
 
 1. Copy this folder into your repository at `docs/engineering/react/performance/`.
-2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you change how a screen loads its
-   code, data, images or fonts, before you add a dependency to the first screen, and when a field
-   metric fails, read `docs/engineering/react/performance/performance.md`." Without it an agent
-   never opens the file.
+2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you add an image, a font, a route, a
+   data request or a dependency to the first load of a screen in a React application, or act on a
+   report that such an application is slow, read
+   `docs/engineering/react/performance/performance.md`." Without it an agent never opens the file.
 3. Use section 11's checklist as the performance part of your review template, so a reviewer
    asks the same questions every time.
 4. The practice links [architecture.md](../architecture/architecture.md),

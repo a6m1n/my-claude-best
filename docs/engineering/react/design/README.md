@@ -34,7 +34,8 @@ an agent builds, a concrete spec, a way to see the result and a reviewer other t
 ## How to adopt
 
 1. Copy this folder into your repository at `docs/engineering/react/design/`.
-2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you design, build or review a screen,
+2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you design or restyle a screen of a
+   React application, add a control, a form or a route to one, or ask an agent to build a screen,
    read `docs/engineering/react/design/README.md` and the file it routes to for that work. The
    check: the closing summary names the files you read." Without it an agent never opens the
    folder. How to write such a line is

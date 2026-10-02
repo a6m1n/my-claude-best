@@ -158,7 +158,8 @@ type InvoiceStatusBadgeProps = {
 };
 
 export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
-  // The word carries the status. The colour repeats it and is never the only signal.
+  // The word carries the status. The colour repeats it and is never the only signal
+  // (accessibility.md section 9).
   return <span className={`text-sm font-medium ${STATUS_COLOR[status]}`}>{STATUS_LABEL[status]}</span>;
 }
 ```
@@ -190,10 +191,12 @@ import type { Invoice } from "@/core/invoice.schema.ts";
 import { formatCents } from "@/core/money.format.ts";
 
 type InvoiceListProps = {
-  // The route hands the client in, like `today`: the component reaches nothing by itself.
+  // The route hands the client in, like `today`: the component reaches nothing by itself
+  // (architecture.md section 8).
   apiClient: ApiClient;
   today: string;
-  // The route supplies the link, so this module needs no router and no path of another module.
+  // The route supplies the link, so this module needs no router and no path of another module
+  // (architecture.md section 6).
   renderPayLink: (invoice: Invoice) => ReactNode;
 };
 
@@ -219,23 +222,29 @@ export function InvoiceList({ apiClient, today, renderPayLink }: InvoiceListProp
         </tr>
       </thead>
       <tbody>
-        {invoices.map((invoice) => (
-          <tr key={invoice.id} className="border-b border-border">
-            <th scope="row" className="py-2 font-medium">
-              {invoice.customerUrl === null ? (
-                invoice.customerName
-              ) : (
-                <ExternalLink href={invoice.customerUrl}>{invoice.customerName}</ExternalLink>
-              )}
-            </th>
-            <td className="tabular-nums">{formatCents(invoice.amountCents)}</td>
-            <td className="tabular-nums">{invoice.dueOn}</td>
-            <td>
-              <InvoiceStatusBadge status={invoiceStatus(invoice, today)} />
-            </td>
-            <td>{invoice.paidOn === null ? renderPayLink(invoice) : null}</td>
-          </tr>
-        ))}
+        {invoices.map((invoice) => {
+          // One source for "paid": the badge and the link read the same rule
+          // (components.md section 1).
+          const status = invoiceStatus(invoice, today);
+
+          return (
+            <tr key={invoice.id} className="border-b border-border">
+              <th scope="row" className="py-2 font-medium">
+                {invoice.customerUrl === null ? (
+                  invoice.customerName
+                ) : (
+                  <ExternalLink href={invoice.customerUrl}>{invoice.customerName}</ExternalLink>
+                )}
+              </th>
+              <td className="tabular-nums">{formatCents(invoice.amountCents)}</td>
+              <td className="tabular-nums">{invoice.dueOn}</td>
+              <td>
+                <InvoiceStatusBadge status={status} />
+              </td>
+              <td>{status === "paid" ? null : renderPayLink(invoice)}</td>
+            </tr>
+          );
+        })}
       </tbody>
     </table>
   );
@@ -247,6 +256,8 @@ Why it is good:
 - **Pure render** ([components.md](components.md) section 2). The date comes in as `today`, and
   each row's status is computed during render from the rule, never stored in state or kept in step
   by an effect ([components.md](components.md) section 4).
+- **The badge and the Pay link read one status**, computed once per row from the rule, so the two
+  cannot disagree about whether an invoice is paid ([components.md](components.md) section 1).
 - **The client comes in as a prop, `apiClient`**, like `today`: the component calls it, so it is an
   input in the signature ([readability.md](../../any-language/readability/readability.md) section
   6). Where the client is built and handed in is
@@ -264,7 +275,8 @@ Why it is good:
   says what will appear here, which [ux.md](../design/ux.md) section 6 asks of an empty state.
 - **The customer's address is an input from outside, so `ExternalLink` shows it.** The customer
   gave the address, so it can be any text. `ExternalLink` makes a link only when its rule accepts
-  the address, and a row with no address shows the name as plain text.
+  the address ([security.md](../security/security.md) section 3), and a row with no address shows
+  the name as plain text.
 - **Each row is keyed by the invoice's id** ([components.md](components.md) section 4).
 - **The table has a caption and header cells with `scope`**, so a screen reader names each cell;
   that markup is [accessibility.md](../design/accessibility.md) section 3.
@@ -278,15 +290,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { InvoiceList } from "@/billing/list-invoices/invoice-list.tsx";
 import { invoicesQueryOptions } from "@/billing/list-invoices/invoices.queries.ts";
-import { toIsoDate } from "@/core/iso-date.ts";
 
 export const Route = createFileRoute("/invoices/")({
   // The loader runs as soon as the URL matches, in parallel with the download of this route's
-  // code, so the request never waits for a component to render first.
+  // code, so the request never waits for a component to render first (architecture.md section 8).
   loader: async ({ context }) => {
     await context.queryClient.query(invoicesQueryOptions(context.apiClient));
 
-    // The clock is read here, once per visit, and passed down as a value: rendering stays pure.
+    // The clock is read here, once per visit, and passed down as a value: rendering stays pure
+    // (components.md section 2).
     return { today: toIsoDate(new Date()) };
   },
   staticData: { title: "Invoices" },
@@ -304,13 +316,30 @@ function InvoicesScreen() {
         apiClient={apiClient}
         today={today}
         renderPayLink={(invoice) => (
-          <Link to="/invoices/$invoiceId/pay" params={{ invoiceId: invoice.id }} className="underline underline-offset-2">
+          // min-h-6: the 24 px floor of a target; pointer-coarse:min-h-11: 44 px on a touch screen
+          // (ux.md section 8).
+          <Link
+            to="/invoices/$invoiceId/pay"
+            params={{ invoiceId: invoice.id }}
+            className="inline-flex min-h-6 items-center underline underline-offset-2 pointer-coarse:min-h-11"
+          >
             Pay<span className="sr-only"> the invoice of {invoice.customerName}</span>
           </Link>
         )}
       />
     </section>
   );
+}
+
+// The date in the user's own time zone. `toISOString()` would give the UTC date, which is
+// already tomorrow for a user west of Greenwich late in the evening. Only this route needs it,
+// so it stays here, not in core/ (file-structure.md section 4).
+function toIsoDate(date: Date): string {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 ```
 
@@ -326,6 +355,9 @@ Why it is good:
 - **The file exports the route, not the screen.** `InvoicesScreen` is used only here, so it stays
   unexported; the shape of a route file is the router's ([components.md](components.md) section
   9).
+- **`toIsoDate` is the route's own function**, unexported at the end of the file: only this route
+  needs it, so it stays here, not in `core/`
+  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 4).
 - **The hidden text tells a screen reader which invoice each "Pay" link pays**; that pattern is
   [accessibility.md](../design/accessibility.md) section 3.
 
@@ -377,12 +409,14 @@ export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormP
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-sm font-medium">Payment method</legend>
-        <label className="flex items-center gap-2">
+        {/* min-h-6: the 24 px floor of a target; pointer-coarse:min-h-11: 44 px on a touch screen
+            (ux.md section 8). */}
+        <label className="flex min-h-6 items-center gap-2 pointer-coarse:min-h-11">
           {/* One method is always chosen, so `payInvoice` never parses an empty choice. */}
           <input type="radio" name="method" value="card" defaultChecked />
           Card
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex min-h-6 items-center gap-2 pointer-coarse:min-h-11">
           <input type="radio" name="method" value="bank_transfer" />
           Bank transfer
         </label>
@@ -390,7 +424,7 @@ export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormP
 
       {/* The region is in the page before the error is: a screen reader announces text that
           appears inside an existing live region, and often misses a region that arrives with
-          its text. */}
+          its text (accessibility.md section 7). */}
       <p role="alert" className="text-sm text-destructive">
         {payment.isError ? "We could not confirm the payment. Check the invoice list before you try again." : null}
       </p>

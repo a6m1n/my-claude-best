@@ -72,8 +72,10 @@ Three more numbers explain a failing vital. They are diagnostics, not goals.
 Field data is what real users got, collected in their browsers: by your own code (real-user
 monitoring, RUM) or by Chrome for its public data set, the Chrome UX Report (CrUX). Lab data is
 one run on one machine: a Lighthouse report, a DevTools trace. Field data decides whether a route
-passes. Lab data finds the cause and catches a regression before release; Lighthouse cannot
-measure INP at all, because no one interacts with the page (web.dev).
+passes. Lab data finds the cause and catches a regression before release. Lighthouse in its
+default navigation mode cannot measure INP, because no one interacts with the page (web.dev); its
+timespan mode and its user flows (since Lighthouse 9.6) report INP for the interactions made
+during the run (Chrome for Developers, 2022).
 
 What the public data set does not see:
 
@@ -106,7 +108,9 @@ origins good, against 77% for INP and 81% for CLS.
 - **Pass `reportSoftNavs: true`**, so each route change is measured as a navigation of its own;
   without it only the first screen of a visit is measured. It needs `web-vitals` 6 or newer and
   works in Chromium 151 and newer; other browsers measure the first screen only (read
-  2026-10-01).
+  2026-10-01). Read the path of each report from `metric.navigationURL`, not from the current URL,
+  because INP and CLS are reported after the fact, when the user may be on the next screen
+  (web-vitals).
 - **Read each metric at the 75th percentile, per route and per device class**, the way the
   thresholds are set: an average hides the slowest quarter of visits. The example's report
   carries `viewportWidthPx`, and the backend groups visits into device classes by that width; the
@@ -132,7 +136,7 @@ sections 2 and 8; the facts here were read on 2026-10-01.
 | Chrome DevTools, Performance panel | a trace of one load or one interaction: long tasks, layout, paint. Since the October 2026 DevTools release (Chrome 153 and 154), its Insights cover soft navigations | throttling "is relative to your computer's capabilities": press Calibrate under Capture settings, CPU, to get low-tier and mid-tier presets for your machine instead of a fixed 4x |
 | React Performance Tracks (React 19.2 and newer) | Scheduler and Components tracks inside that trace, so React's work sits next to the browser's | everything shows in a development build; in a profiling build only the Scheduler track and `<Profiler>` subtrees; nothing in production |
 | `<Profiler>` | the render time of one tree, from code | off in the production build by default. Josh Comeau warns that its milliseconds are not "trustworthy" as absolute time: compare two runs, and confirm in a production build on slow hardware |
-| Lighthouse | a lab run by hand or in CI: LCP, CLS, TBT | no INP. Version 13 replaced sixteen audits with insights and removed `offscreen-images`, `preload-fonts` and `uses-rel-preload`, so a check that read those audits no longer runs (release notes and a search snippet of the Chrome blog) |
+| Lighthouse | a lab run by hand or in CI: LCP, CLS, TBT | no INP in navigation mode; timespan mode and user flows (since Lighthouse 9.6) report it. Version 13 replaced sixteen audits with insights and removed `offscreen-images`, `preload-fonts` and `uses-rel-preload`, so a check that read those audits no longer runs (release notes and a search snippet of the Chrome blog) |
 | A bundle analyser: rollup-plugin-visualizer, vite-bundle-analyzer, Sonda | what a chunk holds and why a dependency is in it | rollup-plugin-visualizer lists Rolldown, Vite 8's bundler, as a supported peer; Sonda reads source maps |
 | Chrome DevTools MCP | lets a coding agent record a trace (`performance_start_trace`) and read it, with CrUX data merged in | it collects usage statistics by default, and the agent can read any data in that browser. Run it in a browser profile that holds nothing private (this practice's choice; the owner only warns) |
 | size-limit | a CI gate on the size, and the run time, of the built files; `--why` explains a growth | |
@@ -152,12 +156,13 @@ Russell's budgets for 2026 assume a 75th-percentile phone (a Samsung Galaxy A24 
 and 100 ms round trips. For a page to load in 3 seconds on it, he allows about 0.3 MiB of
 JavaScript on a page that is mostly content (2.0 MiB in all), and about 0.62 MiB on a page that is
 mostly JavaScript (1.2 MiB in all). For a 5-second load the figures are 0.57 MiB and 1.15 MiB
-(infrequently.org, 2025-11-24). The figures are bytes sent over the network, so compressed
-(gzip or Brotli), not the size on disk; "in all" means every resource on the critical path of the
-page (HTML, CSS, fonts, images and JavaScript together). For a client-rendered application, start
-from the row for a page that is mostly JavaScript: 0.62 MiB at 3 seconds. Replace it once your
-own field data shows your users' devices. For comparison, the median mobile page in the 2025 Web Almanac sent
-646 KB of compressed JavaScript.
+(infrequently.org, 2025-11-24). Russell does not say whether the figures are compressed. His model
+counts download time over 9 Mbps, so this practice reads them as bytes sent over the network:
+compressed (gzip or Brotli), not the size on disk. "In all" means every resource on the critical
+path of the page (HTML, CSS, fonts, images and JavaScript together). For a client-rendered
+application, start from the row for a page that is mostly JavaScript: 0.62 MiB at 3 seconds.
+Replace it once your own field data shows your users' devices. For comparison, the median mobile
+page in the 2025 Web Almanac sent 646 KB of compressed JavaScript.
 
 Vite warns when one chunk passes 500 kB before compression (`build.chunkSizeWarningLimit`). A
 warning fails nothing, so it is not a gate.
@@ -215,10 +220,11 @@ client-rendered application; no owner states it.
 
 ### Images
 
-- **Never put `loading="lazy"` on the LCP image, and give it `fetchpriority="high"`**, so the
-  browser starts the download at once and ahead of other images (web.dev). `fetchpriority` is
-  Baseline newly available since 2024-10-29: Chrome and Edge 103, Safari 17.2, Firefox 132 (read
-  2026-10-01).
+- **Never put `loading="lazy"` on the LCP image**, so the browser starts the download at once
+  (web.dev).
+- **Give the LCP image `fetchpriority="high"`**, so its download goes ahead of other images
+  (web.dev). `fetchpriority` is Baseline newly available since 2024-10-29: Chrome and Edge 103,
+  Safari 17.2, Firefox 132 (read 2026-10-01).
 - **Set `width` and `height` on every image to its intrinsic size, with `max-width: 100%` and
   `height: auto` in CSS**, so the browser reserves the box from the aspect ratio before the file
   arrives and nothing below it moves (web.dev).
@@ -229,14 +235,16 @@ client-rendered application; no owner states it.
 - **Lazy-load images below the first screen only**, with `loading="lazy"`, so they do not compete
   with what the user sees first. It is Baseline widely available (read 2026-10-01).
 
-Section 9 shows the first two as pairs of a mistake and its fix.
+Section 9 shows the lazy LCP image and the image without dimensions as pairs of a mistake and its
+fix.
 
 Check: before you merge a change to a route's first screen, name its LCP element and confirm it
 carries no `loading="lazy"`.
 
 ### Fonts
 
-- **Serve fonts as WOFF2 only**: "WOFF2 is now supported everywhere" (web.dev, 2022).
+- **Serve fonts as WOFF2 only**, the format with the best compression, so each font is less data
+  to download: "WOFF2 is now supported everywhere" (web.dev, 2022).
 - **Choose `font-display` on purpose**: `optional` when a stable layout matters most (the browser
   waits about 100 ms, then keeps the fallback, and nothing shifts); `swap` when the text must
   show at once and the brand font must replace it, which needs the font delivered early (web.dev).
@@ -258,8 +266,10 @@ Whether to host fonts yourself or load them from a font service: web.dev finds t
   downloads only what changed. `immutable` may be added; some browsers ignore it (web.dev).
 - **Serve the HTML with `Cache-Control: no-cache` and an `ETag` or `Last-Modified`**, so the
   browser asks every time, gets a short `304` when nothing changed, and sees a new deploy at once.
-- **Never send `Cache-Control: no-store` on a page's HTML**: browsers then keep the page out of
-  the back/forward cache (web.dev).
+- **Never send `Cache-Control: no-store` on a page's HTML that carries no personal data or session
+  id**: browsers then keep the page out of the back/forward cache (web.dev). HTML that does carry
+  them, such as a server-rendered page of an account, follows
+  [security.md](../security/security.md) section 5.
 - **Compress text with Brotli rather than gzip**: web.dev's table shows Brotli smaller on every
   file it tested.
 - **Serve from a CDN**, so the first byte comes from a server close to the user (web.dev).
@@ -314,7 +324,8 @@ deprecate the event (web.dev, updated 2026-07-02).
 
   ```ts
   // A deploy removed the chunks this open tab still points to. A reload fetches the new
-  // index.html, which points to the new chunks (Vite, "Load error handling").
+  // index.html, which points to the new chunks (Vite, "Load error handling"; performance.md
+  // section 5).
   window.addEventListener("vite:preloadError", () => {
     window.location.reload();
   });
@@ -376,7 +387,8 @@ function yieldToMain() {
     return scheduler.yield();
   }
 
-  // Safari has no scheduler.yield(); a zero-delay timeout also lets the browser paint first.
+  // Safari has no scheduler.yield(); a zero-delay timeout also lets the browser paint first
+  // (performance.md section 6).
   return new Promise((resolve) => {
     setTimeout(resolve, 0);
   });
@@ -483,9 +495,10 @@ sends.
 
 - **Prerender or server-render every page that must rank or be previewed**, so its text, title
   and meta tags are in the HTML the server sends (Google; react.dev `prerender`).
-- **Make every link an `<a>` with an `href`.** "Google can only crawl your link if it's an `<a>`
-  HTML element with an `href` attribute."
-- **Route with the History API, not `#` fragments** (Google).
+- **Make every link an `<a>` with an `href`**, so a crawler can follow it to the page it names:
+  "Google can only crawl your link if it's an `<a>` HTML element with an `href` attribute."
+- **Route with the History API, not `#` fragments**, so each view has its own URL that a crawler
+  requests and indexes (Google).
 - **Render one `<title>` per view.** React 19 moves a `<title>` rendered anywhere into the head;
   with two at once, search engines' behaviour is undefined (react.dev). What a title change does
   for a screen-reader user is [accessibility.md](../design/accessibility.md) section 6.
@@ -505,7 +518,8 @@ behind a login needs none of this section.
 
 ```html
 <!-- Bad: this illustration is the largest element of the empty invoices screen, and
-     loading="lazy" makes the browser wait for layout before it asks for the file. -->
+     loading="lazy" makes the browser wait for layout before it asks for the file
+     (performance.md section 5). -->
 <img src="/images/no-invoices.avif" width="480" height="320" alt="" loading="lazy">
 ```
 
@@ -513,7 +527,8 @@ behind a login needs none of this section.
 should stay under 10% (section 5).
 
 ```html
-<!-- Good: the same image, eager, and first in line among the images. -->
+<!-- Good: the same image, eager, and first in line among the images (performance.md
+     section 5). -->
 <img src="/images/no-invoices.avif" width="480" height="320" alt="" fetchpriority="high">
 ```
 
@@ -524,7 +539,7 @@ as the browser sees the element and goes ahead of other images (web.dev).
 
 ```html
 <!-- Bad: no width and no height. The browser learns the size only when the file arrives,
-     and the text under the logo jumps down. -->
+     and the text under the logo jumps down (performance.md section 5). -->
 <img src="/images/acme-logo.svg" alt="Acme Corp">
 ```
 
@@ -532,12 +547,13 @@ The jump is a layout shift, and it counts toward CLS on every visit.
 
 ```html
 <!-- Good: width and height give the aspect ratio, so the box is reserved before the file
-     arrives. -->
+     arrives (performance.md section 5). -->
 <img src="/images/acme-logo.svg" width="160" height="40" alt="Acme Corp">
 ```
 
 ```css
-/* Keeps a sized image fluid: the width follows the container, the ratio stays. */
+/* Keeps a sized image fluid: the width follows the container, the ratio stays
+   (performance.md section 5). */
 img {
   max-width: 100%;
   height: auto;
@@ -555,8 +571,11 @@ the file was removed again.
 
 ```tsx
 // Bad: `lazy` runs inside the component. Each render makes a new component type, so React
-// unmounts the chart and resets its state every time.
+// unmounts the chart and resets its state every time (performance.md section 5).
 export function InvoiceTotals({ isChartOpen }: InvoiceTotalsProps) {
+  // The chart and its charting library download only when a user opens the chart
+  // (performance.md section 5).
+  // `lazy` renders the `default` of what the import resolves to; the map keeps the named export.
   const InvoiceChart = lazy(() =>
     import("@/billing/list-invoices/invoice-chart.tsx").then((chartModule) => ({ default: chartModule.InvoiceChart })),
   );
@@ -565,8 +584,10 @@ export function InvoiceTotals({ isChartOpen }: InvoiceTotalsProps) {
     return null;
   }
 
+  // The chunk loads in under a second, and a wait that short gets no spinner (ux.md section 2);
+  // the empty box has the chart's height, so nothing below it moves when the chart arrives.
   return (
-    <Suspense fallback={<ScreenPending />}>
+    <Suspense fallback={<div className="h-64" />}>
       <InvoiceChart />
     </Suspense>
   );
@@ -576,7 +597,8 @@ export function InvoiceTotals({ isChartOpen }: InvoiceTotalsProps) {
 react.dev: declaring `lazy` inside a component "will cause all state to be reset on re-renders".
 
 ```tsx
-// The chart and its charting library download only when a user opens the chart.
+// The chart and its charting library download only when a user opens the chart
+// (performance.md section 5).
 // `lazy` renders the `default` of what the import resolves to; the map keeps the named export.
 const InvoiceChart = lazy(() =>
   import("@/billing/list-invoices/invoice-chart.tsx").then((chartModule) => ({ default: chartModule.InvoiceChart })),
@@ -587,8 +609,10 @@ export function InvoiceTotals({ isChartOpen }: InvoiceTotalsProps) {
     return null;
   }
 
+  // The chunk loads in under a second, and a wait that short gets no spinner (ux.md section 2);
+  // the empty box has the chart's height, so nothing below it moves when the chart arrives.
   return (
-    <Suspense fallback={<ScreenPending />}>
+    <Suspense fallback={<div className="h-64" />}>
       <InvoiceChart />
     </Suspense>
   );
@@ -596,18 +620,23 @@ export function InvoiceTotals({ isChartOpen }: InvoiceTotalsProps) {
 ```
 
 The fix moves the `lazy` call to the top level of the module. It runs once, the component type
-stays the same across renders, and React caches the import, so the chunk downloads once.
+stays the same across renders, and React caches the import, so the chunk downloads once. The
+fallback, the same in both blocks, is an empty box of the chart's height: a wait under a second
+gets no spinner (ux.md section 2), and the box keeps the content below in place.
 
 ### A request that starts after render
 
-The imports and the screen component are cut from both blocks; they are the same as in
-[performance-example.md](performance-example.md).
+The imports, the screen component and `toIsoDate` at the end of the file are cut from both
+blocks. [layout-example.md](../architecture/layout-example.md) section 5 quotes the file with its
+imports and its screen component.
 
 ```tsx
 // Bad: the loader does not start the invoices request. `InvoiceList` starts it when it first
-// renders, and that waits for this route's code chunk: two round trips, one after the other.
+// renders, and that waits for this route's code chunk: two round trips, one after the other
+// (performance.md section 5).
 export const Route = createFileRoute("/invoices/")({
-  // The clock is read here, once per visit, and passed down as a value: rendering stays pure.
+  // The clock is read here, once per visit, and passed down as a value: rendering stays pure
+  // (components.md section 2).
   loader: () => ({ today: toIsoDate(new Date()) }),
   staticData: { title: "Invoices" },
   component: InvoicesScreen,
@@ -621,11 +650,12 @@ problem, and it never triggers `<Suspense>` either (react.dev).
 ```tsx
 export const Route = createFileRoute("/invoices/")({
   // The loader runs as soon as the URL matches, in parallel with the download of this route's
-  // code, so the request never waits for a component to render first.
+  // code, so the request never waits for a component to render first (architecture.md section 8).
   loader: async ({ context }) => {
     await context.queryClient.query(invoicesQueryOptions(context.apiClient));
 
-    // The clock is read here, once per visit, and passed down as a value: rendering stays pure.
+    // The clock is read here, once per visit, and passed down as a value: rendering stays pure
+    // (components.md section 2).
     return { today: toIsoDate(new Date()) };
   },
   staticData: { title: "Invoices" },
@@ -638,17 +668,23 @@ The fix starts the request in the loader. The router does not split the loader o
 
 ### Memoising everything by hand
 
-The imports and the route definition are cut from both blocks.
+The imports, the route definition and `toIsoDate` are cut from both blocks.
 
 ```tsx
-// Bad: `useCallback` by hand in new code, with the compiler on.
+// Bad: `useCallback` by hand in new code, with the compiler on (components.md section 7).
 function InvoicesScreen() {
   const { apiClient } = Route.useRouteContext();
   const { today } = Route.useLoaderData();
 
   const renderPayLink = useCallback(
     (invoice: Invoice) => (
-      <Link to="/invoices/$invoiceId/pay" params={{ invoiceId: invoice.id }} className="underline underline-offset-2">
+      // min-h-6: the 24 px floor of a target; pointer-coarse:min-h-11: 44 px on a touch screen
+      // (ux.md section 8).
+      <Link
+        to="/invoices/$invoiceId/pay"
+        params={{ invoiceId: invoice.id }}
+        className="inline-flex min-h-6 items-center underline underline-offset-2 pointer-coarse:min-h-11"
+      >
         Pay<span className="sr-only"> the invoice of {invoice.customerName}</span>
       </Link>
     ),
@@ -680,7 +716,13 @@ function InvoicesScreen() {
         apiClient={apiClient}
         today={today}
         renderPayLink={(invoice) => (
-          <Link to="/invoices/$invoiceId/pay" params={{ invoiceId: invoice.id }} className="underline underline-offset-2">
+          // min-h-6: the 24 px floor of a target; pointer-coarse:min-h-11: 44 px on a touch screen
+          // (ux.md section 8).
+          <Link
+            to="/invoices/$invoiceId/pay"
+            params={{ invoiceId: invoice.id }}
+            className="inline-flex min-h-6 items-center underline underline-offset-2 pointer-coarse:min-h-11"
+          >
             Pay<span className="sr-only"> the invoice of {invoice.customerName}</span>
           </Link>
         )}
@@ -757,7 +799,7 @@ A review question per area. Ask each one of the change in front of you.
 | 4. The order of work | Does the change name the field metric it fixes, with percentile, source and date? | "feels faster"; work on a metric that already passes |
 | 5. Images | Is the LCP image eager with `fetchpriority="high"`, and does every image have `width` and `height`? | `loading="lazy"` on the LCP image; an `<img>` with no size |
 | 5. Fonts | WOFF2 only, a chosen `font-display`, and a preload only for the first screen's font, with `crossorigin`? | a preload with no `crossorigin`; a preload for every weight |
-| 5. Caching | Hashed assets cached for a year, and the HTML revalidated? | `no-store` on the HTML; HTML cached for hours |
+| 5. Caching | Hashed assets cached for a year, and the HTML revalidated? | `no-store` on HTML that carries no personal data or session id; HTML cached for hours |
 | 5. Code splitting | One chunk per route, and `lazy` only at module level? | `lazy` inside a component; the whole application in one chunk |
 | 5. Data | Does every screen start its data in the route loader? | a request that starts after render; suspense queries in series |
 | 6. Runtime | Is a task over 50 ms broken up, and was a slow render traced before it was changed? | a render change with no trace behind it; a layout read after a write in a loop |
@@ -767,7 +809,8 @@ A review question per area. Ask each one of the change in front of you.
 
 ## 12. Sources
 
-All read on 2026-10-01; a page's own date is given where it has one.
+All read on 2026-10-01 unless an entry gives another read date; a page's own date is given where
+it has one.
 
 ### What fast means
 
@@ -815,7 +858,9 @@ All read on 2026-10-01; a page's own date is given where it has one.
     CPU calibration; soft-navigation Insights.
 14. [Lighthouse releases](https://github.com/GoogleChrome/lighthouse/releases); the Chrome blog
     post [Lighthouse 13](https://developer.chrome.com/blog/lighthouse-13-0) is the place to look
-    for the removed audits, read here through a search snippet only.
+    for the removed audits, read here through a search snippet only. Chrome for Developers,
+    [INP tool support](https://developer.chrome.com/blog/inp-tools-2022) (2022-05-17, read
+    2026-10-02): INP in Lighthouse's timespan mode, and in user flows from Lighthouse 9.6.
 15. The registry entries of
     [rollup-plugin-visualizer](https://registry.npmjs.org/rollup-plugin-visualizer/latest) and
     [vite-bundle-analyzer](https://registry.npmjs.org/vite-bundle-analyzer/latest), and
