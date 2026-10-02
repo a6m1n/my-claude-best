@@ -61,9 +61,9 @@ Two skills, for commits and pull requests, are planned. The `skills/` folder has
 ## Why it is useful
 
 - The agent reads a practice only when the work needs it. Your `CLAUDE.md` holds one trigger line per practice, not the rules themselves, so it stays short.
-- Each rule is one act at one moment, such as "before you stage" or "when you add a log call". An agent can follow it, and a reviewer can check that it did.
+- Each rule is one act at one moment, such as "before you stage" or "when you add a log call", and a new or changed rule gives its reason. An agent can follow it, a reviewer can check that it did, and a reader can tell when it does not apply.
 - Every rule comes from public practice, never from what one codebase happens to do. Most practices end with the sources behind their rules.
-- A good example follows every practice that governs what it shows, not only the one it illustrates. A bad example names its problem and sits next to the fixed version.
+- A good example follows every practice that governs what it shows, not only the one it illustrates. You, or your agent, will copy the example and not the rules around it, so each new practice reaches every example written after it. A line you might otherwise change or delete carries its reason in a comment, which comes along when you copy the code. A bad example names its problem and sits next to the fixed version.
 - It works with any agent that reads `CLAUDE.md` or `AGENTS.md`, not only Claude Code.
 - The English is plain: short sentences and common words, for readers whose first language is not English.
 

@@ -18,12 +18,11 @@ import json
 import logging
 from contextvars import ContextVar
 from datetime import UTC, datetime
-from typing import Final, Literal, TypeAlias
+from typing import Final, Literal
 
 from opentelemetry import trace
 
-LogFormat: TypeAlias = Literal["console", "json"]
-LogLevel: TypeAlias = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+from acme.core.schemas import LogFormat, LogLevel
 
 # Set per request or per run: request_id by the request-id middleware, thread_id where
 # the agent is invoked (logging.md section 8).
@@ -96,7 +95,8 @@ class JsonFormatter(logging.Formatter):
         context = {key: getattr(record, key, "-") for key in _CONTEXT_IDS}
         fields = context | _extra_fields(record)
         timestamp = datetime.fromtimestamp(record.created, UTC)
-        # The formatter's own keys go last, so no extra= key can overwrite them.
+        # The formatter's own keys go last, so no extra= key can overwrite them
+        # (logging.md section 6).
         fields |= {
             "ts": timestamp.isoformat(timespec="milliseconds"),
             "level": record.levelname,
@@ -111,7 +111,8 @@ class JsonFormatter(logging.Formatter):
         if record.stack_info:
             fields["stack"] = self.formatStack(record.stack_info)
 
-        # json.dumps escapes line breaks inside values, so a value cannot split the record.
+        # json.dumps escapes line breaks inside values, so a value cannot split the
+        # record (logging.md section 6).
         return json.dumps(fields, default=str)
 
 
@@ -123,25 +124,30 @@ def build_logging_config(
     """The one logging config of a process; main() applies it, directly or through uvicorn."""
     return {
         "version": 1,
-        # The default True silences loggers created before this call.
+        # The default True silences loggers created before this call
+        # (logging.md section 2).
         "disable_existing_loggers": False,
         "filters": {"context": {"()": ContextFilter}},
         "formatters": {
-            "console": {"()": ConsoleFormatter},
-            "json": {"()": JsonFormatter},
+            LogFormat.CONSOLE: {"()": ConsoleFormatter},
+            LogFormat.JSON: {"()": JsonFormatter},
         },
         "handlers": {
             "stream": {
                 "class": "logging.StreamHandler",
                 "stream": f"ext://sys.{stream}",
                 "formatter": log_format,
+                # On the handler: a logger's filter skips records from child loggers
+                # (logging.md section 7).
                 "filters": ["context"],
             },
         },
         "loggers": {
-            # Start, stop and error lines.
+            # uvicorn's loggers have their own handlers and do not propagate; route
+            # them through ours so they pass the Filter (logging.md section 2). This
+            # one writes start, stop and error lines.
             "uvicorn": {"handlers": [], "propagate": True},
-            # One line per request.
+            # The same, for one line per request.
             "uvicorn.access": {"handlers": [], "propagate": True},
             # httpx logs every outgoing request at INFO.
             "httpx": {"level": "WARNING"},
@@ -157,20 +163,44 @@ The console formatter is the default, because a person reads the log while the c
 field (logging.md section 6). Both read the same Filter, so a line has the same ids in either
 format.
 
-## `core/config.py`: the two settings
+## `core/schemas.py` and `core/config.py`: the two settings and their types
+
+`core/logging.py` and `core/config.py` both use the level and the format, so the two types sit
+in `core/schemas.py` ([file-structure.md](../../any-language/file-structure/file-structure.md)
+section 4).
+
+```python
+# core/schemas.py: the types core/ files share (file-structure.md section 4)
+from enum import StrEnum, unique
+from typing import Literal, TypeAlias
+
+
+# This application's formats. Code names them, as the formatter keys and the default,
+# so a StrEnum (python.md section 2).
+@unique
+class LogFormat(StrEnum):
+    CONSOLE = "console"
+    JSON = "json"
+
+
+# The standard library's level names, so a Literal (python.md section 2).
+LogLevel: TypeAlias = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+```
 
 The two logging fields of the application's settings class. Its `model_config` and its other
 fields are left out; they are [python/language/settings-example.md](../language/settings-example.md)'s.
 
 ```python
+# core/config.py
 from pydantic_settings import BaseSettings
 
-from acme.core.logging import LogFormat, LogLevel
+from acme.core.schemas import LogFormat, LogLevel
 
 
 class Settings(BaseSettings):
     log_level: LogLevel = "INFO"
-    log_format: LogFormat = "console"  # ACME_LOG_FORMAT=json in deployed environments
+    # ACME_LOG_FORMAT=json in deployed environments
+    log_format: LogFormat = LogFormat.CONSOLE
 ```
 
 The types reject a misspelt level or format when the process starts, not at the first log call.
@@ -198,25 +228,40 @@ def main() -> None:
 
 ```python
 # cli/main.py: the CLI keeps stdout for its output, so its log goes to stderr
+# (logging.md section 6)
 import logging.config
 import sys
+from collections.abc import Mapping
+from typing import Final
 
-from acme.cli.commands import run
+from acme.cli.commands_check_report_request import run
 from acme.core.config import Settings
 from acme.core.logging import build_logging_config
+from acme.core.schemas import LogLevel
+
+# -v and -q are read here, before dictConfig, so the run's first line already has
+# the level they ask for, and no command file maps them again (logging.md section 12).
+_LEVEL_FLAGS: Final[Mapping[str, LogLevel]] = {"-v": "DEBUG", "-q": "WARNING"}
 
 
 def main() -> None:
     settings = Settings()
+    args = sys.argv[1:]
+
+    flags = [arg for arg in args if arg in _LEVEL_FLAGS]
+    log_level = _LEVEL_FLAGS[flags[-1]] if flags else settings.log_level
     logging.config.dictConfig(
-        build_logging_config(settings.log_level, settings.log_format, stream="stderr")
+        build_logging_config(log_level, settings.log_format, stream="stderr")
     )
 
-    sys.exit(run(sys.argv[1:]))
+    sys.exit(run([arg for arg in args if arg not in _LEVEL_FLAGS]))
 ```
 
-`run` gets only the arguments because this CLI's commands call no client; a command that does gets
-it from `main()`, built from `settings`, as `build_app` does for routes.
+`main()` maps `-v` and `-q` to the level before it applies the config, so the run's first line
+already has that level ([logging.md](logging.md) section 12). `run`, in
+`cli/commands_check_report_request.py`, is left out: it parses the remaining arguments. It gets
+only the arguments because this CLI's commands call no client; a command that does gets it from
+`main()`, built from `settings`, as `build_app` does for routes.
 
 No other file calls `dictConfig`, and no test does: pytest's `caplog` keeps working.
 
@@ -250,7 +295,8 @@ class RequestIdMiddleware:
             return
 
         incoming_id = Headers(scope=scope).get(REQUEST_ID_HEADER, "")
-        # A client's id only if it is safe to write into a log line.
+        # A client's id only if it is safe to write into a log line
+        # (logging.md section 7).
         is_safe = _VALID_ID_PATTERN.fullmatch(incoming_id) is not None
         current_request_id = incoming_id if is_safe else uuid4().hex
 
@@ -279,17 +325,19 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from acme.api.middleware_request_id import RequestIdMiddleware
-from acme.api.routes_report import router as report_router
+from acme.api.routes_generate_report import router as generate_report_router
 from acme.core.config import Settings
 
 
 async def internal_error(request: Request, exc: Exception) -> JSONResponse:
-    # uvicorn logs this exception once, with its traceback; a log call here would write a second ERROR.
+    # uvicorn logs this exception once, with its traceback; a log call here would
+    # write a second ERROR (logging.md section 5).
     return JSONResponse({"detail": "Internal server error"}, status_code=500)
 
 
 def create_app() -> RequestIdMiddleware:
-    # Outside FastAPI's own error middleware, so the id is set first and its header reaches a 500 too.
+    # Outside FastAPI's own error middleware, so the id is set first and its header
+    # reaches a 500 too (logging.md section 7).
     return RequestIdMiddleware(build_app(Settings()))
 
 
@@ -297,7 +345,7 @@ def build_app(settings: Settings) -> FastAPI:
     app = FastAPI()
 
     app.add_exception_handler(Exception, internal_error)
-    app.include_router(report_router)
+    app.include_router(generate_report_router)
 
     return app
 ```
@@ -334,7 +382,8 @@ class SearchClient:
                 return parse_sections(response.content)
             except httpx.TimeoutException:
                 if attempt == MAX_ATTEMPTS:
-                    # from None: the error text could repeat the request; the attempts say enough
+                    # from None: the error text could repeat the request; the
+                    # attempts say enough (logging.md section 10)
                     raise SearchUnavailable(attempts=attempt) from None
 
                 logger.warning(
@@ -349,7 +398,8 @@ class SearchClient:
 ([python.md](../language/python.md) section 4).
 
 ```python
-# reports/report/usecase.py: this code decides what a failed search means, so it logs it, once
+# reports/generate_report/usecase.py: this code decides what a failed search means,
+# so it logs it, once (logging.md section 5)
 logger = logging.getLogger(__name__)
 
 
@@ -379,18 +429,19 @@ With `ACME_LOG_FORMAT=console`, one request that needed a retry:
 ```
 2026-09-27 14:03:11,482 INFO     uvicorn.error [-] Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 2026-09-27 14:03:15,107 WARNING  acme.core.search_client [7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12] Search API timed out, retry 1 of 2
-2026-09-27 14:03:16,020 INFO     acme.reports.report.usecase [7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12] Report 81 generated sections=6
+2026-09-27 14:03:16,020 INFO     acme.reports.generate_report.usecase [7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12] Report 81 generated sections=6
 2026-09-27 14:03:16,021 INFO     uvicorn.access [7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12] 192.0.2.10:53211 - "POST /reports HTTP/1.1" 200
 ```
 
 The same `Report 81 generated` line with `ACME_LOG_FORMAT=json`:
 
 ```json
-{"request_id": "7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12", "thread_id": "-", "trace_id": "-", "sections": 6, "ts": "2026-09-27T14:03:16.020+00:00", "level": "INFO", "logger": "acme.reports.report.usecase", "message": "Report 81 generated", "template": "Report %s generated"}
+{"request_id": "7f3c9a1e0b2d4c6e8f1a3b5c7d9e0f12", "thread_id": "-", "trace_id": "-", "sections": 6, "ts": "2026-09-27T14:03:16.020+00:00", "level": "INFO", "logger": "acme.reports.generate_report.usecase", "message": "Report 81 generated", "template": "Report %s generated"}
 ```
 
-This request opens no span, so `trace_id` is `-`; an HTTP tracer, for example OpenTelemetry's
-FastAPI instrumentation, fills the field.
+This request calls no model, so it opens no root span ([logging.md](logging.md) section 8), and
+`trace_id` is `-`. An OpenTelemetry HTTP instrumentation fills the field on every route, but read
+[logging.md](logging.md) section 12 before you add one to a process that traces with Langfuse.
 
 The start line carries `-`: uvicorn wrote it before any request existed. The access line carries
 the request's id because uvicorn writes it inside the request's own task.

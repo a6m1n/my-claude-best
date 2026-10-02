@@ -169,13 +169,14 @@ The unit suite runs without a network and without a model
 ([python/testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 4). For an agent,
 that takes these parts:
 
-- **Must. The model is the real chat model class with a scripted transport.** A `ChatOpenAI` built
+- **Must. The model is the real chat model class with a scripted transport**:
+  [python/testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 3 sets this
+  seam for an agent's chat model and gives its reason. A `ChatOpenAI` built
   with `http_client=httpx.Client(transport=httpx.MockTransport(handler))` (or
   `http_async_client=` with an `httpx.AsyncClient` for async code) answers from a script: first a
   tool call, then the final reply. It is the first stand-in of
   [python/testing/fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 1, the real class
-  with a fake inside. The request it sends carries the real tool list and schemas, so the test can
-  also check them. LangChain's `GenericFakeChatModel` has no `bind_tools`, so `create_agent` with
+  with a fake inside. LangChain's `GenericFakeChatModel` has no `bind_tools`, so `create_agent` with
   tools raises `NotImplementedError`; a subclass whose `bind_tools` returns the model works, but
   sends no tool schema anywhere, so use it only where the chat model's HTTP client cannot be
   replaced. [agent-eval-example.md](agent-eval-example.md) shows the handler.

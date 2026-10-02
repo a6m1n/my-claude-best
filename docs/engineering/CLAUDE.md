@@ -65,18 +65,31 @@ other example is a GOOD example.
   repeats the rule's conditions or its check.
 - Before you write a practice file, or add, rename or remove one of its `##` headings, read
   `any-language/git/git.md` section 9: it says which files open with a navigation block and how the block is
-  kept in step. In a file that has one, the diff shows each heading change next to its line.
+  kept in step. In a file that has one, the diff shows each heading change next to its line. When
+  you renumber or move a `##` section of a rules file, run
+  `git grep -n -E '<file>\.md\)? (section|§) ?<old n>([^0-9]|$)' docs/` and update each hit in the
+  same commit, because a comment that cites the old number now points a reader at the wrong rule.
 - When you add a practice, or change a rule in one, write in the commit body how existing code
   responds, using one of the answers `any-language/refactoring/refactoring.md` section 7 lists. In the same
   commit, change every example under `docs/engineering/` that the new or changed rule governs
   and does not yet follow; an example never waits for a change to touch it.
   The check: the commit body names one of the answers, and before you stage,
-  each hit of `grep -rn "<key term of the rule>" docs/engineering/` is in the diff, is a BAD
-  that shows the old form on purpose, or already shows the new rule. An added practice gets
-  one search per rule.
-- Write a rule as one act, at one moment. `docs/claude-code/claude-md.md` § "How to write a line
-  an agent can follow" is the test, and it holds for a practice doc as much as for an instruction
-  file. A `Check:` line is optional: most rules leave their act in the diff, and review is enough.
+  each hit of `grep -rn "<key term of the rule>" docs/engineering/`, and of a second search for
+  the code the rule is about (`os.environ` for a settings rule), is in the diff, is a BAD that
+  shows the old form on purpose, or already shows the new rule. An added practice gets one
+  search per rule.
+- Write a rule as one act, at one moment, then give its reason in one clause: the goal it serves
+  or the failure it prevents. The reason lets a reader judge an exception and see when the rule
+  needs another look; a rule whose reason you cannot state is a candidate to cut. Google's style
+  guides aim to give each ruling its pros, cons and decision
+  ([Software Engineering at Google](https://abseil.io/resources/swe-book/html/ch08.html), ch. 8),
+  so that "it should be clearer to everyone when a rule may be waived"
+  ([Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html), Goals). A reason
+  never replaces a check. `docs/claude-code/claude-md.md` § "How to write a line an agent can
+  follow" is the test for the moment, the act and the check. A practice doc gives every rule its
+  reason, which that section asks of an instruction file only where the act could be misapplied: a
+  practice is read when its work starts, and an instruction file is in every turn's context. A
+  `Check:` line is optional: most rules leave their act in the diff, and review is enough.
   Add one where a miss would be costly or easy to overlook in review, and make it one specific
   question at a named moment ("read the title alone") or a tool that already runs and rarely cries
   wolf (`lint-imports` in CI) — never "review carefully", and never a gate people will have to
@@ -87,12 +100,43 @@ other example is a GOOD example.
   company appears under its own name only as a cited source, as the tool described, or as its
   own public product.
 - When you write or change a GOOD example, make it follow every practice here that governs what
-  it shows, and say next to it why it is good. Add nothing only to show another practice. Code
-  it leaves out is cut with `...`, or named as left out in the sentence that introduces it;
-  never shown as if it were complete. The check: before you stage, read each GOOD example the
-  diff adds or changes once per practice folder, with that folder's rules files open, and write
-  one line per folder in the closing summary: "follows" or "governs nothing here"; a GOOD with
-  no sentence that says why it is good fails.
+  it shows, and say next to it why it is good. Why: readers, people and agents, copy the example
+  and not the rules around it, so a GOOD that breaks a practice spreads that break to every copy
+  and to every author who cites it as precedent (documentation teams hold their samples to the
+  same bar:
+  [MDN](https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Writing_style_guide/Code_style_guide)
+  asks that examples "follow generally accepted best practices", and
+  [Microsoft's .NET docs](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions)
+  "show code you should write today"). A practice governs an example when its routing line in the
+  project `CLAUDE.md` would fire for that code in an application. Add nothing only to show another
+  practice. Code it leaves out is cut with `...`, or named as left out in the sentence that
+  introduces it; never shown as if it were complete. The check: when you write the commit message,
+  open the sections of each practice that governs each GOOD the diff adds or changes, and put a
+  `Practices: <rules file> §n, …; every other practice governs nothing here` line in it as a git
+  trailer (`Key: value`): last, with the other trailers, above `Co-Authored-By:` where that line
+  exists, a long one folded onto indented lines, such as
+  `Practices: testing/layout.md §3, logging/logging.md §8; every other practice governs nothing here`.
+  When no practice governs the examples, the line is `Practices: none govern these examples`.
+  Why a trailer: `git log` keeps it with the change, and this library has no CI to run a stricter
+  check.
+  A GOOD with no sentence that says why it is good fails.
+- Before you stage, a GOOD that breaks a rule of a practice that governs it is not ready,
+  whatever severity a review gives the break, unless the example declares the departure where it
+  happens: it names the rule, says why it departs and what that costs, so a reader who copies it
+  sees the trade and can choose (the
+  [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html) states a rule's
+  goal so that "it should be clearer to everyone when a rule may be waived"). Fix every other
+  break before you stage, and never park it in a backlog or let a review record it as a design
+  choice, because readers copy it in the meantime. If the rule is the thing that is wrong, change
+  the rule in the practice that owns it. The evidence that an example follows a practice is a
+  clause in that practice's rules file, never another example.
+- In an example, each line that [readability.md](any-language/readability/readability.md)
+  section 4 says carries its reason (code that others copy) gets a short comment that says why,
+  and names the rule's section where a practice rule owns the reason, such as
+  `# One trace per label, so a wrong verdict can be opened (evals.md section 9).` The longer
+  reason goes in the sentence after the block that says why the example is good. The check:
+  before you stage, ask of each line the diff adds to an example whether a reader who copies it
+  would likely undo it; if so, it has its reason at the line.
 - When you write or change a BAD example, or the GOOD that fixes one, make the BAD show one
   problem, named in its label or by the rule that calls it wrong; the reason sits right after
   it, and in everything else it follows every practice here. Its GOOD is the same example with

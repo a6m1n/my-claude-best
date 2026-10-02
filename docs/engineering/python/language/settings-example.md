@@ -90,7 +90,8 @@ tests/unit/core/
 
 Where each file sits is [file-structure.md](../../any-language/file-structure/file-structure.md) sections 4
 and 5. [python/testing/layout.md](../testing/layout.md) section 3 gives each module its own test folder;
-the test of `core/` mirrors its folder the same way.
+the test of `core/` mirrors its folder the same way. Every folder under `tests/` has an empty
+`__init__.py` ([python/testing/layout.md](../testing/layout.md) section 6); the tree leaves them out.
 
 `src/acme/core/config.py`
 
@@ -102,7 +103,7 @@ from typing import Final
 from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from acme.core.logging import LogFormat, LogLevel
+from acme.core.schemas import LogFormat, LogLevel
 
 # The value .env.example ships with: a deployment that still has it was never set up.
 PLACEHOLDER_SECRET: Final = "changethis"
@@ -118,6 +119,7 @@ class Settings(BaseSettings):
         hide_input_in_errors=True,
     )
 
+    # No default: a deployment that lacks one stops at startup (python.md section 5).
     database_host: str
     database_name: str
     database_user: str
@@ -125,7 +127,8 @@ class Settings(BaseSettings):
     payments_api_key: SecretStr
     allowed_origins: tuple[str, ...] = ()
     log_level: LogLevel = "INFO"
-    log_format: LogFormat = "console"  # ACME_LOG_FORMAT=json in deployed environments
+    # ACME_LOG_FORMAT=json in deployed environments
+    log_format: LogFormat = LogFormat.CONSOLE
 
     @field_validator("database_password", "payments_api_key")
     @classmethod
@@ -151,6 +154,8 @@ from sqlalchemy import URL, Engine, create_engine
 
 
 def build_engine(host: str, name: str, user: str, password: SecretStr) -> Engine:
+    # URL.create, not an f-string: SQLAlchemy prints this URL with *** for the
+    # password (python.md section 5).
     url = URL.create(
         "postgresql+psycopg",
         username=user,
@@ -200,15 +205,18 @@ import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from acme.api.middleware_request_id import RequestIdMiddleware
 from acme.api.routes_checkout import build_checkout_router
 from acme.core.config import Settings
 from acme.core.database import build_engine
 from acme.core.payments_client import PaymentGateway
 
 
-def create_app() -> FastAPI:
+def create_app() -> RequestIdMiddleware:
     """The factory uvicorn calls once in each worker, at startup."""
-    return build_app(Settings())
+    # Outside FastAPI's own error middleware, so the id is set first and its header
+    # reaches a 500 too (logging.md section 7).
+    return RequestIdMiddleware(build_app(Settings()))
 
 
 def build_app(settings: Settings) -> FastAPI:
@@ -233,7 +241,9 @@ def build_app(settings: Settings) -> FastAPI:
 It is good because the adapter is the one place that turns settings into clients, each built once
 per worker. `create_app` is the factory uvicorn calls by name; `build_app` takes the `Settings`, so
 a test builds the app from its own. `routes_checkout.py`, not shown, hands the two clients to the
-use case as parameters.
+use case as parameters. `create_app` also wraps the app in `RequestIdMiddleware`, the request-id
+middleware of [python/logging/setup-example.md](../logging/setup-example.md)
+([logging.md](../logging/logging.md) section 7).
 
 `src/acme/api/main.py`
 
@@ -310,6 +320,8 @@ class TestSettings:
         environment.delenv(name)
 
         with pytest.raises(ValidationError) as caught:
+            # _env_file=None: a developer's .env stays out of the test
+            # (python.md section 5).
             Settings(_env_file=None)
 
         # include_input=False: the message shows each field and holds no value it read

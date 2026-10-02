@@ -15,7 +15,8 @@ What each part does:
 - `evals/triage/schemas.py` turns a line into a typed case once, at the edge;
 - `evals/triage/experiment_triage.py` runs every case three times against the real model and grades
   each run by code;
-- `evals/rate_gate.py` counts every run and fails when a rate falls below its baseline;
+- `evals/rate_gate.py` counts every run, fails when a rate falls below its baseline, and reports
+  the rates;
 - `.github/workflows/evals.yml` runs it on a pull request that changes the call, and every night;
 - the pytest contract for single cases stays in `tests/integration/triage/`.
 
@@ -41,12 +42,13 @@ Why it looks like this ([evals.md](evals.md) section 4):
 
 ```python
 # evals/triage/schemas.py
+from dataclasses import dataclass
 from datetime import date
 from enum import StrEnum, unique
 
 from pydantic import BaseModel, ConfigDict
 
-from acme.support.triage.schemas import TicketKind
+from acme.support.triage.schemas import TicketKind, TicketTriage
 
 
 @unique
@@ -58,9 +60,17 @@ class Criterion(StrEnum):
 
 
 @unique
-class ModelFailure(StrEnum):
-    """How the model failed a run instead of answering; the run is graded as failed."""
+class RunMeasure(StrEnum):
+    """What the eval reports over the whole run, next to the rates; never gated."""
 
+    DATE_WAY_OUT = "date_way_out"
+
+
+@unique
+class TriageEnd(StrEnum):
+    """How one run of the triage call ended; only a run that answered can pass."""
+
+    ANSWERED = "answered"
     REFUSED = "refused"
     CUT_OFF = "cut_off"
     INVALID_ANSWER = "invalid_answer"
@@ -75,14 +85,35 @@ class TriageCase(BaseModel):
     ticket_text: str
     kind: TicketKind
     problem_first_occurred_on: date | None
+
+
+@dataclass(frozen=True)
+class TriageRun:
+    """What one run of the triage call did: how it ended, and its triage."""
+
+    ended: TriageEnd
+    triage: TicketTriage | None
+
+    def __post_init__(self) -> None:
+        # Checked on the type, never only in a comment: a refused run that held a
+        # triage would pass both graders (python.md section 2).
+        if (self.triage is None) != (self.ended is not TriageEnd.ANSWERED):
+            raise ValueError("a run holds a triage exactly when it answered")
 ```
 
 A line of the file is data from outside the code, so it becomes a model once, when it is read
 ([python.md](../language/python.md) section 4). A misspelt kind or a key the model does not name fails
 the load, not the grading. `kind` is the application's own `TicketKind`, that of
 [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), so a case cannot expect a kind the
-application does not have. The criteria and the model's failures are closed sets, so they are
-enums, not strings ([python.md](../language/python.md) section 3).
+application does not have. The criteria, the run measures and how a run ended are closed sets, so
+they are enums, not strings ([python.md](../language/python.md) section 3). `TriageRun` is built by
+the eval's own code from values it already holds, so it is a frozen dataclass
+([python.md](../language/python.md) section 4). A run that did not answer is still a `TriageRun`
+with its `TriageEnd` and no triage: an untagged union of an answer and a failure would make every
+caller write an `isinstance` check, and `TicketTriage | None` is the documented form for no result
+([python.md](../language/python.md) section 3). `__post_init__` raises when the triage and the
+ending disagree, so the rule between the two fields is on the type, not in a comment
+([python.md](../language/python.md) section 2).
 
 ## `evals/triage/experiment_triage.py`: the run and its gate
 
@@ -93,13 +124,17 @@ enums, not strings ([python.md](../language/python.md) section 3).
 import logging.config
 import uuid
 from collections import Counter
-from collections.abc import Mapping
+from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
 from typing import Final
 
 from acme_ai import AcmeAiSdk
 from langfuse import Evaluation, RunnerContext, get_client
-from langfuse.experiment import ExperimentResult, LocalExperimentItem
+from langfuse.experiment import (
+    ExperimentItemResult,
+    ExperimentResult,
+    LocalExperimentItem,
+)
 
 from acme.core.acme_ai_client import AcmeAiClient
 from acme.core.config import Settings
@@ -109,18 +144,28 @@ from acme.core.logging import build_logging_config
 from acme.support.triage.consts import TRIAGE_LLM_MODEL, TRIAGE_LLM_REASONING_EFFORT
 from acme.support.triage.schemas import TicketTriage
 from acme.support.triage.services.service_triage import triage_ticket
-from evals.rate_gate import check_rates
-from evals.triage.schemas import Criterion, ModelFailure, TriageCase
+from evals.rate_gate import CASE_ID_METADATA_KEY, check_rates, rate_report
+from evals.triage.schemas import (
+    Criterion,
+    RunMeasure,
+    TriageCase,
+    TriageEnd,
+    TriageRun,
+)
 
 CASES_FILE: Final = Path(__file__).with_name("cases_triage.jsonl")
+# Three runs of each case, one rate over all: one run shows no rate
+# (repeated-runs.md sections 5 and 7).
 RUNS_PER_CASE: Final = 3
 # The pass rates of the version on main. The pull request that changes them explains why.
 BASELINE: Final[Mapping[Criterion, float]] = {
     Criterion.KIND_MATCHES: 0.95,
     Criterion.DATE_MATCHES: 0.88,
 }
-# About two standard errors of a rate near 0.9 over 40 cases x 3 runs (repeated-runs.md section 5).
-MARGIN: Final = 0.05
+# Two standard errors of the lowest baseline, 0.88, over 40 cases x 3 runs if the runs
+# were independent; they are not, so the real error is larger (repeated-runs.md
+# section 5).
+MARGIN: Final = 0.06
 
 
 def experiment(context: RunnerContext) -> ExperimentResult:
@@ -129,17 +174,19 @@ def experiment(context: RunnerContext) -> ExperimentResult:
 
 
 def run_triage_eval(context: RunnerContext, settings: Settings) -> ExperimentResult:
-    cases = [
-        TriageCase.model_validate_json(line)
-        for line in CASES_FILE.read_text().splitlines()
-    ]
+    cases = _cases()
+
     client = _uncached_client(settings)
 
+    # One trace per run, so a failed case can be opened; a plain loop leaves none
+    # (evals.md section 9).
     result = context.run_experiment(
         name="triage",
         data=[_item(case) for case in cases for _ in range(RUNS_PER_CASE)],
         task=lambda *, item, **kwargs: _triage(item, client),
         evaluators=[kind_matches, date_matches],
+        # The way out, a null date, counted apart from the rates (evals.md section 4).
+        run_evaluators=[date_way_out],
         # The prompt is in git, so the commit is its version (evals.md section 9).
         metadata={
             "model": TRIAGE_LLM_MODEL,
@@ -148,75 +195,128 @@ def run_triage_eval(context: RunnerContext, settings: Settings) -> ExperimentRes
         },
     )
 
-    check_rates(
-        result,
-        runs_asked=Counter(
-            case.case_id for case in cases for _ in range(RUNS_PER_CASE)
-        ),
-        baseline=BASELINE,
-        margin=MARGIN,
+    rates, breach = check_rates(
+        result, runs_asked=_runs_asked(cases), baseline=BASELINE, margin=MARGIN
     )
+
+    report = rate_report(result, rates, baseline=BASELINE, margin=MARGIN)
+    print(report)  # noqa: T201  # the report is this command's output
+
+    # Raised after the report, so a red run's log holds every rate too.
+    if breach is not None:
+        raise breach
 
     return result
 
 
 def kind_matches(
-    *,
-    output: TicketTriage | ModelFailure,
-    expected_output: TriageCase,
-    **kwargs: object,
+    *, output: TriageRun, expected_output: TriageCase, **kwargs: object
 ) -> Evaluation:
-    matches = isinstance(output, TicketTriage) and output.kind is expected_output.kind
-    return Evaluation(
-        name=Criterion.KIND_MATCHES, value=matches, comment=_failure_comment(output)
-    )
+    if output.triage is None:
+        return _failed_run(Criterion.KIND_MATCHES, output.ended)
+
+    matches = output.triage.kind is expected_output.kind
+    return Evaluation(name=Criterion.KIND_MATCHES, value=matches)
 
 
 def date_matches(
-    *,
-    output: TicketTriage | ModelFailure,
-    expected_output: TriageCase,
-    **kwargs: object,
+    *, output: TriageRun, expected_output: TriageCase, **kwargs: object
 ) -> Evaluation:
-    expected = expected_output.problem_first_occurred_on
+    if output.triage is None:
+        return _failed_run(Criterion.DATE_MATCHES, output.ended)
+
     matches = (
-        isinstance(output, TicketTriage)
-        and output.problem_first_occurred_on == expected
+        output.triage.problem_first_occurred_on
+        == expected_output.problem_first_occurred_on
     )
+    return Evaluation(name=Criterion.DATE_MATCHES, value=matches)
+
+
+def date_way_out(
+    *, item_results: list[ExperimentItemResult], **kwargs: object
+) -> Evaluation:
+    """The share of answered runs that took the way out, a null date.
+
+    The comment counts the answered runs, then gives the two-by-two table of evals.md
+    section 4: expected null or a date, returned null or a date. A run that did not
+    answer fails both rates already.
+    """
+    table = Counter(
+        (
+            case.problem_first_occurred_on is None,
+            triage.problem_first_occurred_on is None,
+        )
+        for case, triage in _answered(item_results)
+    )
+    took_way_out = table[True, True] + table[False, True]
+
     return Evaluation(
-        name=Criterion.DATE_MATCHES, value=matches, comment=_failure_comment(output)
+        name=RunMeasure.DATE_WAY_OUT,
+        value=took_way_out / table.total() if table else 0.0,
+        comment=(
+            f"of {table.total()} answered runs: "
+            f"expected null: {table[True, True]} null, {table[True, False]} a date; "
+            f"expected a date: {table[False, True]} null, {table[False, False]} a date"
+        ),
     )
 
 
-def _failure_comment(output: TicketTriage | ModelFailure) -> str | None:
-    """The model's failure, as the comment of a failed grade; an answer needs none."""
-    return f"model failure: {output}" if isinstance(output, ModelFailure) else None
+def _answered(
+    item_results: Iterable[ExperimentItemResult],
+) -> Iterator[tuple[TriageCase, TicketTriage]]:
+    """Each run that answered, with its case; this eval's items are local dicts."""
+    for run in item_results:
+        case = run.item["expected_output"] if isinstance(run.item, dict) else None
+        if (
+            isinstance(case, TriageCase)
+            and isinstance(run.output, TriageRun)
+            and run.output.triage is not None
+        ):
+            yield case, run.output.triage
+
+
+def _failed_run(criterion: Criterion, ended: TriageEnd) -> Evaluation:
+    """A run with no triage fails every criterion; the comment says how it ended."""
+    return Evaluation(name=criterion, value=False, comment=f"run ended: {ended}")
+
+
+def _cases() -> list[TriageCase]:
+    return [
+        TriageCase.model_validate_json(line)
+        for line in CASES_FILE.read_text().splitlines()
+    ]
+
+
+def _runs_asked(cases: Iterable[TriageCase]) -> Counter[str]:
+    return Counter(case.case_id for case in cases for _ in range(RUNS_PER_CASE))
 
 
 def _item(case: TriageCase) -> LocalExperimentItem:
     return LocalExperimentItem(
-        input=case.ticket_text, expected_output=case, metadata={"case_id": case.case_id}
+        input=case.ticket_text,
+        expected_output=case,
+        metadata={CASE_ID_METADATA_KEY: case.case_id},
     )
 
 
-def _triage(
-    item: LocalExperimentItem, client: AcmeAiClient
-) -> TicketTriage | ModelFailure:
+def _triage(item: LocalExperimentItem, client: AcmeAiClient) -> TriageRun:
     # The model's own failure is a failed case. ModelUnavailable, the provider's, is not
     # caught: it is an error of the run (evals.md section 6).
     try:
-        return triage_ticket(
+        triage = triage_ticket(
             item["input"],
             client,
             model=TRIAGE_LLM_MODEL,
             reasoning_effort=TRIAGE_LLM_REASONING_EFFORT,
         )
     except ModelRefused:
-        return ModelFailure.REFUSED
+        return TriageRun(ended=TriageEnd.REFUSED, triage=None)
     except ModelOutputCutOff:
-        return ModelFailure.CUT_OFF
+        return TriageRun(ended=TriageEnd.CUT_OFF, triage=None)
     except ModelAnswerInvalid:
-        return ModelFailure.INVALID_ANSWER
+        return TriageRun(ended=TriageEnd.INVALID_ANSWER, triage=None)
+
+    return TriageRun(ended=TriageEnd.ANSWERED, triage=triage)
 
 
 def _uncached_client(settings: Settings) -> AcmeAiClient:
@@ -230,15 +330,21 @@ def _uncached_client(settings: Settings) -> AcmeAiClient:
 
 def main() -> None:
     settings = Settings()
-    # A command, like the CLI of python/logging/setup-example.md: its log goes to stderr.
+
+    # The log goes to stderr, so stdout holds only the report (logging.md section 6).
     logging.config.dictConfig(
         build_logging_config(settings.log_level, settings.log_format, stream="stderr")
     )
+
     start_tracing(
         settings.langfuse_public_key,
         settings.langfuse_secret_key,
         settings.langfuse_base_url,
+        environment=settings.langfuse_environment,
+        release=settings.git_commit,
+        enabled=settings.langfuse_tracing_enabled,
     )
+
     langfuse = get_client()
 
     run_triage_eval(RunnerContext(client=langfuse), settings)
@@ -259,10 +365,14 @@ if __name__ == "__main__":
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from enum import StrEnum
-from typing import TypeVar
+from typing import Final, TypeVar
 
 from langfuse import RegressionError
 from langfuse.experiment import ExperimentItemResult, ExperimentResult
+
+# Every experiment writes the case id under this key and the gate reads it, so the key
+# is one name: a typo in one file would leave every run ungraded (python.md section 3).
+CASE_ID_METADATA_KEY: Final = "case_id"
 
 CriterionT = TypeVar("CriterionT", bound=StrEnum)
 
@@ -273,8 +383,14 @@ def check_rates(
     runs_asked: Counter[str],
     baseline: Mapping[CriterionT, float],
     margin: float,
-) -> None:
-    """Raises RegressionError when a run has no grade or a rate falls below its baseline."""
+) -> tuple[dict[CriterionT, float], RegressionError | None]:
+    """Each criterion's rate over the runs the cases asked for, and an error for the
+    first rate below its baseline, left for the caller to raise once the report is out.
+
+    Raises RegressionError when a run has no grade: no rate can be told then.
+    """
+    # A grader that raised leaves no score: such a run counts as missing below, never
+    # as a fail (evals.md section 6).
     graded = [
         run for run in result.item_results if len(run.evaluations) == len(baseline)
     ]
@@ -286,21 +402,48 @@ def check_rates(
             result=result, message=f"runs with no grade: {dict(missing)}"
         )
 
-    for criterion, rate_before in baseline.items():
-        rate = _passes(graded, criterion) / runs_asked.total()
-        if rate < rate_before - margin:
-            raise RegressionError(
+    rates = {
+        criterion: _passes(graded, criterion) / runs_asked.total()
+        for criterion in baseline
+    }
+
+    for criterion, rate in rates.items():
+        if rate < baseline[criterion] - margin:
+            return rates, RegressionError(
                 result=result,
                 metric=criterion,
                 value=rate,
-                threshold=rate_before - margin,
+                threshold=baseline[criterion] - margin,
             )
+
+    return rates, None
+
+
+def rate_report(
+    result: ExperimentResult,
+    rates: Mapping[CriterionT, float],
+    *,
+    baseline: Mapping[CriterionT, float],
+    margin: float,
+) -> str:
+    """Each rate with its baseline and the margin, then each run measure."""
+    lines = [
+        f"{criterion}: {rate:.3f} over the runs asked; "
+        f"baseline {baseline[criterion]:.2f}, margin {margin:.2f}"
+        for criterion, rate in rates.items()
+    ]
+    lines += [
+        f"{measure.name}: {measure.value}; {measure.comment}"
+        for measure in result.run_evaluations
+    ]
+
+    return "\n".join(lines)
 
 
 def _case_id(run: ExperimentItemResult) -> str:
     """The case id an experiment put into the item's metadata."""
     metadata = run.item["metadata"] if isinstance(run.item, dict) else run.item.metadata
-    return str((metadata or {})["case_id"])
+    return str((metadata or {})[CASE_ID_METADATA_KEY])
 
 
 def _passes(runs: Iterable[ExperimentItemResult], criterion: StrEnum) -> int:
@@ -323,19 +466,35 @@ Why it looks like this:
   sections 4 and 5): the gate compares each criterion's rate with its baseline minus a margin, and
   never requires each case to pass three times in three.
 - **Graded by code** ([evals.md](evals.md) section 5): the kind and the date have one right value,
-  so no judge is needed. One grader per criterion, each with its own rate.
+  so no judge is needed. One grader per criterion, each with its own rate. The same section asks
+  each grader to fail known-bad output and a system that does nothing before it gates; this example
+  leaves that check out ([What this example does not claim](#what-this-example-does-not-claim)).
+- **The way out counted apart** ([evals.md](evals.md) section 4,
+  [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 8): a
+  null date is the call's way out, and three of the four cases expect it, so a call that never
+  reads a date would still pass `DATE_MATCHES` on those three. `date_way_out`, a run evaluator
+  that Langfuse runs once over all the results, reports the share of answered runs that took the
+  way out, with the count of answered runs and the two-by-two table of expected null or a date
+  against returned null or a date as its comment.
+  It sits next to the rates and does not gate; `DATE_MATCHES` stays as it is.
 - **Every run counted** ([evals.md](evals.md) section 6): a refusal, an answer cut off or one that
-  does not parse is the model's own answer, so `_triage` returns it as a `ModelFailure`, and each
-  grader fails the run with the failure as its comment. Only `ModelUnavailable`, the provider's
-  failure, raises. `run_experiment` leaves a run out when its task raised, so the gate compares the
-  graded runs with the runs each case asked for, and a missing grade fails the gate with the case
-  ids instead of raising the rate. The rate is divided by the runs the case set asked for, never by
-  the results that came back.
+  does not parse is the model's own answer, so `_triage` returns it as a `TriageRun` with no
+  triage and its `TriageEnd`, and each grader fails the run with that ending as its comment. Only
+  `ModelUnavailable`, the provider's failure, raises. `run_experiment` leaves a run out when its
+  task raised, so the gate compares the graded runs with the runs each case asked for, and a
+  missing grade fails the gate with the case ids instead of raising the rate. The rate is divided
+  by the runs the case set asked for, never by the results that came back.
 - **The baseline is main's last run**, which departs from [evals.md](evals.md) section 7: `BASELINE`
   holds the rates from the last run of the version on main on the same cases, not from the old
   version run again in this job. Why, and what it costs, is under
   [What this example does not claim](#what-this-example-does-not-claim). A change is judged against
   these rates, and a pull request that moves them has to say why.
+- **The rates in the output** ([evals.md](evals.md) section 8): `check_rates` returns each
+  criterion's rate over the runs asked, with an error for a rate below its baseline, and
+  `rate_report` turns the rates into one line per criterion, with its baseline and the margin,
+  followed by each run measure. `run_triage_eval` prints the report before it raises that error, so
+  on either entry point, red run or green, the job's log holds the result the pull request's
+  Verification quotes next to its baseline.
 - **Every run reaches the model**: the client's cache switch
   ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 17) puts a fresh
   UUID first in each prompt, so a response cache in front of the model cannot answer a run from an
@@ -356,8 +515,9 @@ Why it looks like this:
 [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), `build_logging_config` and the
 settings fields `log_level` and `log_format` those of
 [python/logging/setup-example.md](../logging/setup-example.md), and `start_tracing` that of
-[python/logging/agent-example.md](../logging/agent-example.md); `acme_ai_api_key`, `git_commit` and the
-Langfuse keys and URL stand for the settings fields those examples leave out.
+[python/logging/agent-example.md](../logging/agent-example.md); `acme_ai_api_key`, `git_commit`,
+`langfuse_environment`, `langfuse_tracing_enabled` and the Langfuse keys and URL stand for the
+settings fields those examples leave out.
 
 ## With LangChain
 
@@ -392,6 +552,8 @@ on:
       - "src/acme/core/acme_ai_client.py"
       - "evals/rate_gate.py"
       - "evals/triage/**"
+  # Nightly too: catches a change on the vendor's side that no pull request made
+  # (evals.md section 8).
   schedule:
     - cron: "0 3 * * *"
 
@@ -404,17 +566,21 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          persist-credentials: false
+          persist-credentials: false  # the job holds a paid key: the token does not stay in .git/config
       - uses: astral-sh/setup-uv@v10.2.0
       - run: uv sync --locked
       - run: uv run --locked python -m evals.triage.experiment_triage
         env:
           # A key of its own, in a project with a monthly spend limit (evals.md section 8).
           ACME_ACME_AI_API_KEY: ${{ secrets.EVALS_ACME_AI_API_KEY }}
-          # The keys of a Langfuse project for evals only, never production's.
+          # An evals-only Langfuse project: its keys read every trace in it, and this
+          # job runs the pull request's code.
           ACME_LANGFUSE_PUBLIC_KEY: ${{ secrets.EVALS_LANGFUSE_PUBLIC_KEY }}
           ACME_LANGFUSE_SECRET_KEY: ${{ secrets.EVALS_LANGFUSE_SECRET_KEY }}
           ACME_LANGFUSE_BASE_URL: ${{ vars.LANGFUSE_BASE_URL }}
+          # Required: the settings give it no default. The experiment runner files each case's
+          # trace under sdk-experiment whatever this says (langfuse-python 4.16.0).
+          ACME_LANGFUSE_ENVIRONMENT: development
           ACME_GIT_COMMIT: ${{ github.sha }}
 ```
 
@@ -422,9 +588,10 @@ A pull request that changes what the triage call sends or how its run is graded 
 triage module (its prompt, its response schema, its model), the one client, the rate gate or the
 case set. So does every night: the schedule catches a change on the vendor's side that no pull
 request made ([evals.md](evals.md) section 8). A `RegressionError` ends the module with an error,
-so the job fails. The key belongs to a project with a spend limit, because nobody watches the
-nightly run. The Langfuse keys belong to a project of their own, because a project's keys read
-every trace in it, and this job runs the pull request's code.
+so the job fails; a run that passes prints its report in the job's log. The key belongs to a
+project with a spend limit, because nobody watches the nightly run. The Langfuse keys belong to a
+project of their own, because a project's keys read every trace in it, and this job runs the pull
+request's code.
 `Settings` reads each field from `ACME_` plus the field's name in upper case
 ([python/language/settings-example.md](../language/settings-example.md)), so `acme_ai_api_key` comes from
 `ACME_ACME_AI_API_KEY`. The job must also set every other required field of the application's
@@ -448,6 +615,11 @@ the prompt.
 The baseline rates and the margin are example values. A real margin comes from your own set's size
 and rates ([repeated-runs.md](repeated-runs.md) section 7), and a real case set starts from reading
 real traces ([evals.md](evals.md) section 3).
+
+Before a grader gates anything, it runs on outputs known to be bad and on a system that does
+nothing, and must fail them ([evals.md](evals.md) section 5): here, a `TriageRun` that ended with no
+triage, and a fixed answer with a null date on a case that states one. This example leaves that
+check out.
 
 [evals.md](evals.md) section 7 asks to run the old version and the new one on the same cases and to
 list every case that passed before and fails now; this example compares with stored rates
