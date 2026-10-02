@@ -34,6 +34,8 @@ floor inside it could never fire.
 ```toml
 [tool.pytest]
 testpaths = ["tests"]
+# --allow-unix-socket keeps asyncio's internal socket pair and a local Docker socket
+# working (fakes-and-boundaries.md section 4).
 addopts = ["-ra", "--disable-socket", "--allow-unix-socket", "-m", "not live_model"]
 markers = [
     "unit: the offline suite; the collection hook sets it from the folder",
@@ -232,8 +234,9 @@ has a cause: an order (section 5), a clock (section 6), or a path or a port two 
 (section 8). Repeat the failed run with its seed, and read a retry mark on a test that does not
 call a real model as the defect itself.
 
-- **pytest-rerunfailures is for the tests that ask a real model** (section 10), and only on the
-  command line of that run, `pytest -m live_model --reruns 2 -raR tests/integration/triage`: never
+- **pytest-rerunfailures is only for a test that asks a real model and whose pass rule is any of
+  n** (section 10), and only on the command line of that run,
+  `pytest -m live_model --reruns 2 -raR tests/integration/<module>`: never
   `reruns` in the configuration and never `@pytest.mark.flaky` on a test, which would give the
   tests that do not call a real model retries too. `-raR` prints a `RERUN` line for each retry,
   which `-ra` does not; section 10 reads each one as a wrong answer. A rerun repeats the test
@@ -262,15 +265,19 @@ section 18; this section is how such a test runs under pytest.
 - **The fixture reads the real key from the environment of the person who runs it**, by building
   `Settings()` as the application does. That is the exception [python.md](../language/python.md)
   section 5 makes, under "Where it stops holding", for a test marked to call a real model.
-- **Retries are a temporary measure, and each one is a paid call.** A model answers the same input
-  differently from call to call, so while a prompt is still changing, a run may add retries:
-  `pytest -m live_model --reruns 2 -raR tests/integration/triage`. The price is what green means:
-  a prompt right one time in two still passes nearly nine runs in ten with three attempts. Each
-  `RERUN` line under `-raR` is a wrong answer; `-ra` prints none. Take the retries away when the
-  prompt stops changing.
+- **Run a check with `--reruns` only when its pass rule is any of n.** The test below names its
+  pass rule, as [repeated-runs.md](../evals/repeated-runs.md) section 4 asks: all of 1, one call
+  per ticket that must be right. A retry changes the rule: `--reruns 2` on the command line makes
+  every check in the run any of 3, so a prompt right one time in two still passes nearly nine runs
+  in ten. Each `RERUN` line under `-raR` is a wrong answer; `-ra` prints none. To run a case more
+  than once, count its passes in a loop ([repeated-runs.md](../evals/repeated-runs.md) section 5).
 
 ```python
-# tests/integration/triage/conftest.py
+# tests/integration/triage/test_service_triage.py
+CRASH_ON_EXPORT: Final = "Since yesterday the CSV export crashes with error 500."
+DARK_MODE_WISH: Final = "Please add a dark mode to the dashboard."
+
+
 @pytest.fixture(scope="session")
 def uncached_model_client() -> AcmeAiClient:
     """The one model client with the cache switch on: every call reaches the model."""
@@ -282,12 +289,6 @@ def uncached_model_client() -> AcmeAiClient:
         disable_prompt_cache=True,
         new_request_uuid=uuid.uuid4,
     )
-```
-
-```python
-# tests/integration/triage/test_service_triage.py
-CRASH_ON_EXPORT: Final = "Since yesterday the CSV export crashes with error 500."
-DARK_MODE_WISH: Final = "Please add a dark mode to the dashboard."
 
 
 @pytest.mark.live_model
@@ -313,13 +314,16 @@ class TestTriageTicket:
             reasoning_effort=TRIAGE_LLM_REASONING_EFFORT,
         )
 
+        # Pass rule: all of 1, so run it without --reruns (repeated-runs.md section 4).
         assert triage.kind is kind
 ```
 
-The client, the settings field and the triage call are those of
+It is good because the fixture sits in the test file, the one file that asks for it
+([fixtures.md](fixtures.md) section 4), and the pass rule is named at the assertion, where a reader
+who reaches for `--reruns` sees it. The client, the settings field and the triage call are those of
 [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md); `acme_ai_api_key` stands for the
 vendor key field its settings class leaves out. The two tickets are invented; a real case set is
-built from real tickets, the way section 18 says.
+built from real tickets, the way [evals.md](../evals/evals.md) section 4 says.
 
 ## 11. Static checks on the tests
 

@@ -207,12 +207,14 @@ So a practice change of this kind starts a migration, and a migration has an end
 1. **Stop the bleeding.** From the day the practice changes, new code uses only the new way
    (Will Larson, "Migrations").
 2. **Count the old uses.** Choose one search that finds every use of the old way, for example
-   `grep -rn "import requests" src/ | wc -l`. Write the command and its result in the
-   migration's tracking issue. Before you stage a change in that area, run the command. The
-   number may only go down: when it drops, write the new number; a change that raises it is not
-   merged unless its commit body says why. This is a ratchet (qntm, 2021); Notion and Imbue keep
-   the same kind of count in a checked-in file that may only go down. A plain search can match
-   comments and strings, so read what it matches once and narrow it before you trust the number.
+   `grep -rnE "^[[:space:]]*(import|from) requests([ .]|$)" src/ | wc -l`, which finds
+   `from requests import Session` as well as `import requests`. Write the command and its result
+   in the migration's tracking issue. Before you stage a change in that area, run the command.
+   The number may only go down: when it drops, write the new number; a change that raises it is
+   not merged unless its commit body says why. This is a ratchet (qntm, 2021); Notion and Imbue
+   keep the same kind of count in a checked-in file that may only go down. A plain search can
+   match comments and strings, so read what it matches once and narrow it before you trust the
+   number.
 3. **Name an owner and an end date.** The person who changed the practice owns the migration.
    Google calls this the churn rule: whoever changes the ground moves the people standing on it.
    The owner moves the easy majority with a tool where one exists, then finishes the rest by

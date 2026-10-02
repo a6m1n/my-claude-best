@@ -118,7 +118,10 @@ feat [PROJ-123]: refund part of an order
 ```
 
 The `refactor` commit changes how the tests build their input, from a `dict` to a `PaidOrder`, but
-no expected value. That is what makes it a refactoring (section 3, rule 4).
+no expected value. That is what makes it a refactoring (section 3, rule 4). It shares the
+feature's pull request because it changes only `refund()`, which the feature edits anyway, and its
+one caller: a small cleanup in the lines the change edits (section 3, rule 7). A move across
+files, as in case 4, is its own pull request.
 
 **What stays.** `src/billing/reporting/daily.py` also reads orders as a `dict`, and PROJ-123
 does not touch it. It stays as it is. The pull request names it as a follow-up and links
@@ -141,7 +144,8 @@ docs [PROJ-140]: use httpx for outgoing HTTP calls
 - New code calls external services through httpx, which gives sync
   and async code one client and one place to set timeouts.
 - Migration: owner Jane Doe, end 2026-12-18, tracked in PROJ-140.
-  Count: grep -rn "import requests" src/ | wc -l, 31 today.
+  Count of import and from lines, 31 today:
+  grep -rnE "^[[:space:]]*(import|from) requests([ .]|$)" src/ | wc -l
 ```
 
 **The tracking issue**, PROJ-140, records the count before each step:
@@ -151,7 +155,9 @@ Migrate from requests to httpx
 
 Owner: Jane Doe
 End date: 2026-12-18
-Count: grep -rn "import requests" src/ | wc -l
+Count: grep -rnE "^[[:space:]]*(import|from) requests([ .]|$)" src/ | wc -l
+The search counts "from requests import Session" lines too, so the
+count reaches zero only when no use is left.
 
 | Date       | Count | What happened                               |
 |------------|-------|---------------------------------------------|
@@ -254,7 +260,11 @@ refactor [PROJ-160]: split open-invoice code by role
   passes, and a search for billing.invoices finds no use left.
 ```
 
-The second pull request is the feature, and the test's expected limit changes in it:
+The second pull request is the feature. Its `test` commit first rewrites the limit test around
+the constant: it stores `MAX_OPEN_INVOICES + 1` open invoices and expects `MAX_OPEN_INVOICES`
+back, so raising the limit changes no expected value
+([python/testing/what-to-test.md](../../python/testing/what-to-test.md) section 3). The feature
+commit follows:
 
 ```text
 feat [PROJ-160]: show up to 100 open invoices

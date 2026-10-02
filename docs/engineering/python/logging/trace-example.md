@@ -2,10 +2,10 @@
 
 A worked example for [logging.md](logging.md) section 8, "One request, one trace". It continues the
 application of [agent-example.md](agent-example.md): the same `core/langfuse_client.py`, the same
-Langfuse handler built once at start-up. A support module, `support/ticket/`, answers a customer's
-ticket in three steps, and each step is one LangChain call: it finds help articles (a retriever),
-lets an agent answer with them, and has a model write a one-line note for the support team. Every
-name is a placeholder.
+Langfuse handler built once at start-up. A support module, `support/answer_ticket/`, answers a
+customer's ticket in three steps, and each step is one LangChain call: it finds help articles (a
+retriever), lets an agent answer with them, and has a model write a one-line note for the support
+team. Every name is a placeholder.
 
 What each part does for the trace:
 
@@ -16,10 +16,10 @@ What each part does for the trace:
   like a list of what the request did;
 - a route that streams its reply opens the root span inside the generator that yields the body.
 
-## `support/ticket/consts.py` and `support/ticket/schemas.py`: the names
+## `support/answer_ticket/consts.py` and `support/answer_ticket/schemas.py`: the names
 
 ```python
-# support/ticket/consts.py
+# support/answer_ticket/consts.py
 from typing import Final
 
 # Evaluators and dashboards find the request's trace by this name, so keep it stable
@@ -28,19 +28,27 @@ SUPPORT_TICKET_TRACE_NAME: Final = "answer-ticket"
 ```
 
 ```python
-# support/ticket/schemas.py, next to Ticket and TicketAnswer
-from typing import Literal, TypeAlias
+# support/answer_ticket/schemas.py, next to Ticket and TicketAnswer
+from enum import StrEnum, unique
 
-# The names of the steps under the root span. Like the trace name, they are an API for
-# evaluators and dashboards, so the set is declared once and the checker rejects any other name.
-TicketStep: TypeAlias = Literal["find-articles", "answer-customer", "write-ticket-note"]
+
+# The names of the steps under the root span. Like the trace name, they are an API
+# for evaluators and dashboards, so the set is declared once and the checker rejects
+# any other name. The use case names each step, so a StrEnum (python.md section 2).
+@unique
+class TicketStep(StrEnum):
+    FIND_ARTICLES = "find-articles"
+    ANSWER_CUSTOMER = "answer-customer"
+    WRITE_TICKET_NOTE = "write-ticket-note"
 ```
 
 The module's model constants sit in `consts.py` too, as in [agent-example.md](agent-example.md);
-they are not shown. The step names are a closed set, so they are a `Literal` alias, not bare
-strings ([python.md](../language/python.md) section 3).
+they are not shown. The step names are a closed set, so they are a type, not bare strings
+([python.md](../language/python.md) section 3), and the use case writes each one by name, so the
+type is a `StrEnum` ([python.md](../language/python.md) section 2). A member is a `str` whose value
+is the step's name, so `run_name` and the span name Langfuse shows are the plain value.
 
-## `support/ticket/usecase.py`: three steps, one handler
+## `support/answer_ticket/usecase.py`: three steps, one handler
 
 The use case leaves out two parts that [agent-example.md](agent-example.md) shows or names for
 `answer`: the run's summary line ([logging.md](logging.md) section 9) and the check of the parsed
@@ -53,32 +61,38 @@ from langchain_core.messages import HumanMessage
 from langchain_core.runnables import RunnableConfig
 
 from acme.core.logging import thread_id
-from acme.support.ticket.graph import TicketFlow
-from acme.support.ticket.schemas import Ticket, TicketAnswer, TicketStep
+from acme.support.answer_ticket.graph import TicketFlow
+from acme.support.answer_ticket.schemas import Ticket, TicketAnswer, TicketStep
 
 
 async def answer_ticket(
     ticket: Ticket, flow: TicketFlow, tracing: BaseCallbackHandler
 ) -> TicketAnswer:
-    # Every line of this run carries it, in nodes and tools too.
+    # Every line of this run carries it, in nodes and tools too (logging.md section 8).
     thread_id.set(ticket.thread_id)
 
-    # The adapter's root span is the current span, so all three calls nest under it.
+    # The adapter's root span is the current span, so all three calls nest under it
+    # (logging.md section 8).
     articles = await flow.find_articles.ainvoke(
-        ticket.text, _traced(tracing, "find-articles")
+        ticket.text, _traced(tracing, TicketStep.FIND_ARTICLES)
     )
 
+    # version="v2": the output is typed, so .value["structured_response"] is the
+    # schema's model.
     output = await flow.agent.ainvoke(
         {"messages": [HumanMessage(ticket.text)], "articles": articles},
-        _traced(tracing, "answer-customer"),
+        _traced(tracing, TicketStep.ANSWER_CUSTOMER),
         version="v2",
     )
     reply = output.value["structured_response"]
 
-    note = await flow.write_note.ainvoke(
-        {"question": ticket.text, "reply": reply.text},
-        _traced(tracing, "write-ticket-note"),
+    # An agent, so its call gets the cache switch (prompt-engineering.md section 17).
+    note_output = await flow.write_note.ainvoke(
+        {"messages": [HumanMessage(ticket.text)], "reply": reply.text},
+        _traced(tracing, TicketStep.WRITE_TICKET_NOTE),
+        version="v2",
     )
+    note = note_output.value["structured_response"]
 
     return TicketAnswer(reply=reply.text, note=note.text)
 
@@ -93,12 +107,17 @@ spans under the current span, which is the adapter's root span. The calls pass n
 metadata keys, because the root span already carries the trace's attributes (logging.md section 8).
 
 `graph.py` builds `TicketFlow` once, at start-up: the retriever, the agent made by `create_agent`
-with an `articles` field in its state, and the chain that writes the note. Each model call in it
-follows [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md)
-sections 11 and 15. The rest of `schemas.py` holds `Ticket` (`customer_id`, `thread_id`, `text`)
-and `TicketAnswer` (`reply`, `note`). `graph.py` and the rest of `schemas.py` are left out.
+with an `articles` field in its state, and the note writer, made by `create_agent` too, with no
+tools and a `reply` field in its state. Each model call in it follows
+[prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) sections 11,
+15 and 17. The note writer is an agent, not a plain chain, so `graph.py` gives both agents the
+middlewares `provider_middlewares(...)` of `core/openai_client.py` returns, as the agent of
+[agent-example.md](agent-example.md) gets them: the cache switch and the two error middlewares are
+agent middlewares, and a chain's call would skip them. The rest
+of `schemas.py` holds `Ticket` (`customer_id`, `thread_id`, `text`) and `TicketAnswer` (`reply`,
+`note`). `graph.py` and the rest of `schemas.py` are left out.
 
-## `api/routes_ticket.py`: the root span around the use case
+## `api/routes_answer_ticket.py`: the root span around the use case
 
 ```python
 from typing import Annotated
@@ -109,9 +128,9 @@ from acme.api.auth import current_customer_id
 from acme.api.schemas import TicketRequest, TicketResponse
 from acme.core.langfuse_client import request_trace
 from acme.core.logging import request_id
-from acme.support.ticket.consts import SUPPORT_TICKET_TRACE_NAME
-from acme.support.ticket.schemas import Ticket
-from acme.support.ticket.usecase import answer_ticket
+from acme.support.answer_ticket.consts import SUPPORT_TICKET_TRACE_NAME
+from acme.support.answer_ticket.schemas import Ticket
+from acme.support.answer_ticket.usecase import answer_ticket
 
 router = APIRouter()
 
@@ -123,7 +142,8 @@ async def ticket_answer(
     customer_id: Annotated[str, Depends(current_customer_id)],
 ) -> TicketResponse:
     ticket = Ticket(customer_id=customer_id, thread_id=body.thread_id, text=body.text)
-    # The request's root span: the retrieval, the agent and the note nest under it as one trace.
+    # The request's root span: the retrieval, the agent and the note nest under it as
+    # one trace (logging.md section 8).
     with request_trace(
         SUPPORT_TICKET_TRACE_NAME,
         request_input=ticket.text,
@@ -159,7 +179,7 @@ answer-ticket            span        input: the ticket text, output: the reply
 ├── answer-customer                  the agent's run
 │   ├── …                generation  each model call, with its tokens and cost
 │   └── …                tool        each tool call
-└── write-ticket-note                the chain that wrote the note
+└── write-ticket-note                the agent that wrote the note
     └── …                generation  the model call, with the note as its output
 ```
 
@@ -174,7 +194,7 @@ Without the root span, the same request leaves three traces, `find-articles`, `a
 and `write-ticket-note`, each with only its own input and output, and nothing that shows they
 answered one ticket.
 
-## `api/routes_ticket.py`, streaming: the root span inside the generator
+## `api/routes_answer_ticket.py`, streaming: the root span inside the generator
 
 The generator that yields the body opens the root span; [logging.md](logging.md) section 8 says
 why the route cannot.
@@ -192,10 +212,10 @@ from acme.api.auth import current_customer_id
 from acme.api.schemas import TicketRequest
 from acme.core.langfuse_client import request_trace
 from acme.core.logging import request_id
-from acme.support.ticket.consts import SUPPORT_TICKET_TRACE_NAME
-from acme.support.ticket.graph import TicketFlow
-from acme.support.ticket.schemas import Ticket
-from acme.support.ticket.usecase import stream_ticket_reply
+from acme.support.answer_ticket.consts import SUPPORT_TICKET_TRACE_NAME
+from acme.support.answer_ticket.graph import TicketFlow
+from acme.support.answer_ticket.schemas import Ticket
+from acme.support.answer_ticket.usecase import stream_ticket_reply
 
 ...
 
@@ -207,7 +227,9 @@ async def ticket_answer_stream(
     customer_id: Annotated[str, Depends(current_customer_id)],
 ) -> StreamingResponse:
     ticket = Ticket(customer_id=customer_id, thread_id=body.thread_id, text=body.text)
-    chunks = _traced_reply(ticket, request.app.state.ticket_flow, request.app.state.tracing)
+    chunks = _traced_reply(
+        ticket, request.app.state.ticket_flow, request.app.state.tracing
+    )
 
     return StreamingResponse(chunks, media_type="text/plain")
 
@@ -215,7 +237,8 @@ async def ticket_answer_stream(
 async def _traced_reply(
     ticket: Ticket, flow: TicketFlow, tracing: BaseCallbackHandler
 ) -> AsyncIterator[str]:
-    # Opened here, not in the route: Starlette sends the body after the route has returned.
+    # Opened here, not in the route: Starlette sends the body after the route has
+    # returned (logging.md section 8).
     with request_trace(
         SUPPORT_TICKET_TRACE_NAME,
         request_input=ticket.text,

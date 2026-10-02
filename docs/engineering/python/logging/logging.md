@@ -168,13 +168,16 @@ for attempt in range(1, MAX_ATTEMPTS + 1):
         return await self._fetch(topic)
     except httpx.TimeoutException:
         if attempt == MAX_ATTEMPTS:
+            # from None: the error text could repeat the request; the attempts say
+            # enough (logging.md section 10)
             raise SearchUnavailable(attempts=attempt) from None
 
         logger.warning(
             "Search API timed out, retry %d of %d", attempt, MAX_ATTEMPTS - 1
         )
 
-# reports/report/usecase.py: this code decides (the report fails), so it logs, once
+# reports/generate_report/usecase.py: this code decides (the report fails),
+# so it logs, once
 try:
     sections = await search.find_sections(topic)
 except SearchUnavailable:
@@ -399,8 +402,8 @@ emitted at the end of a request", in addition to the normal lines.
 
 At every level, `DEBUG` included, a log line never carries:
 
-- **secrets:** tokens, keys, passwords, session ids, connection strings, authorization headers,
-  pre-signed URLs, or any URL with a query string;
+- **secrets:** tokens, keys, passwords, authentication session ids, connection strings,
+  authorization headers, pre-signed URLs, or any URL with a query string;
 - **content:** prompt text, model answers, tool arguments and results, documents, user text, or
   a value the code exists to hide.
 
@@ -441,8 +444,10 @@ every rule.
 - **Review covers the rest:** who handles an exception, whether a warning will be read, which
   field someone filters on, whether a line carries content. The `grep` lines in this file help a
   reviewer. They are not gates.
-- **No tests on log output.** A test that asserts a line's text breaks on every rewording, and it
-  tests the words, not the behaviour.
+- **No tests on log output, except the leak check.** A test that asserts a line's text breaks on
+  every rewording, and it tests the words, not the behaviour. The one allowed test of log output is
+  the absence check of [assertions.md](../testing/assertions.md) section 6: it asserts no wording,
+  and it catches a leak of section 10 that the positive assertions of a test cannot see.
 
 A study of 4,550 pull requests by coding agents found that the agents ignored the logging
 instructions they were given in 67% of the cases (Ouatiti et al., 2026). That is the reason the

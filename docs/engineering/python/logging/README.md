@@ -53,8 +53,8 @@ flowchart LR
    a process, wire logging or tracing into a service or an agent, or add an HTTP route, a CLI
    command or a worker's job that calls a model, read
    `docs/engineering/python/logging/logging.md`." Without it an agent never opens the file.
-3. Copy `core/logging.py` from `setup-example.md`, add the `LOG_LEVEL` and `LOG_FORMAT` settings,
-   and apply the config in each process's `main()`.
+3. Copy `core/logging.py` and the two types in `core/schemas.py` from `setup-example.md`, add the
+   `LOG_LEVEL` and `LOG_FORMAT` settings, and apply the config in each process's `main()`.
 4. Turn on the ruff rules listed in `logging.md` section 11 in the linter your project already
    runs.
 5. Re-check the lines that name a moving target: the FastAPI, Starlette and uvicorn versions in

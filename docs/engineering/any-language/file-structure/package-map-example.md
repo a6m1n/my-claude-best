@@ -18,8 +18,9 @@ new rule does.
 ```
 src/<app>/
 ├── core/              # cross-cutting: config · consts (limits every module obeys) · errors (the base
-│                      # error every adapter maps) · logging · schemas (types two or more modules use) ·
-│                      # database · one <system>_client.py per external system, the only path to it.
+│                      # error every adapter maps) · logging · schemas (types two or more modules use,
+│                      # or only core/ files use) · database · one <system>_client.py per external
+│                      # system, the only path to it.
 │                      # Imports no module and no adapter.
 ├── <domain>/          # one folder per module; imports no web or CLI framework. Every module:
 │   └── <module>/

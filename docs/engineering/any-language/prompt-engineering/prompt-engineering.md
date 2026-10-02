@@ -598,7 +598,7 @@ Good — one message per turn, each with its role:
 ```text
 system:    You are a support engineer answering customers of Acme Corp.
 user:      Where is my order? Ticket PROJ-123.
-assistant: [calls lookup_order(ticket="PROJ-123")]
+assistant: [calls lookup_order(ticket_key="PROJ-123")]
 tool:      {"status": "shipped", "carrier": "..."}
 ```
 
@@ -885,7 +885,8 @@ and grown, how each case is graded, and how the two versions are compared is
 an existing prompt or model runs old against new on it. What is particular to a prompt:
 
 - On a model change, keep the prompt fixed, so the test measures the model.
-- Keep options in one fixed order, or shuffle them across runs; parse leniently before you score.
+- Keep options in one fixed order, or shuffle them across runs.
+- Score an answer that does not parse as [evals.md](../../python/evals/evals.md) section 6 says.
 
 **Should.** When you try a technique this practice marks Should, such as a role, examples, a
 reasoning field, definitions, the order of the parts, a per-model layer or a reasoning level, run
@@ -901,8 +902,8 @@ application (Husain and Shankar), and they keep prompts "versioned, reviewed, an
 atomically with the application code". A generic "better" prompt can make the results worse
 (When "Better" Prompts Hurt, 2026). Whether a technique helps depends on the pass criterion you
 chose (Wharton Prompting Science Report 1, 2025). Parse errors alone deflated one model's score by
-up to 206% (arXiv:2607.22969), and shuffling the input order cost 3 to 12 points
-(arXiv:2502.04134). Grading on accuracy alone rewards guessing (Kalai et al., 2025).
+up to 206% (arXiv:2607.22969), so one rule decides how they count. Shuffling the input order cost
+3 to 12 points (arXiv:2502.04134). Grading on accuracy alone rewards guessing (Kalai et al., 2025).
 
 ## 19. Where it stops holding
 
