@@ -1016,7 +1016,13 @@ type ExternalLinkProps = {
 export function ExternalLink({ href, children }: ExternalLinkProps) {
   return (
     // `noreferrer` keeps this page's address, which can name an invoice, from the linked site.
-    <a href={href} rel="noreferrer" className="underline underline-offset-2">
+    // min-h-6: the 24 px floor of a target; pointer-coarse:min-h-11: 44 px on a touch screen
+    // (ux.md section 8).
+    <a
+      href={href}
+      rel="noreferrer"
+      className="inline-flex min-h-6 items-center underline underline-offset-2 pointer-coarse:min-h-11"
+    >
       {children}
     </a>
   );

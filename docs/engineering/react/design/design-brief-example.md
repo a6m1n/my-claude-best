@@ -30,6 +30,13 @@ src/
     └── invoices.$invoiceId.pay.tsx   the pay screen, which the brief points at
 ```
 
+Why it is good: each file sits where architecture.md section 3 puts its kind (the route files and
+the router's error screen in `routes/`, the module's own files in `billing/list-invoices/`, the
+shared UI in `core/ui/`), so a reader finds a file by its kind.
+
+`screen-pending.tsx` and `-screen-error.tsx` exist before the brief and are not in its diff: step 6
+takes the loading and the failed state from the router's defaults in `main.tsx`.
+
 Not shown: the rule that decides a status (`invoice-status.rules.ts`) and the type it returns
 (`invoice-status.schema.ts`), the query
 (`invoices.queries.ts`), the money helper in `core/`, the rule that decides which
@@ -42,9 +49,10 @@ The project's instruction file holds three lines for design, under a heading of 
 
 ```markdown
 ## Design
-- When you style a screen, take every colour and radius from the roles in `src/styles.css`; when
-  one is missing, add the role there first, with a value for each colour scheme. The diff shows
-  the new role next to the first screen that uses it.
+- When you style a screen, take every colour and radius from the roles in `src/styles.css`, except
+  `rounded-full` on a circle or a pill and `transparent` on a part that shows no colour
+  (visual-design.md section 3); when one is missing, add the role there first, with a value for
+  each colour scheme. The diff shows the new role next to the first screen that uses it.
 - Before you add a control to a screen, use a native element, a component from `src/core/ui/` or
   one of the module's own; a new shared one goes in `src/core/ui/`. The diff adds no second
   button, link or dialog.
@@ -59,9 +67,10 @@ Why it is good:
   [claude-md.md](../../../claude-code/claude-md.md#how-to-write-a-line-an-agent-can-follow) gives
   for a line an agent can follow.
 - **The first line puts the spec where the build reads it.** The theme in the result holds the roles and
-  clears Tailwind's default palette, so a colour outside the roles gives no style at all. Putting
-  the project's design system above the model's own choices is this practice's choice for a
-  screen in the repository (designing-with-claude-code.md section 3).
+  clears Tailwind's default palette, so a palette colour outside the roles gives no style at all,
+  while the keywords `transparent`, `current` and `inherit` stay. Putting the project's design
+  system above the model's own choices is this practice's choice for a screen in the repository
+  (designing-with-claude-code.md section 3).
 - **The second line is the component rule as an act.** The folder is the list of components, so no
   list goes stale here (designing-with-claude-code.md section 8).
 - **The third line routes to this practice** instead of copying it into a file every session
@@ -98,7 +107,8 @@ the order the work happens, and each ends with how anyone can tell it was done.
 3. When you pick a colour or a radius, use a role from src/styles.css: background, foreground,
    muted-foreground, border, primary, success, destructive or ring, and rounded-control for a
    control. The theme clears Tailwind's own palette, so a class such as bg-blue-500 gives no
-   style. Check: every colour and radius class in the diff names one of these roles.
+   style. Check: every colour and radius class in the diff names one of these roles, or is one of
+   the two exceptions of visual-design.md section 3.
 4. When you show a status, write its word in its role colour: Paid in success, Due in
    muted-foreground, Overdue in destructive. Check: the status reads the same in a greyscale
    screenshot.
@@ -124,7 +134,7 @@ the order the work happens, and each ends with how anyone can tell it was done.
    its round, screen, state, width and colour scheme, such as round-1-invoices-empty-390-dark.png.
 9. Then start a reviewer subagent with a fresh context. Give it steps 1 to 8 of this brief in
    <brief>, the diff in <diff>, the screenshot file names in <screenshots> and the checklist in
-   <review_checklist>, and tell it to report only the items the screen fails. Fix what it
+   <review_checklist>. Fix what it
    reports, take the screenshots of step 8 again under the next round's name, then start a new
    reviewer the same way. Check: after the second review, stop and send me the screenshots and
    every item still open.
@@ -169,7 +179,8 @@ Read the code first, then the screenshots. Report only the items the screen fail
 file and line or a screenshot name; a wish that no item covers is not a finding.
 
 In the code:
-1. Colours and radii: every class names a role from src/styles.css. Fails when a class names a
+1. Colours and radii: every class names a role from src/styles.css, or is rounded-full on a
+   circle or a pill, or transparent on a part that shows no colour. Fails when a class names a
    palette colour such as bg-blue-500, or a value in brackets such as text-[#333].
 2. Controls: each one is a component from src/core/ui/, one of the module's own, or a native
    element. Fails when the diff adds a second button component, or a div with an onClick.
@@ -529,7 +540,9 @@ export function ScreenPending() {
       {/* The router shows this screen after its pending delay, so the wait is already about a
           second: a wait of that length gets a spinner (ux.md section 3). motion-safe: keeps it
           still for a user who asked for less motion (visual-design.md section 8). rounded-full
-          draws the circle, which has no corner for a radius role (visual-design.md section 7). */}
+          draws the circle, which has no corner for a radius role (visual-design.md section 7);
+          border-t-transparent is the gap: a part that shows no colour takes transparent
+          (visual-design.md section 3). */}
       <span
         aria-hidden="true"
         className="size-4 rounded-full border-2 border-muted-foreground border-t-transparent motion-safe:animate-spin"

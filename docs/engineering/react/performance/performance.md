@@ -520,20 +520,19 @@ behind a login needs none of this section.
 <!-- Bad: this illustration is the largest element of the empty invoices screen, and
      loading="lazy" makes the browser wait for layout before it asks for the file
      (performance.md section 5). -->
-<img src="/images/no-invoices.avif" width="480" height="320" alt="" loading="lazy">
+<img src="/images/no-invoices.avif" width="480" height="320" alt="" loading="lazy" fetchpriority="high">
 ```
 
 `loading="lazy"` on the LCP element adds a wait to the resource load delay, the part of LCP that
 should stay under 10% (section 5).
 
 ```html
-<!-- Good: the same image, eager, and first in line among the images (performance.md
-     section 5). -->
+<!-- Good: the same image, eager (performance.md section 5). -->
 <img src="/images/no-invoices.avif" width="480" height="320" alt="" fetchpriority="high">
 ```
 
-The fix removes the lazy loading and adds `fetchpriority="high"`, so the download starts as soon
-as the browser sees the element and goes ahead of other images (web.dev).
+The fix removes the lazy loading, so the download starts as soon as the browser sees the element
+(web.dev).
 
 ### An image without dimensions
 
@@ -739,7 +738,8 @@ section 7.
 ### Optimising without a measurement
 
 The two blocks are the Verification section of a pull request
-([git.md](../../any-language/git/git.md) section 4). The values in the second are invented.
+([git.md](../../any-language/git/git.md) section 4), cut to the lines about speed; the gate
+commands are left out of both. The values in the second are invented.
 
 ```markdown
 ## Verification

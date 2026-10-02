@@ -19,10 +19,18 @@ flowchart LR
   R --> M["&lt;domain&gt;/&lt;module&gt;/"]
   M --> C["core/ · core/ui/"]
   R --> C
+  S --> C
+  R --> RT["the router"]
+  S --> RT
   M -. "never" .-> M2["another &lt;module&gt;"]
   M -. "never" .-> RT["the router"]
   C -. "never" .-> RT
 ```
+
+Why it is good: the arrows are the one direction of
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 2, as
+[architecture.md](architecture.md) section 3 lays it out, with the import rules of its section 5;
+the dotted edges are the imports the lint rejects.
 
 ## What is here
 

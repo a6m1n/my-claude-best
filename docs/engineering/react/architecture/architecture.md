@@ -51,9 +51,9 @@ shows it whole. Its code was type-checked, linted, unit-tested and built; nothin
 browser.
 
 The one rule: **every kind of thing has one home, and its kind decides where.** A screen lives in
-its route file. One thing the user does lives in its module. Code moves into `core/` when a second
-module needs it ([file-structure.md](../../any-language/file-structure/file-structure.md)
-section 4). Data the server owns lives in the query cache. State a link should carry lives in the
+its route file. One thing the user does lives in its module. Code no module owns lives in `core/`
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 4 says when code
+moves there). Data the server owns lives in the query cache. State a link should carry lives in the
 URL. A reader who knows what kind of thing they want knows where to find it, and no value has a second copy that
 drifts away from the first.
 

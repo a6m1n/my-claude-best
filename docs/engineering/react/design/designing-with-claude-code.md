@@ -95,7 +95,8 @@ reading of the skill, not a test).
 The spec is what Claude Code reads for every screen: the theme file, a few lines in the instruction
 file, and the code it is told to follow. A brief (section 4) adds what is particular to one screen.
 
-- **Put the design tokens in the theme file as roles, and let a component name only roles.**
+- **Put the design tokens in the theme file as roles, and let a component name only roles, apart
+  from the two exceptions of [visual-design.md](visual-design.md) section 3.**
   Claude Code's own docs, on the pages Claude publishes as artifacts, tell you to record colours,
   fonts and spacing in `CLAUDE.md` or a theme file, and state the order: "Claude treats your design
   system as higher precedence than its own choices, and your prompt as higher precedence than
@@ -339,8 +340,10 @@ Good — the same goal, with the spec as things the diff shows:
 ```text
 Build the invoices screen at /invoices, in src/routes/invoices.index.tsx. An accounts clerk
 opens it to see which invoices are due or overdue and to start paying one. Take every colour and
-radius from the roles in src/styles.css, build from the components in src/core/ui/, and give the
-screen the same frame as src/routes/invoices.$invoiceId.pay.tsx.
+radius from the roles in src/styles.css, except rounded-full on a circle or a pill and transparent
+on a part that shows no colour (visual-design.md section 3), build from native elements, the
+components in src/core/ui/ and the module's own, and give the screen the same frame as
+src/routes/invoices.$invoiceId.pay.tsx.
 ```
 
 The three adjectives became three things a reviewer can check in the diff: the roles, the
@@ -442,7 +445,7 @@ merged.
 
 | Section | Ask | Red flag |
 |---|---|---|
-| 3. The spec | Do the components name roles only, and do the design lines in `CLAUDE.md` route rather than list? | A colour value or a default palette class in a component; a component list in `CLAUDE.md` |
+| 3. The spec | Do the components name roles only, apart from the two exceptions of [visual-design.md](visual-design.md) section 3, and do the design lines in `CLAUDE.md` route rather than list? | A raw colour (a hex value) or a default palette class in a component; a component list in `CLAUDE.md` |
 | 4. The brief | Does the brief give values, components, states, words and a screen to follow, with an "instead" for each thing to avoid? | Adjectives as the spec; a prohibition with no "instead" |
 | 5. The tools | Is each design tool the owner's own version, and was its status re-read since the table's date? | A community server where the owner ships one; work that depends on a preview tool with no way back |
 | 6. The verify loop | Did someone other than the author answer the checklist, from the code and from screenshots of each state? | The only review is the author's; more than three rounds; the earlier screens not checked again |

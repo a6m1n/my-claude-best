@@ -260,7 +260,13 @@ export function ExternalLink({ href, children }: ExternalLinkProps) {
 
   return (
     // `noreferrer` keeps this page's address, which can name an invoice, from the linked site.
-    <a href={href} rel="noreferrer" className="underline underline-offset-2">
+    // min-h-6: the 24 px floor of a target; pointer-coarse:min-h-11: 44 px on a touch screen
+    // (ux.md section 8).
+    <a
+      href={href}
+      rel="noreferrer"
+      className="inline-flex min-h-6 items-center underline underline-offset-2 pointer-coarse:min-h-11"
+    >
       {children}
     </a>
   );
@@ -282,6 +288,8 @@ Why it is good:
 - **A screen uses it:** `src/billing/list-invoices/invoice-list.tsx` shows the customer's address
   (`customerUrl`, which the schema marks as an address from outside) through `ExternalLink`, and
   shows the customer's name alone when the address is `null`.
+- **The link's `min-h-6` and `pointer-coarse:min-h-11` are the target floor of ux.md section 8**,
+  the same as the Pay link's; a link in a table row is a target like any other.
 
 ## 4. The one HTML sink
 
@@ -357,8 +365,8 @@ Why it is good:
   sees why this one sink is allowed.
 - **What it does not stop:** a DOMPurify bypass found after this was written. The library is
   updated with the routine updates (security.md section 4). Trusted Types runs in report-only
-  mode in section 6 of this file: a violation shows in the browser console on a preview deploy but
-  is not blocked yet; security.md section 4 says when to enforce it.
+  mode in section 6 of this file: a violation shows in the browser console but is not blocked yet;
+  security.md section 4 says when to enforce it.
 
 ## 5. The web-vitals report
 
@@ -404,10 +412,10 @@ reads no setting.
       // screen (performance.md section 3).
       target: metricTarget(metric),
       // The URL the metric belongs to, not the current one: the INP and CLS of a screen arrive
-      // after the user has moved on (web-vitals). The path only: a query string can hold what
-      // the user typed (security.md section 13).
+      // after the user has moved on (web-vitals; performance.md section 3). The path only: a
+      // query string can hold what the user typed (security.md section 13).
       path: new URL(metric.navigationURL ?? window.location.href).pathname,
-      // The backend groups visits into device classes by this width.
+      // The backend groups visits into device classes by this width (performance.md section 3).
       viewportWidthPx: window.innerWidth,
     });
   }
@@ -450,9 +458,9 @@ Why it is good:
   # No 'unsafe-inline' in script-src: the build puts no script into the page itself, so an
   # injected one stays blocked (security.md section 5).
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.example.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
-  # Trusted Types in report-only mode: a violation shows only in the browser console of a visit
-  # to a preview deploy; a live application adds a report endpoint, then enforces (security.md
-  # section 4).
+  # Trusted Types in report-only mode: with no report endpoint, a violation shows only in the
+  # browser console of whoever visits a deploy that serves this file; a live application adds a
+  # report endpoint and enforces once the reports stop (security.md section 4).
   Content-Security-Policy-Report-Only: require-trusted-types-for 'script'
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   X-Content-Type-Options: nosniff
@@ -464,6 +472,8 @@ Why it is good:
   Cache-Control: public, max-age=31536000, immutable
 
 /index.html
+  # no-cache, not no-store: this HTML holds no personal data, and no-store keeps the page out
+  # of the back/forward cache (performance.md section 5).
   Cache-Control: no-cache
 ```
 
@@ -475,7 +485,7 @@ The policy rests on what the build writes. The built `dist/index.html`, from the
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="module" crossorigin src="/assets/index-CmvdpZ2y.js"></script>
+    <script type="module" crossorigin src="/assets/index-jrUD5Y6A.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-CbXtAM7H.js">
     <link rel="modulepreload" crossorigin href="/assets/preload-helper-C1JRZSNY.js">
     <link rel="stylesheet" crossorigin href="/assets/index-CmulJnWv.css">
@@ -500,30 +510,31 @@ Why it is good, directive by directive (security.md section 5):
 | `frame-ancestors 'none'` | another site framing the page to trick clicks; it works only as a header, which is why the policy is not in a `<meta>` tag |
 | the other five headers | each row of the header table in security.md section 5 |
 
-The two comments in the file give their reason at the line:
+The two security comments in the file give their reason at the line:
 
 - **No `'unsafe-inline'` in `script-src`.** It is the word a reader would most likely add when a
   script is blocked, so the comment above the policy says why it stays out (security.md
   section 5).
 - **Trusted Types run in report-only mode now** (security.md section 4). A violation shows only
-  in the browser console, on the team's own visits to a preview deploy that serves this file,
-  because the header names no `report-to` endpoint. A live application adds a report endpoint, the
-  way the main policy's report-only phase below does, and enforces when the reports stop.
+  in the browser console of whoever visits a deploy that serves this file, preview or production,
+  because the header names no `report-to` endpoint; the team sees its own visits, on its preview
+  deploys. A live application adds a report endpoint, the way the main policy's report-only phase
+  below does, and enforces when the reports stop.
   DOMPurify returns a `TrustedHTML` where the browser has Trusted Types, so the one sink of
   section 4 of this file passes the report-only check (security.md section 4, "Make the policy
   sanitise"); this was type-checked and not run in a browser.
 
 The two `Cache-Control` blocks serve caching, which [performance.md](../performance/performance.md)
-section 5 owns.
+section 5 owns, and the comment on `/index.html` gives its reason at the line.
 
 What it leaves out, on purpose or for a later step:
 
 - **The report-only phase.** A live application sends this policy as
   `Content-Security-Policy-Report-Only`, with a report endpoint, before it enforces it. The example
   shows the main policy in its enforced form; only the Trusted Types header is report-only.
-- **Enforced Trusted Types.** They run in report-only mode now, and move to enforced when the
-  reports stop, first on the team's preview deploys and then at a live application's report
-  endpoint (security.md section 4).
+- **Enforced Trusted Types.** They run in report-only mode now. A live application adds a report
+  endpoint and enforces once its reports stop; until then a violation shows only in the console
+  (security.md section 4).
 - **`preload` in `Strict-Transport-Security`,** and the `X-Frame-Options`, CORP, COEP and
   `X-XSS-Protection` headers; the table in security.md section 5 says what each would add.
 

@@ -1,4 +1,4 @@
-# Example: one module, written to every rule
+# Example: one module, written to every rule except the component tests
 
 A worked example for [components.md](components.md). The billing screens of Acme Corp list the
 invoices with their status, and let a user pay one. The parts below come from the modules
@@ -131,8 +131,10 @@ Why it is good:
 
 The test sits beside the rule it tests; where a test file sits is
 [architecture.md](../architecture/architecture.md) section 3 (the tree), and the test tools are
-[libraries.md](../architecture/libraries.md) section 6. This reference application has no component test;
-the rule carries the logic worth a unit test.
+[libraries.md](../architecture/libraries.md) section 6. That section gives a component with
+behaviour of its own one test in Vitest Browser Mode, so `PayInvoiceForm` and `InvoiceList` each
+owe one. The reference application has none, and the rule's test is the only test this example
+shows.
 
 ## The badge
 

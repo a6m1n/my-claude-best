@@ -238,7 +238,8 @@ export default defineConfig({
     tailwindcss(),
   ],
   resolve: {
-    // Reads the `@/*` alias from tsconfig, so the alias is declared in one place.
+    // Reads the `@/*` alias from tsconfig, so the alias is declared in one place
+    // (architecture.md section 5).
     tsconfigPaths: true,
   },
 });
@@ -293,7 +294,8 @@ export default defineConfig([
     },
     settings: {
       "import/resolver": { typescript: { project: "./tsconfig.app.json" } },
-      // The three kinds of folder. `src/main.tsx` wires them and belongs to none.
+      // The three kinds of folder (file-structure.md section 2). `src/main.tsx` wires them and
+      // belongs to none (file-structure.md section 5).
       "boundaries/elements": [
         { type: "core", pattern: "src/core" },
         { type: "routes", pattern: "src/routes" },
@@ -301,7 +303,8 @@ export default defineConfig([
       ],
     },
     rules: {
-      // One direction: routes -> modules -> core. A module imports its own files and core only.
+      // One direction: routes -> modules -> core. A module imports its own files and core only
+      // (file-structure.md section 2; architecture.md section 5).
       "boundaries/dependencies": [
         "error",
         {
@@ -333,8 +336,9 @@ export default defineConfig([
           ],
         },
       ],
-      // Absolute imports only: the import line names the file's place in the tree. The settings
-      // are read in `src/main.tsx` alone and handed on as values.
+      // Absolute imports only: the import line names the file's place in the tree
+      // (file-structure.md section 7; architecture.md section 5). The settings are read in
+      // `src/main.tsx` alone and handed on as values (architecture.md section 8).
       "no-restricted-imports": ["error", { patterns: [RELATIVE_IMPORTS, SETTINGS_FILE] }],
       // Two patterns: the first glob does not reach a file directly under src/.
       "check-file/filename-naming-convention": [
@@ -956,7 +960,7 @@ Then each of these files, which breaks one rule, was added, run through the chec
 | a relative import in a module, after the two new blocks were added | `no-restricted-imports`: the `./` pattern, with the message to import by `@/` (the repeated pattern still works) | [architecture.md](architecture.md) section 5 |
 | `core/` importing `core/config.ts` | `no-restricted-imports`: "Only src/main.tsx reads the settings; take the value as a parameter" | [architecture.md](architecture.md) section 8 |
 | a route importing `core/config.ts` | `no-restricted-imports`: the same message | [architecture.md](architecture.md) section 8 |
-| an `index.ts` that re-exports a module | Oxlint `oxc/no-barrel-file`: 249 modules loaded, over the threshold of 100 | [architecture.md](architecture.md) section 5 |
+| an `index.ts` of `export *` lines that re-exports a module | Oxlint `oxc/no-barrel-file`: 249 modules loaded, over the threshold of 100; a barrel of named re-exports passed | [architecture.md](architecture.md) section 5 |
 | a file named `ControlTop.tsx` directly under `src/` | `check-file/filename-naming-convention`: does not match the `KEBAB_CASE` pattern; it passed before the second pattern was added | [architecture.md](architecture.md) section 4 |
 | a module importing `@/core/config`, without the extension | `no-restricted-imports`: the same message, from the pattern | [architecture.md](architecture.md) section 8 |
 

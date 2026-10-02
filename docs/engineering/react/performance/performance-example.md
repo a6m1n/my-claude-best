@@ -64,10 +64,10 @@ export function reportWebVitals(apiClient: ApiClient): void {
       // screen (performance.md section 3).
       target: metricTarget(metric),
       // The URL the metric belongs to, not the current one: the INP and CLS of a screen arrive
-      // after the user has moved on (web-vitals). The path only: a query string can hold what
-      // the user typed (security.md section 13).
+      // after the user has moved on (web-vitals; performance.md section 3). The path only: a
+      // query string can hold what the user typed (security.md section 13).
       path: new URL(metric.navigationURL ?? window.location.href).pathname,
-      // The backend groups visits into device classes by this width.
+      // The backend groups visits into device classes by this width (performance.md section 3).
       viewportWidthPx: window.innerWidth,
     });
   }
@@ -265,7 +265,8 @@ export default defineConfig({
     tailwindcss(),
   ],
   resolve: {
-    // Reads the `@/*` alias from tsconfig, so the alias is declared in one place.
+    // Reads the `@/*` alias from tsconfig, so the alias is declared in one place
+    // (architecture.md section 5).
     tsconfigPaths: true,
   },
 });
@@ -277,11 +278,11 @@ The production build of the reference application printed these files (Vite 8.3.
 dist/index.html                                    0.53 kB │ gzip:  0.30 kB
 dist/assets/index-CmulJnWv.css                     9.30 kB │ gzip:  2.78 kB
 dist/assets/rolldown-runtime-CbXtAM7H.js           0.58 kB │ gzip:  0.36 kB
-dist/assets/invoices.index-DNWi5nFn.js             3.60 kB │ gzip:  1.47 kB
+dist/assets/invoices.index-m_HDp9I8.js             3.66 kB │ gzip:  1.47 kB
 dist/assets/money.format-CUDBypya.js               8.07 kB │ gzip:  3.00 kB
-dist/assets/invoices._invoiceId.pay-Cq7GeqYe.js   34.05 kB │ gzip: 13.51 kB
+dist/assets/invoices._invoiceId.pay-B_GXieUv.js   34.05 kB │ gzip: 13.51 kB
 dist/assets/preload-helper-C1JRZSNY.js           123.77 kB │ gzip: 37.88 kB
-dist/assets/index-CmvdpZ2y.js                    301.45 kB │ gzip: 96.87 kB
+dist/assets/index-jrUD5Y6A.js                    301.45 kB │ gzip: 96.88 kB
 ```
 
 The built `index.html` asks for the entry chunk and preloads two shared chunks:
@@ -292,7 +293,7 @@ The built `index.html` asks for the entry chunk and preloads two shared chunks:
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="module" crossorigin src="/assets/index-CmvdpZ2y.js"></script>
+    <script type="module" crossorigin src="/assets/index-jrUD5Y6A.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-CbXtAM7H.js">
     <link rel="modulepreload" crossorigin href="/assets/preload-helper-C1JRZSNY.js">
     <link rel="stylesheet" crossorigin href="/assets/index-CmulJnWv.css">
@@ -309,12 +310,12 @@ Why it is good:
   a visit to the list does not download the payment form (performance.md section 5, code
   splitting). This serves the LCP of the first screen, which waits for the entry chunk to run.
 - **A dependency of one route stays in that route's chunk.** Only the payment screen imports the
-  HTML sanitiser, through its form, and its chunk is the larger one: 34.05 kB against 3.60 kB.
+  HTML sanitiser, through its form, and its chunk is the larger one: 34.05 kB against 3.66 kB.
   The build output lists sizes, not contents; a bundle analyser (performance.md section 3) is how
   to confirm what each chunk holds.
 - **The first screen's JavaScript is small.** The entry and the two chunks `index.html` preloads
-  come to 96.87 + 0.36 + 37.88 = 135.11 kB after gzip. The first screen, `/invoices`, also loads
-  its route chunk and `money.format`: 135.11 + 1.47 + 3.00 = 139.58 kB. The budget of
+  come to 96.88 + 0.36 + 37.88 = 135.12 kB after gzip. The first screen, `/invoices`, also loads
+  its route chunk and `money.format`: 135.12 + 1.47 + 3.00 = 139.59 kB. The budget of
   performance.md section 3 counts compressed bytes, by the practice's reading of Russell's model,
   so this is the figure to compare: 0.62 MiB, about 650 kB, is the budget for a page that is
   mostly JavaScript, and this application is well under it. That is a size from the build, not a
@@ -338,19 +339,21 @@ are [security.md](../security/security.md) section 5's.
   Cache-Control: public, max-age=31536000, immutable
 
 /index.html
+  # no-cache, not no-store: this HTML holds no personal data, and no-store keeps the page out
+  # of the back/forward cache (performance.md section 5).
   Cache-Control: no-cache
 ```
 
 Why it is good:
 
 - **Built assets are cached for a year.** Vite puts a hash of the content in every asset name
-  (`index-CmvdpZ2y.js`), so a new build changes the name and a returning user downloads only what
+  (`index-jrUD5Y6A.js`), so a new build changes the name and a returning user downloads only what
   changed. This serves the LCP of a repeat visit (performance.md section 5, caching).
 - **`index.html` is revalidated on every visit**, so a deploy reaches users at once and a new
   page load never points to chunks the host has deleted; the Vite guide recommends `no-cache` on
   HTML for that reason. A tab opened before the deploy is the `vite:preloadError` case.
 - **`no-cache`, not `no-store`**: a page sent with `no-store` is kept out of the back/forward
-  cache (performance.md section 5).
+  cache (performance.md section 5), and the comment says so at the line.
 
 Check on the host, since nothing here was run against one: a deep link such as `/invoices` is
 answered with `index.html` by the host's fallback, and a host may match a header rule on the path
@@ -375,3 +378,8 @@ Two more parts of the practice are not here: the size gate in CI (performance.md
 the server-rendered case and SEO. The server-rendered case (performance.md section 7) does not
 apply because the application renders in the browser only, and SEO (performance.md section 8)
 because its screens sit behind a login with nothing a crawler must read.
+
+The time from an interaction to its network result is not reported either, although
+performance.md section 3 asks for it when an interaction waits for the network. The pay screen's
+submit is that case: INP ends at the next paint, when the button already reads "Paying…", while
+the user still waits for the payment.

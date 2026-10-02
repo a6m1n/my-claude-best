@@ -33,8 +33,8 @@ Every line that carries a read date is to be distrusted after 2027-04-01 until i
 the README's "How to adopt" says how to list those lines.
 
 The one rule: **an application screen is designed in product mode, and every visual value on it
-comes from a token or a scale, never from one screen's taste.** Each section below is one part of
-that rule, or one way it breaks.
+comes from a token or a scale (section 3 names two exceptions), never from one screen's taste.**
+Each section below is one part of that rule, or one way it breaks.
 
 Why:
 
@@ -101,8 +101,9 @@ different words for the same shape: a raw value, then a role, then a component.
 - **When a component needs a colour, a radius or a shadow, use a role, never a raw value,** so a new
   theme or a rebrand is an edit to one file. Primer says base tokens are never used directly in
   code or design, and that its functional tokens are the ones used most. Carbon gives the payoff:
-  with tokens, a change made in one place shows across the whole system. A circle or a pill is the
-  one exception (section 7).
+  with tokens, a change made in one place shows across the whole system. Two values no theme
+  changes are the exceptions: `rounded-full` for a circle or a pill (section 7), and `transparent`
+  for a part that shows no colour, such as the gap in a spinner ring.
 - **Pick the role by what the thing means, not by how it looks.** Error text takes `destructive`
   even when another role has a similar red. Atlassian's rule is to choose a token by its meaning,
   not by its value.
@@ -153,8 +154,9 @@ The token file of the billing application, in full:
 }
 
 @theme inline {
-  /* Clearing the default palette leaves the roles below as the only colours: `bg-blue-500`
-     produces no style at all (visual-design.md section 3). */
+  /* Clearing the default palette leaves the roles below as the only theme colours, apart from
+     the keywords `transparent`, `current` and `inherit`: `bg-blue-500` produces no style at all
+     (visual-design.md section 3). */
   --color-*: initial;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -188,9 +190,10 @@ Why it is good:
 
 - A component sees only roles. The values sit in one place, the light and the dark value of each
   role side by side in `light-dark()`, so both themes are designed together.
-- `--color-*: initial` removes Tailwind's palette. A raw colour such as `bg-blue-500` then produces
-  no style, so the mistake shows the first time anyone looks at the screen, not in a review months
-  later. The comment keeps that reason at the line, because the line looks removable.
+- `--color-*: initial` removes Tailwind's palette, but not the keywords `transparent`, `current`
+  and `inherit`. A raw colour such as `bg-blue-500` then produces no style, so the mistake shows
+  the first time anyone looks at the screen, not in a review months later. The comment keeps that
+  reason at the line, because the line looks removable.
 - Every text role has the surface it sits on, and each pair's contrast is computed in both themes
   (section 4).
 - `input`, the edge of a control, is a role apart from `border`, so a field's edge can meet 3:1
@@ -499,7 +502,9 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
 - **A full circle or a pill, such as a status dot or a spinner ring, takes `rounded-full`,**
   because a radius role stands for the size of a corner, and a circle has no corner. `full` is not
   a role: Primer's table above lists "full (pill)" as the last step of its radius scale, and
-  Tailwind 4's `rounded-full` is a fixed value, `calc(infinity * 1px)`.
+  Tailwind 4's `rounded-full` is a fixed value, `calc(infinity * 1px)`. The gap in a spinner ring
+  takes `border-t-transparent`, because a hidden edge has no colour to name; the built stylesheet
+  keeps the keyword after `--color-*: initial`.
 - **Draw a border only where it tells the reader something.** Anthropic's frontend-design skill:
   "Structural devices like outlines, borders, numbering, eyebrows, dividers, labels, etc., encode
   useful information about the content rather than decorate it." Linear's 2026 refresh removed
@@ -735,12 +740,12 @@ two or more is not ready.
 | Section | Ask | Red flag |
 |---|---|---|
 | 2. Mode | Is this a task screen, and does it look like one? | Brand-size type, a gradient hero or expressive motion on a screen behind the login |
-| 3. Tokens | Does every colour, radius and shadow name a role, with `rounded-full` only on a circle or a pill? | A palette class (`bg-blue-600`), a hex value, or a role picked because its colour looked right |
+| 3. Tokens | Does every colour, radius and shadow name a role, with `rounded-full` only on a circle or a pill and `transparent` only on a part that shows no colour? | A palette class (`bg-blue-600`), a hex value, or a role picked because its colour looked right |
 | 4. Colour and contrast | Does every text-on-surface pair have its ratio in both themes? | A new pair with no ratio; colour as the only signal; grey text on a coloured surface |
 | 5. Type | Are sizes steps of the scale, and does the hierarchy use weight and colour first? | A size in square brackets; running text wider than 75 characters; numbers in a column without `tabular-nums` |
 | 6. Spacing and layout | Is every space a step of the 4 px scale? | A value in square brackets; a component that only adapts to the viewport |
 | 7. Shape and borders | Are radii small and named by role (a circle or a pill takes `rounded-full`), and does each border carry meaning? | A border around every box; a decorative border as the only edge of a field |
-| 8. Motion | Does motion answer an action, at a duration that fits its size? | `transition: all`; an animated `width` or `height`; no reduced-motion rule |
+| 8. Motion | Does motion answer an action, at a duration that fits its size (a loop that shows a wait keeps its utility's duration, section 8)? | `transition: all`; an animated `width` or `height`; no reduced-motion rule |
 | 9. Themes | Was the dark theme looked at, not only computed? | A component that checks which theme is on; a colour set outside the token file |
 | 10. Styles | Does the style keep sections 3 to 9? | Glass under text, soft shadows on controls, a style chosen because it is in fashion |
 

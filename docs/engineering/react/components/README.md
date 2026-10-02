@@ -18,9 +18,10 @@ their fixes. It is the React case of [readability](../../any-language/readabilit
   reports each; then where the rules stop holding and a review checklist. Read it before you write
   or change a component or a custom hook, and when you review one.
 - [component-example.md](component-example.md) — one module of a billing screen written to every
-  rule at once: a pure rule and its test, a badge, a list that takes its link as a prop, the route
-  that feeds it, and a form that reads with a suspense query and writes with a mutation, with the
-  reason next to each part. Read it when you write the components of a new module.
+  rule except the component tests: a pure rule and its test, a badge, a list that takes its link as
+  a prop, the route that feeds it, and a form that reads with a suspense query and writes with a
+  mutation, with the reason next to each part. Read it when you write the components of a new
+  module.
 
 ## How to adopt
 
@@ -58,4 +59,5 @@ by identity. What does not change are the Rules of React in section 2 or 9: Reac
 and the compiler skips a component that breaks one.
 
 The rules for testing a component are not a practice yet. [libraries.md](../architecture/libraries.md)
-section 6 gives the tools and a minimum, and the example's only tests are the two rule files' tests.
+section 6 gives the tools and a minimum, and the reference application's only tests are its two
+rule files' tests; [component-example.md](component-example.md) shows one of them.

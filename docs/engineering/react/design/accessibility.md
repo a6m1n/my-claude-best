@@ -491,7 +491,9 @@ export function ScreenPending() {
       {/* The router shows this screen after its pending delay, so the wait is already about a
           second: a wait of that length gets a spinner (ux.md section 3). motion-safe: keeps it
           still for a user who asked for less motion (visual-design.md section 8). rounded-full
-          draws the circle, which has no corner for a radius role (visual-design.md section 7). */}
+          draws the circle, which has no corner for a radius role (visual-design.md section 7);
+          border-t-transparent is the gap: a part that shows no colour takes transparent
+          (visual-design.md section 3). */}
       <span
         aria-hidden="true"
         className="size-4 rounded-full border-2 border-muted-foreground border-t-transparent motion-safe:animate-spin"
