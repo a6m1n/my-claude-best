@@ -56,6 +56,14 @@ billing-app/
     └── main.tsx                      builds the API client and the error reporter, reads the settings
 ```
 
+The tree has no package manager settings file, although security.md section 10 asks for the
+install-script block in the repository's own config file; section 8 of this file shows those
+files. The reference application was installed on npm 10.8 with
+`--ignore-scripts --before=2026-09-24` on the command line instead, because npm 10.8 has no
+`min-release-age`, the install already needed `--before` on the command line, and
+`--ignore-scripts` went on the same line. The cost: an install that forgets the flags runs every
+install script.
+
 The link, its rule and the HTML sink each sit in the one module that uses them, not in `core/`:
 [file-structure.md](../../any-language/file-structure/file-structure.md) section 4 moves code to
 `core/` only when a second module needs it. When a second module needs one of them,
@@ -596,10 +604,12 @@ for npm 12 a denial in `package.json`'s `allowScripts`, which `npm deny-scripts`
 page gives no value format for that entry, so it is not shown here (pnpm's build settings page
 and npm's v12 config page, read 2026-10-03).
 
-The two files below make the same controls part of the repository, so every install obeys them
-(security.md section 10). They are written from the owners' docs (npm's config page and changelog,
-CISA's axios alert, pnpm's settings and supply-chain pages, read 2026-10-01) and were not run:
-the machine had npm 10.8.
+The files below make the same controls part of the repository, one for each package manager:
+`.npmrc` for npm 12, `.npmrc` for npm 11.10.0 or later, and `pnpm-workspace.yaml` for pnpm 11; a
+repository takes the one it installs with, so every install obeys them (security.md section 10).
+They are written from the owners' docs (npm's config page and changelog, CISA's axios alert,
+pnpm's settings and supply-chain pages, read 2026-10-01) and were not run: the machine had npm
+10.8.
 
 `min-release-age` exists since npm 11.10.0 (2026-02-11) and `min-release-age-exclude` since
 11.17.0; npm before 11.10.0 has neither. There `--before=<date>` on the install command installs
@@ -664,8 +674,9 @@ strictDepBuilds: true
 blockExoticSubdeps: true
 # Fails when a version has weaker provenance than earlier ones (security.md section 10).
 trustPolicy: no-downgrade
-# Denied, not allowed: the checks passed with every install script ignored, and a package set to
-# false is never built (security.md section 10).
+# Denied by name, so strictDepBuilds does not fail the install on them; the checks passed
+# with every install script ignored (pnpm's build settings page; security.md section 10 for
+# the review rule).
 allowBuilds:
   unrs-resolver: false
   fsevents: false

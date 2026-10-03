@@ -225,9 +225,9 @@ Why it is good:
 
 The code below is the reference application's, quoted as it is. The application is not in this
 folder; the example files of the `react/` practices quote its code, and the checks named in the last
-section were run on it on 2026-10-01 and 2026-10-02. The code meets the brief, but it was not
-produced by running the brief, and the brief's steps 8 and 9 were not run on it (see the last
-section).
+section were run on it on 2026-10-01, 2026-10-02 and 2026-10-03. The code meets the brief, but it
+was not produced by running the brief, and the brief's steps 8 and 9 were not run on it (see the
+last section).
 
 ### The theme: `src/styles.css`
 
@@ -386,7 +386,7 @@ import { invoiceStatus } from "@/billing/list-invoices/invoice-status.rules.ts";
 import { invoicesQueryOptions } from "@/billing/list-invoices/invoices.queries.ts";
 import type { ApiClient } from "@/core/api-client.ts";
 import type { Invoice } from "@/core/invoice.schema.ts";
-import { formatCents } from "@/core/money.format.ts";
+import { moneyText } from "@/core/money.format.ts";
 
 type InvoiceListProps = {
   // The route hands the client in, like `today`: the component reaches nothing by itself
@@ -434,7 +434,7 @@ export function InvoiceList({ apiClient, today, renderPayLink }: InvoiceListProp
                   <ExternalLink href={invoice.customerUrl}>{invoice.customerName}</ExternalLink>
                 )}
               </th>
-              <td className="tabular-nums">{formatCents(invoice.amountCents)}</td>
+              <td className="tabular-nums">{moneyText(invoice.amountCents)}</td>
               <td className="tabular-nums">{invoice.dueOn}</td>
               <td>
                 <InvoiceStatusBadge status={status} />

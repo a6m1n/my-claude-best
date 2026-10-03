@@ -6,7 +6,7 @@ rules, the startup file, the routes and one module's reads and writes. Each part
 follows and why. Names are invented. The code was type-checked, linted, unit-tested and built;
 nothing was run in a browser. The code is quoted from a reference application that is not in this
 folder: the example files of the `react/` practices quote its code, and the checks named were run
-on it on 2026-10-01 and 2026-10-02.
+on it on 2026-10-01, 2026-10-02 and 2026-10-03.
 
 **Navigation**
 
@@ -85,6 +85,26 @@ vitals is in [performance-example.md](../performance/performance-example.md).
 The session server, the Backend for Frontend of [security.md](../security/security.md) section 6,
 is not part of this tree and is not shown.
 
+The tree has no package manager settings file, although [security.md](../security/security.md)
+section 10 asks for the install-script block in the repository's own config file;
+[security-example.md](../security/security-example.md) section 8 shows those files. The reference
+application was installed on npm 10.8 with `--ignore-scripts --before=2026-09-24` on the command
+line instead, because npm 10.8 has no `min-release-age`, the install already needed `--before` on
+the command line, and `--ignore-scripts` went on the same line. The cost: an install that forgets
+the flags runs every install script.
+
+The tree has no formatter. Prettier is the default of [libraries.md](libraries.md) section 5, so a
+new application installs it and lists `src/route-tree.gen.ts` in `.prettierignore`. The reference
+application leaves it out, because the record of its checks covers the type check, the linters,
+the tests and the build. The cost: its code is not checked for format.
+
+The tree has no `docs/ARCHITECTURE.md`, although
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 10 asks every
+application for one map of its structure there, under "Package map". The reference application
+leaves it out, because this file and [architecture.md](architecture.md) section 3 already say what
+each kind of folder and file is for. The cost: a copied application starts without a map of its
+own, and its readers come back to this practice instead.
+
 What to notice:
 
 - **Each module is one thing the user does**, named for it: seeing the invoices, paying one
@@ -119,7 +139,9 @@ What to notice:
 The order below makes the first module land on a tree that already checks it. It was not run once as
 a list. On 2026-10-02 the create command ran on its own, as `npm create vite@latest`; step 1's
 command, with its version pin and `--no-immediate`, was not run. The reference application was
-written by hand to the same end state.
+written by hand, and it differs from the list's end state in two ways, both declared under the tree
+in section 1 of this file: it has no package manager settings file (step 2), and no formatter
+(step 3).
 
 1. **Create the base:** `npm create vite@<version> <name> -- --template react-ts --no-immediate`,
    where `<version>` is the newest create-vite that is older than the cooldown step 2 sets
@@ -131,7 +153,8 @@ written by hand to the same end state.
 2. **Write the package manager's settings before the first install:** the files of
    [security-example.md](../security/security-example.md) section 8, so every install obeys them
    ([security.md](../security/security.md) section 10). On npm before 11.10.0, which has no
-   `min-release-age`, pass `--ignore-scripts --before=<date>` to each install command instead.
+   `min-release-age`, write `ignore-scripts=true` in `.npmrc` and pass `--before=<date>` to each
+   install command.
 3. **Install what the example's `package.json` lists beyond the template**, so the libraries are
    the ones the rules assume ([libraries.md](libraries.md) section 2 for the runtime and the
    build, section 4 for the lint, section 6 for the tests). `eslint-import-resolver-typescript`
@@ -148,7 +171,10 @@ written by hand to the same end state.
    npm install -D @tanstack/router-plugin tailwindcss @tailwindcss/vite babel-plugin-react-compiler @rolldown/plugin-babel @babel/core eslint @eslint/js typescript-eslint eslint-plugin-boundaries eslint-import-resolver-typescript eslint-plugin-check-file eslint-plugin-oxlint vitest
    ```
 
-   Add `dompurify` and `web-vitals` when the first screen needs them.
+   Add `dompurify` and `web-vitals` when the first screen needs them. The example's `package.json`
+   has no formatter, a departure section 1 of this file declares: a new application also installs
+   Prettier, the default of [libraries.md](libraries.md) section 5, and lists
+   `src/route-tree.gen.ts` in `.prettierignore`.
 4. **Write the configuration files in the order section 3 of this file shows them**: the alias and
    compiler flags, the bundler, ESLint, then Oxlint. The alias comes first because every import that
    follows uses it, and the checks come before the first module so that no module is written against
@@ -271,9 +297,9 @@ Why it is good:
 - **The router plugin points at the adapter folder and gives the generated tree a kebab-case
   name** ([architecture.md](architecture.md) section 3). `autoCodeSplitting` makes each route's
   component its own chunk ([architecture.md](architecture.md) section 10), and the comment says why
-  the plugin comes first. `routeFileIgnorePattern` keeps a test file beside a route out of the route
-  tree, so the plugin does not warn about it on each build ([architecture.md](architecture.md)
-  section 3).
+  the plugin comes first. `routeFileIgnorePattern` makes the plugin skip a test file beside a
+  route, so it does not warn on each build that the file exports no route
+  ([architecture.md](architecture.md) section 3).
 - The React Compiler preset is [components.md](../components/components.md)'s, and the Tailwind
   plugin is [visual-design.md](../design/visual-design.md)'s.
 
@@ -465,7 +491,8 @@ Why it is good:
 
 Why it is good:
 
-- **`plugins` keeps Oxlint's four defaults and adds the three the rules below need**, and its
+- **`plugins` keeps Oxlint's four defaults and adds three: `react` and `import` for rules named
+  below, and `jsx-a11y` for the accessibility rules of the `correctness` category**, and its
   comment gives the reason at the line, so a copier who trims the list to the plugins the rules
   name does not turn the default correctness rules off ([libraries.md](libraries.md) section 4).
 - **`oxc/no-barrel-file` fails on a barrel** of `export *` lines whose imports load more than 100

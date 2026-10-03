@@ -149,7 +149,8 @@ The rule that reports it is `react-hooks(rules-of-hooks)`: in the reference appl
 file, Oxlint reported a conditional `useState` with it.
 
 The GOOD is the form as the application has it, from
-`src/billing/pay-invoice/pay-invoice-form.tsx`. The submit handler and the form's markup are cut.
+`src/billing/pay-invoice/pay-invoice-form.tsx`. The imports, the props type, the submit handler
+and the form's markup are cut.
 
 ```tsx
 export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormProps) {
@@ -198,8 +199,8 @@ among the calls it rejects, and Oxlint reported the impure call in the reference
 control file with it.
 
 The GOOD reads the clock in the route's loader, `src/routes/invoices.index.tsx`, and passes the
-date down. The pay link the screen passes to the list is cut, and so is `toIsoDate`, the route's
-own function at the end of the file.
+date down. The imports and the pay link the screen passes to the list are cut, and so is
+`toIsoDate`, the route's own function at the end of the file.
 
 ```tsx
 export const Route = createFileRoute("/invoices/")({
@@ -233,8 +234,8 @@ function InvoicesScreen() {
 }
 ```
 
-The list takes the date as a prop, in `src/billing/list-invoices/invoice-list.tsx`; its table is
-cut.
+The list takes the date as a prop, in `src/billing/list-invoices/invoice-list.tsx`; its imports
+and its table are cut.
 
 ```tsx
 type InvoiceListProps = {
@@ -473,7 +474,7 @@ reference application's control file; react.dev's page for the rule lists "deriv
 props" among its wrong examples.
 
 The GOOD reads the value where it is needed, `src/billing/pay-invoice/pay-invoice-form.tsx`, with
-the submit handler and the form's markup cut:
+the imports, the props type, the submit handler and the form's markup cut:
 
 ```tsx
 export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormProps) {

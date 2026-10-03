@@ -16,7 +16,8 @@ application, with the metric it serves and why it is good. Names are placeholder
 - [Not in the reference application](#not-in-the-reference-application)
 
 The reference application is not in this folder. The example files of the `react/` practices
-quote its code, and the checks named here were run on it on 2026-10-01 and 2026-10-02.
+quote its code, and the checks named here were run on it on 2026-10-01, 2026-10-02 and
+2026-10-03.
 
 What was verified, and what was not: the code was type-checked, linted, unit-tested and built.
 Nothing was run in a browser, so no metric of this application was measured. The example shows
@@ -108,6 +109,12 @@ Why it is good:
   The option carries its reason at the line (section 4 there). `keepalive` and
   `credentials: "omit"` carry theirs at their own lines in `ApiClient.report`, which
   [security-example.md](../security/security-example.md) section 5 quotes.
+- **It leaves out the time from an interaction to its network result**, which performance.md
+  section 3 asks for when an interaction waits for the network. The application's one such
+  interaction is the payment, and timing it needs a mark at the submit and one when the mutation
+  ends, which this file does not show. The cost: a slow payment request shows in no field metric.
+  INP ends at the next paint, when the button already reads "Paying…", while the user still waits
+  for the payment.
 
 ## The router: preload on intent
 
@@ -323,7 +330,8 @@ Why it is good:
   so this is the figure to compare: 0.62 MiB, about 650 kB, is the budget for a page that is
   mostly JavaScript, and this application is well under it. That is a size from the build, not a
   measured LCP. The uncompressed sizes in the first column are not comparable. The reference
-  application has no size gate, so the CI job of performance.md section 3 is not shown.
+  application has no CI job, so it has no size gate, and the CI job of performance.md section 3
+  is not shown. The cost: a build that grows past the budget passes unnoticed.
 - **The compiler is on**, which the memoisation rule of
   [components.md](../components/components.md) section 7 relies on (performance.md section 6). The comment
   keeps the order of the plugins, which a reader might otherwise change.
@@ -382,7 +390,5 @@ the server-rendered case and SEO. The server-rendered case (performance.md secti
 apply because the application renders in the browser only, and SEO (performance.md section 8)
 because its screens sit behind a login with nothing a crawler must read.
 
-The time from an interaction to its network result is not reported either, although
-performance.md section 3 asks for it when an interaction waits for the network. The pay screen's
-submit is that case: INP ends at the next paint, when the button already reads "Paying…", while
-the user still waits for the payment.
+The time from an interaction to its network result is not reported either; the last point under
+the field-metrics reporter says why, and what that costs.

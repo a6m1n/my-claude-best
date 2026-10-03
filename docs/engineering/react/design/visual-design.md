@@ -433,7 +433,7 @@ Amounts in proportional figures:
 ```tsx
 {/* Bad: proportional figures. A "1" is narrower than an "8", so the digits of
     the amounts do not line up and the eye cannot compare them down the column. */}
-<td>{formatCents(invoice.amountCents)}</td>
+<td>{moneyText(invoice.amountCents)}</td>
 <td>{invoice.dueOn}</td>
 ```
 
@@ -441,7 +441,7 @@ The digits shift from row to row. The same cells from the application's invoice 
 two cells that hold numbers:
 
 ```tsx
-<td className="tabular-nums">{formatCents(invoice.amountCents)}</td>
+<td className="tabular-nums">{moneyText(invoice.amountCents)}</td>
 <td className="tabular-nums">{invoice.dueOn}</td>
 ```
 

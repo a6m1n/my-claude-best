@@ -11,7 +11,7 @@ The code is quoted verbatim from a reference application on React 19.3, React Co
 TypeScript 6.0, Vite 8, TanStack Router 1 and TanStack Query 5 (versions read 2026-10-01). It was
 type-checked, linted with Oxlint and ESLint, unit-tested and built; nothing was run in a browser.
 The application is not in this folder: the example files of the `react/` practices quote its code,
-and the checks named were run on it on 2026-10-01 and 2026-10-02.
+and the checks named were run on it on 2026-10-01, 2026-10-02 and 2026-10-03.
 The whole tree and the configuration files are
 [layout-example.md](../architecture/layout-example.md); the accessibility of the markup is
 [accessibility.md](../design/accessibility.md) section 3.
@@ -21,7 +21,7 @@ Not shown: `invoices.queries.ts` and `invoice.queries.ts` hold one `queryOptions
 read when a payment succeeds. `payment.schema.ts` holds the Zod schemas of the payment method and
 the receipt. In `core/`, `invoice.schema.ts` holds the `Invoice` type both modules read (`id`,
 `customerName`, `customerUrl` or `null`, `amountCents`, `dueOn`, `paidOn` or `null`, `noteHtml` or
-`null`), `money.format.ts` holds `formatCents`, and `ui/` holds `Button` (shown in
+`null`), `money.format.ts` holds `moneyText`, and `ui/` holds `Button` (shown in
 [components.md](components.md) section 3). `list-invoices/external-link.tsx` holds `ExternalLink`,
 shown in [security-example.md](../security/security-example.md) section 3, and
 `pay-invoice/sanitized-html.tsx` holds `SanitizedHtml`. How those files are written is
@@ -133,8 +133,9 @@ The test sits beside the rule it tests; where a test file sits is
 [architecture.md](../architecture/architecture.md) section 3 (the tree), and the test tools are
 [libraries.md](../architecture/libraries.md) section 6. That section gives a component with
 behaviour of its own one test in Vitest Browser Mode, so `PayInvoiceForm` and `InvoiceList` each
-owe one. The reference application has none, and the rule's test is the only test this example
-shows.
+owe one. The reference application has none: Vitest Browser Mode needs a browser, and none was
+run for the reference application. The rule's test is the only test this example shows, and the
+cost is that no test checks the behaviour of the two components.
 
 ## The badge
 
@@ -190,7 +191,7 @@ import { invoiceStatus } from "@/billing/list-invoices/invoice-status.rules.ts";
 import { invoicesQueryOptions } from "@/billing/list-invoices/invoices.queries.ts";
 import type { ApiClient } from "@/core/api-client.ts";
 import type { Invoice } from "@/core/invoice.schema.ts";
-import { formatCents } from "@/core/money.format.ts";
+import { moneyText } from "@/core/money.format.ts";
 
 type InvoiceListProps = {
   // The route hands the client in, like `today`: the component reaches nothing by itself
@@ -238,7 +239,7 @@ export function InvoiceList({ apiClient, today, renderPayLink }: InvoiceListProp
                   <ExternalLink href={invoice.customerUrl}>{invoice.customerName}</ExternalLink>
                 )}
               </th>
-              <td className="tabular-nums">{formatCents(invoice.amountCents)}</td>
+              <td className="tabular-nums">{moneyText(invoice.amountCents)}</td>
               <td className="tabular-nums">{invoice.dueOn}</td>
               <td>
                 <InvoiceStatusBadge status={status} />
@@ -376,7 +377,7 @@ import { payInvoiceMutationOptions } from "@/billing/pay-invoice/pay-invoice.mut
 import { paymentMethodSchema } from "@/billing/pay-invoice/payment.schema.ts";
 import { SanitizedHtml } from "@/billing/pay-invoice/sanitized-html.tsx";
 import type { ApiClient } from "@/core/api-client.ts";
-import { formatCents } from "@/core/money.format.ts";
+import { moneyText } from "@/core/money.format.ts";
 import { Button } from "@/core/ui/button.tsx";
 
 type PayInvoiceFormProps = {
@@ -404,7 +405,7 @@ export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormP
   return (
     <form onSubmit={payInvoice} className="flex max-w-md flex-col gap-4">
       <p>
-        Amount due: <span className="font-medium tabular-nums">{formatCents(invoice.amountCents)}</span>
+        Amount due: <span className="font-medium tabular-nums">{moneyText(invoice.amountCents)}</span>
       </p>
 
       {invoice.noteHtml === null ? null : <SanitizedHtml html={invoice.noteHtml} />}

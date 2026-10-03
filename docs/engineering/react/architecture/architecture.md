@@ -658,7 +658,7 @@ marks a cut.
 ### Mistake 1. Server data copied into state (section 7)
 
 **Bad**: the list copies the cached invoices into its own state. From
-`src/billing/list-invoices/invoice-list.tsx`, with the imports and the table cut:
+`src/billing/list-invoices/invoice-list.tsx`, with the imports, the props type and the table cut:
 
 ```tsx
 export function InvoiceList({ apiClient, today, renderPayLink }: InvoiceListProps) {
