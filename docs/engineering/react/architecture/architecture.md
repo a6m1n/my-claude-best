@@ -4,7 +4,7 @@
 
 - [1. Purpose and the one rule](#1-purpose-and-the-one-rule)
 - [2. The application format](#2-the-application-format)
-- [3. The tree: the React case of file-structure](#3-the-tree-the-react-case-of-file-structure)
+- [3. The tree: by what the user does](#3-the-tree-by-what-the-user-does)
 - [4. File names](#4-file-names)
 - [5. Imports: absolute, direct, one way](#5-imports-absolute-direct-one-way)
 - [6. A screen is composed in its route](#6-a-screen-is-composed-in-its-route)
@@ -27,10 +27,10 @@ This file is for everyone who starts or grows a React application: people and AI
 Read it before you choose the format of an application, add a folder, a module or a route, or
 write a query, a mutation, a form or an error screen. Every line that carries a read date is to be distrusted after 2027-04-01 until it is read again; [README.md](README.md), under how to adopt, says how to list those lines.
 
-It is the React case of [file-structure.md](../../any-language/file-structure/file-structure.md).
-That practice owns the shape of the tree, the import direction, one role per file and absolute
-imports. This file links it for each of them and adds only what React changes: which folder is the
-adapter, where shared UI goes, the file names, the import alias, the tool that checks the
+Its tree has the shape of [file-structure.md](../../any-language/file-structure/file-structure.md):
+three kinds of folder, one import direction, one role per file and absolute imports. This file
+links that practice for those rules and argues the tree from React's own reasons (section 3). It
+adds the folders, where shared UI goes, the file names, the import alias, the tool that checks the
 direction, and where a test file sits. It also covers what file-structure leaves open: the format
 of the application, where state lives, how server data is read and written, routing, forms and
 errors. Other questions have their own owners:
@@ -38,6 +38,7 @@ errors. Other questions have their own owners:
 | Question | Owner |
 |---|---|
 | How one component or one hook is written | [components.md](../components/components.md) |
+| How props, state, events and refs are typed | [components.md](../components/components.md) section 3 |
 | Which library does which job, and its version | [libraries.md](libraries.md) |
 | What the browser side must and must not do | [security.md](../security/security.md) |
 | What fast means, and how to measure it | [performance.md](../performance/performance.md) |
@@ -51,9 +52,9 @@ shows it whole. Its code was type-checked, linted, unit-tested and built; nothin
 browser.
 
 The one rule: **every kind of thing has one home, and its kind decides where.** A screen lives in
-its route file. One thing the user does lives in its module. Code no module owns lives in `core/`
-([file-structure.md](../../any-language/file-structure/file-structure.md) section 4 says when code
-moves there). Data the server owns lives in the query cache. State a link should carry lives in the
+its route file. One thing the user does lives in its module. Code no module or route owns lives in
+`core/` ([file-structure.md](../../any-language/file-structure/file-structure.md) section 4 says
+when code moves there). Data the server owns lives in the query cache. State a link should carry lives in the
 URL. A reader who knows what kind of thing they want knows where to find it, and no value has a second copy that
 drifts away from the first.
 
@@ -100,10 +101,31 @@ table does not settle the argument. It says which need decides.
 
 This practice's examples are the first row: billing screens behind a login.
 
-## 3. The tree: the React case of file-structure
+## 3. The tree: by what the user does
 
-[file-structure.md](../../any-language/file-structure/file-structure.md) section 2 owns the shape: three
-kinds of folder and one import direction. In a React application they are these folders:
+The tree groups code by what the user does, and each screen is composed in its route. The reasons
+are React's. Files that change together sit together, so a change to one user flow stays in one
+folder (colocation, quoted in the module rule below). react.dev asks for a screen's data
+dependencies "at the route level", so the route is where a screen's data and parts meet (section
+6). A screen loads what it imports, and Vite fetches every file a barrel lists, so a module is
+imported file by file (section 5). And a team can change or delete one module alone:
+bulletproof-react, Robin Wieruch, Nadia Makarevich (2022) and Feature-Sliced Design all keep
+features from importing each other, none of the four argues from a backend, and Makarevich names
+independence and cheap refactoring as her reasons.
+
+The shape is the one these React sources prescribe. bulletproof-react composes features "at the
+application level", Robin Wieruch's features do not import each other, and Angular's style guide, a
+frontend owner, says to organise by feature and to "avoid creating directories like `components`,
+`directives`, and `services`". React's own word is short: the old React FAQ, no longer updated,
+says "don't spend more than five minutes on choosing a file structure", and that larger projects
+"often use a mix" of grouping by feature and by file type. Josh Comeau groups by type instead: in
+his experience "real life isn't nicely segmented", and feature boundaries become arbitrary. This
+practice stays by feature, because a flow kept in one folder is changed and deleted in one place,
+which is what the sources above argue for. TanStack Router's own examples keep code that is not a
+route by type (`components/`, `utils/`) or as loose files beside `routes/`; they are demos of the
+router, not models of a growing application. The shape is the same as
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 2's, three kinds
+of folder and one import direction, and in a React application the folders are these:
 
 ```text
 src/
@@ -123,25 +145,25 @@ src/
 └── routes/               # the adapter: turns a URL into a screen composed from modules
 ```
 
-| Kind in file-structure | React folder | Holds | Imports |
+| React folder | Holds | Imports | Same kind in file-structure.md |
 |---|---|---|---|
-| the file that starts the process (section 5) | `src/main.tsx` | reads the settings, builds the API client, the query client and the router once, gives the router its default screens, renders | anything; it sits outside every layer |
-| `core/` (section 4) | `src/core/` | the API client, the settings, the query client, the schemas and query-key roots that two modules share, formats | libraries and `core/`; never the router |
-| part of `core/` | `src/core/ui/` | design-system components with no business words | the same as `core/` |
-| a module (section 3) | `src/<domain>/<module>/` | one thing the user does: its components, hooks, queries, mutations, schemas, rules, and their tests | its own files, `core/` and libraries; never another module, a route or the router |
-| an adapter (section 5) | `src/routes/` | one file per route, with its loader and its screen; the router's own error screen | modules, `core/` and the router |
+| `src/main.tsx` | reads the settings, builds the API client, the query client and the router once, gives the router its default screens, renders | anything; it sits outside every layer | the file that starts the process (section 5) |
+| `src/core/` | the API client, the settings, the query client, the schemas and query-key roots that two modules share, formats | libraries and `core/`; never the router | `core/` (section 4) |
+| `src/core/ui/` | design-system components with no business words | the same as `core/` | part of `core/` |
+| `src/<domain>/<module>/` | one thing the user does: its components, hooks, queries, mutations, schemas, rules, and their tests | its own files, `core/` and libraries; never another module, a route or the router | a module (section 3) |
+| `src/routes/` | one file per route, with its loader and its screen; the router's own error screen; and code one route uses, in `-` folders, in a code base that keeps one-route flows there (section 3, Scalability) | modules, `core/` and the router | an adapter (section 5) |
 
-- **`routes/` is the adapter, and the router is its framework.** A route file turns a URL into a
-  screen: its loader starts the fetches of the modules, and its component places their components.
-  It holds no business rule, as
-  [file-structure.md](../../any-language/file-structure/file-structure.md) section 5 says of every
-  adapter. Nothing outside `routes/` and `main.tsx` imports the router, because
-  [file-structure.md](../../any-language/file-structure/file-structure.md) section 2 keeps a framework
-  in its adapter; section 6 below says how a module gets a link without it. The router's default
-  error screen calls the router to retry, so it sits in `routes/`, named with the `-` prefix that
-  tells TanStack Router the file is not a route: `routes/-screen-error.tsx`. A pending screen that
-  needs no router stays in `core/ui/`. The boundary rule of section 5 checks imports between
-  folders, not imports of a library, so a second rule catches a router import in the wrong place.
+- **`routes/` composes each screen, and only it and `main.tsx` import the router.** A route file
+  turns a URL into a screen: its loader starts the fetches of the modules, and its component places
+  their components. It holds no business rule
+  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 5). No owner
+  says that only `routes/` imports the router; it is this practice's choice, because a module's
+  component then renders and is tested without a router, and section 6 says how a module gets a
+  link without it. The router's default error screen calls the router to retry, so it sits in
+  `routes/`, named with the `-` prefix that tells TanStack Router the file is not a route:
+  `routes/-screen-error.tsx`. A pending screen that needs no router stays in `core/ui/`. The
+  boundary rule of section 5 checks imports between folders, not imports of a library, so a second
+  rule catches a router import in the wrong place.
 
   Check: ESLint's `no-restricted-imports` fails on an import of `@tanstack/react-router` in `core/`
   or in a module; only `routes/` and `main.tsx` are left free of it
@@ -150,9 +172,11 @@ src/
   field. A component that knows about invoices stays in its module, even when a second module could
   use it; [file-structure.md](../../any-language/file-structure/file-structure.md) section 6,
   move 3, decides whether it moves down or is copied. Robin
-  Wieruch promotes code that two features use to a shared folder. Here that folder is `core/`,
-  because [file-structure.md](../../any-language/file-structure/file-structure.md) section 7 bans
-  the name `shared`.
+  Wieruch promotes code that two features use to a shared folder. Here that folder is `core/`, by
+  this library's naming rule, which bans the name `shared`
+  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 7). React
+  sources usually call this folder `shared` (Feature-Sliced Design), `lib` or `components/ui`
+  (shadcn/ui), and no React source bans the name.
 - **A module keeps its components next to its data code.** Its components, queries, mutations,
   schemas and rules sit in one folder, so a change to paying an invoice stays in `pay-invoice/`.
   Kent C. Dodds' rule: "Place code as close to where it's relevant as possible"; he credits Dan
@@ -163,25 +187,42 @@ src/
   `tests/` tree of
   [python/testing/layout.md](../../python/testing/layout.md). The colocation reason above holds: a
   test changes with its file, and a reader who opens the folder sees both. The test imports by the
-  same `@/` path as every other file. The evidence is one practitioner's principle, Kent C. Dodds'
-  essay on colocation; no tool owner in the sources read says where a test file sits.
-- **`main.tsx` builds each shared object once**, at startup: the API client, the query client and
-  the router. It hands both clients to the router's context, so every loader reads the same cache,
-  as TanStack Router's guide to external data loading does. This is
-  [file-structure.md](../../any-language/file-structure/file-structure.md) section 4's
-  client, built once at startup and handed in. Only `main.tsx` imports `core/config.ts`: it reads
-  the settings and passes values on, such as the API's base URL, and nothing below it reads them.
+  same `@/` path as every other file. Angular's style guide puts unit tests in the same directory
+  as the code they test, Robin Wieruch colocates them, and Kent C. Dodds gives the reason. Inside
+  `routes/`, the router plugin treats every file as a route candidate, so a test beside a route
+  file needs `routeFileIgnorePattern: "\\.test\\.tsx?$"` in the plugin's options: without it the
+  plugin warns about every test file on each build, and in development it writes a route template
+  into a new empty file there. None of the eight TanStack examples read on 2026-10-03 sets this
+  pattern or keeps a test in `routes/`. A TanStack maintainer pointed to this option for tests
+  beside routes in a 2024 discussion; none of those eight examples uses it, so the pattern
+  `\\.test\\.tsx?$` is this practice's own setting. TanStack's testing guide puts route tests in a
+  parallel `src/test/routes/` tree instead. [layout-example.md](layout-example.md) section 3 shows
+  the pattern.
 - **A generated file is never edited.** The router plugin writes `route-tree.gen.ts` on every dev
   run and every build, and both linters skip it. The plugin's default name is `routeTree.gen.ts`;
   the example sets a kebab-case name, so section 4 holds for this file too.
-- **Scalability: the tree grows by the moves of
-  [file-structure.md](../../any-language/file-structure/file-structure.md) section 6**, which this
-  file does not restate. What grows is the number of modules, the size of the team, and the time
-  the lint and the build take. Two rules carry that growth: no module imports another, which the
-  boundary tool of section 5 checks, and the moves of
-  [file-structure.md](../../any-language/file-structure/file-structure.md) section 6. A module that
-  grows splits by role files first, before it is split into two modules. Section 16 says where this
-  shape stops holding.
+- **Scalability: the tree grows in steps.** By default a user flow is a module from its first
+  route, as section 1, the table above and [layout-example.md](layout-example.md) do. That is
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 6, move 1, a new
+  feature is a new module, with its tests beside its files rather than in `tests/` (the test bullet
+  above). Moves 3 and 4 there carry over as written. Moves 2 and 6 take this file's forms: a file
+  that becomes a folder gets no index file (section 5), and a new module or a second domain folder
+  needs no change to the lint config, since its patterns capture the domain and the module
+  ([layout-example.md](layout-example.md) section 3). Feature-Sliced Design v2.1
+  names the cost: a module that serves one route spreads one user flow over a route file and a
+  module. The allowed alternative: a code base may keep a flow that one route uses in that route's
+  `-` folder (`routes/invoices/-components/`), which the router leaves out of the route tree, an
+  option its docs give and none of the eight TanStack examples read on 2026-10-03 uses, and make
+  it a module when a second route reuses it, the line v2.1 draws. A code base picks one of the two
+  and keeps it, so each kind of thing still has one home; the alternative departs from move 1 for
+  a flow that one route uses. A `-` folder holds what v2.1 keeps in a page: UI, forms and data
+  logic, such as the route's queries and mutations, that no other route reuses. It belongs to the
+  route files in the folder that holds it: `routes/invoices/-components/` belongs to the routes
+  under `routes/invoices/`. Only those files import it, it imports what a route may import, and a
+  business rule, a pure decision with its test, still goes to a module, as the first bullet of this
+  section says. When `routes/` grows, `(group)` folders sort its files without changing a URL.
+
+  Check: in review, does any import of a `-` folder come from outside its folder?
 
 ## 4. File names
 
@@ -217,12 +258,15 @@ src/
   TanStack Query maintainer calls a key factory `todoKeys`. Everything else follows section 7 as it
   stands: a function is named for what it answers (`invoiceStatus` in `invoice-status.rules.ts`), and
   a type for its subject (`InvoiceStatus`, `PaymentMethod`).
-- **Route files take the router's own names**: `__root.tsx`, `invoices.index.tsx`,
+- **Only route files take the router's own names**: `__root.tsx`, `invoices.index.tsx`,
   `invoices.$invoiceId.pay.tsx`. The router plugin reads meaning from them: `$` makes a parameter,
   `.` nests a route, and a `-` prefix leaves a file out of the route tree. Kebab-case does not apply
-  in `routes/`.
-- **Never `utils`, `helpers`, `common` or `shared`**, as a file or a folder
-  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 7).
+  to route files. A `-`-prefixed file and the files in a `-` folder are no routes, so kebab-case
+  and the role suffixes hold for them, and a file keeps its name when a second route reuses it and
+  it moves to a module. Both name checks skip `src/routes/`, so review checks those names.
+- **Never a name that [file-structure.md](../../any-language/file-structure/file-structure.md)
+  section 7 bans**, such as `utils` or `shared`, as a file or a folder. This is this library's
+  naming rule; section 3 says what React sources call such a folder.
 
 With `ignoreMiddleExtensions`, the name check below reads the name before the role suffix, so
 `invoice-status.rules.test.ts` passes it.
@@ -280,12 +324,11 @@ direction in section 11 there. This section gives each its React form.
   module importing another module, a module importing a route, `core/` importing a module, and a
   module importing a module of the same name in another domain.
 
-  Version notes (read 2026-10-01): the rule was called `boundaries/element-types` before version 6,
-  so a guide that uses that name is for version 5 or older. In version 7.2 the allowed imports sit
-  under the key `policies`, and the plugin's README and docs write them there. The older key
-  `rules` still works in 7.2.0 and printed a deprecation warning when the example was checked. What
-  the rule cannot see: it reads imports through
-  `eslint-import-resolver-typescript`, and only those that resolver can resolve. How it treats
+  Its version notes and config keys are [libraries.md](libraries.md) section 4's. What the rule
+  cannot see: it reads imports through `eslint-import-resolver-typescript`, and only those that
+  resolver can resolve. A file in none of the three kinds of folder, such as one directly in a
+  domain folder, is no element, and the rule skips an import of it unless `checkUnknownLocals` is
+  on; the example turns it on, so two modules cannot share such a file. How it treats
   `import type` and a dynamic `import()` was not verified.
 
   Check: `boundaries/dependencies` fails the lint ([layout-example.md](layout-example.md)
@@ -304,9 +347,8 @@ direction in section 11 there. This section gives each its React form.
   not import each other holds.
 - **A module gets a link or a navigation from the route.** A link comes in as a render prop
   (`renderPayLink`), a navigation as a callback (`onPaid`). The module then names no URL and imports
-  no router. No owner states this; it is this practice's design, built on
-  [file-structure.md](../../any-language/file-structure/file-structure.md) section 2:
-  a framework stays in its adapter. The reason is coupling that nothing shows. A module that writes
+  no router. No owner states this; it is this practice's design, and it follows from the router
+  rule of section 3. The reason is coupling that nothing shows. A module that writes
   `<Link to="/invoices/$invoiceId/pay">` depends on the pay screen through the router's registered
   types, with no import between the two modules for the boundary rule to see. The cost is one prop
   per link or navigation a module offers. [layout-example.md](layout-example.md) section 5 shows
@@ -355,8 +397,11 @@ that reads it.
 
 ## 8. Server data: reads
 
-- **Build the API client once, in `src/main.tsx`, and hand it on.** The router's context carries it
-  to every loader. The route's component reads it with `Route.useRouteContext()` and gives it to a
+- **Build the API client once, in `src/main.tsx`, and hand it on.** `main.tsx` builds each shared
+  object once, at startup: the API client, the query client and the router. The router's context
+  carries both clients to every loader, so every loader reads the same cache, as TanStack Router's
+  guide to external data loading does. The route's component reads the API client with
+  `Route.useRouteContext()` and gives it to a
   module's component as a prop, and the module's `queryOptions` and `mutationOptions` take it as
   their first parameter (`invoicesQueryOptions(apiClient)`). The rule itself is
   [file-structure.md](../../any-language/file-structure/file-structure.md) section 4's for a
@@ -369,8 +414,9 @@ that reads it.
   Check: ESLint's `no-restricted-imports` fails on an import of `core/config.ts` in any file but
   `src/main.tsx` ([layout-example.md](layout-example.md) section 3). In review, does any file
   import a ready-made client instead of taking one?
-- **Write one `queryOptions` per query, in the module's `<name>.queries.ts`**, with the key and the
-  fetch function together. The route's loader, the component and an invalidation all call the same
+- **Write one `queryOptions` per query, in a `<name>.queries.ts` file of its module, or of its
+  route's `-` folder while one route reads it, in a code base that keeps one-route flows there
+  (section 3)**, with the key and the fetch function together. The route's loader, the component and an invalidation all call the same
   function. TkDodo: "Separating QueryKey from QueryFunction was a mistake." TanStack Query's guide
   says `queryOptions` exists to "share queryKey and queryFn between multiple places, yet keep them
   co-located". Export the options, not a hook that wraps them: TkDodo wrote in February 2026 that
@@ -401,7 +447,8 @@ that reads it.
   a preload always asks the query cache and the router keeps no second copy of loader data (TanStack
   Router's preloading guide).
 - **Every response is parsed with its schema, in the one API client.** `core/api-client.ts` takes
-  the schema with the request and returns `schema.parse(...)` of the body, never a cast. No owner in
+  the schema with the request and returns `schema.parse(...)` of the body, never a cast, and the
+  type of the result is inferred from the schema (section 13). No owner in
   the sources read states this; it is this practice's choice. A TypeScript type is a claim the
   compiler cannot check against data that arrives at run time. A cast lets a changed response
   through to a component that fails far from the cause; a parse fails at the boundary and names the
@@ -411,10 +458,11 @@ that reads it.
 
 ## 9. Server data: writes
 
-- **Write one `mutationOptions` per write, in the module's `<name>.mutations.ts`**, beside the
-  module's queries. `mutationOptions` is the twin of `queryOptions` in TanStack Query 5, and a file
-  per role keeps the reads and the writes apart
-  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 3).
+- **Write one `mutationOptions` per write, in a `<name>.mutations.ts` file of its module, or of its
+  route's `-` folder while one route uses it, in a code base that keeps one-route flows there
+  (section 3)**, beside the queries. `mutationOptions`
+  is the twin of `queryOptions` in TanStack Query 5, and a file per role keeps the reads and the
+  writes apart ([file-structure.md](../../any-language/file-structure/file-structure.md) section 3).
 - **Call `mutate`, and react in its callbacks.** Use `mutateAsync` only when a second write waits
   for the result of the first: `mutate` returns nothing, and `mutateAsync` throws on an error that
   the caller then has to catch (TkDodo; TanStack Query's mutations guide).
@@ -544,19 +592,39 @@ example.
 
 ## 13. TypeScript settings
 
-- **Turn on three flags beyond `strict`.** `noUncheckedIndexedAccess`: a read by index or by key may
-  be `undefined`, so the code has to check it. `verbatimModuleSyntax`: imports are emitted as
-  written, so a type-only import says `import type`. `erasableSyntaxOnly`: a file holds only syntax
-  that a tool which strips types can remove. All three are off by default (TypeScript's TSConfig
-  reference, read 2026-10-01), and create-vite's React template already sets the last two. The
-  TypeScript team declined to fold `noUncheckedIndexedAccess` into `strict`, so you set it by hand.
+This section owns the compiler settings and the typing rules for the whole project; component
+typing is [components.md](../components/components.md) section 3, and the version is
+[libraries.md](libraries.md) section 3.
+
+- **Turn on three flags beyond `strict`**, which TypeScript 6.0 turns on by default.
+  `noUncheckedIndexedAccess`: a read by index or by key may be `undefined`, so the code has to check
+  it. `verbatimModuleSyntax` and `erasableSyntaxOnly` are the next two rules. All three are off by
+  default (TypeScript's TSConfig reference, read 2026-10-01), and create-vite's React template
+  already sets the last two. The TypeScript team declined to fold `noUncheckedIndexedAccess` into
+  `strict`, so you set it by hand.
+- **`verbatimModuleSyntax`: a type-only import says `import type`.** Imports are emitted as
+  written, so a bundler that strips types never keeps a runtime import by mistake. Add no
+  `consistent-type-imports`: the flag already enforces `import type`, and the two can report
+  conflicting fixes.
+- **`erasableSyntaxOnly`: a file holds only syntax that a tool which strips types can remove.**
+  Node runs a `.ts` file by stripping its types, file by file, and cannot run syntax that emits
+  code; with the flag the same code runs there and in Vite's build. So `enum`, `namespace` with
+  code and constructor parameter properties are compile errors. Write a closed set as a union of
+  string literals; when its values are needed at run time, use an `as const` object (TypeScript
+  handbook, Enums). The flag is the check: add no lint rule against `enum`.
+- **Turn on `switch-exhaustiveness-check` by name in `eslint.config.js` when the code switches over
+  a union with no `default`**: it reports a member with no `case`, so a value added to the union
+  later cannot pass unhandled; no recommended, strict or stylistic preset turns it on (the `all`
+  config does).
+- **Write each data type once, as `z.infer<typeof schema>` beside its schema**, so the type cannot
+  drift from the schema the API client parses with (section 8). The API client's `request` returns
+  `z.infer<TSchema>`, so `queryOptions`, `mutationOptions` and `useSuspenseQuery` infer their types:
+  give them no type arguments, because one type argument forces all of them (TkDodo).
 - **Leave `exactOptionalPropertyTypes` off.** It breaks the types of libraries not written for it:
   Radix's issue to support it was open with no maintainer reply (read 2026-10-01).
 - **Declare `paths` with no `baseUrl`**, as section 5 says.
-- **Stay on TypeScript 6.0 for now.** TypeScript 7.0, the native compiler, ships with no
-  programmatic API, and the TypeScript team expects one in 7.1. typescript-eslint's type-aware rules
-  need that API, so the project stays on 6.0 until it arrives (read 2026-10-01). The pin, and the
-  package that runs 6.0 beside 7 for the linter, are in [libraries.md](libraries.md).
+- The TypeScript version is pinned until typescript-eslint supports TypeScript 7:
+  [libraries.md](libraries.md) section 3.
 
 ## 14. The server-rendered case
 
@@ -564,9 +632,9 @@ When section 2 sends some routes to a framework that renders on the server, or t
 application to a framework in single-page mode, the tree keeps its shape, and the adapter moves to
 the framework's routes folder. In single-page mode the tree (section 3), state (section 7), server
 data (sections 8 and 9) and the components still hold. The framework's own conventions replace the
-routes folder and the loaders. No source read states this split; it follows from
-[file-structure.md](../../any-language/file-structure/file-structure.md) section 2, which keeps a
-framework in its adapter.
+routes folder and the loaders. No source read states this split; it is this practice's reading of
+section 3: the routes folder is where a screen is composed, so the framework's routes folder takes
+that place, and the modules and `core/` stay as they are.
 
 - **The framework's routes folder is the adapter.** In Next.js that folder is `app/`. A folder in it
   becomes a public route only when it holds a `page` or a `route` file, and the Next.js docs allow
@@ -778,9 +846,10 @@ src/
 
 The top of the tree says nothing about what the application does. A change to paying an invoice
 spreads over `features/`, `components/` and `hooks/`, and `utils/` and `shared/` collect whatever
-nobody placed. [file-structure.md](../../any-language/file-structure/file-structure.md) rejects
-each folder: a domain folder is named for the business (section 2 there), role folders sit inside
-a module (section 3 there), and `utils` and `shared` are banned names (section 7 there). Many React
+nobody placed. Angular's style guide, a frontend owner, says to organise by feature and to "avoid
+creating directories like `components`, `directives`, and `services`" (section 3), and `utils` and
+`shared` are banned by this library's naming rule
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 7). Many React
 guides start here: bulletproof-react's top level has `components/`, `hooks/` and `utils/` beside
 `features/`. No linter in the example reports it.
 
@@ -802,9 +871,7 @@ the module that uses them, what no module owns is in `core/`, and shared UI is i
 
 ## 16. Where the rules stop holding
 
-- **A prototype or a one-screen tool.** Below two modules the three kinds of folder are ceremony
-  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 12). Start with
-  one folder, and move to this shape at the second module.
+- **A prototype or a one-screen tool.** Start flat and grow by the steps of section 3.
 - **A component library published as a package.** Its entry file is its public API, and its users
   import from it by name. This practice is for applications, as
   [file-structure.md](../../any-language/file-structure/file-structure.md) section 12 says of
@@ -826,8 +893,8 @@ template.
 | Section | Ask | Red flag |
 |---|---|---|
 | 2. Format | Does any page need a crawler, a link preview or a fast first paint on a slow device? | Public pages that must be indexed, served as a plain client-rendered app; a server runtime behind a login that uses none of its features |
-| 3. The tree | Can I tell each file's kind from its folder? | A business word in `core/ui/`; a router import outside `routes/` and `main.tsx`; a test away from the file it tests |
-| 4. File names | Does each name say what the file holds and its role? | A name outside `routes/` that is not kebab-case; a role file without its suffix; `utils`, `helpers` or `shared` |
+| 3. The tree | Can I tell each file's kind from its folder? | A business word in `core/ui/`; a router import outside `routes/` and `main.tsx`; a test away from the file it tests; a test in `routes/` with no `routeFileIgnorePattern` for it; a route that imports a `-` folder outside its own folder |
+| 4. File names | Does each name say what the file holds and its role? | A name outside `routes/` that is not kebab-case; a role file without its suffix; a name that file-structure.md section 7 bans |
 | 5. Imports | Does each import name the file that holds the name, by `@/`? | An `index.ts` that only re-exports; `./` or `../`; a boundary rule turned off for a line |
 | 6. Composition | Is every screen that uses two modules composed in its route? | A module that imports another module, names a URL or imports the router |
 | 7. State | Is each piece of state on the lowest rung that serves its readers? | Server data in `useState` or a store; a filter a link should carry, held in component state |
@@ -836,7 +903,7 @@ template.
 | 10. Routing | Does a route file only load and compose? | A business rule in a route file; search params read without a schema |
 | 11. Forms | Does the form's tool fit its size? | A complex form built by hand with a `useState` per field; an Actions form that must keep its values after a submit |
 | 12. Errors | Can every route fail and load without a blank screen? | No default error screen; a retry that does not reset the failed query |
-| 13. TypeScript | Are the three flags on, and is the version pinned to 6.0? | `exactOptionalPropertyTypes` on; `baseUrl` set |
+| 13. TypeScript | Are the three flags on, and is TypeScript at the version libraries.md section 3 names? | `exactOptionalPropertyTypes` on; `baseUrl` set; a type argument on a query hook; a hand-written type beside its schema; a `switch` over a union with no `default` and `switch-exhaustiveness-check` off |
 
 ## 18. Sources
 
@@ -852,7 +919,7 @@ of the React rules.
    (a build from scratch is "your own adhoc framework").
 3. react.dev, "Sunsetting Create React App", 2025-02-14:
    https://react.dev/blog/2025/02/14/sunsetting-create-react-app (frameworks run as SPAs on static
-   hosting; fetching in effects causes waterfalls).
+   hosting; fetching in effects causes waterfalls; data dependencies "at the route level").
 4. React Router, its pages on modes and on SPA mode: https://reactrouter.com/start/modes ,
    https://reactrouter.com/how-to/spa ; TanStack Start, "SPA mode":
    https://tanstack.com/start/latest/docs/framework/react/guide/spa-mode (the single-page mode of
@@ -885,12 +952,12 @@ of the React rules.
     (the `@/*` alias; kebab-case enforced by `check-file`).
 12. Robin Wieruch, "React Folder Structure", updated 2026-05-05:
     https://www.robinwieruch.de/react-folder-structure/ (features do not import each other; code two
-    features use is promoted; index files as a public API).
+    features use is promoted; index files as a public API; tests beside their components).
 13. Robin Wieruch, "React Feature Architecture", 2024-11-25:
     https://www.robinwieruch.de/react-feature-architecture/ (composition at the parent level keeps
     fetches parallel).
 14. Kent C. Dodds, "Colocation", 2019: https://kentcdodds.com/blog/colocation (code as close to
-    where it is relevant as possible; the principle behind tests beside their file).
+    where it is relevant as possible; the reason for tests beside their file).
 15. Next.js docs, "Project structure", 2026-07-21:
     https://nextjs.org/docs/app/getting-started/project-structure ("unopinionated"; `app/` purely
     for routing; no convention for component file names).
@@ -1045,3 +1112,49 @@ of the React rules.
 
 64. TanStack Router, "Authenticated Routes":
     https://tanstack.com/router/latest/docs/framework/react/guide/authenticated-routes .
+
+**Added on review, 2026-10-03 (sections 3 and 13)**
+
+65. Angular, "Style guide": https://angular.dev/style-guide , read 2026-10-03 (organise by feature;
+    "avoid creating directories like `components`, `directives`, and `services`"; unit tests in the
+    same directory as the code they test).
+66. Nadia Makarevich, on React project structure, 2022:
+    https://www.developerway.com/posts/react-project-structure (independent features; independence
+    and cheap refactoring as the reasons).
+67. Feature-Sliced Design, "Overview": https://feature-sliced.design/docs/get-started/overview (the
+    bottom layer is `shared`; no imports within a layer); its v2.1 release, 2024-11-13:
+    https://github.com/feature-sliced/documentation/discussions/756 (code no other page reuses stays
+    in the page's slice; one user flow spread over several folders is the cost).
+68. React's legacy FAQ, "File Structure": https://legacy.reactjs.org/docs/faq-structure.html (no
+    longer updated; "don't spend more than five minutes"; a mix of both as projects grow).
+69. Josh Comeau, on React file structure, updated 2025-12-03:
+    https://www.joshwcomeau.com/react/file-structure/ (folders by type; "real life isn't nicely
+    segmented"; one person's experience).
+70. TanStack Router's examples, the `src/` listings under
+    https://api.github.com/repos/TanStack/router/contents/examples/react/ (start-basic,
+    basic-react-query-file-based, large-file-based and others), read 2026-10-03 (code that is not a
+    route kept by type or loose; no `-` folder; none of the eight read sets `routeFileIgnorePattern`
+    or keeps a test in `routes/`).
+71. TanStack Router, "How to test file-based routing":
+    https://tanstack.com/router/latest/docs/how-to/test-file-based-routing (route tests in a parallel
+    `src/test/routes/` tree); its generator's config:
+    https://raw.githubusercontent.com/TanStack/router/main/packages/router-generator/src/config.ts
+    (`routeFileIgnorePattern` has no default); discussion 6697, 2026-02-18:
+    https://github.com/TanStack/router/discussions/6697 (the plugin writes a route template into a new
+    file in `routes/`). Read 2026-10-03.
+72. TypeScript 5.8 release notes:
+    https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-8.html (what
+    `erasableSyntaxOnly` rejects); TypeScript handbook, "Enums":
+    https://www.typescriptlang.org/docs/handbook/enums.html (`as const` objects); "Announcing
+    TypeScript 6.0", 2026-03-23: https://devblogs.microsoft.com/typescript/announcing-typescript-6-0/
+    (`strict` on by default).
+73. typescript-eslint, `consistent-type-imports` and `switch-exhaustiveness-check`:
+    https://typescript-eslint.io/rules/consistent-type-imports/ ,
+    https://typescript-eslint.io/rules/switch-exhaustiveness-check/ (reports that conflict with
+    `verbatimModuleSyntax`; a missing `case` over a union).
+74. TkDodo, "React Query and TypeScript": https://tkdodo.eu/blog/react-query-and-type-script (type
+    the fetcher, let the hooks infer; no partial type-argument inference); Zod's API docs:
+    https://zod.dev/api (`z.infer`).
+75. TanStack Router discussion 3046, 2024-12-19:
+    https://github.com/TanStack/router/discussions/3046 (a maintainer points to
+    `routeFileIgnorePattern` for tests kept beside routes). Read 2026-10-03.

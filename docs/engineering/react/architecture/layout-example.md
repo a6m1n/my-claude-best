@@ -89,7 +89,9 @@ What to notice:
 
 - **Each module is one thing the user does**, named for it: seeing the invoices, paying one
   ([file-structure.md](../../any-language/file-structure/file-structure.md) section 1). Both modules
-  read invoices, and neither imports the other.
+  read invoices, and neither imports the other. Each serves one route, and the example takes the
+  default of [architecture.md](architecture.md) section 3: a user flow is a module from its first
+  route.
 - **`core/` holds what both modules need**: the invoice schema, the key root, the API client class and
   the query client ([architecture.md](architecture.md) sections 3 and 6). The status badge knows about
   invoices, so it stays in its module and not in `core/ui/`. The link, its rule and the sanitised
@@ -102,7 +104,10 @@ What to notice:
   ([architecture.md](architecture.md) section 4). The files in `routes/` take the router's names.
 - **The test sits beside the rule it tests** ([architecture.md](architecture.md) section 3).
   `vitest run` found both test files, both in `list-invoices/`, with no test settings in
-  `vite.config.ts`.
+  `vite.config.ts`. A test beside a route file needs the router plugin's `routeFileIgnorePattern`,
+  set in section 3 of this file. A TanStack maintainer pointed to this option for tests beside
+  routes in a 2024 discussion; none of the eight TanStack examples read on 2026-10-03 uses it, so
+  the pattern is this practice's own setting.
 - **`routes/` holds the route files and the adapter's own error screen.** The `-` prefix keeps the
   error screen out of the route tree. The route files, the error screen and `main.tsx` are the only
   hand-written files that import the router ([architecture.md](architecture.md) section 3).
@@ -129,12 +134,18 @@ written by hand to the same end state.
    `min-release-age`, pass `--ignore-scripts --before=<date>` to each install command instead.
 3. **Install what the example's `package.json` lists beyond the template**, so the libraries are
    the ones the rules assume ([libraries.md](libraries.md) section 2 for the runtime and the
-   build, section 4 for the lint, section 6 for the tests). The names are below, with no
-   versions; [libraries.md](libraries.md) section 8 has the versions that passed the checks:
+   build, section 4 for the lint, section 6 for the tests). `eslint-import-resolver-typescript`
+   pulls in `unrs-resolver`, and `fsevents` (optional, macOS) comes with the dev tools; both carry
+   an install script, which the files of step 2 fail on unless reviewed. The reference application
+   was installed with scripts ignored and its checks passed, so neither script is needed: deny
+   both before the first install, with `unrs-resolver: false` and `fsevents: false` under
+   `allowBuilds` (pnpm), or with a denial in `package.json`'s `allowScripts`, which
+   `npm deny-scripts` writes (npm 12). The names are below, with no versions;
+   [libraries.md](libraries.md) section 8 has the versions that passed the checks:
 
    ```sh
    npm install @tanstack/react-query @tanstack/react-router zod
-   npm install -D @tanstack/router-plugin tailwindcss @tailwindcss/vite babel-plugin-react-compiler @rolldown/plugin-babel @babel/core eslint @eslint/js typescript-eslint eslint-plugin-react-hooks eslint-plugin-boundaries eslint-import-resolver-typescript eslint-plugin-check-file eslint-plugin-oxlint vitest
+   npm install -D @tanstack/router-plugin tailwindcss @tailwindcss/vite babel-plugin-react-compiler @rolldown/plugin-babel @babel/core eslint @eslint/js typescript-eslint eslint-plugin-boundaries eslint-import-resolver-typescript eslint-plugin-check-file eslint-plugin-oxlint vitest
    ```
 
    Add `dompurify` and `web-vitals` when the first screen needs them.
@@ -143,7 +154,10 @@ written by hand to the same end state.
    follows uses it, and the checks come before the first module so that no module is written against
    a rule that does not run yet. Then add the four scripts of section 7 of this file
    (`typecheck`, `lint`, `test`, `build`) to the template's: the template has no `typecheck` and
-   no `test`, and its `lint` runs Oxlint alone.
+   no `test`, and its `lint` runs Oxlint alone. Delete the template's `src/App.tsx`, `src/App.css`,
+   `src/index.css` and `src/assets/`, and replace its `src/main.tsx` with section 4's: the
+   template's files use a PascalCase name and relative imports, which the checks of section 3
+   reject.
 5. **Write the first module and its route, then run `npm run typecheck`, `npm run lint`,
    `npm test` and `npm run build`.** All four exit 0 before the second module is started, so a
    broken rule is found while it has one file to blame.
@@ -232,6 +246,9 @@ export default defineConfig({
       autoCodeSplitting: true,
       routesDirectory: "./src/routes",
       generatedRouteTree: "./src/route-tree.gen.ts",
+      // A test sits beside the route file it tests: without this pattern the plugin warns on
+      // every build that the test file exports no route (architecture.md section 3).
+      routeFileIgnorePattern: "\\.test\\.tsx?$",
     }),
     react(),
     babel({ presets: [reactCompilerPreset()] }),
@@ -254,7 +271,9 @@ Why it is good:
 - **The router plugin points at the adapter folder and gives the generated tree a kebab-case
   name** ([architecture.md](architecture.md) section 3). `autoCodeSplitting` makes each route's
   component its own chunk ([architecture.md](architecture.md) section 10), and the comment says why
-  the plugin comes first.
+  the plugin comes first. `routeFileIgnorePattern` keeps a test file beside a route out of the route
+  tree, so the plugin does not warn about it on each build ([architecture.md](architecture.md)
+  section 3).
 - The React Compiler preset is [components.md](../components/components.md)'s, and the Tailwind
   plugin is [visual-design.md](../design/visual-design.md)'s.
 
@@ -267,7 +286,6 @@ import js from "@eslint/js";
 import boundaries from "eslint-plugin-boundaries";
 import checkFile from "eslint-plugin-check-file";
 import oxlint from "eslint-plugin-oxlint";
-import reactHooks from "eslint-plugin-react-hooks";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 
@@ -287,15 +305,17 @@ export default defineConfig([
   globalIgnores(["dist", "src/route-tree.gen.ts"]),
   {
     files: ["src/**/*.{ts,tsx}"],
-    extends: [js.configs.recommended, tseslint.configs.strictTypeChecked, reactHooks.configs.flat.recommended],
+    // The typed preset the owner suggests to start with; strictTypeChecked is the step-up
+    // (libraries.md section 4).
+    extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
     plugins: { boundaries, "check-file": checkFile },
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
     settings: {
       "import/resolver": { typescript: { project: "./tsconfig.app.json" } },
-      // The three kinds of folder (file-structure.md section 2). `src/main.tsx` wires them and
-      // belongs to none (file-structure.md section 5).
+      // The three kinds of folder. `src/main.tsx` wires them and belongs to none
+      // (architecture.md section 3).
       "boundaries/elements": [
         { type: "core", pattern: "src/core" },
         { type: "routes", pattern: "src/routes" },
@@ -304,11 +324,14 @@ export default defineConfig([
     },
     rules: {
       // One direction: routes -> modules -> core. A module imports its own files and core only
-      // (file-structure.md section 2; architecture.md section 5).
+      // (architecture.md sections 3 and 5).
       "boundaries/dependencies": [
         "error",
         {
           default: "disallow",
+          // A file outside the three kinds of folder is no element: without this option the rule
+          // skips an import of it, so two modules could share it (architecture.md section 5).
+          checkUnknownLocals: true,
           policies: [
             {
               from: { element: { type: "routes" } },
@@ -346,7 +369,9 @@ export default defineConfig([
         { "src/!(routes)/**/*.{ts,tsx}": "KEBAB_CASE", "src/*.{ts,tsx}": "KEBAB_CASE" },
         { ignoreMiddleExtensions: true },
       ],
-      "check-file/folder-naming-convention": ["error", { "src/**/": "KEBAB_CASE" }],
+      // routes/ is left out: the router reads `-`, `$`, `_` and `()` in its folder names
+      // (architecture.md section 4).
+      "check-file/folder-naming-convention": ["error", { "src/!(routes)/**/": "KEBAB_CASE" }],
     },
   },
   // A later block replaces the whole option of a rule, so each block below repeats what it keeps.
@@ -368,16 +393,18 @@ export default defineConfig([
 
 Why it is good:
 
-- **`boundaries/elements` names the three kinds of folder of
-  [file-structure.md](../../any-language/file-structure/file-structure.md) section 2 by their
-  path.** `src/core/ui/` counts as `core`, not as a module: a module imports
-  `@/core/ui/button.tsx`, and the lint passes. `src/main.tsx` matches none of them, as the comment
-  says: the startup file sits outside every layer
-  ([file-structure.md](../../any-language/file-structure/file-structure.md) section 5).
+- **`boundaries/elements` names the three kinds of folder of [architecture.md](architecture.md)
+  section 3 by their path**, the shape of
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 2. `src/core/ui/`
+  counts as `core`, not as a module: a module imports `@/core/ui/button.tsx`, and the lint passes.
+  `src/main.tsx` matches none of them, as the comment says: the startup file sits outside every
+  layer ([architecture.md](architecture.md) section 3;
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 5).
 - **`boundaries/dependencies` starts from `default: "disallow"` and lists what each kind may
   import** ([architecture.md](architecture.md) section 5). A module may import a module only when
   both captured folder names match its own, so one rule keeps every module apart, with no line per
-  module. A new module needs no change here.
+  module. A new module needs no change here. `checkUnknownLocals: true` makes an import of a file in
+  none of the three kinds of folder fail too, so two modules cannot share a file left outside them.
 - **The `import/resolver` setting reads `tsconfig.app.json`**, so the boundary rule resolves `@/`
   paths to their folders.
 - **`no-restricted-imports` bans `./` and `../`**, and its message tells the author the form to use
@@ -389,13 +416,13 @@ Why it is good:
   `paths` entry, because `paths` matches the exact string and an import without the extension
   would pass it. A later config block replaces the whole option of a rule, so each block repeats
   what it keeps, as the comment in the file says.
-- **`check-file` holds every file outside `routes/` and every folder to kebab-case**
-  ([architecture.md](architecture.md) section 4). It needs two patterns, because
+- **`check-file` holds every file and every folder outside `routes/` to kebab-case**
+  ([architecture.md](architecture.md) section 4). It needs two file patterns, because
   `src/!(routes)/**/*` does not reach a file directly under `src/`. `ignoreMiddleExtensions` lets
-  the role suffix through, and `routes/` is left out because the router's own names win there.
+  the role suffix through, and `routes/` is left out because the router's own names win there: a
+  route-local folder such as `-components/` passes.
 - **The generated route tree is ignored**, so a rule never fails on a file nobody edits.
-- The rule sets in `extends` and the Oxlint bridge are [libraries.md](libraries.md)'s; the hooks
-  rules are [components.md](../components/components.md)'s.
+- The rule sets in `extends` and the Oxlint bridge are [libraries.md](libraries.md)'s.
 
 ### Barrels and cycles, in Oxlint
 
@@ -404,8 +431,11 @@ Why it is good:
 ```json
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // The list replaces Oxlint's default plugins, so it keeps all four of them (eslint, unicorn,
+  // typescript, oxc) and adds react, jsx-a11y and import (libraries.md section 4).
   "plugins": [
     "eslint",
+    "unicorn",
     "typescript",
     "react",
     "jsx-a11y",
@@ -435,9 +465,9 @@ Why it is good:
 
 Why it is good:
 
-- **`plugins` names six plugins, `eslint` first**, because the list replaces Oxlint's default set
-  and every rule the config turns on belongs to a plugin in the list
-  ([libraries.md](libraries.md) section 4). `unicorn`, one of the defaults, is left out.
+- **`plugins` keeps Oxlint's four defaults and adds the three the rules below need**, and its
+  comment gives the reason at the line, so a copier who trims the list to the plugins the rules
+  name does not turn the default correctness rules off ([libraries.md](libraries.md) section 4).
 - **`oxc/no-barrel-file` fails on a barrel** of `export *` lines whose imports load more than 100
   modules ([architecture.md](architecture.md) section 5).
 - **`import/no-cycle` fails on two files that import each other.** Inside one module the boundary
@@ -456,7 +486,7 @@ paths, the two default screens come from `@/core/ui/screen-pending.tsx` and
 ```tsx
 ...
 // Settings are read here, once, and handed on as values: nothing below this file reads them
-// (architecture.md section 3).
+// (architecture.md section 8).
 const apiClient = new ApiClient(config.apiBaseUrl);
 const queryClient = createQueryClient();
 const reportError = createErrorReporter(apiClient);
@@ -963,6 +993,8 @@ Then each of these files, which breaks one rule, was added, run through the chec
 | an `index.ts` of `export *` lines that re-exports a module | Oxlint `oxc/no-barrel-file`: 249 modules loaded, over the threshold of 100; a barrel of named re-exports passed | [architecture.md](architecture.md) section 5 |
 | a file named `ControlTop.tsx` directly under `src/` | `check-file/filename-naming-convention`: does not match the `KEBAB_CASE` pattern; it passed before the second pattern was added | [architecture.md](architecture.md) section 4 |
 | a module importing `@/core/config`, without the extension | `no-restricted-imports`: the same message, from the pattern | [architecture.md](architecture.md) section 8 |
+| a module importing a new file placed directly in `src/billing/`, in none of the three kinds of folder | `boundaries/dependencies`: no policy allows a `module` to import a local file of no kind; the same import passed before `checkUnknownLocals` was set | [architecture.md](architecture.md) section 5 |
+| a folder named `PayInvoice/` in the domain folder, `src/billing/PayInvoice/` | `check-file/folder-naming-convention`: the folder "PayInvoice" does not match the `KEBAB_CASE` pattern | [architecture.md](architecture.md) section 4 |
 
 The same run showed the React, accessibility and security rules of `.oxlintrc.json` failing on a
 component written to break them; those rules belong to the files section 3 of this file names.

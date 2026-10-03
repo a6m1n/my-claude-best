@@ -117,7 +117,7 @@ What happens when a rule breaks:
 
 | Who | What it does |
 |---|---|
-| The linter | `eslint-plugin-react-hooks` 7 in its `recommended` preset and Oxlint's `react` plugin report a hook called conditionally, a missing effect dependency, and the compiler's diagnostics: an impure call in render, a synchronous `setState` in an effect, a changed prop or state, and more. In the reference application, Oxlint 1.85.0 reported its controls as `react-hooks(rules-of-hooks)`, `react(purity)` and `react(set-state-in-effect)` (read 2026-10-01). Which linter runs which rule is [libraries.md](../architecture/libraries.md) section 4. |
+| The linter | Oxlint's `react` plugin reports a hook called conditionally, a missing effect dependency, and the compiler's diagnostics: an impure call in render, a synchronous `setState` in an effect, a changed prop or state, and more. Its rules are those of `eslint-plugin-react-hooks` 7, whose pages document each one; the reference application runs them in Oxlint alone. In the reference application, Oxlint 1.85.0 reported its controls as `react-hooks(rules-of-hooks)`, `react(purity)` and `react(set-state-in-effect)` (read 2026-10-01). Which linter runs which rule is [libraries.md](../architecture/libraries.md) section 4. |
 | The compiler | It "skips code that breaks the Rules of React": the component still runs, without the compiler's memoisation. With the lint off, nothing tells you. One practitioner found such a skip only "by way of a re-render regression no profiler was looking for". |
 | React, in development | Strict Mode runs each effect's setup, cleanup and setup again, and calls a state initializer twice, so a missing cleanup or an impure initializer shows up while you work. |
 
@@ -267,12 +267,16 @@ The props are a component's signature, and
 stands. This section adds how to type them and how to shape them. The `apiClient` that
 `InvoiceList` takes is one such input: the component calls the client, so the client is a prop and
 not an import ([architecture.md](../architecture/architecture.md) section 8 owns where it is built).
+For a type this section does not cover (generic or polymorphic components, `CSSProperties`,
+context), read react.dev's "Using TypeScript", then the React TypeScript Cheatsheet's "Useful
+Patterns by Use Case" page; this file does not restate them.
 
 - *Taste.* **Type the props on the function's parameter, `function Button({ ... }: ButtonProps)`,
   not with `React.FC`.** Matt Pocock: since React 18 and TypeScript 5.1, `React.FC` "is fine to use
   again", but he still prefers annotating props directly, which is simpler and easier to turn into
   a generic component. So the choice is style, not safety. react.dev's TypeScript page types props
-  on plain functions, with a `type` or an `interface`; keep one of the two across the code base.
+  on plain functions. Type props with `type`, as the example does, so the code base has one form
+  (the React TypeScript Cheatsheet: `type` for props, `interface` for a public API).
 - *Advice.* **Type `children` as `ReactNode`**, so a caller can pass anything JSX accepts as a
   child and nothing React cannot render (react.dev, "Using TypeScript").
 - *Advice.* **Type an event as the element's event type, such as
@@ -281,12 +285,21 @@ not an import ([architecture.md](../architecture/architecture.md) section 8 owns
 - *Advice.* **Type a state that holds one of several values with its union, such as
   `useState<PaymentMethod | null>(null)`**, so its setter takes each value of the set and rejects
   any other (react.dev, "Using TypeScript").
+- *Advice.* **Type a reducer's actions as a union keyed on `type`**, so each `case` narrows its
+  payload (react.dev, "Using TypeScript").
+- *Advice.* **Write React 19's types: `useRef` takes its first value
+  (`useRef<HTMLInputElement>(null)`), and JSX types are `React.JSX`.** Code copied from an older
+  guide, `useRef<HTMLDivElement>()` or `JSX.Element`, then fails the type check; run
+  `npx types-react-codemod@latest preset-19` on older code (React 19 upgrade guide).
 - *Advice.* **A wrapper that passes native props through takes them as
   `ComponentProps<"input">`, or `ComponentProps<typeof DatePicker>` for a component you do not
   control, instead of a copied list of attributes** (Matt Pocock). Every attribute the element
   accepts then works through the wrapper. His page names `ComponentPropsWithRef<"input">` for a
-  wrapper that also takes a `ref`. A design-system component that offers a closed set of props
-  lists them instead, as `Button` below does.
+  wrapper that also takes a `ref`. When the props extend a wide type, write
+  `interface Props extends ComponentProps<"input"> {…}`, not `&`: an interface reports a
+  conflicting property, while an intersection can reduce it to `never` (TypeScript performance
+  wiki). A design-system component that offers a closed set of props lists them instead, as
+  `Button` below does.
 - *Advice.* **In React 19, take `ref` as an ordinary prop, and render a context as
   `<CurrentAccountContext value={account}>`.** Do not write `forwardRef` or `<Context.Provider>` in
   new code. react.dev: "In future versions we will deprecate and remove `forwardRef`"; it
@@ -944,7 +957,7 @@ when a component or a hook the change wrote or edited shows two or more, it is n
     `ComponentProps` for native elements and for components you do not control;
     `ComponentPropsWithRef`.
 13. react.dev, "Using TypeScript", https://react.dev/learn/typescript: props typed on plain
-    functions, `ReactNode` for children, event types, union state.
+    functions, `ReactNode` for children, event types, union state, reducer actions as a union.
 14. react.dev blog, "React 19", 2024-12-05, https://react.dev/blog/2024/12/05/react-19: `ref` as a
     prop and the plan to remove `forwardRef`; `<Context>` as a provider.
 15. Nadia Makarevich, "Advanced TypeScript for React developers: discriminated unions", 2021,
@@ -1048,3 +1061,17 @@ when a component or a hook the change wrote or edited shows two or more, it is n
     radio from buttons with ARIA roles.
 49. react.dev, `Component`, https://react.dev/reference/react/Component: no error boundary as a
     function component.
+
+**TypeScript, added on review, 2026-10-03**
+
+50. react.dev blog, "React 19 Upgrade Guide", 2024-04-25,
+    https://react.dev/blog/2024/04/25/react-19-upgrade-guide: `useRef` needs an argument; `React.JSX`
+    in place of the global `JSX`; `types-react-codemod preset-19`.
+51. React TypeScript Cheatsheet, "Typing Component Props",
+    https://react-typescript-cheatsheet.netlify.app/docs/basic/getting-started/basic_type_example/ ,
+    and "Useful Patterns by Use Case",
+    https://react-typescript-cheatsheet.netlify.app/docs/basic/getting-started/patterns_by_usecase/ ,
+    read 2026-10-03: `type` for props, `interface` for a public API; generic and polymorphic
+    components.
+52. TypeScript wiki, "Performance", https://github.com/microsoft/TypeScript/wiki/Performance, read
+    2026-10-03: `interface` extension over intersections.

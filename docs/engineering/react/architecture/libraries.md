@@ -105,39 +105,70 @@ linting keeps working: typescript-eslint, which runs those rules, supports TypeS
 The compiler flags beyond `strict` are a rule of [architecture.md](architecture.md) section 13, with the
 reason for each. Re-check the pin when TypeScript 7.1 ships its API and typescript-eslint's
 supported range includes 7; typescript-eslint's tracking issue #10940 was open on 2026-10-01.
+TypeScript's 7.1 iteration plan puts the stable release on 2026-11-24, and on 2026-09-29 a
+typescript-eslint maintainer wrote that its 7.1 support "is looking more and more stable" (both
+read 2026-10-03).
 
 ## 4. Lint
 
-Two linters run, in the order Oxlint's docs give: `oxlint && eslint`. Oxlint is the default linter
-of create-vite's React template, and here it runs most rules: hooks, the compiler's diagnostics,
-accessibility in JSX, import cycles and barrel files. ESLint 10 runs only what Oxlint cannot run on
-this stack: the type-aware rules of typescript-eslint, which need TypeScript 6.0 (section 3), and
-the import-boundary rule. `eslint-plugin-oxlint`, spread last in the ESLint config, turns off every
-ESLint rule that Oxlint already checks, so each problem is reported once. ESLint 9 reached end of
-life on 2026-08-06, so the ESLint half is ESLint 10. Both config files are in
+The default set, and the condition that adds each part:
+
+- **Oxlint alone is create-vite's start and section 12's end state**: the React template ships no
+  ESLint config from 9.1.0, and its `lint` script runs Oxlint. On this stack ESLint comes on day
+  one, because the module-boundary and folder-name checks start with the first module
+  ([layout-example.md](layout-example.md) section 2).
+- **Oxlint's plugins:** the template's `react`, `typescript` and `oxc`, plus `eslint` for the core
+  rules of [security.md](../security/security.md) sections 3 and 14, `jsx-a11y` for the checks in
+  JSX of [accessibility.md](../design/accessibility.md), `import` for `import/no-cycle`, and
+  `unicorn`, one of Oxlint's defaults, for its correctness rules such as `no-thenable`.
+- **Add ESLint 10 for three jobs Oxlint has no rule for on this stack:** typescript-eslint's
+  type-aware rules while TypeScript is pinned to 6.0 (section 3), the module-boundary rule
+  (Oxlint's only folder-scoped tool is `no-restricted-imports` in an override, which matches import
+  text and needs one override per module to keep modules apart; `boundaries/dependencies` does it
+  in one rule, and oxc#13789 asks for the missing rule), and folder names (Oxlint's
+  `unicorn/filename-case` reads file names only). The cost of two linters: Oxlint's
+  `--report-unused-disable-directives` reports an `eslint-disable` comment for a rule only ESLint
+  runs, and that issue was closed as not planned.
+- **While ESLint runs, it also holds the three `no-restricted-imports` bans**, so the whole import
+  contract, the boundary rule and the bans with their per-folder blocks, is read in one file; and
+  `js.configs.recommended` adds nine core rules that the bridge, `eslint-plugin-oxlint`, leaves to
+  ESLint: `no-case-declarations`, `no-empty`, `no-fallthrough`, `no-octal`,
+  `no-prototype-builtins`, `no-regex-spaces`, `no-unexpected-multiline`, `no-useless-assignment`
+  and `preserve-caught-error`. Oxlint has eight of them outside its `correctness` category, the
+  only one `.oxlintrc.json` turns on, and does not have `no-octal` (TypeScript rejects octal
+  literals itself).
+- **Lint carries no formatting rules:** ESLint deprecated its own and points to a formatter, and
+  typescript-eslint advises against `eslint-plugin-prettier`, which doubles parsing. The formatter
+  runs on its own (section 5).
+
+When ESLint is added, the two linters run in the order Oxlint's docs give: `oxlint && eslint`.
+Oxlint runs most rules: hooks, the compiler's diagnostics, accessibility in JSX, import cycles and
+barrel files. `eslint-plugin-oxlint`, spread last in the ESLint config, turns off every ESLint rule
+that Oxlint already checks, so each problem is reported once. ESLint 9 reached end of life on
+2026-08-06, so the ESLint half is ESLint 10. Both config files are in
 [layout-example.md](layout-example.md) section 3.
 
 When you write `.oxlintrc.json`, name in `plugins` every plugin to run: the list replaces Oxlint's
-default set instead of adding to it (Oxlint's plugins page, source 39). The example names six,
-`eslint` first, then `typescript`, `react`, `jsx-a11y`, `import` and `oxc`, because every rule
-the config turns on belongs to a plugin in the list. Then turn on `import/no-cycle` and
-`oxc/no-barrel-file` by name: by default Oxlint loads only its `eslint`, `typescript`, `unicorn`
-and `oxc` plugins and the `correctness` category, so a rule that exists in Oxlint is not yet a rule
-that runs. Upgrade `oxlint` and `eslint-plugin-oxlint` together,
-because the plugin's version tracks Oxlint's and its peer range is `oxlint ~1.86.0`.
+default set instead of adding to it (Oxlint's plugins page, source 39), so a default left out of
+the list stops running. Then turn on `import/no-cycle` and `oxc/no-barrel-file` by name: by
+default Oxlint loads only its `eslint`, `typescript`, `unicorn` and `oxc` plugins and the
+`correctness` category, so a rule that exists in Oxlint is not yet a rule that runs. Upgrade
+`oxlint` and `eslint-plugin-oxlint` together, because the plugin's version tracks Oxlint's and its
+peer range is `oxlint ~1.86.0`.
 
-Which tool checks what (versions read 2026-10-01; Oxlint 1.86.0, ESLint 10.11.0):
+Which tool checks what (read 2026-10-01; the rows that rest on sources 43, 65, 66 and 67 on
+2026-10-03; the versions are in section 8):
 
 | Check | Tool and rule | Note |
 |---|---|---|
 | Rules of Hooks, effect dependencies | Oxlint `react/rules-of-hooks`, `react/exhaustive-deps` | the hooks rules sit under `react/`; there is no separate hooks plugin. Set `rules-of-hooks` to `error` by name, as create-vite's config does |
-| React Compiler diagnostics | Oxlint: 22 compiler rules in `correctness` (announced 2026-08-18) | Oxlint lacks the compiler's `config` and `gating` checks. `eslint-plugin-react-hooks` 7.1.1 has them and runs on ESLint 10; the example keeps its `recommended` preset in ESLint and lets `eslint-plugin-oxlint` turn off what Oxlint repeats |
+| React Compiler diagnostics | Oxlint: 22 compiler rules in `correctness` (announced 2026-08-18) | Oxlint lacks only the compiler's `config` and `gating` checks. `config` checks the options passed to the compiler and `gating` checks its gating object; an application that passes neither, as the example does, gives them nothing to check, so no ESLint plugin is added for them |
 | Accessibility in JSX | Oxlint `jsx-a11y` | implements every rule of `eslint-plugin-jsx-a11y`'s `recommended` set. It checks static code only; a rendered page gets axe (section 6) |
 | Import cycles, barrel files | Oxlint `import/no-cycle`, `oxc/no-barrel-file` | `no-barrel-file` fires on a barrel of `export *` lines when the modules its imports load exceed its threshold, 100 by default |
 | Relative imports | `no-restricted-imports` with patterns; ESLint core has it, and so does Oxlint | the rule that asks for absolute imports belongs to [file-structure.md](../../any-language/file-structure/file-structure.md) section 7 |
-| Import direction between folders | `eslint-plugin-boundaries` 7.2.0, rule `boundaries/dependencies` | stays in ESLint: nothing read names it as working under Oxlint's JS plugins, which are in alpha, and an open issue on the plugin asks for docs on it. It reads the `@/` alias through `eslint-import-resolver-typescript`. The plugin's 7.x README writes the rule's entries under `policies`; the older `rules` key and `mode: "folder"` still work in 7.2.0 and print a deprecation warning |
-| File and folder names | `eslint-plugin-check-file` 3.3.2 | flat config only from 3.x |
-| Type-aware rules | typescript-eslint 8.71.0, the `strictTypeChecked` preset with `projectService: true`, the one the example uses | its docs advise `strictTypeChecked` only when "a nontrivial percentage of its developers are highly proficient in TypeScript"; step down to `recommendedTypeChecked` when that is not true of your team |
+| Import direction between folders | `eslint-plugin-boundaries`, rule `boundaries/dependencies` | stays in ESLint for now: Oxlint's only folder-scoped tool is `no-restricted-imports` in an override, which matches import text and needs one override per module to keep modules apart; `boundaries/dependencies` does it in one rule (oxc#13789 asks for the missing rule). The plugin's author documents a run under Oxlint's JS plugins (alpha); it works only with a resolver configured, and without one `@/` imports count as external and skip the check (source 43). It reads the `@/` alias through `eslint-import-resolver-typescript`. Before version 6 the rule was called `boundaries/element-types`, so a guide that uses that name is for version 5 or older. The plugin's 7.x README writes the rule's entries under `policies`; the older `rules` key and `mode: "folder"` still work in 7.2.0 and print a deprecation warning |
+| File and folder names | `eslint-plugin-check-file` | in ESLint because Oxlint has no folder-name rule: its `unicorn/filename-case` reads file names only. Flat config only from 3.x |
+| Type-aware rules | typescript-eslint, the `recommendedTypeChecked` preset with `projectService: true` | the preset the owner suggests to start typed linting with. `stylisticTypeChecked` is optional and not loaded here: its `consistent-type-definitions` prefers `interface`, against the `type` default of [components.md](../components/components.md) section 3. Step up to `strictTypeChecked` when "a nontrivial percentage of its developers are highly proficient in TypeScript"; the owner says the strict presets are "not considered 'stable' under Semantic Versioning", and on React code they need two options: `"@typescript-eslint/no-confusing-void-expression": ["error", { ignoreArrowShorthand: true }]`, so a short arrow handler passes, and `"@typescript-eslint/restrict-template-expressions": ["error", { allowAny: false, allowBoolean: false, allowNever: false, allowNullish: false, allowRegExp: false, allowNumber: true }]`: a rule's options replace the preset's, so the line repeats strict's other settings. This default rests on the owner's advice; no team was found stepping down from strict |
 | Fast Refresh | Oxlint `react/only-export-components` | create-vite's config sets it to `warn` with `allowConstantExport: true`. The example does not turn it on: it reports a file with a component that also exports anything else, and TanStack Router's file routes export `Route` next to an unexported screen component. Tried in the example, it reported all three route files |
 | `eval`, `javascript:` URLs, `dangerouslySetInnerHTML` | Oxlint core rules and `react/no-danger` | which rules and why: [security.md](../security/security.md) sections 3 and 14 |
 
@@ -150,22 +181,15 @@ Oxlint's limits on 2026-10-01:
 - Its JS plugins, which run ESLint plugins inside Oxlint, are "currently in alpha" and do not run
   type-aware ESLint rules.
 
-ESLint plugins and ESLint 10, by the peer ranges on the registry (read 2026-10-01); the plugins that do not declare ESLint 10 are in section 10:
+The ESLint plugins the default config loads, by the peer ranges on the registry (read 2026-10-01).
+Their versions are in section 8; the plugins that do not declare ESLint 10 are in section 10:
 
-| Plugin | Version | Declares ESLint 10 | Use here |
-|---|---|---|---|
-| `typescript-eslint` | 8.71.0 | yes | type-aware rules |
-| `eslint-plugin-react-hooks` | 7.1.1 | yes, since 7.1.0 | the compiler checks Oxlint lacks |
-| `eslint-plugin-boundaries` | 7.2.0 | yes, by its release notes | import direction |
-| `eslint-plugin-check-file` | 3.3.2 | yes (`eslint>=9.0.0`) | file and folder names |
-| `eslint-plugin-oxlint` | 1.86.0 | no ESLint peer; its peer is `oxlint ~1.86.0` | turns off what Oxlint already checks |
-| `@tanstack/eslint-plugin-query` | 5.104.0 | yes | rules for TanStack Query code, `flat/recommended` preset |
-| `eslint-plugin-testing-library` | 7.16.2 | yes | rules for component test files |
-| `@vitest/eslint-plugin` | 1.6.27 | yes (open-ended peer) | rules for Vitest test files |
-| `eslint-plugin-playwright` | 2.12.0 | yes (open-ended peer) | rules for end-to-end test files |
-| `eslint-plugin-import-x` | 4.17.1 | yes | when an import rule is needed that Oxlint lacks |
-| `eslint-plugin-react-refresh` | 0.5.7 | yes | not in the example: it runs no Fast Refresh check (the Fast Refresh row above says why) and does not add this plugin either |
-| `eslint-config-prettier` | 10.1.8 | yes (open-ended peer) | optional here: once `eslint-plugin-oxlint` has turned off the duplicates, the ESLint half runs type-aware, import, naming and compiler rules, not style rules. That is an inference from this setup, not an owner statement |
+| Plugin | Declares ESLint 10 | When to add |
+|---|---|---|
+| `typescript-eslint` | yes | with ESLint, for its job in the list at the top of this section |
+| `eslint-plugin-boundaries` | yes, by its release notes | with ESLint, for its job in the list at the top of this section |
+| `eslint-plugin-check-file` | yes (`eslint>=9.0.0`) | with ESLint, for its job in the list at the top of this section |
+| `eslint-plugin-oxlint` | no ESLint peer; its peer is `oxlint ~1.86.0` | always with ESLint, as the paragraph after that list says |
 
 ## 5. Format
 
@@ -174,6 +198,9 @@ ESLint plugins and ESLint 10, by the peer ranges on the registry (read 2026-10-0
 | Prettier | 3.9.9 | stable | the default formatter |
 | oxfmt | 0.71.0 | beta since 2026-02-24. Oxc says it passes 100% of Prettier's JavaScript and TypeScript conformance tests (the vendor's own test); Prettier plugins are not supported yet | re-check when it leaves beta |
 | Biome | 2.5.15 | stable; one tool that lints and formats | not by default: section 10 |
+
+Whichever formatter runs, list `src/route-tree.gen.ts` in its ignore file: TanStack Router's docs
+say the generated tree "shouldn't be changed by your linter or formatter".
 
 ## 6. Tests
 
@@ -234,7 +261,6 @@ together, not a reason to stay on them.
 | `typescript` | 7.0.2 (pinned to `~6.0`, section 3) | 6.0.3 |
 | `typescript-eslint` | 8.71.0 | 8.70.1 |
 | `eslint` | 10.11.0 | 10.11.0 |
-| `eslint-plugin-react-hooks` | 7.1.1 | 7.1.1 |
 | `eslint-plugin-boundaries` | 7.2.0 | 7.2.0 |
 | `eslint-import-resolver-typescript` | not read | 4.4.5 |
 | `eslint-plugin-check-file` | 3.3.2 | 3.3.2 |
@@ -288,8 +314,8 @@ team may weigh differently.
 | `eslint-plugin-import` | import rules for ESLint | 2.32.0's peer range stops at ESLint 9; `eslint-plugin-import-x` 4.17.1 is the maintained fork that declares ESLint 10 |
 | `eslint-plugin-react`, `eslint-plugin-jsx-a11y` | React rules and JSX accessibility rules for ESLint | neither declares ESLint 10 (7.37.5 and 6.10.2), and ESLint 9 is past end of life; Oxlint's `react` and `jsx-a11y` plugins cover them (section 4) |
 | A second boundary tool: dependency-cruiser 18.5.0, Nx's `enforce-module-boundaries`, Sheriff | import rules checked outside ESLint, or across a workspace | `eslint-plugin-boundaries` already runs inside the ESLint this stack has. Nx's rule needs an Nx workspace. Sheriff treats an `index.ts` as a module's public API, which the no-barrel rule of [architecture.md](architecture.md) section 5 rules out |
-| Biome as the only linter and formatter | one tool for both jobs, with React rules in its `react` domain | its React Compiler rule is still a nursery (experimental) rule. Its plugins only match code snippets, and the pages read show no rule for import direction, so the boundary check of section 4 has no Biome equivalent in what was read. Its type-aware rules use its own type inference, not the TypeScript compiler, and Biome's own posts put their coverage below typescript-eslint's |
-| `@eslint-react/eslint-plugin` | its own React rules, which also run under Oxlint | `eslint-plugin-react-hooks` already carries the compiler rules, and its metadata makes no ESLint 10 statement |
+| Biome as the only linter and formatter | one tool for both jobs, with React rules in its `react` domain | its React Compiler rule is still a nursery (experimental) rule. Its plugins only match code snippets. Biome's `noPrivateImports` (recommended since 2.0) keeps a symbol marked `@package` inside its folder. It works per symbol and cannot let `routes/` import a module while modules may not import each other, so it does not replace the boundary check of section 4. Its type-aware rules use its own type inference, not the TypeScript compiler, and Biome's own posts put their coverage below typescript-eslint's |
+| `@eslint-react/eslint-plugin` | its own React rules, which also run under Oxlint | Oxlint already runs the hooks rules and the compiler's diagnostics (section 4), and the plugin's metadata makes no ESLint 10 statement |
 | SWR | data fetching with a cache, in one hook | TanStack Query covers the job, and no source read says when SWR is the better choice |
 | Storybook 10.6.1 | stories, and component tests through its Vitest addon | not needed to start: component tests run in Vitest Browser Mode (section 6) |
 | Cypress | end-to-end and component tests | Playwright covers end-to-end tests; Cypress's current version came from one summary only |
@@ -324,8 +350,25 @@ team may weigh differently.
 Read every version again on the day you adopt this file. Beyond that, each line below changes a
 row when it happens:
 
-- TypeScript 7.1 ships its API and typescript-eslint's range includes 7 (issue #10940): the pin of
-  section 3 moves, and Oxlint's type-aware mode can replace the ESLint half's type-aware rules.
+- TypeScript 7.1 ships its API and typescript-eslint's range includes 7 (issue #10940; 7.1 stable
+  is planned for 2026-11-24, section 3): the pin of section 3 moves. Then each ESLint job of
+  section 4 has its own way out to one linter. The type-aware rules move to Oxlint's type-aware
+  mode. The boundary rule can run under Oxlint's JS plugins, still alpha, with a resolver set, or
+  `@/` imports pass unchecked. The three `no-restricted-imports` bans move to `.oxlintrc.json`,
+  since Oxlint has the same rule; each per-folder block becomes an Oxlint override that repeats the
+  whole option, as the ESLint blocks do. The eight core rules of section 4 that Oxlint has are
+  turned on by name in `.oxlintrc.json`. File names move to Oxlint's `unicorn/filename-case`,
+  turned off for `src/routes/**` in an `overrides` block (its `ignore` option matches file names,
+  not folders). Folder names have no Oxlint rule, so ESLint stays for that one check, or the check
+  is dropped.
+- Oxc issue #20881 (source 73), a `no-restricted-imports` that merges its options across folders,
+  lands: an Oxlint override then stops repeating the whole option.
+- `eslint-plugin-boundaries` moves to `@boundaries/eslint-plugin`, as its rename discussion #371
+  plans (source 74): change the install name in [layout-example.md](layout-example.md) section 2
+  and the import in `eslint.config.js`.
+- Oxc issue #13789 (source 42) lands: the boundary check can move to Oxlint.
+- Oxlint's JS plugins drop the alpha label (source 39); their owner already calls them "ready for
+  adoption in real world projects" (source 75).
 - `eslint-plugin-jsx-a11y` or `eslint-plugin-react` declares ESLint 10.
 - oxfmt leaves beta.
 - 2026-10-28: Node 26 becomes Active LTS.
@@ -464,13 +507,17 @@ summary" was read through a tool's summary of the page: it is the place to look,
     jsx-a11y rule folder,
     https://api.github.com/repos/oxc-project/oxc/contents/crates/oxc_linter/src/rules/jsx_a11y
     (both read as summaries): Oxlint's coverage of `recommended`.
-42. eslint-plugin-react-hooks changelog,
-    https://github.com/facebook/react/blob/main/packages/eslint-plugin-react-hooks/CHANGELOG.md:
-    ESLint 10 support from 7.1.0.
+42. Oxc issue #13789, `no-restricted-paths` (rule suggestion),
+    https://github.com/oxc-project/oxc/issues/13789, open on 2026-10-03: Oxlint has no rule that
+    restricts imports by the importing folder.
 43. eslint-plugin-boundaries releases,
     https://github.com/javierbrea/eslint-plugin-boundaries/releases; its TypeScript guide,
     https://www.jsboundaries.dev/docs/guides/typescript-support/; issue #431,
-    https://github.com/javierbrea/eslint-plugin-boundaries/issues/431.
+    https://github.com/javierbrea/eslint-plugin-boundaries/issues/431, closed by PR #473,
+    https://github.com/javierbrea/eslint-plugin-boundaries/pull/473 (merged 2026-07-20); its Oxlint
+    example,
+    https://github.com/javierbrea/eslint-plugin-boundaries/tree/master/examples/oxlint-integration
+    (read 2026-10-03): the run under Oxlint's JS plugins, and the resolver it needs.
 44. eslint-plugin-check-file README,
     https://raw.githubusercontent.com/dukeluo/eslint-plugin-check-file/main/README.md.
 45. eslint-plugin-import releases, https://github.com/import-js/eslint-plugin-import/releases, and
@@ -525,3 +572,47 @@ summary" was read through a tool's summary of the page: it is the place to look,
 62. Valibot, "Comparison", https://valibot.dev/guides/comparison/: Valibot's own claim of a much
     smaller bundle (a vendor's claim). Read by a reviewer on 2026-10-02.
 63. TanStack Router, "Type Safety" and "Search Params", https://tanstack.com/router/latest/docs/framework/react/guide/type-safety and https://tanstack.com/router/latest/docs/framework/react/guide/search-params: `validateSearch` accepts Standard Schema libraries; Zod v4, Valibot, ArkType and Effect Schema work without adapters (read 2026-10-01 in the research run).
+
+### Added on review, 2026-10-03
+
+64. create-vite changelog,
+    https://raw.githubusercontent.com/vitejs/vite/main/packages/create-vite/CHANGELOG.md: Oxlint for
+    the React templates from 9.1.0 (2026-06-23).
+65. typescript-eslint, "Shared Configs", https://typescript-eslint.io/users/configs/, and the rules
+    https://typescript-eslint.io/rules/no-confusing-void-expression/ and
+    https://typescript-eslint.io/rules/restrict-template-expressions/: `recommendedTypeChecked` to
+    start; `strictTypeChecked` for proficient teams and not stable under Semantic Versioning;
+    `ignoreArrowShorthand` and `allowNumber`.
+66. react.dev, the `gating` and `config` lints,
+    https://react.dev/reference/eslint-plugin-react-hooks/lints/gating and
+    https://react.dev/reference/eslint-plugin-react-hooks/lints/config: what each checks.
+67. Oxlint, `unicorn/filename-case`,
+    https://oxc.rs/docs/guide/usage/linter/rules/unicorn/filename-case.html: file names only, no
+    folder-name rule.
+68. Oxc issue #27223, https://github.com/oxc-project/oxc/issues/27223, closed as not planned:
+    `--report-unused-disable-directives` reports `eslint-disable` comments for rules only ESLint
+    runs.
+69. ESLint, "Deprecation of formatting rules", 2023-10-26,
+    https://eslint.org/blog/2023/10/deprecating-formatting-rules/, and typescript-eslint,
+    "Performance", https://typescript-eslint.io/troubleshooting/typed-linting/performance/: no
+    formatting in lint; `eslint-plugin-prettier` doubles parsing.
+70. TanStack Router, "Installation with Vite",
+    https://tanstack.com/router/latest/docs/installation/with-vite: the generated tree "shouldn't be
+    changed by your linter or formatter".
+71. TypeScript 7.1 iteration plan, issue #63703, https://github.com/microsoft/TypeScript/issues/63703:
+    7.1 stable planned for 2026-11-24; the maintainer's comment of 2026-09-29 on issue #10940
+    (source 36).
+72. Biome, `noPrivateImports`, https://biomejs.dev/linter/rules/no-private-imports/: per-symbol
+    `@package` visibility, recommended since 2.0.
+73. Oxc issue #20881, https://github.com/oxc-project/oxc/issues/20881, open and assigned: rich
+    `no-restricted-imports` options across folders; until it lands, an override repeats every
+    restriction.
+74. eslint-plugin-boundaries discussion #371, the rename RFC, 2025-11-05,
+    https://github.com/javierbrea/eslint-plugin-boundaries/discussions/371: only
+    `@boundaries/eslint-plugin` to be published from 7.0; on 2026-10-03 the registry still showed
+    both names at 7.2.0, neither deprecated.
+75. Oxc, the Oxlint JS plugins alpha post, 2026-03-11,
+    https://oxc.rs/blog/2026-03-11-oxlint-js-plugins-alpha.html: "JS plugins are ready for adoption
+    in real world projects", with the alpha label kept and no type-aware JS rules.
+
+Sources 64 to 75 were read on 2026-10-03.

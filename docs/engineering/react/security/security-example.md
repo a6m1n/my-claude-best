@@ -588,8 +588,13 @@ Why it is good:
 The reference application was installed with
 `npm install --ignore-scripts --before=2026-09-24` on npm 10.8: no dependency ran an install
 script, and no version published after that date was taken, a week before the build. Type check,
-lint, tests and build then passed, so the application needs no dependency build script, and
-`allowScripts` or `allowBuilds` stays empty.
+lint, tests and build then passed, so the application needs no dependency build script. Two of
+its dependencies carry one, `unrs-resolver`, which `eslint-import-resolver-typescript` pulls in,
+and `fsevents` (optional, macOS), and the strict settings below fail the install on a script
+nobody reviewed. So the two are denied, not allowed: `false` under `allowBuilds` for pnpm, and
+for npm 12 a denial in `package.json`'s `allowScripts`, which `npm deny-scripts` writes. npm's
+page gives no value format for that entry, so it is not shown here (pnpm's build settings page
+and npm's v12 config page, read 2026-10-03).
 
 The two files below make the same controls part of the repository, so every install obeys them
 (security.md section 10). They are written from the owners' docs (npm's config page and changelog,
@@ -659,6 +664,11 @@ strictDepBuilds: true
 blockExoticSubdeps: true
 # Fails when a version has weaker provenance than earlier ones (security.md section 10).
 trustPolicy: no-downgrade
+# Denied, not allowed: the checks passed with every install script ignored, and a package set to
+# false is never built (security.md section 10).
+allowBuilds:
+  unrs-resolver: false
+  fsevents: false
 ```
 
 Why it is good:

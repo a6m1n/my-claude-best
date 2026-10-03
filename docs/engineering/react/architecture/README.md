@@ -1,9 +1,10 @@
 # React application architecture practices
 
-How a React application is put together: the format that fits its pages, the tree as the React
-case of [file-structure](../../any-language/file-structure/README.md), where state lives, how
-server data is read and written through a query cache, routing, forms and errors, and which library
-does which job.
+How a React application is put together: the format that fits its pages, a tree grouped by what the
+user does and argued from React's own reasons (the shape of
+[file-structure](../../any-language/file-structure/README.md)), where state lives, how server data
+is read and written through a query cache, routing, forms and errors, and which library does which
+job.
 
 **Navigation**
 
@@ -27,15 +28,15 @@ flowchart LR
   C -. "never" .-> RT
 ```
 
-Why it is good: the arrows are the one direction of
-[file-structure.md](../../any-language/file-structure/file-structure.md) section 2, as
-[architecture.md](architecture.md) section 3 lays it out, with the import rules of its section 5;
-the dotted edges are the imports the lint rejects.
+Why it is good: the arrows are the one direction [architecture.md](architecture.md) section 3
+lays out and its section 5 checks, the same direction as
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 2; the dotted
+edges are the imports the lint rejects.
 
 ## What is here
 
 - [architecture.md](architecture.md) — the rules, one topic per section: the application format,
-  the tree as the React case of file-structure and how it grows (scalability), file names, imports and the tool that checks their
+  the tree with its React reasons and how it grows (scalability), file names, imports and the tool that checks their
   direction, a screen composed in its route, where state lives, reading and writing server data,
   routing and URL state, forms, errors and loading, TypeScript settings, the server-rendered case,
   the common mistakes with their fixes, where the rules stop holding, a review checklist and the
@@ -56,8 +57,8 @@ the dotted edges are the imports the lint rejects.
    format, add a folder, a module or a route, or write a query, a mutation, a form or an error
    screen, read `docs/engineering/react/architecture/architecture.md`; before you add a dependency,
    read `libraries.md` in the same folder." Without it an agent never opens the files.
-3. The practice is the React case of `any-language/file-structure` and links it for every rule it
-   owns. It also links `any-language/readability`, `any-language/refactoring`, `python/testing` (its
+3. The practice's tree has the shape of `any-language/file-structure` and links it for every rule
+   that practice owns. It also links `any-language/readability`, `any-language/refactoring`, `python/testing` (its
    `layout.md` and `what-to-test.md`) and the other folders under `react/`. Copy those folders too,
    or replace each link with your own rule for that topic.
 4. Set up the checks of [layout-example.md](layout-example.md) section 3 with the first module, not
@@ -66,12 +67,15 @@ the dotted edges are the imports the lint rejects.
    `src/main.tsx`, the file-name rule and Oxlint's barrel rule. Old code that breaks them reaches
    the practice the way [refactoring.md](../../any-language/refactoring/refactoring.md) section 4
    says, not by a rewrite.
-5. Re-check the lines that name a moving target, all read on 2026-10-01 or 2026-10-02. Do it on the day you adopt
-   the folder, when a trigger of [libraries.md](libraries.md) section 12 fires, and again by
-   2027-04-01, six months after the reading; after that date, distrust every dated line until it is
-   read again. The command `grep -rnE '2026-10-0[12]' docs/engineering/react/architecture/` lists the
-   lines. [libraries.md](libraries.md), under when to re-check it, lists the triggers for the
-   libraries.
+5. Re-check the lines that name a moving target, all read between 2026-10-01 and 2026-10-03. Do it
+   on the day you adopt the folder, when a trigger of [libraries.md](libraries.md) section 12 fires,
+   and again by 2027-04-01, six months after the reading; after that date, distrust every dated line
+   until it is read again. The command
+   `grep -rnE '2026-10-0[1-3]' docs/engineering/react/architecture/` lists the lines.
+   [libraries.md](libraries.md), under when to re-check it, lists the triggers for the libraries.
+   On the day you adopt the folder, file one tracked issue per dated or upstream trigger of
+   [libraries.md](libraries.md) section 12, with its date or its issue link, so a trigger that
+   fires reaches someone who watches the tracker.
 6. Use the checklist of [architecture.md](architecture.md) section 17 as the architecture part of
    your review template.
 

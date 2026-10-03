@@ -120,7 +120,7 @@ so it sits with the routes, and the `-` prefix keeps it out of the route tree. T
 
 ```tsx
 // Settings are read here, once, and handed on as values: nothing below this file reads them
-// (architecture.md section 3).
+// (architecture.md section 8).
 const apiClient = new ApiClient(config.apiBaseUrl);
 const queryClient = createQueryClient();
 const reportError = createErrorReporter(apiClient);
@@ -259,6 +259,9 @@ export default defineConfig({
       autoCodeSplitting: true,
       routesDirectory: "./src/routes",
       generatedRouteTree: "./src/route-tree.gen.ts",
+      // A test sits beside the route file it tests: without this pattern the plugin warns on
+      // every build that the test file exports no route (architecture.md section 3).
+      routeFileIgnorePattern: "\\.test\\.tsx?$",
     }),
     react(),
     babel({ presets: [reactCompilerPreset()] }),
