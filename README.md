@@ -4,7 +4,7 @@ Engineering practices that people and AI coding agents both follow, plus a statu
 
 [![License: CC BY 4.0 for the text, MIT for the code](https://img.shields.io/badge/license-CC%20BY%204.0%20text%20%2B%20MIT%20code-blue)](#license)
 [![Works with agents that read CLAUDE.md or AGENTS.md](https://img.shields.io/badge/works%20with-CLAUDE.md%20and%20AGENTS.md%20agents-blue)](#getting-started)
-[![Code examples in Python](https://img.shields.io/badge/examples-Python-blue)](docs/engineering/python/)
+[![Code examples in Python and TypeScript](https://img.shields.io/badge/examples-Python%20%7C%20TypeScript-blue)](docs/engineering/)
 [![Issues welcome](https://img.shields.io/badge/issues-welcome-brightgreen)](CONTRIBUTING.md)
 
 **Navigation**
@@ -29,9 +29,9 @@ For example, the git practice needs this one line in your `CLAUDE.md`:
 
 With this line in your `CLAUDE.md`, the agent opens `git.md` before its first git command, and its commit titles take one form, such as `fix(orders): reject an empty cart`.
 
-It is for teams that write code with an AI coding agent. The code examples are in Python. The practices are Markdown, so there is nothing to build or install. Every name in the examples is invented.
+It is for teams that write code with an AI coding agent. The code examples are in Python, and in TypeScript for the React practices. The practices are Markdown, so there is nothing to build or install. Every name in the examples is invented.
 
-The practices sit in group folders: `any-language/` for the ones whose rules work in any language (their examples are still in Python), and `python/` for the ones written for Python. [docs/engineering/CLAUDE.md](docs/engineering/CLAUDE.md) says how a practice's group is picked. In the order to read them:
+The practices sit in group folders: `any-language/` for the ones whose rules work in any language (their examples are still in Python), `python/` for the ones written for Python, and `react/` for the ones written for a React application. [docs/engineering/CLAUDE.md](docs/engineering/CLAUDE.md) says how a practice's group is picked. In the order to read them:
 
 - [any-language/git](docs/engineering/any-language/git/) — branches, commits, pull requests and merging, with no rewriting of pushed history.
 - [python/language](docs/engineering/python/language/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
@@ -43,6 +43,11 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 - [any-language/prompt-engineering](docs/engineering/any-language/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
 - [python/testing](docs/engineering/python/testing/) — which code earns a test, and how a pytest suite is laid out and written.
 - [python/evals](docs/engineering/python/evals/) — how to check what a language model does in an application, with real calls on real cases.
+- [react/architecture](docs/engineering/react/architecture/) — the format of a React application, its tree, where state and server data live, and the library for each job.
+- [react/components](docs/engineering/react/components/) — how one component and one hook are written, and the common mistakes.
+- [react/design](docs/engineering/react/design/) — how a screen looks and behaves, accessibility, and designing with Claude Code.
+- [react/security](docs/engineering/react/security/) — what the browser side of an application must and must not do.
+- [react/performance](docs/engineering/react/performance/) — what fast means, how to measure it, and what to fix first, with SEO in brief.
 
 Two more parts are about Claude Code itself:
 
@@ -53,7 +58,7 @@ What it does not do:
 
 - It is not a standard. The practices are one author's choices: change or drop any rule in your copy.
 - It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself.
-- It has no examples in languages other than Python.
+- It has no examples in languages other than Python and TypeScript.
 - It is not an official Anthropic project, and Anthropic does not endorse it.
 
 Two skills, for commits and pull requests, are planned. The `skills/` folder has none yet.
@@ -122,7 +127,8 @@ my-claude-best/
 ├── docs/
 │   ├── engineering/       # the practices, and CLAUDE.md: the contract for writing one
 │   │   ├── any-language/  # practices whose rules work in any language, one folder each
-│   │   └── python/        # practices whose rules are written for Python, one folder each
+│   │   ├── python/        # practices whose rules are written for Python, one folder each
+│   │   └── react/         # practices whose rules are written for a React application, one folder each
 │   └── claude-code/       # guides on instructing Claude Code
 ├── claude-config/
 │   └── statusline/        # the status line: the script, its install guide, its images
