@@ -1,0 +1,129 @@
+# Project plan
+
+The plan says how the project reaches the goal in the charter: what is built, when, by whom, and
+how a change is handled. Read this file in the planning phase, after the [charter](charter.md)
+is approved, and again each time the plan is reviewed. The phases are in
+[life-cycle.md](life-cycle.md).
+
+**Navigation**
+
+- [1. What the plan is and when to write it](#1-what-the-plan-is-and-when-to-write-it)
+- [2. What it holds](#2-what-it-holds)
+- [3. The schedule](#3-the-schedule)
+- [4. Baseline and change control](#4-baseline-and-change-control)
+- [5. Plan near work in detail](#5-plan-near-work-in-detail)
+- [6. Keep it current](#6-keep-it-current)
+- [7. Sources](#7-sources)
+
+## 1. What the plan is and when to write it
+
+Write the plan in planning, after the charter. The charter gives the goal and the limits; the
+plan can only be checked against them.
+
+PMI defines the plan as "The document that describes how the project will be executed,
+monitored and controlled, and closed." (PMI Lexicon, 2026) The PMP exam outline asks the project
+manager to "Create an integrated project management plan" and to "Maintain the integrated project
+management plan" (PMP exam content outline, July 2026).
+
+## 2. What it holds
+
+Keep the plan short: one page per part is enough for most projects, and a part with nothing to
+say gets one line. A long plan is not kept current, and a stale plan misleads.
+
+| Part | What it says | Where the detail lives |
+|---|---|---|
+| Scope | The deliverables and the work to make them | [wbs.md](wbs.md) |
+| Schedule | Milestones, and dates for the work near now | Section 3 |
+| Roles and resources | Who owns which deliverable, who is on the team | The WBS dictionary entries |
+| Risks | The top risks and who owns them | [risks.md](risks.md) |
+| Communication | Who hears what, how often, in which channel | This page |
+| Change control | How a change to scope, schedule or budget is approved | Section 4 |
+
+As a cross-check, PRINCE2 says a project plan covers the project's products, major activities,
+schedule, resource requirements, tolerances and control arrangements (PRINCE2 guide to the
+project plan). The table above covers each of these except tolerances, which section 4 sets.
+
+## 3. The schedule
+
+A project schedule is "An output of a schedule model that presents linked activities with planned
+dates, durations, milestones, and resources." (PMI Lexicon, 2026) A Gantt chart is "A bar chart of
+schedule information where activities are listed on the vertical axis, dates are shown on the
+horizontal axis, and activity durations are shown as horizontal bars placed according to start and
+finish dates." (PMI Lexicon, 2026)
+
+In Jira, keep the schedule in the Timeline, so the plan and the work are one thing, not two:
+
+- Epics carry the dates. Their child work items, sprints, releases and dependency lines show on
+  the same view. A Timeline shows work items from one space only.
+- A milestone is a version (the Fix version field) with a planned release date. The Releases
+  feature shows how much work in a version is done.
+- A plan across several spaces needs Jira Plans ([wbs.md](wbs.md) section 7).
+
+## 4. Baseline and change control
+
+When the plan is approved, baseline the schedule; after that, change it only through change
+control. Without a baseline nobody can say whether the project is late, and without change
+control the baseline is rewritten to match the slip.
+
+PMI defines the baseline as "The approved version of a work product that can be changed using
+formal change control procedures and is used as the basis for comparison to actual results." Change
+control is "A process whereby modifications to documents, deliverables, or baselines associated
+with the project are identified, documented, approved, or rejected." (PMI Lexicon, 2026) The PMP
+exam outline lists the task "Baseline a project schedule."
+
+This practice's own: the baseline dates live in a column on the plan page next to each version's
+current release date in Jira, and nobody edits that column after the sponsor's approval. The status
+against the baseline is that table plus the open change requests (a filled table is in
+[project-example.md](project-example.md) section 3).
+
+For each change after the baseline, record three things: the change request (a formal proposal to
+modify a document, deliverable or baseline, in PMI's words), who approved it, and why. NASA's WBS
+Handbook asks for the same on a revised WBS baseline: the "change rationale and project manager
+approval" ([wbs.md](wbs.md) section 7).
+
+When you baseline the plan, agree a tolerance with the sponsor (for example, a milestone may move up
+to one week from its baseline date, so the sponsor's time goes to changes that move the goal, not
+to routine slips). Inside it the project manager decides and records the change; only a change beyond it
+goes to the sponsor. While a request waits, the team keeps working to the current baseline. Tolerance
+and management by exception are PRINCE2's ("manage by stages and by exception",
+[principles.md](principles.md) section 4); the one-week number is an example.
+
+In Jira, one way is a work item per change request, with the approver and the reason in its
+description and a link to the epic it changes. A change to the charter's goal, scope boundary,
+budget or sponsor goes to the sponsor ([charter.md](charter.md) section 3).
+
+Check: when the baseline moves, ask where the request, the approver and the reason are written.
+
+## 5. Plan near work in detail
+
+Plan the work of the next weeks in detail and the work further away at a higher level; fill in
+the detail when that work comes near. Requirements change, so far-off detail is rewritten before
+anyone uses it. Martin Fowler notes that in practice "the vast majority of software projects find
+they need to change their requirements significantly within a few months."
+
+PMI calls this "An iterative planning technique in which the work to be accomplished in the near
+term is planned in detail, while the work in the future is planned at a higher level." (PMI
+Lexicon, 2026, rolling wave planning) NASA does the same inside the WBS with work packages for
+near-term work and planning packages for far-term work ([wbs.md](wbs.md) section 5). PRINCE2 makes
+stage plans "shortly before work begins" (PRINCE2 guide to the project plan).
+
+## 6. Keep it current
+
+Review the plan with the team at a fixed rhythm and adjust it. The plan is a tool for the next
+decision; an out-of-date plan gets ignored, and then it has no use. Atlassian's six steps for a
+plan end with "Share, Gather Feedback, And Adjust The Project Plan As Necessary", and the PMP
+outline asks the project manager to maintain the plan.
+
+Pick the rhythm when you approve the plan and write it into the plan, for example "every second
+Monday, 30 minutes". No standard sets the number; choose one short enough that a review finds few
+changes, and change it if reviews find many.
+
+## 7. Sources
+
+- [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: project management plan, project schedule, Gantt chart, baseline, change control, change request, rolling wave planning.
+- [PMP examination content outline](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf), July 2026 exam: create, maintain the plan; baseline a project schedule.
+- [PRINCE2, what is a project plan](https://www.prince2.com/usa/blog/what-is-a-project-plan-in-prince2-project-management-and-how-do-you-build-one), 2026-08-12: plan content, stage plans.
+- [NASA WBS Handbook, Rev E](https://www.nasa.gov/wp-content/uploads/2025/06/nasa-wbs-handbook.pdf), June 2025, section 3.3.6: revision rationale and approval.
+- [Martin Fowler, Waterfall process](https://martinfowler.com/bliki/WaterfallProcess.html), 2019-11-13.
+- [Atlassian, write an effective project plan](https://www.atlassian.com/blog/project-management/write-an-effective-project-plan), 2023-07-20.
+- Jira Timeline: [what is the timeline](https://support.atlassian.com/jira-software-cloud/docs/what-is-the-roadmap/); versions and releases: [enable releases and versions](https://support.atlassian.com/jira-software-cloud/docs/enable-releases-and-versions/). Both undated.
