@@ -148,16 +148,16 @@ The dictionary, one entry in the epic's description, three lines each:
 ```
 PROJ-10 Payment provider integration (epic)
 Scope: the API client and the settings the shop needs to take card payments through the provider.
-Owner: John Smith. Done when: test payments pass in staging and a 1% live trial matches
-the old success rate.
+Owner: John Smith. Done when: test payments pass in staging and the load test at 2x peak
+passes.
 
 PROJ-11 Routing flag (epic)
 Scope: the flag that sends each card payment to the old or the new provider, and the steps that move traffic from 1% to all.
 Owner: Richard Roe. Done when: with the flag off every payment goes to the old provider, and at 100% every card payment goes to the new one.
 
 PROJ-12 Payment records migration (epic)
-Scope: the nullable provider column on payment records and the code that writes it.
-Owner: Mary Major. Done when: every payment record written after the release holds its provider, and the old release runs against the new schema.
+Scope: the nullable provider column on payment records, the code that writes it, and the backfill of old records.
+Owner: Mary Major. Done when: every payment record holds its provider, old ones through the backfill, and the old release runs against the new schema.
 ```
 
 The WBS is good because each epic is a thing the sponsor can accept or reject ([wbs.md](wbs.md)
@@ -170,7 +170,7 @@ place). Dated 2026-11-16.
 
 | ID | Risk | P | I | Score | Response | Actions | Owner | Trigger | Status |
 |---|---|---|---|---|---|---|---|---|---|
-| R-1 | Because the new provider is untested at our volume, its API may time out during cut-over, so checkout payments fail | 3 | 5 | 15 | Mitigation | Load test at 2x peak by 2027-01-15; route 1% first | John Smith | Timeouts above 1% in the load test | Open |
+| R-1 | Because the new provider is untested at our volume, its API may time out during cut-over, so checkout payments fail | 3 | 5 | 15 | Mitigation | Load test at 2x peak by 2027-01-15; route 1% first in `PROJ 1.1` on 2027-02-12 | John Smith | Timeouts above 1% in the load test | Open |
 | R-2 | Because the draft contract has no uptime clause, a provider outage after cut-over may leave checkout down for hours, so SEV 1 targets are missed | 2 | 4 | 8 | Transference | Put a 99.9% uptime clause and a 1-hour incident response time into the contract by 2026-12-04 | John Smith | The provider refuses the clause | Open |
 | R-3 | Because one engineer knows the old payment code, a long absence may delay the routing flag, so `PROJ 1.1` is late | 2 | 2 | 4 | Acceptance | None unless it happens; one week of schedule reserve exists | John Smith | Absence announced | Open |
 | R-4 | Because the provider's fee tier is fixed at signing, a volume fee above the quote may exceed the budget, so the project overspends | 3 | 3 | 9 | Escalation | Send the fee quote and the budget gap to Jane Doe by 2026-12-04 | Jane Doe | A quote above USD 0.30 per payment | Open |
@@ -191,6 +191,8 @@ The story from [tickets.md](tickets.md) section 2, in `PROJ 1.0 test payments`:
 
 ```
 PROJ-123  Story    Epic: PROJ-11    Fix version: PROJ 1.0 test payments
+Route card payments by flag
+
 As a shopper, I want my card payment to go through the new provider
 so that checkout keeps working while Acme Corp changes provider.
 
@@ -216,6 +218,8 @@ A bug found in testing, in the same version:
 
 ```
 PROJ-131  Bug    Epic: PROJ-11    Fix version: PROJ 1.0 test payments
+Saved-card payment ignores the flag
+
 With the flag off, a test payment on a returning shopper's saved card goes to the new provider.
 Steps: turn the flag off in staging; pay with a saved test card.
 Expected: the old provider handles it. Actual: the new provider handles it.
@@ -226,12 +230,15 @@ The bug's branch and commit, named by [git.md](../git/git.md) sections 2 and 3. 
 takes the commit's title (git.md section 4) and links `PROJ-131`:
 
 ```
-branch: fix/PROJ-131-flag-off-saved-card
+branch: fix/PROJ-131-saved-card-ignores-flag
 commit: fix [PROJ-131]: route saved-card payments by flag
 
-- The saved-card path took the provider from a default and ignored the flag, so
-  payments went to the new provider with the flag off.
+- The saved-card path took the provider from a default and ignored the
+  flag, so payments went to the new provider with the flag off.
 ```
+
+The branch and commit are good because the key ties them and the pull request to `PROJ-131`, so
+the fix is found from the work item ([git.md](../git/git.md) sections 2 and 3).
 
 Fix version on `PROJ-131`: `PROJ 1.0 test payments`, so the release page shows the bug fixed
 before the release ([tickets.md](tickets.md) section 5). The team's Definition of Done:
@@ -244,8 +251,12 @@ before the release ([tickets.md](tickets.md) section 5). The team's Definition o
 - If the change touches routing, turning the flag off still sends payments to the old provider.   # keeps the rollback step true (rollback-plan.md section 2)
 ```
 
-The items are good because each story has criteria a stranger can check ([tickets.md](tickets.md)
+The list is good because each line is a check a reviewer can tick, and the flag line keeps the
+rollback step true ([tickets.md](tickets.md) section 2, [rollback-plan.md](rollback-plan.md)
 section 2).
+
+The items are good because each one, story, task or bug, says what done looks like in a way a
+stranger can check ([tickets.md](tickets.md) section 2).
 
 ## 7. SLA
 
@@ -257,6 +268,9 @@ Severity is written first, and each level maps to one Jira priority
 | SEV 1 | Card payments fail for all shoppers | Highest | 4 hours |
 | SEV 2 | Card payments fail for one card brand or country | High | 24 hours |
 | SEV 3 | Checkout is slow, or a receipt line is wrong | Medium | none agreed |
+
+The table is good because each level maps to one Jira priority and one restore target, so the
+person on call picks the clock from the level ([sla.md](sla.md) sections 2 and 7).
 
 The SEV 1 clause, with the five parts of [sla.md](sla.md) section 4 (the on-call line belongs to
 the clock part):
@@ -284,8 +298,9 @@ Consequence: a miss goes to Jane Doe in a written review within 2 working days. 
 ```
 
 In Jira Service Management ([sla.md](sla.md) section 7): one goal, "Time to restore", for priority
-Highest at 4 hours, on a 24/7 calendar. The goal may start at creation; the on-call person backdates nothing and records the alert time
-in the item. It has no pause condition. It stops when the status becomes Restored, which the on-call engineer sets only
+Highest at 4 hours, on a 24/7 calendar. The goal starts when the item is created, so it can read shorter than the contract clock; the
+person on call records the alert time in the item, and that time decides a miss
+([sla.md](sla.md) section 3). It has no pause condition. It stops when the status becomes Restored, which the on-call engineer sets only
 after the 30 minutes in the definition, so the 4 hours include them. When the outage follows a
 release, the first step is the rollback in section 8, before any search for the cause
 ([sla.md](sla.md) section 5).
@@ -303,15 +318,15 @@ Rollback plan: PROJ 1.1 1% live
 Trigger: success rate of payments sent to the new provider is below the pre-move level
 (96.5%) for 15 minutes, or a SEV 1 or SEV 2 is tied to this release.   # a number with a time window, so nobody argues (rollback-plan.md section 2)
 Decider: Richard Roe, on call for the release week; backup Mary Major, who decides after 15 minutes
-without an answer to the page. One name at a time; nobody waits for a group.   # (rollback-plan.md section 2)
+without an answer to the page. One name at a time; nobody waits for a group.   # a named backup, so an absent decider does not stall the outage (rollback-plan.md section 2)
 Steps: 1. Turn the routing flag off. All payments go to the old provider; no new code.
        2. Watch the success rate until it is normal for 30 minutes (SLA "restored").
        3. Open a work item for the cause, linked to the incident with "causes / is caused by".
-       4. Keep the flag off in every environment until the fix for the cause is merged.
+       4. Keep the flag off in every environment until the fix for the cause is merged.   # main still holds the change, so the next deploy would ship it again (rollback-plan.md section 3)
 Data: payments written during the release keep provider = new; the old release ignores
 the column. Changes that cannot be undone: none.   # "none" is stated, so the decider knows (rollback-plan.md section 4)
 Time: 15 minutes trigger window + up to 15 minutes for the backup + 7 minutes to turn the flag off
-(rehearsal) + 30 minutes until restored = 67 minutes, inside the 4-hour SEV 1 target.
+(rehearsal) + 30 minutes until restored = 67 minutes, inside the 4-hour SEV 1 target.   # counted from the alert, as the SLA clock is (rollback-plan.md section 2)
 Who is told: John Smith, Jane Doe, the customer support lead.
 ```
 
@@ -325,9 +340,10 @@ the migrated schema. The rehearsal also showed that the on-call role could not c
 staging; the permission was added the same day.
 
 Where it lives ([rollback-plan.md](rollback-plan.md) section 6): in the description of the version
-`PROJ 1.1 1% live`, with a link to the Confluence page that holds the long form. Its work items
-(`PROJ-123`, `PROJ-124`, `PROJ-131`) sit in the same version. A rollback, if one happens, is a work
-item linked to the incident with "causes / is caused by".
+`PROJ 1.1 1% live`, with a link to the Confluence page that holds the long form. The version
+holds the work items that ship in it, such as the change that sets the flag to 1%; `PROJ-123`,
+`PROJ-124` and `PROJ-131` shipped earlier, in `PROJ 1.0 test payments`. A rollback, if one
+happens, is a work item linked to the incident with "causes / is caused by".
 
 The plan is good because every part can be checked before the deploy ([rollback-plan.md](rollback-plan.md)
 section 2).
@@ -345,7 +361,7 @@ criteria, not against the plan.
 
 Jane Doe's acceptance is a comment on the charter page, dated 2027-04-09, so the phase can be
 shown to have ended ([life-cycle.md](life-cycle.md) section 2). The risk register is reviewed one
-last time and its open rows are closed.
+last time and its open rows are closed, and the epics `PROJ-10`, `PROJ-11` and `PROJ-12` are closed.
 
 Lessons learned, from a 60-minute retrospective on 2027-04-14, each with an owner and a date:
 

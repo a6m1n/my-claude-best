@@ -133,10 +133,11 @@ code and one place to set timeouts.
 ways to set timeouts and retries, and new code would copy whichever one it saw first. Moving code
 only on touch would never finish. Jane Doe changed the practice, so she owns the migration.
 
-**The practice change** is one commit, and its body says how existing code responds (section 7):
+**The practice change** is one commit for its own work item, PROJ-141, under the epic PROJ-140, and
+its body says how existing code responds (section 7):
 
 ```
-docs [PROJ-140]: use httpx for outgoing HTTP calls
+docs [PROJ-141]: use httpx for outgoing HTTP calls
 
 - New code calls external services through httpx, which gives sync
   and async code one client and one place to set timeouts.
@@ -144,7 +145,10 @@ docs [PROJ-140]: use httpx for outgoing HTTP calls
   Count: grep -rn "import requests" src/ | wc -l, 31 today.
 ```
 
-**The tracking issue**, PROJ-140, records the count before each step:
+**The tracking issue**, PROJ-140, is the epic of the migration. It holds the owner, the end date
+and the count, and each module's change is its own work item with one branch and one pull request
+([tickets.md](../project-management/tickets.md) sections 3 and 4). It records the count before each
+step:
 
 ```
 Migrate from requests to httpx
@@ -239,12 +243,15 @@ def get_open_invoices(customer_id: str, request: Request) -> list[InvoiceRow]:
 - The name does not say which of the four things the file holds
   ([file-structure.md](../file-structure/file-structure.md) sections 3 and 7).
 
-**What lands.** Two pull requests, both for PROJ-160. The split is a larger refactoring, so it is
-its own pull request and merges first (section 3, rule 7). It starts with a `test` commit that
-pins today's rows and the limit of 50, as in case 2, then splits the file:
+**What lands.** Two pull requests, one per work item: PROJ-161 for the refactor, which blocks
+PROJ-160, and PROJ-160 for the change itself ([tickets.md](../project-management/tickets.md)
+sections 4 and 5). The split is a larger refactoring, so it is its own pull request and merges
+first (section 3, rule 7). Its branch is `refactor/PROJ-161-split-open-invoices`
+([git.md](../git/git.md) section 2). It starts with a `test` commit that pins today's rows and the
+limit of 50, as in case 2, then splits the file:
 
 ```text
-refactor [PROJ-160]: split open-invoice code by role
+refactor [PROJ-161]: split open-invoice code by role
 
 - The route and its handler move to the HTTP adapter, the query to
   the repository and the limit to the constants, both in a new

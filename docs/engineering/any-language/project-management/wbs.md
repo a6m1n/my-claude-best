@@ -52,10 +52,11 @@ deliverables instead of phases."
 
 | Avoid (phases and teams) | Use (deliverables) |
 |---|---|
-| Design, Build, Test | Provider API client, Routing flag, Payment records migration |
-| Backend team, QA team | Each deliverable has an owner; the team is the owner's detail |
+| Design, Build, Test | Payment provider integration, Routing flag, Payment records migration |
+| Backend team, QA team | Checkout payments, Payment records |
 
-The table is good because every right-hand item can be accepted or rejected by the sponsor.
+The table is good because every right-hand item can be accepted or rejected by the sponsor. The
+first row names the epics of [project-example.md](project-example.md) section 4.
 
 ## 4. How deep
 

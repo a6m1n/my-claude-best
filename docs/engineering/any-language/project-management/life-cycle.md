@@ -34,7 +34,7 @@ and maintenance keep their own Jira homes (section 3).
 Project   Initiation -> Planning -> Execution ------------------------> Closure
                                     |  release 1 | release 2 | ...  |
                                     |  7 SDLC    | 7 SDLC    |      |
-          Monitoring runs alongside, from Planning to Closure
+          Monitoring runs alongside, from the baseline to Closure
 ```
 
 The diagram is good because it shows the seven SDLC phases repeating inside one project phase,
