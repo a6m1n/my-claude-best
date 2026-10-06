@@ -171,13 +171,17 @@ def _parse_answer(model: LlmModel, text: str, answer_type: type[AnswerT]) -> Ans
 
 ```python
 # core/errors.py
+from openai.types import ChatModel
+
 from acme.core.schemas import LlmModel
+
+# Two clients raise these errors: AcmeAiClient names an LlmModel, the OpenAI chat model a ChatModel.
 
 
 class ModelUnavailable(Exception):
-    """The vendor failed; the message names the model and the status, never the vendor's text."""
+    """The provider failed; the message names the model and status, never the provider's text."""
 
-    def __init__(self, model: LlmModel, status: int | None) -> None:
+    def __init__(self, model: LlmModel | ChatModel, status: int | None) -> None:
         super().__init__(f"model {model} unavailable (status {status})")
         self.model = model
         self.status = status
@@ -186,23 +190,23 @@ class ModelUnavailable(Exception):
 class ModelRefused(Exception):
     """The model refused; the message names the model, never the prompt or the answer."""
 
-    def __init__(self, model: LlmModel) -> None:
+    def __init__(self, model: LlmModel | ChatModel) -> None:
         super().__init__(f"model {model} refused")
         self.model = model
 
 
 class ModelOutputCutOff(Exception):
-    """The answer hit the model's output limit, so it may not match the schema."""
+    """The answer hit the model's output limit; the message names the model, never the answer."""
 
-    def __init__(self, model: LlmModel) -> None:
+    def __init__(self, model: LlmModel | ChatModel) -> None:
         super().__init__(f"model {model} stopped at its output limit")
         self.model = model
 
 
 class ModelAnswerInvalid(Exception):
-    """The answer did not match the schema; the message names the model, never the text."""
+    """The answer did not match the schema; the message names the model, never the answer."""
 
-    def __init__(self, model: LlmModel) -> None:
+    def __init__(self, model: LlmModel | ChatModel) -> None:
         super().__init__(f"model {model} gave an answer that does not match the schema")
         self.model = model
 ```
