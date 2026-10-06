@@ -25,8 +25,6 @@ Ask two questions, in this order.
 
 One exception to question 2: a hard rule stays in `CLAUDE.md`, whatever its topic, when review will not stop a miss. Either the harm happens at the act itself (a push, a call to a live service), or it hides easily in a diff (a key in a config file). A pointer works only when Claude decides to open the file, and for these rules one skipped read is already the harm.
 
-The official target is under 200 lines per file. Shorter works better.
-
 ## What goes in
 
 Two places, sorted by how many tasks need a line.
@@ -167,7 +165,7 @@ What is in none of the four files: the folder tree, the list of dependencies, ho
 
 ## Sources
 
-- Anthropic, "How Claude remembers your project": https://code.claude.com/docs/en/memory (file locations and load order, the 200-line target, "build commands, conventions, project layout", the four "add a line when" triggers, the specificity examples, imports load at launch, `.claude/rules/`, the `/doctor` trim, "context, not enforced configuration", a file named in words is seen "only if it decides to open the file", the auto memory index and its on-demand topic files)
+- Anthropic, "How Claude remembers your project": https://code.claude.com/docs/en/memory (file locations and load order, "build commands, conventions, project layout", the four "add a line when" triggers, the specificity examples, imports load at launch, `.claude/rules/`, the `/doctor` trim, "context, not enforced configuration", a file named in words is seen "only if it decides to open the file", the auto memory index and its on-demand topic files)
 - Anthropic, "Best practices for Claude Code": https://code.claude.com/docs/en/best-practices (the include/exclude table; "only include things that apply broadly"; what is "only relevant sometimes" goes to skills; "would removing this cause Claude to make mistakes?"; one `IMPORTANT` on a single line)
 - HumanLayer, "Writing a good CLAUDE.md", 2025-11: https://www.humanlayer.dev/blog/writing-a-good-claude-md (keep it short; progressive disclosure: task-specific files such as `running_tests.md` and `code_conventions.md`, listed in `CLAUDE.md` with a short description, and Claude decides which to read before it starts working; do not auto-generate it)
 - agents.md: https://agents.md/ ("README.md files are for humans"; the agent file holds what would clutter a README)
