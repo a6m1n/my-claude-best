@@ -27,9 +27,15 @@ from dataclasses import dataclass
 from enum import StrEnum, unique
 from typing import Literal, TypeAlias
 
+from openai.types import ChatModel
+
 # The vendor owns the ids; this is the set this project has tested its prompts on.
 # Each id names one fixed build, never a moving alias (python/evals/production.md section 6).
 LlmModel: TypeAlias = Literal["acme-large-2-2026-08-19", "acme-small-3-2026-06-02"]
+
+# The models either client can name: AcmeAiClient takes an LlmModel, the OpenAI chat model a
+# ChatModel. core/errors.py names it, so the type lives here (file-structure.md section 4).
+ModelName: TypeAlias = LlmModel | ChatModel
 
 
 @unique
@@ -171,17 +177,13 @@ def _parse_answer(model: LlmModel, text: str, answer_type: type[AnswerT]) -> Ans
 
 ```python
 # core/errors.py
-from openai.types import ChatModel
-
-from acme.core.schemas import LlmModel
-
-# Two clients raise these errors: AcmeAiClient names an LlmModel, the OpenAI chat model a ChatModel.
+from acme.core.schemas import ModelName
 
 
 class ModelUnavailable(Exception):
     """The provider failed; the message names the model and status, never the provider's text."""
 
-    def __init__(self, model: LlmModel | ChatModel, status: int | None) -> None:
+    def __init__(self, model: ModelName, status: int | None) -> None:
         super().__init__(f"model {model} unavailable (status {status})")
         self.model = model
         self.status = status
@@ -190,7 +192,7 @@ class ModelUnavailable(Exception):
 class ModelRefused(Exception):
     """The model refused; the message names the model, never the prompt or the answer."""
 
-    def __init__(self, model: LlmModel | ChatModel) -> None:
+    def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} refused")
         self.model = model
 
@@ -198,7 +200,7 @@ class ModelRefused(Exception):
 class ModelOutputCutOff(Exception):
     """The answer hit the model's output limit; the message names the model, never the answer."""
 
-    def __init__(self, model: LlmModel | ChatModel) -> None:
+    def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} stopped at its output limit")
         self.model = model
 
@@ -206,10 +208,14 @@ class ModelOutputCutOff(Exception):
 class ModelAnswerInvalid(Exception):
     """The answer did not match the schema; the message names the model, never the answer."""
 
-    def __init__(self, model: LlmModel | ChatModel) -> None:
+    def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} gave an answer that does not match the schema")
         self.model = model
 ```
+
+The OpenAI chat model of [agent-example.md](../../python/logging/agent-example.md) raises the same
+errors, so `core/errors.py` is one file in both examples and its errors take `ModelName` from
+`core/schemas.py` above. Change both copies together.
 
 What it does for the rules:
 
