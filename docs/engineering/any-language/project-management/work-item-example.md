@@ -143,21 +143,19 @@ a subtask has no children, takes its parent's sprint and is left out of velocity
 
 ## 6. Subtasks handed out per person, and the fix
 
-Bad: the story is split by person, and each person's piece has its own estimate. The one problem
-is that subtasks are used to hand out work:
+Bad: the story is split by person. The one problem is that subtasks are used to hand out work:
 
 ```
-PROJ-141  Subtask of PROJ-123    Jane Doe: backend    Estimate: 5 points
-PROJ-142  Subtask of PROJ-123    John Smith: tests    Estimate: 3 points
+PROJ-141  Subtask of PROJ-123    Jane Doe: backend     Estimate: none
+PROJ-142  Subtask of PROJ-123    John Smith: database  Estimate: none
 ```
 
 The reason it is wrong: each person now owns a piece alone, and nobody owns the story. Wolpers
 lists this among his Jira anti-patterns (his view, [work-item-types.md](work-item-types.md)
-section 3). The points do nothing either, because velocity ignores subtask estimates (Atlassian).
-Agreeing what the story must deliver and leaving the way to the people is
+section 3). Agreeing what the story must deliver and leaving the way to the people is
 [principles.md](principles.md) section 2.
 
-Good: the same work, split by step, owned by the Developers, with no points. This is section 5:
+Good: the same work, split by step and owned by the Developers. This is section 5:
 
 ```
 PROJ-141  Subtask of PROJ-123    Owner: the Developers    Estimate: none   # velocity ignores subtask points (work-item-types.md section 3)
@@ -165,6 +163,9 @@ Read the flag value in the payment router
 
 PROJ-142  Subtask of PROJ-123    Owner: the Developers    Estimate: none
 Send the payment to the provider the flag names
+
+PROJ-143  Subtask of PROJ-123    Owner: the Developers    Estimate: none
+Store the provider on the payment record
 ```
 
 This fixes the one problem. The names say what each step does, so any Developer can pick one up,

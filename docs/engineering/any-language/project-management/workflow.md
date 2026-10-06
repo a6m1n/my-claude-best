@@ -304,6 +304,7 @@ Review:
 ```
 PROJ-135  Story    Epic: PROJ-10    Status: Code Review
 Show payment errors to the shopper
+As a shopper, I want to see why my payment failed so that I can try again or pay another way.
 
 Acceptance criteria
 1. A declined card shows the message "Your card was declined."
@@ -318,8 +319,9 @@ deployed, so the item is split.
 ```
 Split on day 6, in the backlog view (Split work item)
 
-PROJ-135  Story    Status: Code Review -> Pre-prod -> Done after the production deploy
+PROJ-135  Story    Epic: PROJ-10    Status: Code Review -> Pre-prod -> Done after the production deploy
 Show payment errors to the shopper (English)
+As a shopper, I want to see why my payment failed so that I can try again or pay another way.
 1. A declined card shows the message "Your card was declined."
 2. A provider timeout shows the message "Payment is taking too long. Try again."
 Comment: Split on day 6. Translation (criterion 3) moves to PROJ-139, unchanged.
@@ -327,6 +329,7 @@ Comment: Split on day 6. Translation (criterion 3) moves to PROJ-139, unchanged.
 
 PROJ-139  Story    Epic: PROJ-10    Status: Backlog    (linked to PROJ-135 by the split)
 Show payment errors in the shop's three languages
+As a shopper, I want the payment errors in my language so that I can read them.
 3. Both messages are shown in the shop's three languages.
 Comment: Split from PROJ-135. Needs the translations; the Product Owner orders it.
 ```
