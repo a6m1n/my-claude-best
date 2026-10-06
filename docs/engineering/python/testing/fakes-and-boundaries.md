@@ -121,6 +121,7 @@ assert [email.to for email in mailer.sent] == ["jane.doe@example.com"]
 | the database | not reached: a rule takes plain values, and a flow that queries goes to `integration/` | a real database in a container, one per run, emptied after each test ([suite-example.md](suite-example.md)) |
 | email, a queue, another sender | a fake subclass that records (section 1) | the same fake, unless the sender is the subject |
 | a language model | a fake of the one model client, returning a prepared answer | the real model, only under the `live_model` mark ([running-tests.md](running-tests.md) section 10) |
+| an agent's chat model | the real chat model class on a scripted `httpx.MockTransport`, because the tool schemas it sends are what the test pins ([python/evals/agents.md](../evals/agents.md) section 5) | the real model, only under the `live_model` mark ([running-tests.md](running-tests.md) section 10) |
 | the clock | a `today` or `now` the test passes ([readability.md](../../any-language/readability/readability.md) section 6) | the same; time-machine only when a library reads the clock itself |
 | files | `tmp_path` | `tmp_path` |
 | settings and the environment | the plain values the unit takes ([python.md](../language/python.md) section 5) | the plain values the unit takes, or the `Settings` a whole-app test passes to the function that builds the app ([python.md](../language/python.md) section 5) |

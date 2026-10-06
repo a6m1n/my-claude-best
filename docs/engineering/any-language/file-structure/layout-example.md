@@ -27,7 +27,7 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 │       │   ├── consts.py                   # limits every module obeys, such as the upload size
 │       │   ├── errors.py                   # the base error every adapter maps
 │       │   ├── logging.py
-│       │   ├── schemas.py                  # types two or more modules use
+│       │   ├── schemas.py                  # types two or more modules use, or only core/ files use
 │       │   ├── database.py                 # only with a database: the one way to reach it
 │       │   └── <system>_client.py          # one per external system: every call to it goes here
 │       ├── <domain>/                       # the modules of one business area, named for the area

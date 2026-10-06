@@ -101,23 +101,27 @@ with async tests and with every other plugin, and shows every answer when it fai
 
 ```python
 # tests/integration/triage/test_service_triage.py
-def kind_or_model_failure(
-    ticket_text: str, client: AcmeAiClient
-) -> TicketKind | ModelRefused | ModelOutputCutOff | ModelAnswerInvalid:
-    """One run's kind, or the model's own failure, which counts as a wrong kind.
+def run_triage(ticket_text: str, client: AcmeAiClient) -> TriageRun:
+    """One run of the triage call; the model's own failure ends it with no triage.
 
     ModelUnavailable, the provider's failure, is not caught: the test fails on it as
     an error of the run (evals.md section 6).
     """
     try:
-        return triage_ticket(
+        triage = triage_ticket(
             ticket_text,
             client,
             model=TRIAGE_LLM_MODEL,
             reasoning_effort=TRIAGE_LLM_REASONING_EFFORT,
-        ).kind
-    except (ModelRefused, ModelOutputCutOff, ModelAnswerInvalid) as exc:
-        return exc
+        )
+    except ModelRefused:
+        return TriageRun(ended=TriageEnd.REFUSED, triage=None)
+    except ModelOutputCutOff:
+        return TriageRun(ended=TriageEnd.CUT_OFF, triage=None)
+    except ModelAnswerInvalid:
+        return TriageRun(ended=TriageEnd.INVALID_ANSWER, triage=None)
+
+    return TriageRun(ended=TriageEnd.ANSWERED, triage=triage)
 
 
 @pytest.mark.live_model
@@ -127,22 +131,27 @@ class TestTriageTicket:
     def test_a_crash_report_is_filed_as_a_bug_in_two_runs_of_three(
         self, uncached_model_client: AcmeAiClient
     ) -> None:
-        kinds = [
-            kind_or_model_failure(CRASH_ON_EXPORT, uncached_model_client)
-            for _ in range(3)
-        ]
+        runs = [run_triage(CRASH_ON_EXPORT, uncached_model_client) for _ in range(3)]
 
-        assert kinds.count(TicketKind.BUG) >= 2
+        passes = sum(
+            run.triage is not None and run.triage.kind is TicketKind.BUG for run in runs
+        )
+        # The message lists the runs, so a red run shows how each one ended
+        # (python/testing/assertions.md section 5).
+        assert passes >= 2, runs
 ```
 
 The client, the fixture and the call are those of
-[running-tests.md](../testing/running-tests.md) section 10, and the `acme.core.errors` classes those
-of [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md). A refusal, an answer cut off or one
-that does not parse is the model's own answer, so `kind_or_model_failure` puts it in the list in
-place of a kind, and it counts as a wrong one. Only `ModelUnavailable`, the provider's failure,
-raises, and the test fails on it as an error of the run ([evals.md](evals.md) section 6). pytest's
-report prints the list, so a red run shows every answer, and the loop makes three calls unless the
-provider fails.
+[running-tests.md](../testing/running-tests.md) section 10, the `acme.core.errors` classes those
+of [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), and `TriageRun` and
+`TriageEnd` those of [case-set-example.md](case-set-example.md). A refusal, an answer cut off or one
+that does not parse is the model's own answer, so `run_triage` ends the run with no triage, which
+counts as a wrong one. `run_triage` returns one type: an untagged union of a kind and three errors
+would make the test write an `isinstance` check for each run, and a run with no triage holds
+`None`, the documented form for no result ([python.md](../language/python.md) section 3). Only
+`ModelUnavailable`, the provider's failure, raises, and the test fails on it as an error of the run
+([evals.md](evals.md) section 6). The assert's message is the list of runs, so a red run shows
+every answer, and the loop makes three calls unless the provider fails.
 
 **Optional.** The `flaky` plugin's decorator, `@flaky(max_runs=3, min_passes=2)`, imported with
 `from flaky import flaky`. It stops as soon as the rule is decided, so a case that passes twice

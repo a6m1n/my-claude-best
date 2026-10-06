@@ -88,6 +88,7 @@ the test counts the passes:
 ```python
 # tests/integration/chat/test_graph.py
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Final
 
 import pytest
@@ -102,24 +103,34 @@ from acme.core.errors import ModelAnswerInvalid, ModelOutputCutOff, ModelRefused
 from acme.support.chat.graph import ChatAgent
 
 QUESTION: Final = "Where is order A-1042?"
+# Three runs, passes counted: one run of one case decides nothing
+# (repeated-runs.md section 5).
 RUNS_PER_CASE: Final = 3
 
 
+# A fresh metric per test: measure() writes its score and error onto it
+# (fixtures.md section 3).
 @pytest.fixture(scope="function")
 def keeps_to_order_status() -> GEval:
     """The reply's judge; only live_model tests ask for it, so no default run reads a key."""
     settings = Settings()
     return GEval(
         name="Keeps to the order status",
+        # Fixed steps, not criteria: a score from criteria alone is not
+        # deterministic (judges.md section 7).
         evaluation_steps=[
             "Read the order status in the context.",
             "Fail the reply if it promises anything the status does not support.",
         ],
         evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT, SingleTurnParams.CONTEXT],
+        # The judge's model from its constant, never DeepEval's default
+        # (prompt-engineering.md section 15).
         model=OpenAIModel(
             model=REPLY_JUDGE_LLM_MODEL,
             api_key=settings.openai_api_key.get_secret_value(),
         ),
+        # Pass or fail; without it the metric passes at a score of 0.5
+        # (judges.md section 7).
         strict_mode=True,
     )
 
@@ -129,10 +140,23 @@ def tool_results(messages: Iterable[AnyMessage]) -> list[str]:
     return [message.text for message in messages if isinstance(message, ToolMessage)]
 
 
-async def judged_run(agent: ChatAgent, judge: GEval) -> bool | Exception | None:
+@dataclass(frozen=True)
+class JudgedRun:
+    """One run of the agent: whether the judge passed its reply, or why it has none."""
+
+    passed: bool
+    failure: Exception | None = None
+
+    def __post_init__(self) -> None:
+        # Checked on the type, never only in a comment: a run that ended on a failure
+        # has no reply, so it cannot pass (python.md section 2).
+        if self.passed and self.failure is not None:
+            raise ValueError("a run that ended on a failure cannot pass")
+
+
+async def judged_run(agent: ChatAgent, judge: GEval) -> JudgedRun:
     """One run of the agent, judged; a run the agent ended without its reply fails.
 
-    That failure comes back in place of a verdict, so a red run shows it.
     ModelUnavailable and an error of the judge raise: errors of the run
     (evals.md section 6).
     """
@@ -146,7 +170,7 @@ async def judged_run(agent: ChatAgent, judge: GEval) -> bool | Exception | None:
         ModelOutputCutOff,
         ModelAnswerInvalid,
     ) as exc:
-        return exc
+        return JudgedRun(passed=False, failure=exc)
 
     test_case = LLMTestCase(
         input=QUESTION,
@@ -155,7 +179,7 @@ async def judged_run(agent: ChatAgent, judge: GEval) -> bool | Exception | None:
     )
     await judge.a_measure(test_case)
 
-    return judge.is_successful()
+    return JudgedRun(passed=judge.is_successful())
 
 
 @pytest.mark.live_model
@@ -165,17 +189,20 @@ class TestBuildAgent:
     async def test_a_processing_order_gets_no_promise_of_a_date_in_two_runs_of_three(
         self, chat_agent: ChatAgent, keeps_to_order_status: GEval
     ) -> None:
-        verdicts = [
+        runs = [
             await judged_run(chat_agent, keeps_to_order_status)
             for _ in range(RUNS_PER_CASE)
         ]
 
-        assert verdicts.count(True) >= 2
+        # The message lists the runs, so a red run shows how each one ended
+        # (python/testing/assertions.md section 5).
+        assert sum(run.passed for run in runs) >= 2, runs
 ```
 
 The names are those of DeepEval 4.2.7; the agent, its fixture and `REPLY_JUDGE_LLM_MODEL` are cut
-here, [agent-eval-example.md](agent-eval-example.md) builds the agent, and `openai_api_key` is the
-settings field of [python/logging/agent-example.md](../logging/agent-example.md); `GraphRecursionError` is
+here. The fixture builds the agent as [agent-eval-example.md](agent-eval-example.md) does, on its
+`FakeOrderStore`; `openai_api_key` is the settings field of
+[python/logging/agent-example.md](../logging/agent-example.md); `GraphRecursionError` is
 LangGraph's, and the `acme.core.errors` classes the agent's middlewares raise are those of
 [python/logging/agent-example.md](../logging/agent-example.md). The test is async
 because the agent is ([agent-eval-example.md](agent-eval-example.md) says why), so it awaits the
@@ -210,8 +237,13 @@ follow the method:
   stays advisory, never alone in a gate, until [judges.md](judges.md) sections 6 and 9 hold. A run
   the agent ended without its reply, at its step limit, on a refusal, or on an answer cut off or
   one that does not parse, is a failed run, not an error ([evals.md](evals.md) section 6):
-  `judged_run` puts it in the list in place of a verdict. `ModelUnavailable` and an error of the
-  judge raise, and the test fails on them as errors of the run.
+  `judged_run` returns it as a `JudgedRun` that did not pass, with the exception that ended it. It
+  returns one type: an untagged union of a verdict and an error would make the test write an
+  `isinstance` check for each run, and `failure` holds `None`, the documented form for no result,
+  when the judge read a reply ([python.md](../language/python.md) section 3). The assert's message
+  is the list of runs, so a red run shows how each one ended.
+  `ModelUnavailable` and an error of the judge raise, and the test fails on them as errors of the
+  run.
 - **Should. Run it with `deepeval test run <file>`**, the documented entry point, and pin a release
   after April 2026, when a fix made it pass pytest's failing exit codes through to CI.
 - **Must. Validate the metric** on your labels before it gates ([judges.md](judges.md) section 6):
