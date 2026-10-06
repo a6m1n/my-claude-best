@@ -5,7 +5,8 @@ the card. One business rule changes the flow: a customer's first order above 1,0
 at once, because the risk team checks it by hand first. Names are invented. The three clients
 (card payments, the review queue, email) stand for outside systems, and their bodies are not
 shown: each one is a single call to that system, and `charge` returns the payment's id as a
-`PaymentId`, a `NewType` the payments client declares.
+`PaymentId`, a `NewType` in `core/schemas.py`
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 4).
 
 Both versions share the order type below and the same rule. What moves is the decision: from
 inside a doer to the first line of the use case. The threshold and its comment sit in the file of
@@ -61,8 +62,9 @@ def place_order(order: Order) -> None:
 from decimal import Decimal
 from typing import Final
 
-from shop.core.payments_client import PaymentId, payments
+from shop.core.payments_client import payments
 from shop.core.review_queue_client import review_queue
+from shop.core.schemas import PaymentId
 from shop.sales.checkout.schemas import Order
 
 # Card fraud clusters in a new customer's first large order, so the risk
@@ -83,7 +85,7 @@ def charge_card(order: Order) -> PaymentId | None:
 
 ```python
 from shop.core.mail_client import mailer
-from shop.core.payments_client import PaymentId
+from shop.core.schemas import PaymentId
 from shop.sales.checkout.schemas import Order
 
 
@@ -124,14 +126,15 @@ things are: the flow is decided in a place the reader of the flow never looks.
 ```text
 src/shop/
 ├── core/
-│   ├── payments_client.py      PaymentGateway and PaymentId: every call to card payments
+│   ├── payments_client.py      PaymentGateway: every call to card payments
 │   ├── review_queue_client.py  ReviewQueue: every call to the risk team's queue
 │   ├── mail_client.py          Mailer: every call to email
+│   ├── schemas.py              PaymentId: the types the clients name
 │   └── ...                     files not shown
 ├── sales/
 │   └── checkout/
 │       ├── schemas.py          what an order is, and how a checkout can end: types only
-│       ├── review_policy.py    the rule, and the threshold it reads
+│       ├── review_rules.py     the rule, and the threshold it reads
 │       └── usecase.py          place_order: the business if, then the steps
 └── api/
     ├── app.py                  builds the app and the three clients once
@@ -153,7 +156,7 @@ flowchart LR
   A[src/shop/api/routes_checkout.py] --> U[src/shop/sales/checkout/usecase.py]
   A --> S[src/shop/sales/checkout/schemas.py]
   U --> S
-  U --> R[src/shop/sales/checkout/review_policy.py]
+  U --> R[src/shop/sales/checkout/review_rules.py]
   U --> C[src/shop/core/]
 ```
 
@@ -163,7 +166,7 @@ flowchart LR
 from shop.core.mail_client import Mailer
 from shop.core.payments_client import PaymentGateway
 from shop.core.review_queue_client import ReviewQueue
-from shop.sales.checkout.review_policy import needs_manual_review
+from shop.sales.checkout.review_rules import needs_manual_review
 from shop.sales.checkout.schemas import CheckoutResult, Order
 
 
@@ -185,7 +188,7 @@ def place_order(
     return CheckoutResult.CONFIRMED
 ```
 
-`src/shop/sales/checkout/review_policy.py`
+`src/shop/sales/checkout/review_rules.py`
 
 ```python
 from decimal import Decimal
@@ -233,6 +236,8 @@ def status_for(result: CheckoutResult) -> HTTPStatus:
             return HTTPStatus.CREATED
         case CheckoutResult.IN_REVIEW:
             return HTTPStatus.ACCEPTED
+        # Unreachable today: a new member fails the type checker here, and raises at
+        # runtime if no checker ran (python.md section 2).
         case _ as unreachable:
             assert_never(unreachable)
 ```

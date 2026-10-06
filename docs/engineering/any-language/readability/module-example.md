@@ -28,6 +28,9 @@ tests/
     └── test_usecase.py
 ```
 
+Every folder under `tests/` has an empty `__init__.py`
+([python/testing/layout.md](../../python/testing/layout.md) section 6); the tree leaves them out.
+
 `schemas.py`, `reminder_format.py`, `repository.py`, `core/database.py`, `core/mail_client.py`,
 the adapter and the integration test are not shown. `schemas.py` holds a frozen `Invoice` with
 `invoice_id`, `customer_email`, `amount`, `due_on` and `last_reminded_on: date | None`, the id

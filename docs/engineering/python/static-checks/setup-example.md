@@ -93,8 +93,10 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: check-added-large-files
-        args: [--enforce-all]
+        args: [--enforce-all]  # every file, not only staged ones, so CI checks the whole tree
       - id: check-merge-conflict
+        # Without it the check fires only during a merge, so CI would pass a committed
+        # marker; a seven-= underline also fails: lengthen it.
         args: [--assume-in-merge]
       - id: detect-private-key
 
@@ -118,6 +120,8 @@ repos:
         name: mypy
         entry: uv run --locked mypy
         language: unsupported
+        # The whole project at every commit, so a caller broken in another file is
+        # caught (static-checks.md section 4).
         always_run: true
         pass_filenames: false
 
@@ -163,7 +167,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          persist-credentials: false
+          persist-credentials: false  # the token does not stay in .git/config for the later steps
 
       - uses: astral-sh/setup-uv@v10.2.0
         with:

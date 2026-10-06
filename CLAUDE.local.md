@@ -130,8 +130,12 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`
-  defines one), read the rules on examples in `docs/engineering/CLAUDE.md` and work by them. The
-  check: the closing summary has the lines that file's GOOD-example bullet asks for.
+  defines one), read the rules on examples in `docs/engineering/CLAUDE.md` and work by them. When
+  you brief a subagent to write or change one, quote that file's two bullets on GOOD examples and
+  its bullet on a line's reason in the brief, since a subagent may not load that file, and ask for
+  the `Practices:` line in the hand-back. The check: when you write the commit message, its
+  trailer block carries the `Practices:` line that file's GOOD-example bullets ask for, in the
+  form they give, `Practices: none govern these examples` included.
 - Every practice under `docs/engineering/` is a folder named by the topic, never a bare file,
   inside a group folder: `any-language/`, or a language's own folder such as `python/`
   (`docs/engineering/CLAUDE.md` says which). Before you stage a change that adds or removes one,

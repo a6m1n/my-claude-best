@@ -47,16 +47,19 @@ logger = logging.getLogger(__name__)
 async def answer(
     question: Question, agent: ChatAgent, tracing: BaseCallbackHandler
 ) -> Answer:
-    # Every line of this run carries it, in nodes and tools too.
+    # Every line of this run carries it, in nodes and tools too (logging.md section 8).
     thread_id.set(question.thread_id)
 
     config: RunnableConfig = {
         "configurable": {"thread_id": question.thread_id},
-        # The prompt, the answer and the tool results go to Langfuse.
+        # The prompt, the answer and the tool results go to Langfuse
+        # (logging.md section 8).
         "callbacks": [tracing],
     }
 
     started = time.perf_counter()
+    # version="v2": the output is typed, so .value["structured_response"] is the
+    # schema's model.
     output = await agent.ainvoke(
         {"messages": [HumanMessage(question.text)]}, config, version="v2"
     )
@@ -125,8 +128,9 @@ router = APIRouter()
 @router.post("/chat")
 async def chat(body: ChatRequest, request: Request) -> ChatResponse:
     question = Question(thread_id=body.thread_id, text=body.text)
-    # The request's root span: the run's model and tool calls nest under it, and every line
-    # inside it, the use case's summary line included, carries its trace id.
+    # The request's root span: the run's model and tool calls nest under it, and
+    # every line inside it, the use case's summary line included, carries its trace
+    # id (logging.md section 8).
     with request_trace(
         SUPPORT_CHAT_TRACE_NAME,
         request_input=question.text,
@@ -171,20 +175,37 @@ service stops. That wiring is not shown.
 
 ## `core/langfuse_client.py`: the one client of Langfuse
 
+`Settings` and `start_tracing` both use the environment's type, so it sits in `core/schemas.py`,
+next to `LogFormat` and `LogLevel` of [setup-example.md](setup-example.md), and building `Settings`
+imports no Langfuse SDK ([file-structure.md](../../any-language/file-structure/file-structure.md)
+section 4). It is a type, not a named value, so it is not in `consts.py`
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 3); three `Final`
+names would leave the setting a bare `str` ([python.md](../language/python.md) section 3).
+
 ```python
+# core/schemas.py, not consts.py: a type, not a named value
+# (file-structure.md section 3)
+from typing import Literal, TypeAlias
+
+# This application's deployments. Settings checks the value at startup and only passes
+# it on to Langfuse; no code names one, so a Literal (python.md section 2). Langfuse
+# keeps test traces out of production's views by it.
+TracingEnvironment: TypeAlias = Literal["development", "staging", "production"]
+```
+
+```python
+# core/langfuse_client.py
 """The one client of Langfuse: every other file reaches the trace store through these functions."""
 
 from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Literal, TypeAlias
 
 from langchain_core.callbacks import BaseCallbackHandler
 from langfuse import Langfuse, LangfuseSpan, get_client, propagate_attributes
 from langfuse.langchain import CallbackHandler
 from pydantic import SecretStr
 
-# This application's deployments; Langfuse keeps test traces out of production's views by it.
-TracingEnvironment: TypeAlias = Literal["development", "staging", "production"]
+from acme.core.schemas import TracingEnvironment
 
 
 def start_tracing(
@@ -208,7 +229,8 @@ def start_tracing(
 
 
 def stop_tracing() -> None:
-    # Sends the spans still in the buffer; Langfuse asks services to call it when they stop.
+    # Sends the spans still in the buffer; Langfuse asks services to call it when
+    # they stop (logging.md section 8).
     get_client().shutdown()
 
 
@@ -219,7 +241,7 @@ class RequestTrace:
         self._root = root
 
     def record_output(self, output: str) -> None:
-        # Langfuse takes the trace's output from its root span.
+        # Langfuse takes the trace's output from its root span (logging.md section 8).
         self._root.update(output=output)
 
     def mark_cut(self) -> None:
@@ -239,11 +261,17 @@ def request_trace(
     user_id: str | None = None,
 ) -> Iterator[RequestTrace]:
     with get_client().start_as_current_observation(
-        as_type="span", name=name, input=request_input, metadata={"request_id": request_id}
+        as_type="span",
+        name=name,
+        input=request_input,
+        metadata={"request_id": request_id},
     ) as root:
-        # The root and every span created inside this block get the attributes; any other span
-        # created earlier does not, so the block opens before any model call.
-        with propagate_attributes(trace_name=name, session_id=session_id, user_id=user_id):
+        # The root and every span created inside this block get the attributes; any
+        # other span created earlier does not, so the block opens before any model
+        # call (logging.md section 8).
+        with propagate_attributes(
+            trace_name=name, session_id=session_id, user_id=user_id
+        ):
             yield RequestTrace(root)
 
 
@@ -258,10 +286,10 @@ own type. The example passes no tags. A service that sets them adds `tags=[...]`
 `propagate_attributes` call; [logging.md](logging.md) section 8 says which values qualify.
 
 `request_trace` and `stop_tracing` reach the client through `get_client()` instead of taking it as
-a parameter, which departs from
-[file-structure.md](../../any-language/file-structure/file-structure.md) section 4: Langfuse's
-handler and `@observe` read the client from `get_client()` by themselves, and `get_client()` builds
-it from the one configuration `start_tracing` registered, so a handle passed in would add nothing.
+a parameter, as [file-structure.md](../../any-language/file-structure/file-structure.md) section 4
+allows for an SDK that keeps its own instance: Langfuse's handler and `@observe` read the client
+from `get_client()` by themselves, and `get_client()` builds it from the one configuration
+`start_tracing` registered, so a handle passed in would add nothing.
 `start_tracing` is also where a `mask_otel_spans` function goes when a service keeps some values
 out of the trace store ([logging.md](logging.md) section 8); this example masks nothing.
 Retention is set on the Langfuse project, or by a scheduled deletion job where the plan has no
@@ -296,6 +324,28 @@ def chat_model(model: ChatModel, api_key: SecretStr) -> ChatOpenAI:
     return ChatOpenAI(model=model, api_key=api_key)
 
 
+def provider_middlewares(
+    model: ChatModel,
+    *,
+    disable_prompt_cache: bool,
+    new_request_uuid: Callable[[], uuid.UUID],
+) -> list[AgentMiddleware]:
+    """Every agent's required middlewares, in order; the agent lists them last."""
+    return [
+        # Required: disable_prompt_cache reaches the model only through this entry
+        # (prompt-engineering.md section 17).
+        PromptCacheSwitchMiddleware(
+            disable_prompt_cache=disable_prompt_cache,
+            new_request_uuid=new_request_uuid,
+        ),
+        # Required, and last: the last entries are the innermost, next to the model, so
+        # every other middleware sees this client's errors, never the provider's error
+        # or the answer's text (logging.md section 10).
+        AnswerErrorMiddleware(model),
+        ProviderErrorMiddleware(model),
+    ]
+
+
 class PromptCacheSwitchMiddleware(AgentMiddleware):
     """disable_prompt_cache: a fresh first line of the system prompt on every call, so nothing from there on hits a cache."""
 
@@ -318,7 +368,7 @@ class PromptCacheSwitchMiddleware(AgentMiddleware):
             request.system_message.text if request.system_message is not None else ""
         )
         # First in the system prompt: a cache matches from the request's start, so
-        # nothing from here on hits.
+        # nothing from here on hits (prompt-engineering.md section 17).
         system_message = SystemMessage(
             f"Request UUID: {self._new_request_uuid()}\n{system}"
         )
@@ -341,11 +391,12 @@ class ProviderErrorMiddleware(AgentMiddleware):
         try:
             return await handler(request)
         except openai.APIStatusError as exc:
-            # from None: the provider's message can quote the prompt; the model and the status say enough
+            # from None: the provider's message can quote the prompt; the model and
+            # the status say enough (logging.md section 10)
             raise ModelUnavailable(self._model, exc.status_code) from None
         except openai.APIError:
-            # every other provider error (connection, timeout, context overflow) has no status we need,
-            # only text we must not log
+            # every other provider error (connection, timeout, context overflow) has no
+            # status we need, only text we must not log (logging.md section 10)
             raise ModelUnavailable(self._model, None) from None
 
 
@@ -361,7 +412,8 @@ class AnswerErrorMiddleware(AgentMiddleware):
         request: ModelRequest,
         handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
     ) -> ModelResponse:
-        # from None in every raise: the SDK's error and the parse error can carry the answer's text
+        # from None in every raise: the SDK's error and the parse error can carry the
+        # answer's text (logging.md section 10)
         try:
             return await handler(request)
         except openai.LengthFinishReasonError:
@@ -385,36 +437,40 @@ def _is_refusal(reply: AIMessage) -> bool:
 # core/errors.py
 from openai.types import ChatModel
 
+from acme.core.schemas import LlmModel
+
+# Two clients raise these errors: AcmeAiClient names an LlmModel, the OpenAI chat model a ChatModel.
+
 
 class ModelUnavailable(Exception):
-    """The model provider failed; the message names the model and the status, never the provider's text."""
+    """The provider failed; the message names the model and status, never the provider's text."""
 
-    def __init__(self, model: ChatModel, status: int | None) -> None:
+    def __init__(self, model: LlmModel | ChatModel, status: int | None) -> None:
         super().__init__(f"model {model} unavailable (status {status})")
         self.model = model
         self.status = status
 
 
 class ModelRefused(Exception):
-    """The model refused; the message names the model, never the answer's text."""
+    """The model refused; the message names the model, never the prompt or the answer."""
 
-    def __init__(self, model: ChatModel) -> None:
+    def __init__(self, model: LlmModel | ChatModel) -> None:
         super().__init__(f"model {model} refused")
         self.model = model
 
 
 class ModelOutputCutOff(Exception):
-    """The answer hit the model's limit; the message names the model, never the answer's text."""
+    """The answer hit the model's output limit; the message names the model, never the answer."""
 
-    def __init__(self, model: ChatModel) -> None:
+    def __init__(self, model: LlmModel | ChatModel) -> None:
         super().__init__(f"model {model} stopped at its output limit")
         self.model = model
 
 
 class ModelAnswerInvalid(Exception):
-    """The answer did not match the schema; the message names the model, never the answer's text."""
+    """The answer did not match the schema; the message names the model, never the answer."""
 
-    def __init__(self, model: ChatModel) -> None:
+    def __init__(self, model: LlmModel | ChatModel) -> None:
         super().__init__(f"model {model} gave an answer that does not match the schema")
         self.model = model
 ```
@@ -475,18 +531,14 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph.state import CompiledStateGraph
 from openai.types import ChatModel
 
-from acme.core.openai_client import (
-    AnswerErrorMiddleware,
-    PromptCacheSwitchMiddleware,
-    ProviderErrorMiddleware,
-)
+from acme.core.openai_client import provider_middlewares
 from acme.core.order_store_client import OrderStore
 from acme.support.chat.call_logging import CallLoggingMiddleware
 from acme.support.chat.consts import SUPPORT_CHAT_MAX_STEPS
 from acme.support.chat.prompts import SYSTEM
 from acme.support.chat.schemas import ChatReply
 from acme.support.chat.services.service_orders import order_tools
-from acme.support.chat.tool_errors import report_tool_failure
+from acme.support.chat.tool_failure_handler import report_tool_failure
 
 ChatAgent: TypeAlias = CompiledStateGraph[
     AgentState[ChatReply], None, InputAgentState, OutputAgentState[ChatReply]
@@ -507,21 +559,21 @@ def build_agent(
         tools=order_tools(orders),
         system_prompt=SYSTEM,
         # The provider's own strict structured output: the provider enforces the schema,
-        # and the reply is the last AI message, with its finish reason.
+        # and the reply is the last AI message, with its finish reason
+        # (prompt-engineering.md section 11).
         response_format=ProviderStrategy(ChatReply, strict=True),
         middleware=[
+            # Required when the model should recover: turns a ToolFailure into a
+            # message it reads, logged once (logging.md section 8).
             ToolErrorMiddleware(on_error=report_tool_failure),
             CallLoggingMiddleware(),
-            # Required: disable_prompt_cache reaches the model only through this entry.
-            PromptCacheSwitchMiddleware(
+            # Required, and last: innermost, so every other middleware sees this
+            # client's errors, never the provider's text (logging.md section 10).
+            *provider_middlewares(
+                model,
                 disable_prompt_cache=disable_prompt_cache,
                 new_request_uuid=new_request_uuid,
             ),
-            # Required, and last: the last entries are the innermost, next to the model, so
-            # every other middleware sees this client's errors, never the provider's error
-            # or the answer's text.
-            AnswerErrorMiddleware(model),
-            ProviderErrorMiddleware(model),
         ],
     ).with_config(recursion_limit=SUPPORT_CHAT_MAX_STEPS)
 ```
@@ -529,6 +581,13 @@ def build_agent(
 `ProviderStrategy(ChatReply, strict=True)` asks for the provider's own strict structured output:
 the provider enforces the schema, and the final reply is the last AI message. LangChain's other
 strategy, a tool call, would end the run on a tool message instead.
+
+`provider_middlewares` keeps the entries every agent's model call needs, and their order, in the
+one client of the provider, so each `graph.py` adds them with one call and a middleware added there
+later reaches every agent ([file-structure.md](../../any-language/file-structure/file-structure.md)
+section 4). They are agent middlewares, not a property of the chat model client, so `chat_model`
+cannot carry them: `provider_middlewares` hands the list to each agent. A unit test pins that an
+agent lists them ([agent-eval-example.md](../evals/agent-eval-example.md), the cache switch).
 
 The two error middlewares split the ways a call fails by what failed. `ProviderErrorMiddleware`
 handles the provider: a status error or any other API error becomes `ModelUnavailable`.
@@ -562,7 +621,8 @@ reads no module-level client, and the model, which fills only `order_id`, never 
 from langchain_core.tools import BaseTool, tool
 
 from acme.core.order_store_client import OrderStore
-from acme.support.chat.errors import ToolFailure, ToolFailureReason
+from acme.support.chat.errors import ToolFailure
+from acme.support.chat.schemas import ToolFailureReason
 
 
 def order_tools(orders: OrderStore) -> list[BaseTool]:
@@ -576,11 +636,13 @@ def order_tools(orders: OrderStore) -> list[BaseTool]:
         try:
             order = orders.get(order_id)
         except ConnectionError:
-            # from None: the store's error text could quote the order; the fixed code says enough
+            # from None: the store's error text could quote the order; the fixed code
+            # says enough (logging.md section 10)
             raise ToolFailure(ToolFailureReason.ORDER_STORE_UNAVAILABLE) from None
 
         if order is None:
-            # An expected outcome is a normal result, so no log line.
+            # An expected outcome is a normal result, so no log line
+            # (logging.md section 8).
             return "No order with this id. Ask the customer to check the id on their receipt."
 
         return order.status
@@ -589,15 +651,21 @@ def order_tools(orders: OrderStore) -> list[BaseTool]:
 ```
 
 ```python
-# support/chat/errors.py
+# support/chat/schemas.py, next to ChatReply
 from enum import StrEnum, unique
 
 
+# Data the error carries, so here, not in errors.py (file-structure.md section 3).
 @unique
 class ToolFailureReason(StrEnum):
     """The fixed codes a tool failure can carry, so no free text reaches the log."""
 
     ORDER_STORE_UNAVAILABLE = "order_store_unavailable"
+```
+
+```python
+# support/chat/errors.py
+from acme.support.chat.schemas import ToolFailureReason
 
 
 class ToolFailure(Exception):
@@ -611,7 +679,7 @@ class ToolFailure(Exception):
 The tool raises and does not log. Whoever handles the failure logs it, and that is the
 tool-failure handler below.
 
-## `support/chat/tool_errors.py`: required when the model should recover
+## `support/chat/tool_failure_handler.py`: required when the model should recover
 
 ```python
 """The one place a tool failure the model can work around is handled, so the one place it is logged."""
@@ -627,7 +695,9 @@ logger = logging.getLogger(__name__)
 
 def report_tool_failure(exc: Exception, request: ToolCallRequest) -> str | None:
     if not isinstance(exc, ToolFailure):
-        return None  # not ours: it propagates, and the caller that decides logs it once
+        # Not ours: it propagates, and the caller that decides logs it once
+        # (logging.md section 5).
+        return None
 
     logger.warning("Tool %s failed: %s", request.tool_call["name"], exc.reason)
 
@@ -713,7 +783,7 @@ id, and the JSON record carries all three):
 
 ```
 2026-09-27 15:21:04,310 INFO     acme.support.chat.call_logging [7f3c9a1e] Model call finished duration_ms=812 finish_reason=tool_calls
-2026-09-27 15:21:04,322 WARNING  acme.support.chat.tool_errors [7f3c9a1e] Tool find_order failed: order_store_unavailable
+2026-09-27 15:21:04,322 WARNING  acme.support.chat.tool_failure_handler [7f3c9a1e] Tool find_order failed: order_store_unavailable
 2026-09-27 15:21:05,104 INFO     acme.support.chat.call_logging [7f3c9a1e] Model call finished duration_ms=779 finish_reason=stop
 2026-09-27 15:21:05,106 INFO     acme.support.chat.usecase [7f3c9a1e] Chat run finished outcome=stop duration_ms=1631 messages=4 tool_calls=1
 2026-09-27 15:21:05,107 INFO     uvicorn.access [7f3c9a1e] 192.0.2.10:53211 - "POST /chat HTTP/1.1" 200

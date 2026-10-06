@@ -140,7 +140,7 @@ evals/
     ├── cases_<purpose>.jsonl        the case set: one JSON object per line
     ├── experiment_<purpose>.py      the run: task, graders, metadata
     ├── schemas.py                   a case, a run's output and the criteria, typed once
-    ├── consts.py                    only with a judge: its model and effort
+    ├── consts.py                    values the module's files share: a judge's model and effort, the gate's margin
     ├── prompts.py                   only with a judge: its prompt
     ├── judge_<criterion>.py         only with a judge: the one call
     └── labels_<criterion>.jsonl     only with a judge: people's labels (judges.md section 6)

@@ -124,6 +124,7 @@ the object, then clean up.** pytest runs the code after `yield` when the scope e
 test failed.
 
 ```python
+# The major version production runs, so a query that works here works there.
 POSTGRES_IMAGE: Final = "postgres:17-alpine"
 
 

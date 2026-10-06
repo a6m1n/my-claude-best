@@ -6,14 +6,6 @@ The service is the shop of [any-language/readability/module-example.md](../../an
 module `remind_overdue_invoice` sends a reminder for an overdue invoice, at most once a week.
 Every name is a placeholder.
 
-The unit test of the reminder rule is the `TestNeedsReminder` file of that example, and
-`tests/support/fake_mailer.py` is the `FakeMailer` of
-[fakes-and-boundaries.md](fakes-and-boundaries.md) section 1; neither is repeated here.
-`FakeMailer` sits in `support/` because two files use it: this module's integration test and the
-test of its CLI command, not shown. The application's own code is left out: `Database` in
-`shop/core/database.py` wraps a SQLAlchemy `Engine`, and `Mailer.send(to, *, subject, body)` is
-the call the use case makes.
-
 **Navigation**
 
 - [The tree](#the-tree)
@@ -25,6 +17,14 @@ the call the use case makes.
 - [The integration test of the reminder run](#the-integration-test-of-the-reminder-run)
 - [Running it](#running-it)
 - [What this example does not claim](#what-this-example-does-not-claim)
+
+The unit test of the reminder rule is the `TestNeedsReminder` file of that example, and
+`tests/support/fake_mailer.py` is the `FakeMailer` of
+[fakes-and-boundaries.md](fakes-and-boundaries.md) section 1; neither is repeated here.
+`FakeMailer` sits in `support/` because two files use it: this module's integration test and the
+test of its CLI command, not shown. The application's own code is left out: `Database` in
+`shop/core/database.py` wraps a SQLAlchemy `Engine`, and `Mailer.send(to, *, subject, body)` is
+the call the use case makes.
 
 ## The tree
 
@@ -65,6 +65,10 @@ the second to its adapter tests ([running-tests.md](running-tests.md) section 3)
 ```toml
 [tool.pytest]
 testpaths = ["tests"]
+# --allow-unix-socket keeps asyncio's internal socket pair and a local Docker socket
+# working (fakes-and-boundaries.md section 4).
+# -m "not live_model": no default run calls a paid model, even before the first such
+# test (running-tests.md section 10).
 addopts = ["-ra", "--disable-socket", "--allow-unix-socket", "-m", "not live_model"]
 markers = [
     "unit: the offline suite; the collection hook sets it from the folder",
@@ -75,6 +79,8 @@ strict_config = true
 strict_markers = true
 strict_parametrization_ids = true
 strict_xfail = true
+# A warning fails its test; silence one warning by name after "error", never drop this
+# (running-tests.md section 4).
 filterwarnings = ["error"]
 required_plugins = ["pytest-randomly", "pytest-socket"]
 ```
@@ -111,6 +117,7 @@ def pytest_collection_modifyitems(
 
     for item in items:
         suite = _suite_of(item, tests_root)
+        # .value, not the member: marks cross to pytest-xdist workers as plain strings.
         item.add_marker(suite.value)
 
         # The configuration blocks the network for every test; the folder opens it.
@@ -256,6 +263,7 @@ def migrated_database(postgres_url: str) -> Iterator[Database]:
     engine.dispose()
 
 
+# The default, written out to show the lifetime (fixtures.md section 1); PT003 is off.
 @pytest.fixture(scope="function")
 def database(migrated_database: Database) -> Iterator[Database]:
     """The run's database, emptied after each test so no test sees another's rows."""
@@ -317,6 +325,7 @@ def insert_invoice(db: Database, invoice: Invoice) -> None:
     ...  # left out: one INSERT into the invoices table
 
 
+# The default, written out to show the lifetime (fixtures.md section 1); PT003 is off.
 @pytest.fixture(scope="function")
 def mailer() -> FakeMailer:
     """A mailer that keeps what it was asked to send, new for each test."""
@@ -356,6 +365,8 @@ class TestRemindOverdueInvoice:
     ) -> None:
         """A retried job must not mail the customer twice for one invoice."""
         remind_overdue_invoice(overdue_invoice_id, TODAY, database, mailer)
+        # A copy: mailer.sent grows with the second run, so an alias would make the
+        # assert always pass.
         sent_by_first_run = list(mailer.sent)
 
         remind_overdue_invoice(overdue_invoice_id, TODAY, database, mailer)
@@ -390,9 +401,15 @@ It is good because:
 # the module in both suites, its CLI command's test included
 uv run pytest tests/*/remind_overdue_invoice tests/*/*/*_remind_overdue_invoice*
 uv run pytest tests/unit                         # the unit suite, as CI runs it on every push
-uv run pytest tests/integration                  # the integration suite, CI's own job for it
+# the integration suite, CI's own job for it: a hung call fails the job instead of
+# stalling it (running-tests.md section 9)
+uv run pytest tests/integration --timeout=120
 uv run pytest -n auto                            # everything in parallel, with pytest-xdist
 ```
+
+It is good because the integration line is the command CI's job runs, timeout included. The
+timeout also counts fixture setup, so its 120 seconds leave room for the Postgres container to
+start ([running-tests.md](running-tests.md) section 9).
 
 ## What this example does not claim
 

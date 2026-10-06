@@ -10,7 +10,8 @@ What each part does:
 
 - `tests/support/fake_order_store.py` is the order store the tests and the eval run against;
 - `tests/unit/chat/test_graph.py` checks the agent's code with a scripted model: the tool it calls,
-  the reply it returns, the tool definition the model is offered, the step limit;
+  the reply it returns, the tool definition the model is offered, the cache switch, the step limit, and a log with no
+  question or key in it;
 - `evals/chat/cases_chat.jsonl` and `evals/chat/experiment_chat.py` run the real model on the cases
   and grade what the agent did: the tools it called, by code, and its reply, by code and by the
   validated judge of [judge-example.md](judge-example.md).
@@ -23,7 +24,8 @@ from collections.abc import Mapping
 
 from typing_extensions import override
 
-from acme.core.order_store_client import Order, OrderStatus, OrderStore
+from acme.core.order_store_client import OrderStore
+from acme.core.schemas import Order, OrderStatus
 
 
 class FakeOrderStore(OrderStore):
@@ -60,13 +62,16 @@ runs against the fake too. An id listed as unavailable raises `ConnectionError`,
 `find_order` catches when the store is down, so the tool's failure path runs too:
 [agents.md](agents.md) section 6 asks a fake tool to "return the real tool's timeouts and errors".
 The unit tests and the eval use the same fake, so both agree on how the store behaves; each builds
-a new one per run.
+a new one per run. Two test files use it, the unit test below and the live-model test of
+[tools.md](tools.md) section 4, whose agent fixture builds on it, so it sits in `tests/support/`
+([python/testing/layout.md](../testing/layout.md) section 7), where the eval imports it too.
 
 ## `tests/unit/chat/test_graph.py`: the agent's code, with no model
 
 ```python
 # tests/unit/chat/test_graph.py
 import json
+import logging
 import uuid
 from collections.abc import Iterator
 from itertools import repeat
@@ -79,7 +84,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.errors import GraphRecursionError
 from pydantic import SecretStr
 
-from acme.core.order_store_client import OrderStatus
+from acme.core.schemas import OrderStatus
 from acme.support.chat.consts import SUPPORT_CHAT_LLM_MODEL, SUPPORT_CHAT_MAX_STEPS
 from acme.support.chat.graph import ChatAgent, build_agent
 from acme.support.chat.schemas import ChatReply
@@ -102,6 +107,10 @@ ASK_FOR_A_1042: Final[dict[str, object]] = {
 SHIPPED_REPLY: Final[dict[str, object]] = {
     "role": "assistant",
     "content": json.dumps({"text": "Order A-1042 has shipped."}),
+}
+STORE_DOWN_REPLY: Final[dict[str, object]] = {
+    "role": "assistant",
+    "content": json.dumps({"text": "I cannot look up orders right now."}),
 }
 
 
@@ -143,25 +152,36 @@ def offered_tools(request_body: bytes) -> list[object]:
     return [tool["function"] for tool in request["tools"]]
 
 
-def agent_on(provider: ScriptedProvider, orders: FakeOrderStore) -> ChatAgent:
+def first_system_prompt(request_body: bytes) -> str:
+    """The text of the first message of one request: the system prompt."""
+    return str(json.loads(request_body)["messages"][0]["content"])
+
+
+def agent_on(
+    provider: ScriptedProvider,
+    orders: FakeOrderStore,
+    *,
+    disable_prompt_cache: bool = False,
+) -> ChatAgent:
     """The real agent, with the real chat model class answering from the script."""
     llm = ChatOpenAI(
         model=SUPPORT_CHAT_LLM_MODEL,
         api_key=SecretStr("key-for-tests"),
         http_async_client=httpx.AsyncClient(transport=httpx.MockTransport(provider)),
+        # No retries: a retried request would take the script's next answer.
         max_retries=0,
     )
     return build_agent(
         llm,
         orders,
         model=SUPPORT_CHAT_LLM_MODEL,
-        disable_prompt_cache=False,
+        disable_prompt_cache=disable_prompt_cache,
         new_request_uuid=uuid.uuid4,
     )
 
 
 class TestBuildAgent:
-    """The support agent does what the model asks, through the pinned tools, within a step limit."""
+    """The support agent does what the model asks, through the pinned tools, within a step limit, with no question or key in its log."""
 
     async def test_an_order_question_is_answered_from_the_store(self) -> None:
         orders = FakeOrderStore({"A-1042": OrderStatus.SHIPPED})
@@ -193,6 +213,8 @@ class TestBuildAgent:
         assert offered_tools(provider.request_bodies[0]) == [
             {
                 "name": "find_order",
+                # As the docstring gives it, indentation included: the bytes the
+                # model reads (agents.md section 5).
                 "description": (
                     "Look up one order by its id, such as A-1042, and return its status.\n\n"
                     "        Call it when the customer asks where an order is or what happened"
@@ -209,6 +231,22 @@ class TestBuildAgent:
             }
         ]
 
+    async def test_a_disabled_prompt_cache_puts_a_request_uuid_first(self) -> None:
+        """Pins: the agent lists provider_middlewares, so the cache switch works.
+
+        An agent built without them sends the system prompt as it is, and the eval's
+        second and third run of a case can be answered from the first
+        (prompt-engineering.md section 17).
+        """
+        provider = ScriptedProvider(iter([SHIPPED_REPLY]))
+
+        await agent_on(
+            provider, FakeOrderStore({}), disable_prompt_cache=True
+        ).ainvoke({"messages": [HumanMessage("Hello")]}, version="v2")
+
+        system_prompt = first_system_prompt(provider.request_bodies[0])
+        assert system_prompt.startswith("Request UUID: ")
+
     async def test_a_model_that_keeps_calling_tools_stops_at_the_step_limit(
         self,
     ) -> None:
@@ -222,6 +260,31 @@ class TestBuildAgent:
             await agent.ainvoke(
                 {"messages": [HumanMessage("Where is order A-1042?")]}, version="v2"
             )
+
+    async def test_a_store_failure_is_logged_without_the_question_or_the_key(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        # DEBUG, so the check below reads every level a leak could hide in
+        # (python/testing/assertions.md section 6).
+        caplog.set_level(logging.DEBUG)
+        question = "Where is order A-1042?"
+        orders = FakeOrderStore({}, unavailable=frozenset({"A-1042"}))
+        agent = agent_on(
+            ScriptedProvider(iter([ASK_FOR_A_1042, STORE_DOWN_REPLY])), orders
+        )
+
+        await agent.ainvoke({"messages": [HumanMessage(question)]}, version="v2")
+
+        # Something was logged, so the check below has records to read
+        # (python/testing/assertions.md section 6).
+        assert any(record.levelno == logging.WARNING for record in caplog.records)
+        # Every attribute of a record, not caplog.text: its format drops extra= fields
+        # (python/testing/assertions.md section 6).
+        assert not any(
+            text in repr(vars(record))
+            for record in caplog.records
+            for text in (question, "key-for-tests")
+        )
 ```
 
 Why it looks like this:
@@ -246,6 +309,10 @@ Why it looks like this:
   ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 14). The raw bodies
   are kept as bytes and parsed in `offered_tools`, so the `Any` that `json.loads` returns stays
   inside the parser ([python.md](../language/python.md) section 3).
+- **The cache switch is checked at the request**: the test builds the agent with
+  `disable_prompt_cache=True` and reads the system prompt the provider received. It starts with
+  `Request UUID:` only when the agent lists `provider_middlewares`, so this is the check for the
+  entries [agent-example.md](../logging/agent-example.md) marks as required.
 - **The step limit is the application's**: `build_agent` sets it from `SUPPORT_CHAT_MAX_STEPS`, and
   the test passes no limit of its own, so it turns red when someone removes the limit or sets it
   to a value other than the constant's; raising the constant is a decision, not a bug, and stays
@@ -253,6 +320,12 @@ Why it looks like this:
   error and its message, not a count of calls, which is LangGraph's own detail.
 - **`version="v2"`**, as the logging example's use case calls the agent, so the output is typed
   and `structured_response` is a `ChatReply`.
+- **No question and no key in the log** ([python/testing/assertions.md](../testing/assertions.md)
+  section 6): the agent handles the customer's question and the provider's key, so the store-failure
+  test first finds the `WARNING` the tool-failure handler writes, then checks that no record, at any
+  level, holds the question or the test's key. `caplog.set_level(logging.DEBUG)` comes first, so
+  the negative check reads every level, and it reads every attribute of a record, not the printed
+  text.
 - **One class for the unit, names that state the guarantee, a fresh agent and a fresh store in each
   test** ([python/testing/test-structure.md](../testing/test-structure.md) sections 1 to 4): the agent is
   built inside the test, so nothing carries from one test to the next. The scripted provider is used
@@ -284,7 +357,7 @@ of the case's successful runs at the eval's `MAX_CONCURRENCY`, never the fastest
 # evals/chat/schemas.py, next to Verdict, Split, NoVerdict, PromiseVerdict and
 # LabelledReply of judge-example.md, with PositiveInt, NonNegativeInt,
 # PositiveFloat and model_validator imported from pydantic, OrderStatus from
-# acme.core.order_store_client, Self from typing, and dataclass from dataclasses
+# acme.core.schemas, Self from typing, and dataclass from dataclasses
 @unique
 class ToolName(StrEnum):
     FIND_ORDER = "find_order"
@@ -319,6 +392,7 @@ class RunMeasure(StrEnum):
 
     WITHIN_BUDGET = "within_budget"
     TOKENS_PER_SUCCESS = "tokens_per_success"
+    STATUS_WAY_OUT = "status_way_out"
 
 
 class Budget(BaseModel):
@@ -389,6 +463,12 @@ class ChatRun:
     order_status_seen: OrderStatus | None
     usage: RunUsage
     within_budget: bool
+
+    def __post_init__(self) -> None:
+        # Checked on the type, never only in a comment: a run that ended without its
+        # reply holds no text, since the customer got none (python.md section 2).
+        if self.reply and self.ended is not RunEnd.REPLY:
+            raise ValueError("a run holds reply text only when it ended on its reply")
 ```
 
 `Budget` and `ChatCase` come from the case file through `model_validate_json`, so they are strict
@@ -399,9 +479,16 @@ that breaks one fails the load: a case allows every tool it requires, and it giv
 order the store fails on. The fake records that id too, so `_first_status_seen` would hand the
 judge a status the agent never saw. How a run ended is a closed set, so `RunEnd` is an enum
 ([python.md](../language/python.md) section 3), and a run that did not end on its reply is still a
-`ChatRun`, so it is graded, never dropped ([evals.md](evals.md) section 6).
+`ChatRun`, so it is graded, never dropped ([evals.md](evals.md) section 6). `__post_init__` raises
+when such a run holds reply text, so the rule between the two fields is on the type, where the
+reader sees it ([python.md](../language/python.md) section 2).
 
 ## `evals/chat/experiment_chat.py`: the agent's eval
+
+`_run_agent` invokes the graph, so the run's one `INFO` summary line is its to write
+([python/logging/logging.md](../logging/logging.md) section 9); this example leaves that line out, as
+[python/logging/trace-example.md](../logging/trace-example.md) does, and
+[python/logging/agent-example.md](../logging/agent-example.md) shows it.
 
 ```python
 # evals/chat/experiment_chat.py
@@ -412,7 +499,7 @@ import logging.config
 import time
 import uuid
 from collections import Counter
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from pathlib import Path
 from typing import Final
 
@@ -434,10 +521,11 @@ from acme.core.errors import ModelAnswerInvalid, ModelOutputCutOff, ModelRefused
 from acme.core.langfuse_client import callback_handler, start_tracing
 from acme.core.logging import build_logging_config
 from acme.core.openai_client import chat_model
-from acme.core.order_store_client import OrderStatus
+from acme.core.schemas import OrderStatus
 from acme.support.chat.consts import SUPPORT_CHAT_LLM_MODEL
 from acme.support.chat.graph import build_agent
 from evals.chat.consts import (
+    CHAT_EVAL_MARGIN,
     UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL,
     UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT,
 )
@@ -452,10 +540,12 @@ from evals.chat.schemas import (
     RunUsage,
     Verdict,
 )
-from evals.rate_gate import check_rates
+from evals.rate_gate import CASE_ID_METADATA_KEY, check_rates, rate_report
 from tests.support.fake_order_store import FakeOrderStore
 
 CASES_FILE: Final = Path(__file__).with_name("cases_chat.jsonl")
+# Three runs of each case, one rate over all: one run shows no rate
+# (repeated-runs.md sections 5 and 7).
 RUNS_PER_CASE: Final = 3
 # How many runs are in flight at once in the one event loop. A run's seconds are
 # wall-clock at this concurrency, so a time budget is compared only with runs at the same
@@ -470,7 +560,6 @@ BASELINE: Final[Mapping[Criterion, float]] = {
     Criterion.REPLY_STATES_THE_STATUS: 0.93,
     Criterion.REPLY_KEEPS_TO_THE_STATUS: 0.90,
 }
-MARGIN: Final = 0.05
 # Tokens per successful run of the version on main, read next to the pass rate, not gated.
 TOKENS_PER_SUCCESS_BEFORE: Final = 1_900
 
@@ -481,18 +570,14 @@ def experiment(context: RunnerContext) -> ExperimentResult:
 
 
 def run_chat_eval(context: RunnerContext, settings: Settings) -> ExperimentResult:
-    cases = [
-        ChatCase.model_validate_json(line)
-        for line in CASES_FILE.read_text().splitlines()
-    ]
+    cases = _cases()
+
     llm = chat_model(SUPPORT_CHAT_LLM_MODEL, settings.openai_api_key)
     tracing = callback_handler()
-    judge_client = AcmeAiClient(
-        AcmeAiSdk(api_key=settings.acme_ai_api_key.get_secret_value()),
-        disable_prompt_cache=True,
-        new_request_uuid=uuid.uuid4,
-    )
+    judge_client = _uncached_client(settings)
 
+    # One trace per run, so a failed case can be opened; a plain loop leaves none
+    # (evals.md section 9).
     result = context.run_experiment(
         name="support-chat",
         data=[_item(case) for case in cases for _ in range(RUNS_PER_CASE)],
@@ -508,7 +593,7 @@ def run_chat_eval(context: RunnerContext, settings: Settings) -> ExperimentResul
             ),
         ],
         composite_evaluator=task_succeeded,
-        run_evaluators=[within_budget, tokens_per_success],
+        run_evaluators=[within_budget, tokens_per_success, status_way_out],
         max_concurrency=MAX_CONCURRENCY,
         # The prompts are in git, so the commit is their version (evals.md section 9).
         metadata={
@@ -519,14 +604,19 @@ def run_chat_eval(context: RunnerContext, settings: Settings) -> ExperimentResul
         },
     )
 
-    check_rates(
+    rates, breach = check_rates(
         result,
-        runs_asked=Counter(
-            case.case_id for case in cases for _ in range(RUNS_PER_CASE)
-        ),
+        runs_asked=_runs_asked(cases),
         baseline=BASELINE,
-        margin=MARGIN,
+        margin=CHAT_EVAL_MARGIN,
     )
+
+    report = rate_report(result, rates, baseline=BASELINE, margin=CHAT_EVAL_MARGIN)
+    print(report)  # noqa: T201  # the report is this command's output
+
+    # Raised after the report, so a red run's log holds every rate too.
+    if breach is not None:
+        raise breach
 
     return result
 
@@ -544,6 +634,8 @@ async def _run_agent(
         llm,
         orders,
         model=SUPPORT_CHAT_LLM_MODEL,
+        # Each of the three runs reaches the model; a response cache would answer runs 2
+        # and 3 from run 1 (prompt-engineering.md section 17).
         disable_prompt_cache=True,
         new_request_uuid=uuid.uuid4,
     )
@@ -554,6 +646,8 @@ async def _run_agent(
     try:
         output = await agent.ainvoke(
             {"messages": [HumanMessage(case.question)]},
+            # The handler puts the model and tool calls into this run's trace
+            # (evals.md section 9).
             {"callbacks": [tracing]},
             version="v2",
         )
@@ -692,6 +786,8 @@ def _failed_run(criterion: Criterion, ended: RunEnd) -> Evaluation:
 
 def task_succeeded(*, evaluations: list[Evaluation], **kwargs: object) -> Evaluation:
     """The headline of the run: every criterion graded, and every one passed."""
+    # Every criterion but this one. A grader that raised left no score, so the run
+    # fails (evals.md section 6).
     graded_all = len(evaluations) == len(Criterion) - 1
     succeeded = graded_all and all(
         evaluation.value is True for evaluation in evaluations
@@ -739,6 +835,50 @@ def tokens_per_success(
     )
 
 
+def status_way_out(
+    *, item_results: list[ExperimentItemResult], **kwargs: object
+) -> Evaluation:
+    """The share of answered runs that took the way out: they state no order status.
+
+    The comment counts the answered runs, then gives the two-by-two table of evals.md
+    section 4: should state a status or not, stated one or not. A run with no reply
+    fails every criterion already.
+    """
+    table = Counter(
+        (case.status_in_reply is not None, _states_a_status(run.reply))
+        for case, run in _replied(item_results)
+    )
+    took_way_out = table[True, False] + table[False, False]
+
+    return Evaluation(
+        name=RunMeasure.STATUS_WAY_OUT,
+        value=took_way_out / table.total() if table else 0.0,
+        comment=(
+            f"of {table.total()} answered runs: "
+            f"should state one: {table[True, True]} did, {table[True, False]} did not; "
+            f"should not: {table[False, True]} did, {table[False, False]} did not"
+        ),
+    )
+
+
+def _states_a_status(reply: str) -> bool:
+    return any(status in reply.lower() for status in OrderStatus)
+
+
+def _replied(
+    item_results: Iterable[ExperimentItemResult],
+) -> Iterator[tuple[ChatCase, ChatRun]]:
+    """Each run that ended on its reply, with its case; the items are local dicts."""
+    for run in item_results:
+        case = run.item["expected_output"] if isinstance(run.item, dict) else None
+        if (
+            isinstance(case, ChatCase)
+            and isinstance(run.output, ChatRun)
+            and run.output.ended is RunEnd.REPLY
+        ):
+            yield case, run.output
+
+
 def _successful_runs(item_results: Iterable[ExperimentItemResult]) -> list[ChatRun]:
     return [
         run.output
@@ -751,18 +891,42 @@ def _successful_runs(item_results: Iterable[ExperimentItemResult]) -> list[ChatR
     ]
 
 
+def _cases() -> list[ChatCase]:
+    return [
+        ChatCase.model_validate_json(line)
+        for line in CASES_FILE.read_text().splitlines()
+    ]
+
+
+def _runs_asked(cases: Iterable[ChatCase]) -> Counter[str]:
+    return Counter(case.case_id for case in cases for _ in range(RUNS_PER_CASE))
+
+
 def _item(case: ChatCase) -> LocalExperimentItem:
     return LocalExperimentItem(
-        input=case.question, expected_output=case, metadata={"case_id": case.case_id}
+        input=case.question,
+        expected_output=case,
+        metadata={CASE_ID_METADATA_KEY: case.case_id},
+    )
+
+
+def _uncached_client(settings: Settings) -> AcmeAiClient:
+    """The one model client with the cache switch on, so every run reaches the model."""
+    return AcmeAiClient(
+        AcmeAiSdk(api_key=settings.acme_ai_api_key.get_secret_value()),
+        disable_prompt_cache=True,
+        new_request_uuid=uuid.uuid4,
     )
 
 
 def main() -> None:
     settings = Settings()
-    # A command, like the CLI of python/logging/setup-example.md: its log goes to stderr.
+
+    # The log goes to stderr, so stdout holds only the report (logging.md section 6).
     logging.config.dictConfig(
         build_logging_config(settings.log_level, settings.log_format, stream="stderr")
     )
+
     start_tracing(
         settings.langfuse_public_key,
         settings.langfuse_secret_key,
@@ -771,6 +935,7 @@ def main() -> None:
         release=settings.git_commit,
         enabled=settings.langfuse_tracing_enabled,
     )
+
     langfuse = get_client()
 
     run_chat_eval(RunnerContext(client=langfuse), settings)
@@ -782,7 +947,10 @@ if __name__ == "__main__":
     main()
 ```
 
-`check_rates` is the gate of [case-set-example.md](case-set-example.md), in `evals/rate_gate.py`.
+`check_rates` and `rate_report` are the gate and the report of
+[case-set-example.md](case-set-example.md), in `evals/rate_gate.py`: a run, green or red, prints each rate
+with its baseline and the margin, then the three run measures, for the pull request's Verification
+([evals.md](evals.md) section 8).
 
 Why it looks like this:
 
@@ -818,6 +986,13 @@ Why it looks like this:
   ([What this example does not claim](#what-this-example-does-not-claim)). No order is asserted,
   because none is the guarantee here. The case with no order id makes "no tool" a case of its own
   ([agents.md](agents.md) section 2).
+- **The way out counted apart** ([evals.md](evals.md) section 4, [agents.md](agents.md) section 2):
+  in `unknown-order`, `store-down` and `no-order-id` the right reply states no status, and
+  `reply_states_the_status` passes any reply there. `status_way_out`, the third run evaluator,
+  reports the share of answered runs whose reply stated no status, with the count of answered runs
+  and the two-by-two table of should state one or not against stated one or not as its comment, by
+  the same string check. It sits next to the rates and
+  does not gate.
 - **Code first, then the judge** ([evals.md](evals.md) section 5): whether the status word is in the
   reply is a string check; whether the reply promises more than the status supports is the
   validated judge of [judge-example.md](judge-example.md), given the status the agent actually saw
@@ -871,6 +1046,10 @@ keeps `evals/` and `tests/` apart copies it instead.
 A run that gates on a judge also judges a fixed set of known-bad replies, which must fail
 ([judges.md](judges.md) section 9), and every grader first fails an agent that does nothing
 ([evals.md](evals.md) section 5); this example leaves both out.
+
+The way-out table counts the replies that state no status; no grader checks that the reply to
+`no-order-id` asks for the order id. A stricter eval gives `ChatReply` a field for the question
+back and compares it by code, as it would the status.
 
 The eval checks which tools ran, not their arguments, which [agents.md](agents.md) section 2 lists
 as a Must ("each required call's arguments, exact where they matter"): a case would carry the order
