@@ -42,6 +42,9 @@ rows, such as a defect a user can see, gets one type:
 | A deliverable that needs more than one work item | Epic | The epic groups the work items and answers "is the deliverable done?". |
 | A step inside one work item | Subtask, and only if the team wants it | A subtask is a step, not a unit of work with its own value (section 3). |
 
+The table is good because each row gives one type with its reason, and the order decides work that
+fits two rows, so two authors give the same work the same type.
+
 The fields of each type, and when to fill them, are in [jira-fields.md](jira-fields.md).
 
 Check: read the summary of the item. If you cannot say who sees the result and what they see, it

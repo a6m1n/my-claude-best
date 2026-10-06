@@ -71,8 +71,10 @@ the Responsible, so a row per work item copies Jira and goes stale in a week.
   least one responsible person, but you can have more than one." (Atlassian)
 - The A of a deliverable's row is the owner in its WBS dictionary entry ([wbs.md](wbs.md) section 6),
   so the two never disagree.
-- C and I come from the stakeholder register ([stakeholders.md](stakeholders.md) section 2), so the
-  matrix and the register name the same people.
+- C and I come from the stakeholder register ([stakeholders.md](stakeholders.md) section 2) or from
+  the team of section 1 (the project manager, the Product Owner, the Scrum Master and the
+  Developers), because the communication plan has lines only for those groups
+  ([communication.md](communication.md) section 1), and a C or I from anywhere else is never told.
 
 Keep the matrix as a Confluence page from Atlassian's RACI chart template, linked from the charter
 page, so anyone who opens the charter can find it.

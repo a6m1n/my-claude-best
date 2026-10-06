@@ -38,6 +38,7 @@ Routing flag
 Assignee: Richard Roe    Components: Payments API
 Labels: provider-switch   # the switch cuts across Checkout and Payments API, so it is a label, not a component (jira-fields.md section 2)
 Start date: 2026-12-21    Due date: 2027-03-26   # the plan's dates: 2.1 starts, PROJ 2.0 ships; the Timeline draws the epic from them (jira-fields.md section 1)
+                                                 # the flag removal PROJ-150 follows PROJ 2.0 and moves this date when its version is planned (jira-fields.md section 1)
 Fix versions: none   # each child carries the version that ships it (tickets.md section 5)
 
 Scope: the flag that sends each card payment to the old or the new provider, the steps that move traffic from 1% to all, and the removal of the flag after the move.
@@ -69,7 +70,7 @@ A story is an outcome a shopper can see ([jira-work-item-types.md](jira-work-ite
 
 ```
 PROJ-136  Story    Parent: PROJ-10    Status: Backlog   # Parent replaced Epic Link (jira-fields.md section 1)
-Show the shopper what to do after a declined card
+Payment error messages to the shopper: what to do after a declined card   # names its work package, because 1.5 is split into several items (wbs.md section 7)
 Fix versions: PROJ 1.0 test payments    Components: Checkout    Labels: provider-switch
 Assignee: Unassigned   # stays empty until someone takes it from the backlog (jira-fields.md section 1)
 Reporter: the customer support lead   # John Smith created it for them, so questions go to the person who raised it (jira-fields.md section 1)
@@ -169,16 +170,28 @@ Components: Payments API    Labels: provider-switch    Assignee: Mary Major
 Environment: staging, flag off, saved test card of a returning shopper   # where it was seen, so a reader can repeat it there (jira-fields.md section 1)
 
 With the flag off, a test payment on a returning shopper's saved card goes to the new provider.
+The saved-card path does not pass through the payment router that PROJ-123 changed: it calls the
+provider client directly, a shortcut from when there was one provider, and gets the client's
+default, which the provider settings (WBS 1.2) set to the new provider. The defect is in code
+PROJ-123 did not touch, so it gets a work item of its own.   # a departure from tickets.md section 4; the reason and the cost are below
 Steps: 1. Turn the flag off in staging. 2. Pay with a saved test card.
 Expected: the old provider handles it. Actual: the new provider handles it.
 Blocks: PROJ-123   # PROJ-123's flag-off criterion cannot pass until this is fixed (tickets.md section 5)
 ```
 
-The bug is good because it states the symptom and leaves the diagnosis out. The reader can repeat
-the steps and see the wrong provider, without opening the comments. Its priority comes from its
-severity, and its Affects versions and Environment say where it shows, so a reader knows how urgent
-it is and where to repeat it ([jira-fields.md](jira-fields.md) section 1). Its branch and commit
-are in [project-example.md](project-example.md) section 6.
+The bug is good because it states the symptom apart from the cause. The reader can repeat the
+steps and see the wrong provider, without opening the comments, and "blocks" shows what waits for
+the fix ([tickets.md](tickets.md) section 5). It departs from [tickets.md](tickets.md) section 4,
+which keeps the fix for a failed staging check under the item's own key: the staging check of
+`PROJ-123` failed, but the defect sits in the saved-card path, which `PROJ-123` did not change, so a
+bug of its own keeps its symptom, steps and severity where a reader looks for a defect. The cost:
+the Development panel of `PROJ-123` does not show this fix, and a reader of `PROJ-123` finds it
+only through the link. `PROJ-123` also leaves Pre-prod when its check fails and has no pull request
+of its own to move on with, so it goes back to Pre-prod outside the board's conditions, once the fix
+of `PROJ-131` is in staging ([jira-workflow.md](jira-workflow.md) sections 2 and 3). Its priority
+comes from its severity, and its Affects versions and Environment say where it shows, so a reader
+knows how urgent it is and where to repeat it ([jira-fields.md](jira-fields.md) section 1). Its
+branch and commit are in [project-example.md](project-example.md) section 6.
 
 Carries: Tatham: symptoms, steps, expected, actual; Atlassian's bug template: numbered steps in the
 description and the environment; the team's Definition of Done.

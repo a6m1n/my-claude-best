@@ -276,7 +276,7 @@ The problem is that it says nothing the board does not, and nobody can act on it
 Good: the same moment, with the decision in it.
 
 ```
-PROJ-135: Translation of the error texts will not fit this sprint. Decision with Jane Doe:
+PROJ-135: Translation of the error texts will not fit this sprint. Decided by John Smith, Product Owner:
 the English texts ship now (criteria 1 and 2), and the translation moves to PROJ-139.
 Description updated.
 ```
@@ -340,7 +340,7 @@ Review:
 
 ```
 PROJ-135  Story    Parent: PROJ-10    Status: Code Review
-Show payment errors to the shopper
+Payment error messages to the shopper: why a payment failed   # names its work package, because 1.5 is split into several items (wbs.md section 7)
 As a shopper, I want to see why my payment failed so that I can try again or pay another way.
 
 Acceptance criteria
@@ -357,15 +357,15 @@ deployed, so the item is split.
 Split on day 6, in the backlog view (Split work item)
 
 PROJ-135  Story    Parent: PROJ-10    Status: Code Review -> Pre-prod -> Done after the production deploy
-Show payment errors to the shopper (English)
+Payment error messages to the shopper: why a payment failed (English)
 As a shopper, I want to see why my payment failed so that I can try again or pay another way.
 1. A declined card shows the message "Your card was declined."
 2. A provider timeout shows the message "Payment is taking too long. Try again."
 Comment: Split on day 6. Translation (criterion 3) moves to PROJ-139, unchanged.
-         Done part meets the Definition of Done on its own. Jane Doe agreed.
+         Done part meets the Definition of Done on its own. John Smith, Product Owner, agreed.
 
 PROJ-139  Story    Parent: PROJ-10    Status: Backlog    (linked to PROJ-135 by the split)
-Show payment errors in the shop's three languages
+Payment error messages to the shopper: in the shop's three languages   # names its work package, because 1.5 is split into several items (wbs.md section 7)
 As a shopper, I want the payment errors in my language so that I can read them.
 3. Both messages are shown in the shop's three languages.
 Comment: Split from PROJ-135. Needs the translations; the Product Owner orders it.

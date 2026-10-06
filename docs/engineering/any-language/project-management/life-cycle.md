@@ -56,6 +56,9 @@ its artifact is not ended.
 | Monitoring | Status is compared with the baseline, changes go through change control, the register is reviewed, the SLA is met | The status against the baseline ([project-plan.md](project-plan.md) section 4), and the decisions on change requests ([sla.md](sla.md) for the SLA) | The sponsor decides a change beyond the agreed tolerance ([project-plan.md](project-plan.md) section 4) |
 | Closure | The sponsor accepts the result, and the team looks back at how the work went | Acceptance and the lessons learned | The sponsor accepts |
 
+The table is good because each phase names its artifact and the one person whose decision it
+needs, so a reader can find that decision, and no phase ends on a date alone.
+
 Monitoring is not a step after execution. It starts when the plan is baselined and runs alongside
 execution until closure; the table shows it in its own row because it has its own artifact.
 Execution ends when the last release the plan names is live, and Monitoring ends with Closure, so

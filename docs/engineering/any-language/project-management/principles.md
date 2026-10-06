@@ -114,6 +114,10 @@ write "all the certifications recommend X".
 | PRINCE2 7 (PeopleCert, 2023) | A project management method | The project initiation document (PID) as its charter-like document; the principles "manage by stages" and "manage by exception"; six threat responses (PeopleCert's PRINCE2 7 Quick Reference Guide) |
 | Scrum Guide (2020), behind CSM and PSM | The Scrum framework | The Definition of Done and a refined backlog; sprints if the team works in them; no charter, WBS or risk register |
 
+The table is good because each row names one body with its edition and what this folder uses from
+it or leaves out, so each artifact is credited to the body that names it and a reader can check it
+there.
+
 The PMBOK Guide 8th edition (2025) was read only through its table of contents.
 
 Tailor the process to "just enough". PMI defines tailoring as "The deliberate adaptation of

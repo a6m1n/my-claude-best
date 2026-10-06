@@ -63,7 +63,7 @@ Top risks: provider outage in cut-over; success rate drops after the move.
 ```
 
 Where it lives ([charter.md](charter.md) section 5): a Confluence page named "PROJ charter", linked
-to the epics `PROJ-10 Payment provider integration`, `PROJ-11` and `PROJ-12`. Jane Doe's written approval is a comment on
+in planning to the epics `PROJ-10 Payment provider integration`, `PROJ-11` and `PROJ-12`. Jane Doe's written approval is a comment on
 that page, dated 2026-10-19, and the plan does not start before it exists.
 
 The charter is good because every line is a fact someone can check later and none is a task
@@ -71,9 +71,10 @@ The charter is good because every line is a fact someone can check later and non
 
 ### Stakeholder register
 
-Made in initiation from the charter's approvers and informed people, kept as a Confluence page
-linked from the charter page ([stakeholders.md](stakeholders.md) section 2). Scale: does not know,
-against, neutral, supports, leads.
+Made in initiation from the charter's approvers and informed people, and from the new provider,
+whose account manager at Globex is the last row. It is kept as a Confluence page linked from the
+charter page ([stakeholders.md](stakeholders.md) section 2). Scale: does not know, against, neutral,
+supports, leads.
 
 | Name and role | Concerns and expectations | Influence | Interest | Engagement now → wanted | How and how often | Owner |
 |---|---|---|---|---|---|---|
@@ -100,7 +101,8 @@ owner and a date, and every row has one owner ([stakeholders.md](stakeholders.md
 
 ## 3. Plan
 
-Written in planning, after the charter, and baselined by Jane Doe on 2026-11-16.
+Written in planning, after the charter, and baselined by Jane Doe on 2026-11-16 with the issue R-5
+unresolved: the charter's assumption failed its check that day (section 5).
 
 | Part | In this project |
 |---|---|
@@ -109,8 +111,23 @@ Written in planning, after the charter, and baselined by Jane Doe on 2026-11-16.
 | Schedule | Four milestones as Jira versions (below), shown on the Timeline of `PROJ` |
 | Roles and resources | `PROJ-10` John Smith, `PROJ-11` Richard Roe, `PROJ-12` Mary Major; the payments team of four, with John Smith also the Product Owner and Mary Major the Scrum Master; the RACI matrix and deciders below |
 | Risks | The register in section 5, a Confluence page linked to `PROJ-10`, `PROJ-11` and `PROJ-12` |
-| Communication | The team uses the `PROJ` board daily; a status update every Friday (below); escalation from a Developer to John Smith, who answers the same working day, and from him to Jane Doe, who answers an exception note within one working day |
+| Communication | The team uses the `PROJ` board daily; a status update every Friday (below); one line for each stakeholder group, in the table under this one; escalation from a Developer to John Smith, who answers the same working day, and from him to Jane Doe, who answers an exception note within one working day |
 | Change control | A change request is a work item; a milestone may move up to one week from its Baseline date on John Smith's decision, a larger move goes to Jane Doe (below) |
+
+The communication lines, one for each group of the stakeholder register in section 2
+([communication.md](communication.md) section 1):
+
+| Group | What they hear | How often | Channel | From |
+|---|---|---|---|---|
+| Jane Doe, sponsor | The status update; an exception note; the Sprint Review | Weekly, on Friday; at once on an exception; each sprint | The update page; a direct message for the exception note; the review | John Smith |
+| Head of security | The data and uptime clauses; each milestone reached | Once before the contract is signed; at each milestone | A briefing; a direct message | John Smith |
+| Customer support lead | The status update; the Sprint Review | Weekly; each sprint from sprint 2 | The update page; the review | Mary Major |
+| Finance, through the finance controller | The status update | Weekly | The update page | John Smith |
+| Account manager at Globex | The go-live date and the volume; the Sprint Review | At each milestone; each sprint | A shared channel; the review | Richard Roe |
+
+The table is good because each line names one sender, the group's owner in the register, so every
+message has a sender and the register's "How and how often" column is read from it
+([communication.md](communication.md) section 1, [stakeholders.md](stakeholders.md) section 2).
 
 Milestones, each a version with a planned release date:
 
@@ -151,8 +168,9 @@ requests to raise and which planning packages to split. Every Thursday, 15 minut
 at the board to decide which top risk needs an action and whether anyone is over the WIP limit
 ([project-plan.md](project-plan.md) section 6).
 
-WIP limit: two work items in progress per person, set by the team at planning. At the Thursday
-board look on 2027-01-14, John Smith showed that Mary Major held three items, one over the limit.
+WIP limit: two work items in progress per person and six for the team, set by the team at
+planning. At the Thursday board look on 2027-01-14, John Smith showed that Mary Major held three
+items, one over the limit.
 The Developers decided that Richard Roe, who held one, would take `PROJ-126`, and Mary Major's
 comment on it said where the work stood ([jira-workflow.md](jira-workflow.md) section 6). John Smith
 recorded the cost on the plan page: none, because no date moved and no scope left
@@ -162,9 +180,9 @@ The WIP note is good because the project manager only showed the overload, the D
 who took the item, and the cost was checked and written down, so the team did not absorb the extra
 work in silence ([principles.md](principles.md) section 3).
 
-Rolling wave: on 2026-11-16 the work for `PROJ 1.0` and `PROJ 1.1` is cut into work items with
-owners. The work for `PROJ 1.2` and `PROJ 2.0` stays at the level of a planning package in section
-4, and is cut into work items when its version is one release away.
+Rolling wave: on 2026-11-16 the work for `PROJ 1.0` and `PROJ 1.1` is cut into work items. The
+work for `PROJ 1.2` and `PROJ 2.0` stays at the level of a planning package in section 4, and is
+cut into work items when its version is one release away.
 
 The rolling wave is good because only the next two versions are cut into work items, so the far
 work is detailed when the team knows enough to detail it, and is not written twice
@@ -176,9 +194,9 @@ section 4).
 
 Artifacts kept ([operating-system.md](operating-system.md) section 3): every artifact the rule files
 ask for, each kept short, plus the conditional ones whose condition holds here: the critical path
-(`PROJ 1.0` has a fixed date, 2027-02-12, set by the change request `PROJ-127`, and its test payments wait on two other work packages),
-contingency plans for R-1 and R-2 (impact 5 and 4), a DACI page for D-3 (moving payment traffic is
-hard to undo), and an exception note when the marker turned Off track.
+(all traffic must move by the fixed 2027-03-31, and the test payments of `PROJ 1.0` wait on two
+other work packages), contingency plans for R-1 and R-2 (impact 5 and 4), a DACI page for D-3
+(moving payment traffic is hard to undo), and an exception note when the marker turned Off track.
 
 The list is good because each conditional artifact names the condition that holds for it, so a reader can check the choice against the project ([operating-system.md](operating-system.md) section 3).
 
@@ -200,10 +218,13 @@ WBS dictionary entry in section 4, so the two never disagree.
 
 Deciders ([roles-and-decisions.md](roles-and-decisions.md) section 5): a milestone move of up to one
 week, John Smith; a larger move, Jane Doe; the provider contract, data clauses acceptable: head of
-security; the provider contract, sign: Jane Doe, after the head of security's yes; a technical
-choice that is hard to undo, Richard Roe, whom the Developers named; go or no-go for each release,
-Richard Roe; a rollback, the decider of section 8; the order of the Product Backlog and canceling a
-work item, John Smith as Product Owner. The other kinds follow the defaults of
+security; the provider contract, sign: Jane Doe, after the head of security's yes; how payment
+traffic moves to the new provider, Jane Doe, because the move puts the checkout revenue at risk,
+which the sponsor owns, so it is outside the team's authority
+([roles-and-decisions.md](roles-and-decisions.md) section 5); a technical choice that is hard to
+undo, Richard Roe, whom the Developers named; go or no-go for each release, Richard Roe; a rollback,
+the decider of section 8; the order of the Product Backlog and canceling a work item, John Smith as
+Product Owner. The other kinds follow the defaults of
 [roles-and-decisions.md](roles-and-decisions.md) section 5.
 
 The list is good because each kind of decision has one name, and the provider contract is split
@@ -214,14 +235,14 @@ One entry of the decision log, a Confluence page from the DACI template
 ([roles-and-decisions.md](roles-and-decisions.md) sections 6 and 7):
 
 ```
-D-3  2026-11-09  Move traffic by the routing flag in steps (1%, 10%, all), not in one night
+D-3  2026-10-12  Move traffic by the routing flag in steps (1%, 10%, all), not in one night
 Driver: John Smith. Approver: Jane Doe. Contributors: Richard Roe, head of security.
 Informed: customer support lead.
-Due: 2026-11-13, before the plan is baselined on 2026-11-16.
+Due: 2026-10-16, before the charter is issued on 2026-10-19, which names the steps.
 Options: one night for all traffic; steps by flag; split by card brand.
 Reason: the flag turns traffic back in minutes, and one night has no way back without
 a new deploy (rollback-plan.md section 2).   # the reason is what a later reader cannot rebuild
-Links: PROJ-11.
+Links: PROJ-11.   # added in planning, when the epic that carries it out was made
 ```
 
 The entry is good because the reason names what the chosen option protects, and the links lead to
@@ -230,9 +251,15 @@ the epic that carries it out.
 ### Schedule and critical path
 
 Drawn on 2026-12-21 with the change request `PROJ-127`, after the provider's test environment opened
-late. It runs to `PROJ 1.0`, the fixed date the work below leads to; the later milestones keep their planning packages (section 4) until their work is cut. Days are working days from 2026-12-21, with the team off from 2026-12-24 to 2027-01-01, and each
-duration is the high end of its range; float is counted to the end of the path, day 32
-([schedule.md](schedule.md) sections 2 and 3):
+late. It runs to `PROJ 1.0`, to the baselined date that `PROJ-127` set, 2027-02-12. This departs
+from [schedule.md](schedule.md) section 3, which asks for the network up to the fixed date,
+2027-03-31: after `PROJ 1.0` the path to that date is the traffic steps 2.2 to 2.4, which the plan
+runs as dated milestones agreed with the provider (the development approach in this section), and
+2.3 and 2.4 are still planning packages ([wbs.md](wbs.md) section 5). The cost: a slip after
+`PROJ 1.0` cannot be read from this table, only from the milestone dates. The network is drawn on
+to 2027-03-31 at the plan review that splits 2.3 into work items. Days are working days from 2026-12-21, with the team off from 2026-12-24 to
+2027-01-01, and each duration is the high end of its range; float is counted to the end of the
+path, day 32 ([schedule.md](schedule.md) sections 2 and 3):
 
 | Work package | Waits on | Days | Finishes on day | Float (days) |
 |---|---|---|---|---|
@@ -267,7 +294,8 @@ the early date at the pace of Sprint 2, the faster, and the late date at that of
 Changed: the provider's test environment opened on 2026-12-14, four weeks after the
 charter's assumption; the work of 1.1, 1.2 and 3.1 is finished and waits in Pre-prod for PROJ 1.0.
 Decisions: none this week.
-Risks: R-1 unchanged; a new issue: the assumption in the charter failed.
+Risks: R-1 unchanged; R-5, the charter's failed assumption, unresolved since 2026-11-16; the environment
+it waited for opened on 2026-12-14.
 Needed: Jane Doe's decision on the exception note sent today.   # the ask, so the sponsor knows what to give back (communication.md section 2)
 ```
 
@@ -314,7 +342,9 @@ The 100% rule check: the charter's scope in is checkout card payments (epic 1 an
 ramp to all traffic in 2.4), payment records (epic 3) and the routing flag (epic 2). Nothing in
 the tree is in the charter's scope out.
 
-The dictionary, one entry in the epic's description, three lines each:
+The dictionary has one entry per element, three lines each. The three epic entries are shown
+below, each in its epic's description; the entries of the work packages and planning packages are
+left out here:
 
 ```
 PROJ-10 Payment provider integration (epic)
@@ -332,21 +362,23 @@ Owner: Mary Major. Done when: every payment record holds its provider, old ones 
 ```
 
 The WBS is good because each epic is a thing the sponsor can accept or reject ([wbs.md](wbs.md)
-section 3). The dictionary is good because each entry gives the scope, one owner, the same person
-as the A of the epic's RACI row, and a done-when the sponsor can check, so two people cannot read
-one epic two ways ([wbs.md](wbs.md) section 6).
+section 3). The dictionary is good because each epic entry gives the scope, one owner, the same
+person as the A of the epic's RACI row, and a done-when the sponsor can check, so two people
+cannot read one epic two ways ([wbs.md](wbs.md) section 6).
 
 ## 5. Risk register
 
 Created in planning, kept as a Confluence page linked to `PROJ-10`, `PROJ-11` and `PROJ-12` ([plan](#3-plan) names the
-place). Dated 2026-11-16; R-1 updated on 2026-12-21 for the change request `PROJ-127`.
+place). Dated 2026-11-16, when R-5 was added because the charter's assumption failed its check that
+day; R-1 and R-5 updated on 2026-12-21 for the change request `PROJ-127`.
 
 | ID | Risk | P | I | Score | Response | Actions | Owner | Trigger | Status |
 |---|---|---|---|---|---|---|---|---|---|
 | R-1 | Because the new provider is untested at our volume, its API may time out during cut-over, so checkout payments fail | 3 | 5 | 15 | Mitigation | Load test at 2x peak by 2027-02-04 (2027-01-15 before `PROJ-127`); route 1% first in `PROJ 1.1` on 2027-02-26, and hold there two weeks before 10%. Contingency plan: on the trigger, John Smith asks Globex to raise the rate limit, and `PROJ 1.0` waits for a second load test to pass, since only the reserve week is left after the load test; it costs up to two weeks on `PROJ 1.0` and each later milestone, which takes `PROJ 2.0` past the fixed 2027-03-31 unless the holds at 1% and 10% shrink again, so John Smith sends Jane Doe an exception note the same day | John Smith | Timeouts above 1% in the load test | Open |
 | R-2 | Because the draft contract has no uptime clause, a provider outage after cut-over may leave checkout down for hours, so SEV 1 targets are missed | 2 | 4 | 8 | Transference | Put a 99.9% uptime clause and a 1-hour incident response time into the contract by 2026-12-04. Contingency plan: on the trigger, John Smith takes the contract to Jane Doe with one option, keeping the old provider on standby for a SEV 1 until 2027-03-31; the standby costs USD 4,000 a month | John Smith | The provider refuses the clause | Open |
-| R-3 | Because one engineer knows the old payment code, a long absence may delay the routing flag, so `PROJ 1.1` is late | 2 | 2 | 4 | Acceptance | None unless it happens; one week of schedule reserve exists | John Smith | Absence announced | Open |
+| R-3 | Because one engineer knows the old payment code, a long absence may delay the routing flag, so `PROJ 1.0` is late | 2 | 2 | 4 | Acceptance | None unless it happens; one week of schedule reserve exists | John Smith | Absence announced | Open |
 | R-4 | Because the provider's fee tier is fixed at signing, a volume fee above the quote may exceed the budget, so the project overspends | 3 | 3 | 9 | Escalation | Send the fee quote and the budget gap to Jane Doe by 2026-12-04 | Jane Doe | A quote above USD 0.30 per payment | Open |
+| R-5 | Because the provider's test environment opened on 2026-12-14, four weeks after the charter's assumption, test payments start late, so `PROJ 1.0` misses its date of 2027-01-29 | none: it happened | 3 | none: no P | none: an issue has already happened, so it gets actions, not a threat response ([risks.md](risks.md) section 1) | From 2026-11-16 until the environment opened on 2026-12-14, Richard Roe asked Globex each week for the opening date and told John Smith; exception note to Jane Doe on 2026-12-18; change request `PROJ-127`, approved by Jane Doe on 2026-12-21, moves three milestones and keeps `PROJ 2.0` on 2027-03-26 | John Smith | none: it has happened; a failed assumption comes here as an issue ([charter.md](charter.md) section 2) | Happened (now an issue) |
 
 R-1 and R-2, the two threats with an impact of 4 or more, carry a contingency plan for their
 trigger, and the week of schedule reserve in R-3 is the one named contingency reserve, kept out of the
@@ -379,7 +411,10 @@ commit: fix [PROJ-131]: route saved-card payments by flag
 ```
 
 The branch and commit are good because the key ties them and the pull request to `PROJ-131`, so
-the fix is found from the work item ([git.md](../git/git.md) sections 2 and 3).
+the fix is found from the work item ([git.md](../git/git.md) sections 2 and 3). They carry the
+bug's key, not that of `PROJ-123`, whose staging check the bug failed: this is the departure from
+[tickets.md](tickets.md) section 4 that [jira-work-item-example.md](jira-work-item-example.md)
+section 4 declares, with its reason and its cost.
 
 Fix version on `PROJ-131`: `PROJ 1.0 test payments`, so the release page shows the bug fixed
 before the release ([tickets.md](tickets.md) section 5). The team's Definition of Done:
@@ -555,6 +590,7 @@ project and a follow-on action, and its row is marked handed over
 | R-2 | Handed over | Richard Roe, for the on-call team | Each month, check the provider's uptime against the contract's 99.9% clause, and take a miss to Globex |
 | R-3 | Closed: did not happen | none | none |
 | R-4 | Handed over | Jane Doe, who owns the payments budget | Each month, compare the provider's fees with the quote of USD 0.30 per payment |
+| R-5 | Happened (now an issue): `PROJ-127` moved the dates, and every milestone met its Baseline | none | none |
 
 Then the epics `PROJ-10`, `PROJ-11` and `PROJ-12` are closed.
 

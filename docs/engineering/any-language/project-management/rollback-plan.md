@@ -31,6 +31,9 @@ incident there is no time to design the way back.
 | Time | The time from the alert to "restored" ([sla.md](sla.md) section 4), which holds the trigger window, the wait for the decider, the rollback itself and the restored window, fits inside the restore target, so a rollback by the plan does not itself miss the SLA | [sla.md](sla.md) |
 | Who is told | The people the plan names, so those who depend on the release hear of the rollback from the team, not from users | This practice |
 
+The table is good because each part is something a reviewer can check before the deploy, and the
+Source column says where each part comes from.
+
 No standard names the decider's role. This practice asks for one name, and one backup, so that
 nobody waits for a group to agree, or for an absent decider, while the outage runs. The decider is
 the person on call for the release, who knows the change and can be paged at once; when the
