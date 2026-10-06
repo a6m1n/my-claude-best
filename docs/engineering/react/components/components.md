@@ -784,6 +784,8 @@ function payInvoice(event: SyntheticEvent<HTMLFormElement>) {
 
 ...
 
+{/* Disabled while the payment runs, so a second click cannot send a second payment
+    (ux.md section 2). */}
 <Button type="submit" disabled={isPaying}>
   {isPaying ? "Paying…" : "Pay invoice"}
 </Button>
@@ -803,6 +805,8 @@ lines between the handler and the button cut:
 
   ...
 
+      {/* Disabled while the payment runs, so a second click cannot send a second payment
+          (ux.md section 2). */}
       <Button type="submit" disabled={payment.isPending}>
         {payment.isPending ? "Paying…" : "Pay invoice"}
       </Button>

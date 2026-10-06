@@ -684,6 +684,8 @@ function InvoicesScreen() {
         params={{ invoiceId: invoice.id }}
         className="inline-flex min-h-6 items-center underline underline-offset-2 pointer-coarse:min-h-11"
       >
+        {/* A screen reader that lists the links reads each one out of its row; the extra
+            words say whose invoice it pays (accessibility.md section 3). */}
         Pay<span className="sr-only"> the invoice of {invoice.customerName}</span>
       </Link>
     ),
@@ -722,6 +724,8 @@ function InvoicesScreen() {
             params={{ invoiceId: invoice.id }}
             className="inline-flex min-h-6 items-center underline underline-offset-2 pointer-coarse:min-h-11"
           >
+            {/* A screen reader that lists the links reads each one out of its row; the extra
+                words say whose invoice it pays (accessibility.md section 3). */}
             Pay<span className="sr-only"> the invoice of {invoice.customerName}</span>
           </Link>
         )}

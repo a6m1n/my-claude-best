@@ -212,6 +212,8 @@ export function InvoiceList({ apiClient, today, renderPayLink }: InvoiceListProp
 
   return (
     <table className="w-full text-left">
+      {/* A screen reader announces the caption as the name of the invoice list; on screen
+          the page heading already says it (accessibility.md section 3). */}
       <caption className="sr-only">Invoices</caption>
       <thead className="border-b border-border text-sm text-muted-foreground">
         <tr>
@@ -220,6 +222,8 @@ export function InvoiceList({ apiClient, today, renderPayLink }: InvoiceListProp
           <th scope="col">Due</th>
           <th scope="col">Status</th>
           <th scope="col">
+            {/* An empty header cell would leave this column with no name; the word is for a
+                screen reader only (accessibility.md section 3). */}
             <span className="sr-only">Actions</span>
           </th>
         </tr>
@@ -327,6 +331,8 @@ function InvoicesScreen() {
             params={{ invoiceId: invoice.id }}
             className="inline-flex min-h-6 items-center underline underline-offset-2 pointer-coarse:min-h-11"
           >
+            {/* A screen reader that lists the links reads each one out of its row; the extra
+                words say whose invoice it pays (accessibility.md section 3). */}
             Pay<span className="sr-only"> the invoice of {invoice.customerName}</span>
           </Link>
         )}
@@ -434,6 +440,8 @@ export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormP
         {payment.isError ? "We could not confirm the payment. Check the invoice list before you try again." : null}
       </p>
 
+      {/* Disabled while the payment runs, so a second click cannot send a second payment
+          (ux.md section 2). */}
       <Button type="submit" disabled={payment.isPending}>
         {payment.isPending ? "Paying…" : "Pay invoice"}
       </Button>
