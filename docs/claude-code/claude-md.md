@@ -61,7 +61,7 @@ The two do not repeat each other. If a line seems to belong in both, split it. T
 
 A rule is one act, at one moment. Before you save a line, check that it answers two questions, and decide whether it needs a third:
 
-- When does it fire? A moment in the working loop the agent can recognize: "before staging", "when you create a doc", "when a file passes 500 lines". "Always" and "be careful" are not moments.
+- When does it fire? A moment in the working loop the agent can recognize: "before staging", "when you create a doc", "when a file passes 1000 lines". "Always" and "be careful" are not moments.
 - What does the agent do? One concrete act. Someone who disagrees with the rule could still carry it out.
 - How does anyone tell? Ask this only where a miss matters. For most rules the act shows in the diff or the transcript, and review is enough.
 
