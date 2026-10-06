@@ -39,6 +39,16 @@ sources behind them, are in [principles.md](principles.md).
   and the review. Read it when you open the register, add a risk or review the register.
 - [tickets.md](tickets.md): what a work item holds, how big it is, how it links to a branch, a pull
   request and a release. Read it when you write or triage a work item.
+- [work-item-types.md](work-item-types.md): the five Jira work types, story or epic, task or
+  subtask, who creates each, and what PMI, PRINCE2 and Scrum ask of a unit of work. Read it when
+  you pick a work item's type.
+- [work-item-example.md](work-item-example.md): one ideal work item of each type, with what each
+  standard contributes. Read it when you write the first work item of a type.
+- [workflow.md](workflow.md): the board's statuses and when an item moves between them, the
+  workflow diagram, Blocked, Canceled, comments, and a work item that is only partly done. Read it
+  when you move a work item, comment on one, or set up a board.
+- [meetings.md](meetings.md): the kickoff and the sprint meetings, their order, cadence and
+  timebox, and who speaks in what order. Read it when you plan or run a team meeting.
 - [sla.md](sla.md): what an SLA is, how it differs from an SLO, severity levels, and what "fixed"
   means in it. Read it when you agree or change an SLA.
 - [rollback-plan.md](rollback-plan.md): the rollback plan of a release, its trigger, owner and
@@ -50,8 +60,9 @@ sources behind them, are in [principles.md](principles.md).
 
 1. Copy this folder into your repository at `docs/engineering/any-language/project-management/`.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you open a project, plan or change its
-   scope or schedule, write or triage a work item, plan a release or its rollback, or agree an SLA,
-   read `docs/engineering/any-language/project-management/README.md` and the file it points to."
+   scope or schedule, write, triage or move a work item, plan a release or its rollback, agree an
+   SLA, or run a team meeting, read `docs/engineering/any-language/project-management/README.md`
+   and the file it points to."
    Without it an agent never opens the folder.
 3. In Jira, turn on releases and versions. This adds the Fix versions field that
    [life-cycle.md](life-cycle.md) and [tickets.md](tickets.md) use to tie work to a release
@@ -68,3 +79,6 @@ sources behind them, are in [principles.md](principles.md).
 - Levels above the epic in Jira: what a team without them does is in [wbs.md](wbs.md) section 7.
 - Where the risk register lives: one place per project ([risks.md](risks.md) section 2).
 - PRINCE2 terms: PID for the charter, its own six threat responses ([risks.md](risks.md) section 5).
+- The board's statuses: a team with no pre-production environment drops Pre-prod
+  ([workflow.md](workflow.md) section 2).
+- The sprint length, which sets every meeting's timebox ([meetings.md](meetings.md) section 2).

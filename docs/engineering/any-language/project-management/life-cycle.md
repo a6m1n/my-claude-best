@@ -75,7 +75,8 @@ Definition of Done ([tickets.md](tickets.md) section 2).
 
 This practice's own Closure rule: the sponsor accepts the result in writing against the charter's
 success criteria, not against the plan, so the result is judged by the goal and not by the schedule.
-The team holds a retrospective and records each lesson with an owner and a date. The epics are
+The team holds a retrospective ([meetings.md](meetings.md) section 8) and records each lesson with
+an owner and a date. The epics are
 closed, and so are the open rows of the risk register. A filled closure is in
 [project-example.md](project-example.md) section 9.
 

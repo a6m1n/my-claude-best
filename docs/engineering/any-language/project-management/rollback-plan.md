@@ -76,7 +76,8 @@ last.
 - Name in the plan every change that cannot be undone, so the decider knows that rolling back will
   not bring it back. For each, the plan names who approves a roll-forward fix instead.
 
-A filled data step is in [project-example.md](project-example.md) sections 6 and 8.
+A filled data step is in [work-item-example.md](work-item-example.md) section 3 and
+[project-example.md](project-example.md) section 8.
 
 ## 5. Rehearse it
 

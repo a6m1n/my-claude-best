@@ -60,7 +60,8 @@ work item, and the practice uses the transition and the comment. No rule in this
 per person, so logging them would be tracking for its own sake.
 
 Check: before you add a field, a report or a recurring status meeting, write one sentence: "We
-will decide X from this." If you cannot, do not add it.
+will decide X from this." If you cannot, do not add it. The meetings this practice keeps, and what
+each one decides, are in [meetings.md](meetings.md) section 1.
 
 ## 3. Workload: see it and adapt it
 
@@ -70,6 +71,8 @@ not finished, and names four flow measures: work in process, throughput, work it
 elapsed time between when a work item started and when it finished). PMI describes a kanban board as
 a tool that shows work in progress "to help identify bottlenecks and overcommitments" (PMI Lexicon,
 2026).
+
+How a Blocked item counts against the limit is in [workflow.md](workflow.md) section 4.
 
 When a person or the team holds more work in process than the agreed limit, the project manager
 delays or moves work. The project manager does not ask for more hours. The reason, from DORA's

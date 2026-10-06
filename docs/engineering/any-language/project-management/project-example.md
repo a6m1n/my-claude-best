@@ -128,6 +128,7 @@ Payment provider integration
    1.2  Provider settings and secrets            (work package)
    1.3  Test payments in staging                 (work package)
    1.4  Load test at 2x peak                     (work package)
+   1.5  Payment error messages to the shopper    (work package)   # story PROJ-135 (workflow.md section 7)
 2  PROJ-11  Routing flag (epic)
    2.1  Flag and routing code                    (work package)   # story PROJ-123
    2.2  1% live trial                            (work package)
@@ -147,7 +148,7 @@ The dictionary, one entry in the epic's description, three lines each:
 
 ```
 PROJ-10 Payment provider integration (epic)
-Scope: the API client and the settings the shop needs to take card payments through the provider.
+Scope: the API client and the settings the shop needs to take card payments through the provider, and the messages a shopper sees when the provider declines a card or times out.
 Owner: John Smith. Done when: test payments pass in staging and the load test at 2x peak
 passes.
 
@@ -187,44 +188,8 @@ The register is good because every risk is specific enough to watch: cause, even
 
 ## 6. Work items
 
-The story from [tickets.md](tickets.md) section 2, in `PROJ 1.0 test payments`:
-
-```
-PROJ-123  Story    Epic: PROJ-11    Fix version: PROJ 1.0 test payments
-Route card payments by flag
-
-As a shopper, I want my card payment to go through the new provider
-so that checkout keeps working while Acme Corp changes provider.
-
-Acceptance criteria
-- With the flag on, a test card payment is sent to the new provider.
-- With the flag off, the same payment is sent to the old provider.
-- The payment record stores which provider handled it.
-Blocked by: PROJ-124   # the third criterion needs the column (tickets.md section 5)
-```
-
-A task, because the work is not an outcome for a shopper:
-
-```
-PROJ-124  Task    Epic: PROJ-12    Fix version: PROJ 1.0 test payments
-Add a nullable `provider` column to payment records.
-
-Acceptance criteria
-- The migration adds the column with no default and no NOT NULL.   # expand step, so the old release still runs (rollback-plan.md section 4)
-- The old release runs against the migrated schema in staging.
-```
-
-A bug found in testing, in the same version:
-
-```
-PROJ-131  Bug    Epic: PROJ-11    Fix version: PROJ 1.0 test payments
-Saved-card payment ignores the flag
-
-With the flag off, a test payment on a returning shopper's saved card goes to the new provider.
-Steps: turn the flag off in staging; pay with a saved test card.
-Expected: the old provider handles it. Actual: the new provider handles it.
-Blocks: PROJ-123
-```
+The project's work items, one of each type (epic, story, task, bug and subtasks), are in
+[work-item-example.md](work-item-example.md). The bug `PROJ-131` is the one used below.
 
 The bug's branch and commit, named by [git.md](../git/git.md) sections 2 and 3. The pull request
 takes the commit's title (git.md section 4) and links `PROJ-131`:
@@ -247,6 +212,7 @@ before the release ([tickets.md](tickets.md) section 5). The team's Definition o
 - Every acceptance criterion is met and checked by someone other than the author.   # a second reader finds what the author missed (tickets.md section 2)
 - The pull request is reviewed and merged to main.
 - Tests for the change pass.
+- The change is deployed to production.   # the team's Done status means in production (workflow.md section 2; tickets.md section 2 owns the DoD)
 - The work item is in its Fix version.   # the release page is only true if every item is in it (tickets.md section 5)
 - If the change touches routing, turning the flag off still sends payments to the old provider.   # keeps the rollback step true (rollback-plan.md section 2)
 ```
@@ -254,9 +220,6 @@ before the release ([tickets.md](tickets.md) section 5). The team's Definition o
 The list is good because each line is a check a reviewer can tick, and the flag line keeps the
 rollback step true ([tickets.md](tickets.md) section 2, [rollback-plan.md](rollback-plan.md)
 section 2).
-
-The items are good because each one, story, task or bug, says what done looks like in a way a
-stranger can check ([tickets.md](tickets.md) section 2).
 
 ## 7. SLA
 

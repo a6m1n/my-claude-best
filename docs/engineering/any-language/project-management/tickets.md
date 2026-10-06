@@ -51,14 +51,23 @@ criteria are the test that the story is done, and without them nobody can tell w
 - Keep one Definition of Done for the team. The Scrum Guide says: "The Definition of Done is a
   formal description of the state of the Increment when it meets the quality measures required for
   the product." A work item that does not meet it is not done.
+- Write the production deploy into the Definition of Done, so that Done on the board means the
+  change is live ([workflow.md](workflow.md) section 2). The Scrum Guide leaves the Definition of
+  Done to the team, and a Done that stops at "merged" shows finished work that no user has yet;
+  Humble puts it as "They are done when it is working in production."
+- Write a bug's steps, its expected result and its actual result in the description, not in
+  comments, so the whole report is in one place. Tatham: "The aim of a bug report is to enable the
+  programmer to see the program failing in front of them." Atlassian's bug template puts expected
+  against actual in comments; this practice follows Tatham.
 - Check the story against INVEST (Wake, 2003): small enough to finish soon, and testable, so that
   you could write a test for it.
 - Definition of Ready is PMI's term; the Scrum Guide has no such term. If the team keeps a
   Definition of Ready, name PMI as its owner and keep it short.
-- Use a bug when something is broken, and a task when the work is not an outcome for a user
-  (Atlassian work types).
+- Pick the work type by [work-item-types.md](work-item-types.md) section 1, which owns when to
+  use a story, a task, a bug, an epic or a subtask.
 
-A filled story is in [project-example.md](project-example.md) section 6.
+One ideal work item of each type is in [work-item-example.md](work-item-example.md); the story is
+in its section 2.
 
 ## 3. Small work items
 
@@ -90,7 +99,34 @@ least daily. Three working days (section 3) is the outer limit; an item that wou
 split. Atlassian: "With small branches, developers can quickly see and review small changes."
 
 The work item key is the only link Jira needs to show the branch, the commit and the deployment on
-the work item. A filled branch and commit are in [project-example.md](project-example.md) section 6.
+the work item. Jira makes the link itself when three things hold (Atlassian, "Reference work items
+in your development work"):
+
+- The key is in the name. A branch links by its name, a commit by its message, and a pull request
+  by its title or its source branch. A build or a deployment links when one of its commits carries
+  the key.
+- The key is in capital letters: "'JRA-123', not 'jra-123'". A lower-case key may not link.
+- The repository is connected to Jira (Bitbucket Cloud, GitHub through the GitHub for Atlassian
+  app, or GitLab), and the reader has the View development tools permission. Without the
+  connection no name links anything, and the first sync can take a few minutes.
+
+Development > Create branch on the work item puts the key into the branch name for you, and each
+person sets the name format once. Set it to the form in [git.md](../git/git.md) section 2, or edit
+the name before you create the branch, because the tool's default is not that form. Bitbucket's own
+branching model uses prefixes such as `feature/` and `bugfix/` and may suggest one from the work
+type; git.md's six types differ, so change the prefix to the git.md one.
+
+No Atlassian page states which characters may come before the key in a branch name, and none
+reports that a prefix with a slash breaks the link. Atlassian's own example puts the key first
+(`JRA-123-<branch-name>`), while git.md's form puts the type first. So check it once in each
+repository.
+
+Check: after the first branch of a repository is pushed, open its work item's Development panel. The
+branch is listed there. If it is not, look for the three causes above; if none applies, the prefix
+before the key is the likely cause, and you record it as a follow-up on the git.md branch rule
+([refactoring.md](../refactoring/refactoring.md) section 8).
+
+A filled branch and commit are in [project-example.md](project-example.md) section 6.
 
 ## 5. Links in Jira
 
@@ -156,3 +192,21 @@ that sets the order of the work is in [life-cycle.md](life-cycle.md).
   ["Process work items with smart
   commits"](https://support.atlassian.com/jira-software-cloud/docs/process-issues-with-smart-commits/),
   undated.
+- Atlassian, ["View development information for a work
+  item"](https://support.atlassian.com/jira-software-cloud/docs/view-development-information-for-an-issue/),
+  ["How to alter the branch name format in the Create branch
+  option"](https://support.atlassian.com/jira/kb/how-to-alter-the-branch-name-format-in-the-create-branch-option-in-development-panel/),
+  and ["Link GitHub workflows and deployments to Jira work
+  items"](https://support.atlassian.com/jira-cloud-administration/docs/link-github-workflows-and-deployments-to-jira-issues/),
+  undated, read 2026-10-06.
+- Atlassian, ["Configure a project's branching
+  model"](https://support.atlassian.com/bitbucket-cloud/docs/configure-a-projects-branching-model/),
+  Bitbucket Cloud, undated, read 2026-10-06.
+- Humble, ["Continuous Delivery vs Continuous
+  Deployment"](https://continuousdelivery.com/2010/08/continuous-delivery-vs-continuous-deployment/),
+  2010-08-13.
+- Tatham, ["How to Report Bugs
+  Effectively"](https://www.chiark.greenend.org.uk/~sgtatham/bugs.html), 1999.
+- Atlassian, ["Bug report
+  template"](https://www.atlassian.com/software/jira/templates/bug-report), undated, read
+  2026-10-06.
