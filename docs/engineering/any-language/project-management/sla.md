@@ -50,11 +50,15 @@ is in [project-example.md](project-example.md) section 7.
 ## 3. Open the incident
 
 When the alert fires, the person on call opens one incident work item. In Jira Service Management
-it is an Incident; without it, use a Bug. The person on call sets the severity from section 2, and
-may raise or lower it while the incident runs. A change of severity keeps the clock's start time;
-whoever lowers it writes why in the incident work item. The SLA clock starts at the alert or the
-first customer report, whichever comes first; the person on call writes that time into the incident
-work item, even when the item is opened later. When service is restored, the person on call opens one problem work item (a Task or a Bug) linked to the
+it is an Incident; without it, use a Bug, since the product does less than it should
+([jira-work-item-types.md](jira-work-item-types.md) section 1). The person on call sets the severity
+from section 2, which picks the SLA target, and may raise or lower it while the incident runs. A
+change of severity keeps the clock's start time, so a new severity cannot restart the clock;
+whoever lowers it writes why in the incident work item, because a lower severity gives a looser
+target. The SLA clock starts at the alert or the first customer report, whichever comes first; the
+person on call writes that time into the incident work item, even when the item is opened later, so
+the clock counts from the first sign of the outage, not from when the item was opened. When service
+is restored, the person on call opens one problem work item (a Task or a Bug) linked to the
 incident, with its own due date, for the root cause ([tickets.md](tickets.md) section 5 for the
 link).
 
@@ -65,10 +69,12 @@ from being forgotten once the service is back.
 
 ## 4. What the clock measures
 
-Write in the SLA what "fixed" means and which clock runs. The SLA clock measures the time to restore
-the service, not the time to find and fix the root cause. ITIL separates incident management
-(restore normal service quickly) from problem management (find the cause), and Atlassian says to run
-both, separately. Google: "first stop the impact of an incident, and then find the root cause".
+Write in the SLA what "fixed" means and which clock runs, so both sides measure a miss the same way.
+The SLA clock measures the time to restore the service, not the time to find and fix the root
+cause, because users feel the outage and the cause can take far longer to find. ITIL separates
+incident management (restore normal service quickly) from problem management (find the cause), and
+Atlassian says to run both, separately. Google: "first stop the impact of an incident, and then find
+the root cause".
 
 No standard says what "fix within 24 hours" means in a contract. This section is this practice's
 advice. A clause such as "fix within 24 hours" names five things:
@@ -86,15 +92,17 @@ done, under its own work item.
 ## 5. Restore first, by rollback when a change caused it
 
 When an outage correlates with a recent release, roll the release back before you look for the
-cause. The reason and the SRE quote are in [rollback-plan.md](rollback-plan.md) section 3, which
-also holds the plan.
+cause, because a rollback restores service faster and more surely than a patch. The longer reason
+and the SRE quote are in [rollback-plan.md](rollback-plan.md) section 3, which also holds the plan.
 
 This practice's own rule for the case with no correlated change: when no release, flag or setting
 change came before the symptoms, there is nothing to roll back. The person on call works the restore
-under the same clock, and a workaround counts once it meets the clause's "restored" (section 4).
+under the same clock, since the SLA measures the restore whatever caused the outage, and a
+workaround counts once it meets the clause's "restored" (section 4).
 
 Measure it with DORA's failed deployment recovery time: the time to recover from a deployment that
-fails and needs immediate intervention. Compare it with the restore target in the SLA.
+fails and needs immediate intervention. Compare it with the restore target in the SLA, so you see
+whether the way back fits inside it.
 
 ## 6. Why small work items make the SLA easier
 
@@ -107,9 +115,10 @@ links are in [tickets.md](tickets.md) sections 3 and 4.
 
 SLAs are a Jira Service Management feature, not part of Jira Software alone. A goal is set per
 priority and uses a calendar, and the clock has start, pause and stop conditions. By default the
-clocks run 24/7; set a calendar to limit them to working hours. Atlassian's own example of a goal is
-that blockers are resolved within 24 hours (legacy page). Jira priorities run from Highest to
-Lowest; map each SEV level of section 2 to one priority.
+clocks run 24/7; set a calendar to limit them to working hours, so Jira's clock matches the one the
+clause names (section 4). Atlassian's own example of a goal is that blockers are resolved within 24
+hours (legacy page). Jira priorities run from Highest to Lowest; map each SEV level of section 2 to
+one priority, because each goal is set per priority.
 
 Without Jira Service Management, a daily Automation rule on the due date can flag overdue work.
 Atlassian says there is no built-in trigger for a passed due date, and gives a scheduled trigger

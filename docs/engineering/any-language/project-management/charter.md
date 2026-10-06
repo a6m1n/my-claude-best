@@ -32,9 +32,9 @@ Check: before you write the plan, ask whether the sponsor has approved the chart
 
 ## 2. What it holds
 
-Keep the charter to one or two pages. Atlassian says it is "not meant to be a detailed project
-plan, but rather a high-level overview" (Atlassian, project charter); detail belongs in the
-plan. Each part below is a short section of the page.
+Keep the charter to one or two pages, so it holds only what changes rarely (section 3). Atlassian
+says it is "not meant to be a detailed project plan, but rather a high-level overview" (Atlassian,
+project charter); detail belongs in the plan. Each part below is a short section of the page.
 
 | Part | What to write | Why it is there |
 |---|---|---|
@@ -59,22 +59,24 @@ used to record all assumptions and constraints throughout the project." (PMI Lex
 Atlassian's project poster gives the reason to write them down: "Unidentified and unvalidated
 assumptions can significantly contribute to project failures." The date on each assumption is this
 practice's own: an assumption with no date to check it by stays untested until it fails. When one is
-proved false, it goes to the [risk register](risks.md) as an issue.
+proved false, it goes to the [risk register](risks.md) as an issue, so it gets an owner and actions
+like every other row there.
 
 A filled charter for one project is in [project-example.md](project-example.md) section 2.
 
 ## 3. It stays stable
 
 Change the charter only when the goal, the scope boundary, the budget or the sponsor changes,
-and only with the sponsor's approval. Day-to-day change goes into the plan
+and only with the approval of the sponsor, who issued it. Day-to-day change goes into the plan
 ([project-plan.md](project-plan.md) section 4). The charter is the reference the plan is
 measured against, so a charter that moves with every plan change measures nothing.
 
 Atlassian lists "neglecting to update the document as project parameters change" as a charter
-mistake, so do update it when one of the four things above changes. It also contrasts the
-charter with the project poster: "Unlike project charters, your project poster is a living
-document." (Atlassian, project charter) If the team wants a page that is updated every week, make
-the poster or the plan page, not the charter.
+mistake, so do update it when one of the four things above changes, or the plan is measured
+against a goal that no longer holds. It also contrasts the charter with the project poster:
+"Unlike project charters, your project poster is a living document." (Atlassian, project charter)
+If the team wants a page that is updated every week, make the poster or the plan page, not the
+charter.
 
 ## 4. Other standards
 

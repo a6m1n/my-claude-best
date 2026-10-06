@@ -13,9 +13,10 @@ artifacts, and when someone asks what happens when.
 
 ## 1. One loop
 
-Run the project as one loop: plan, deliver, inspect what happened, decide, adapt the plan. No
-standard read for this practice draws the artifacts of this folder into one loop, so the loop below
-is this practice's own; its two halves come from the owners.
+Run the project as one loop: plan, deliver, inspect what happened, decide, adapt the plan, so what
+the team learns while it delivers reaches the plan. No standard read for this practice draws the
+artifacts of this folder into one loop, so the loop below is this practice's own; its two halves
+come from the owners.
 
 - **The stage half, from PRINCE2 7.** "A PRINCE2 project is planned, monitored, and controlled on a
   stage-by-stage basis." At each stage boundary the board reviews "the success of the current stage",
@@ -58,8 +59,9 @@ the life of the project." (PeopleCert, 2023)
 
 ## 2. The rhythm
 
-Hold each step of the loop at a fixed rhythm, and write the rhythm into the plan. PRINCE2 7 splits
-its controls in two: time-driven controls run "at predefined periodic intervals", such as the
+Hold each step of the loop at a fixed rhythm, and write the rhythm into the plan, so every artifact
+is looked at before it goes stale, on a day anyone can find in the plan. PRINCE2 7 splits its
+controls in two: time-driven controls run "at predefined periodic intervals", such as the
 highlight report, and event-driven controls run "when a specific event occurs", such as "the end of a
 stage" or "the creation of an exception report" (PeopleCert, 2023). The table keeps that split:
 
@@ -74,9 +76,12 @@ stage" or "the creation of an exception report" (PeopleCert, 2023). The table ke
 | Every phase end | The approval of the phase's artifact; the whole risk register; the stakeholder register | Whether to go on | [life-cycle.md](life-cycle.md) section 2, [risks.md](risks.md) section 7, [stakeholders.md](stakeholders.md) section 6 |
 | Closure | Acceptance against the success criteria; lessons with owners | The result against the charter | [life-cycle.md](life-cycle.md) section 2 |
 
-A team without sprints keeps the daily and the weekly rows and replaces the sprint row by the
-cadence of [meetings.md](meetings.md) section 9; the Kanban Guide asks for no fixed cadence, so the
-team writes its own.
+The table is good because each row names what it inspects and the rule that owns it, so a plan
+that copies it says when each step happens and where its rule lives.
+
+A team without sprints keeps the daily and the weekly rows, which need no sprint, and replaces the
+sprint row by the cadence of [meetings.md](meetings.md) section 9; the Kanban Guide asks for no
+fixed cadence, so the team writes its own.
 
 ## 3. Tailor it to the project's size
 
@@ -85,8 +90,9 @@ the project allows: the charter, the stakeholder register, the named roles with 
 and the decision log, the RACI matrix for the deliverables, the plan with its baseline, the risk
 register, the weekly status update with the escalation path, and, for each release, the go or
 no-go decision and the rollback plan. On a small project, one team for a few months, each of them
-fits on one page or in a few lines. Anything beyond them and the conditional artifacts below
-follows the "just enough" rule of [principles.md](principles.md) section 4.
+fits on one page or in a few lines, and a short artifact costs less to keep current. Anything
+beyond them and the conditional artifacts below follows the "just enough" rule of
+[principles.md](principles.md) section 4.
 
 Keep the conditional artifacts when their condition holds; each condition is owned by the file
 named. A larger project, with several teams or a date set outside the team, meets more of them:

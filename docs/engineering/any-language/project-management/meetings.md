@@ -34,6 +34,8 @@ back.
 | Sprint Review | What is Done, and what to do next toward the goal | At Complete sprint, items not Done move to the next sprint or the backlog list, and their status does not change ([jira-workflow.md](jira-workflow.md) section 7); the backlog re-ordered |
 | Sprint Retrospective | Which improvements the team takes on | Actions, each with an owner and a date |
 
+The table is good because every row names the decision its meeting makes, as the rule above asks,
+so a reader who copies a row into a calendar invite also copies what the meeting must decide.
 The Jira column is this practice's own: it names where each decision is kept, so that nobody has
 to remember what a meeting decided.
 
@@ -65,6 +67,10 @@ A two-week sprint:
 | Sprint Review | Last day | 30 to 60 minutes | The Scrum Team and the stakeholders |
 | Sprint Retrospective | Last day, after the review | 30 to 60 minutes | The Scrum Team |
 
+The table is good because each meeting has its day, its timebox and who attends, and every value
+comes from a source this section names or is marked as this practice's own, so a team can copy it
+and know where each number comes from.
+
 The timeboxes come from two places. The Scrum Guide gives the maxima for a one-month Sprint:
 Planning 8 hours, Review 4 hours, Retrospective 3 hours, and the Daily Scrum 15 minutes. It adds
 that shorter Sprints have shorter events. For planning, Atlassian's rule is "no more than two
@@ -78,10 +84,10 @@ A table is enough here, so there is no diagram.
 ## 3. Project kickoff
 
 Hold one kickoff at the start of the project, after the sponsor has issued the charter
-([charter.md](charter.md)). PMI defines it as "A gathering of team members and other key
-stakeholders at the beginning of a project to formally set expectations, gain a common
-understanding, and commence work." Atlassian's project kickoff play plans 90 minutes for 3 to 14
-people.
+([charter.md](charter.md)), so the meeting can walk a charter that is already agreed (step 2 below).
+PMI defines it as "A gathering of team members and other key stakeholders at the beginning of a
+project to formally set expectations, gain a common understanding, and commence work." Atlassian's
+project kickoff play plans 90 minutes for 3 to 14 people.
 
 Run it in this order. Steps 1 and 5 follow Atlassian's play, which opens with the sponsor and ends
 with next steps; steps 2 to 4 are this practice's own, built on PMI's three aims (set
@@ -105,8 +111,9 @@ work can be shown later.
 
 ## 4. Sprint Planning
 
-Hold it on day 1 of the sprint with the whole Scrum Team. The Scrum Guide gives it three topics,
-and you take them in this order, because each needs the answer of the one before:
+Hold it on day 1 of the sprint with the whole Scrum Team, so the sprint has its goal before the
+work starts. The Scrum Guide gives it three topics, and you take them in this order, because each
+needs the answer of the one before:
 
 | Topic | Question | Who brings it |
 |---|---|---|
@@ -209,11 +216,12 @@ other practice governs it.
 ## 6. Backlog refinement
 
 Refine the backlog all the time, and hold a refinement session once a week, about an hour, before
-Sprint Planning. The Product Owner runs it. The Scrum Guide describes refinement as "an ongoing
-activity to add details, such as a description, order, and size", and it is an activity, not an
-event. Atlassian puts the session once a week, run by the Product Owner, with the Product Owner,
-the Scrum Master and at least one Developer, before each sprint planning meeting. The hour is this
-practice's own figure.
+Sprint Planning, so the items are ready when the planning picks them. The Product Owner runs it,
+because the session ends in the Product Owner's order of the backlog (step 5 below). The Scrum
+Guide describes refinement as "an ongoing activity to add details, such as a description, order,
+and size", and it is an activity, not an event. Atlassian puts the session once a week, run by the
+Product Owner, with the Product Owner, the Scrum Master and at least one Developer, before each
+sprint planning meeting. The hour is this practice's own figure.
 
 Leave an item in refinement until it can be Done within one Sprint, and until it fits
 [tickets.md](tickets.md) section 3's three-day limit. The Scrum Guide says items "that can be Done
@@ -222,7 +230,7 @@ not fit cannot be picked in Sprint Planning, and one that is too big is found ou
 sprint.
 
 The decision of the session is which items are ready, and in what order. This practice's own
-order of work in the session:
+order of work in the session, where each step uses what the one before it settled:
 
 1. The Product Owner presents the top items and why they matter.
 2. The Developers ask questions and check the acceptance criteria.
@@ -237,11 +245,12 @@ The output in Jira is the item with its description, its rank in the backlog and
 
 ## 7. Sprint Review
 
-Hold it on the last day of the sprint. The order:
+Hold it on the last day of the sprint, so it covers all the work the sprint reached. The order:
 
-1. The Product Owner opens with the Sprint Goal, and says what is Done and what is not Done. The
-   Scrum Guide 2017 has this step: "The Product Owner explains what Product Backlog items have been
-   'Done' and what has not been 'Done'"; the 2020 Guide does not.
+1. The Product Owner opens with the Sprint Goal, and says what is Done and what is not Done, so
+   everyone judges what follows against the goal. The Scrum Guide 2017 has this step: "The Product
+   Owner explains what Product Backlog items have been 'Done' and what has not been 'Done'"; the
+   2020 Guide does not.
 2. The Developers demonstrate Done items only. The Scrum Guide 2020 says an item that does not meet
    the Definition of Done "cannot be released or even presented at the Sprint Review. Instead, it
    returns to the Product Backlog for future consideration."
@@ -253,9 +262,10 @@ Hold it on the last day of the sprint. The order:
 
 The order of the steps is this practice's own, and each step names its source. Keep it a
 conversation (Scrum Guide 2020): "The Sprint Review is a working session and the Scrum Team should
-avoid limiting it to a presentation." The review is not a gate to releasing: the Guide says an
-Increment may be delivered before the end of the Sprint, and that "the Sprint Review should never
-be considered a gate to releasing value".
+avoid limiting it to a presentation." The reason: the meeting decides what to do next, and a
+presentation decides nothing. The review is not a gate to releasing: the Guide says an Increment
+may be delivered before the end of the Sprint, and that "the Sprint Review should never be
+considered a gate to releasing value".
 Its output in Jira: the backlog re-ordered by the Product Owner. Done items are already Done, from
 their production deploy ([jira-workflow.md](jira-workflow.md) section 2). At Complete sprint, items
 not Done move to the next sprint or the backlog list, and their status does not change
@@ -287,7 +297,7 @@ long as 3 hours, so scale the minutes to the length you pick.
 
 End with "a few actionable ideas with clear owners and due dates" (Atlassian). The reason: an
 idea with no owner and no date is forgotten before the next sprint. Write each as a work item with
-its owner and its date.
+its owner and its date, so the action is planned and tracked with the rest of the work.
 
 No source prescribes a speaking order for the retrospective. Atlassian's only rule on turns is
 that, when one person dominates, the facilitator calls on others "to make sure everyone gets
@@ -305,8 +315,8 @@ This practice's own rule: a team without sprints keeps a daily board review, wal
 right to left as in section 5, and a regular retrospective, and it refines when the Backlog runs
 low. The reasons: the daily review keeps the age of items visible, the retrospective changes how
 the team works, and refining on need keeps the Backlog from growing stale. Where the Kanban Guide
-lists no cadence, the team picks it, and writes it down. When a team should work without sprints
-is in [life-cycle.md](life-cycle.md) section 4.
+lists no cadence, the team picks it, and writes it down, so the cadence does not depend on anyone's
+memory. When a team should work without sprints is in [life-cycle.md](life-cycle.md) section 4.
 
 ## 10. PRINCE2 and PMBOK: reports, not meetings
 

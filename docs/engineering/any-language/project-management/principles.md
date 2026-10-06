@@ -52,9 +52,10 @@ way to the person. Two sources point the same way:
 The reason: a manager who checks every step makes people wait for the check, and a team that waits
 does not decide.
 
-Collect a number only when a decision uses it, and name that decision before you start collecting.
-Martin Fowler argues that productivity cannot be measured reasonably, and that "false measures only
-make things worse". A report that no decision reads is tracking for its own sake.
+Collect a number only when a decision uses it, and name that decision before you start collecting,
+because collecting costs the team time and a number no decision uses gives nothing back. Martin
+Fowler argues that productivity cannot be measured reasonably, and that "false measures only make
+things worse". A report that no decision reads is tracking for its own sake.
 
 When the team sets up Jira, leave time logging off unless a named decision needs hours. Jira's smart commits can log time, add a comment and move a
 work item, and the practice uses only the comment ([tickets.md](tickets.md) section 5). No rule in this folder needs hours
@@ -67,7 +68,8 @@ each one decides, are in [meetings.md](meetings.md) section 1.
 ## 3. Workload: see it and adapt it
 
 Show the work in progress on the board, and agree a limit on it with the team: a limit per person
-and for the team. The Kanban Guide defines work in process as the number of work items started but
+and for the team, so a person who holds too much shows on the board before it shows as a missed
+date. The Kanban Guide defines work in process as the number of work items started but
 not finished, and names four flow measures: work in process, throughput, work item age and cycle time (the
 elapsed time between when a work item started and when it finished). PMI describes a kanban board as
 a tool that shows work in progress "to help identify bottlenecks and overcommitments" (PMI Lexicon,
@@ -86,7 +88,7 @@ Inside a sprint, the Developers decide who stops an item or hands it over, and t
 decides what leaves the sprint, because the sprint's plan is theirs, not the project manager's.
 The Scrum Guide (2020) says the Developers "internally decide who does what, when, and how", and
 calls the Sprint Backlog "a plan by and for the Developers". A team without sprints decides at the
-same board look.
+same board look, so the overload is dealt with on the day it is seen.
 
 The project manager then records what the change costs: which date moves, or which scope leaves.
 Inside the tolerance it is a recorded change ([project-plan.md](project-plan.md) section 4); beyond
@@ -101,8 +103,9 @@ that leaves the sprint.
 
 ## 4. The standards behind this practice
 
-Take the practice from the standards, and attribute each artifact to the body that names it. The
-bodies do not name the same artifacts, so never write "all the certifications recommend X".
+Take the practice from the standards, and attribute each artifact to the body that names it, so a
+reader can check each rule at its source. The bodies do not name the same artifacts, so never
+write "all the certifications recommend X".
 
 | Body and edition | What it is | What this folder takes from it |
 |---|---|---|
@@ -128,13 +131,15 @@ message. Branches, commits and pull requests show on a work item only after a Ji
 the repository host to Jira, and deployments only after the CI/CD tool is connected too (Atlassian,
 "Reference work items in your development spaces" and "View release information for a work item").
 The branch, commit and pull request names are owned by [git.md](../git/git.md)
-sections 2 to 4. Read the rule there, and do not copy it.
+sections 2 to 4. Read the rule there, and do not copy it, because a copy here goes stale when
+git.md changes.
 
 The reason: with the key in every name, anyone can go from the goal to an epic, to a work item, to
 the code and to the release, and back, without asking a person.
 
-Use Jira's own names. "Work item" replaced "issue" in 2025 (Atlassian announcement of 2025-02-06),
-though APIs still say "issue". The hierarchy is in [wbs.md](wbs.md) section 7. A version is defined
+Use Jira's own names, so the words here match what the reader sees in Jira and in Atlassian's
+docs. "Work item" replaced "issue" in 2025 (Atlassian announcement of 2025-02-06), though APIs
+still say "issue". The hierarchy is in [wbs.md](wbs.md) section 7. A version is defined
 in [tickets.md](tickets.md) section 5, and Timeline is the view of epics and work items over time,
 inside one space.
 
@@ -168,10 +173,12 @@ practice's own). The reason: a team that knows the date is fixed cuts scope when
 and a team that does not know asks for more time, or quietly cuts quality. PRINCE2 7 states the quality target as "What is delivered by the project
 must be fit for purpose." (PeopleCert, 2023) PMI's Lexicon has no entry for quality itself. This
 practice measures quality by the acceptance criteria and the Definition of Done of each work item
-([tickets.md](tickets.md) section 2), and by the charter's success criteria (this practice's own).
+([tickets.md](tickets.md) section 2), and by the charter's success criteria (this practice's own),
+so "fit for purpose" becomes something a reviewer can check.
 
 Judge success by the value of the result, against the charter's success criteria, not by the
-schedule alone. PMI defines project success as "The consensus view across intended beneficiaries,
+schedule alone, because a project can end on its date and still deliver nothing worth its cost.
+PMI defines project success as "The consensus view across intended beneficiaries,
 other stakeholders, and project participants that a project was perceived to have delivered value
 that was worth the effort and expense." (PMI Lexicon, 2026), and PMBOK 7 says "Value is the ultimate
 indicator of project success." Schedule, budget and scope stay in the picture as the traditional

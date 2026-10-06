@@ -86,15 +86,16 @@ activity, scheduling, cost, and resource information about each component in the
 structure." (PMI Lexicon, 2026) NASA adds that it is a controlled document the project manager
 maintains (sections 3.2, 3.4.4).
 
-Keep it simple: the epic's description can be the entry. Three lines are enough. A filled
+Keep it simple: the epic's description can be the entry, so it sits where the team already reads
+about the work. Three lines are enough, and a short entry is one people keep current. A filled
 dictionary is in [project-example.md](project-example.md) section 4.
 
 ## 7. In Jira
 
-This mapping is this practice's own. Atlassian publishes no mapping from WBS to Jira, so it is
-built from Jira's work item hierarchy: epics, then work items (story, task, bug), then
-subtasks. Atlassian's user-story guide says epics break into stories and several epics form an
-initiative.
+This mapping is this practice's own, and it keeps the WBS and the work in Jira in one tree, not two.
+Atlassian publishes no mapping from WBS to Jira, so it is built from Jira's work item hierarchy:
+epics, then work items (story, task, bug), then subtasks. Atlassian's user-story guide says epics
+break into stories and several epics form an initiative.
 
 | WBS part | Jira |
 |---|---|
@@ -102,7 +103,10 @@ initiative.
 | A deliverable | An epic |
 | A work package | A work item: story, task or bug |
 | A work package split into several work items | Work items under the same epic, each naming the work package in its summary |
-| A step inside one work item | A subtask, and only then |
+| A step inside one work item | A subtask, and only then, since a subtask is a step, not a unit of work with its own value ([jira-work-item-types.md](jira-work-item-types.md) section 1) |
+
+The table is good because every row names the Jira level that holds that part of the WBS, so no
+part is kept outside Jira.
 
 A work package too big for one work item becomes several work items;
 [tickets.md](tickets.md) section 3 says how to size them and section 2 how to write them. Levels above the epic need Jira Plans on a Premium or Enterprise

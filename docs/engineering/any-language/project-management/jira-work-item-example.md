@@ -171,7 +171,7 @@ Environment: staging, flag off, saved test card of a returning shopper   # where
 With the flag off, a test payment on a returning shopper's saved card goes to the new provider.
 Steps: 1. Turn the flag off in staging. 2. Pay with a saved test card.
 Expected: the old provider handles it. Actual: the new provider handles it.
-Blocks: PROJ-123
+Blocks: PROJ-123   # PROJ-123's flag-off criterion cannot pass until this is fixed (tickets.md section 5)
 ```
 
 The bug is good because it states the symptom and leaves the diagnosis out. The reader can repeat

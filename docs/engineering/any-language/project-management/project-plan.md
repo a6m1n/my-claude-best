@@ -40,6 +40,8 @@ say gets one line. A long plan is not kept current, and a stale plan misleads.
 | Communication | Who hears what, how often, in which channel; the escalation path | [communication.md](communication.md) |
 | Change control | How a change to scope, schedule or budget is approved | Section 4 |
 
+The table is good because each part names where its detail lives, so the plan itself stays short.
+
 As a cross-check, PRINCE2 7 defines the project plan as "a high-level plan showing the major
 products of the project and when, how, and at what cost they will be delivered." (PeopleCert, 2023)
 The table above covers the products, the when and the how; the cost is the budget the plan must
@@ -76,11 +78,13 @@ control is "A process whereby modifications to documents, deliverables, or basel
 with the project are identified, documented, approved, or rejected." (PMI Lexicon, 2026) The PMP
 exam outline lists the task "Baseline a project schedule."
 
-On the plan page, give each milestone (a version in Jira) three dates side by side:
+On the plan page, give each milestone (a version in Jira) three dates side by side, so a reader sees
+at a glance how far it has moved:
 
 - Original: the date approved at the first baseline. Nobody edits it.
 - Baseline: the current approved date. It changes only when the sponsor approves a change request
-  beyond the tolerance, and only for the milestones the request names and the ones linked to them.
+  beyond the tolerance, and only for the milestones the request names and the ones linked to them,
+  so a change does not hide the slip of a milestone it did not touch.
 - Now: the current forecast, or the version's release date in Jira. The project manager moves it
   inside the tolerance.
 
@@ -112,10 +116,11 @@ explains.
 
 When you baseline the plan, agree a tolerance with the sponsor (for example, a milestone may move up
 to one week from its Baseline date, so the sponsor's time goes to changes that move the goal, not
-to routine slips). Inside it the project manager decides and records the change; only a change beyond it
-goes to the sponsor. While a request waits, the team keeps working to the current baseline. Tolerance
-comes from PRINCE2 7's principle "manage by exception" (PeopleCert, 2023;
-[principles.md](principles.md) section 4); the one-week number is an example.
+to routine slips). Inside it the project manager decides and records the change; only a change
+beyond it goes to the sponsor. While a request waits, the team keeps working to the current
+baseline, because a change is not the plan until the sponsor approves it. Tolerance comes from
+PRINCE2 7's principle "manage by exception" (PeopleCert, 2023; [principles.md](principles.md)
+section 4); the one-week number is an example.
 
 In Jira, one way is a work item per change request, with the old date, the new date, the approver
 and the reason in its description and a link to the epic it changes. A change to the charter's goal,
@@ -146,8 +151,9 @@ plan end with "Share, Gather Feedback, And Adjust The Project Plan As Necessary"
 outline asks the project manager to maintain the plan.
 
 Pick the rhythm when you approve the plan and write it into the plan, for example "every second
-Monday, 30 minutes". No standard sets the number; choose one short enough that a review finds few
-changes, and change it if reviews find many.
+Monday, 30 minutes", so the reviews happen without anyone having to call them. No standard sets the
+number; choose one short enough that a review finds few changes, and change it if reviews find many,
+because many changes mean the team worked to an out-of-date plan between reviews.
 
 ## 7. Sources
 

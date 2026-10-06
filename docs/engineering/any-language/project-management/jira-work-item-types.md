@@ -31,7 +31,8 @@ defines them in one line each:
 
 "Issue" is the old name of a work item in Jira; this folder says work item
 ([tickets.md](tickets.md) section 1). Atlassian's definitions are short on purpose, so the table
-below is this practice's own reading of them. Take the first row that fits:
+below is this practice's own reading of them. Take the first row that fits, so work that matches two
+rows, such as a defect a user can see, gets one type:
 
 | What you have | Type | Why |
 |---|---|---|
@@ -123,7 +124,8 @@ undated). The roles below come from the Scrum Guide and from this practice.
 | Subtask | The Developers, as part of the Sprint Backlog | The Scrum Guide: the Sprint Backlog is a plan by and for the Developers. |
 
 Where the product owner is not the author, the product owner still decides the order and whether
-the item stays in the backlog.
+the item stays in the backlog, because the product owner stays accountable for the backlog
+whoever writes the item (the Story row above).
 
 ## 5. What the standards ask of a work item
 

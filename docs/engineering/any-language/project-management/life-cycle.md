@@ -78,7 +78,8 @@ deploy ([tickets.md](tickets.md) section 2), so it cannot be the gate before the
 This practice's own Closure rule: the sponsor accepts the result in writing against the charter's
 success criteria, not against the plan, so the result is judged by the goal and not by the schedule.
 The team holds a retrospective ([meetings.md](meetings.md) section 8) and records each lesson with
-an owner and a date. The epics are closed.
+an owner and a date, so each lesson turns into a change and not only a note. The epics are closed,
+so no new work lands on a project that has ended.
 
 Give each open risk a named owner for after the project and a follow-on action, then mark its row
 handed over, so no risk is dropped when the team moves on. PRINCE2 7 asks the same of closing a
@@ -122,8 +123,8 @@ invites failure" (quoted from a web transcription of the 1970 paper, not from th
 ## 4. Pick the development approach
 
 In planning, pick the development approach for each deliverable of the WBS, and write it, with the
-reason, in the plan ([project-plan.md](project-plan.md) section 2). PMI names three approaches (PMI
-Lexicon, 2026):
+reason, in the plan ([project-plan.md](project-plan.md) section 2), so anyone can check the choice
+again when its reason stops holding. PMI names three approaches (PMI Lexicon, 2026):
 
 | Approach | PMI's definition | It fits when |
 |---|---|---|
@@ -139,8 +140,9 @@ life cycle suits "when complexity is high, when the project incurs frequent chan
 scope is subject to differing stakeholders' views" (PMI and Agile Alliance, first edition, 2017; a
 second edition came out in 2026 and was not read for this practice).
 
-Decide per deliverable, not once for the whole project. The Agile Practice Guide says "It is not
-necessary to use a single approach for an entire project." The PMP exam outline asks the project
+Decide per deliverable, not once for the whole project, because the deliverables of one project
+can differ in how firm their requirements are. The Agile Practice Guide says "It is not necessary
+to use a single approach for an entire project." The PMP exam outline asks the project
 manager to "Assess project needs, complexity, and magnitude" and then recommend the approach. In a
 software project this usually means that the software runs adaptive, in sprints or a Kanban flow,
 and the parts fixed by a contract or a date, such as a provider contract or a migration window, are

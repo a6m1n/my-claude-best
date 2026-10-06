@@ -81,7 +81,8 @@ Every other file is a practice, and maps that practice to Jira in a section of i
 
 ## How to adopt
 
-1. Copy this folder into your repository at `docs/engineering/any-language/project-management/`.
+1. Copy this folder into your repository at `docs/engineering/any-language/project-management/`,
+   so the path in step 2 and the links to other practices in step 5 still work.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you open a project, write or change
    its charter, plan, scope, schedule, WBS, risk register, stakeholder register or RACI matrix, make
    or record a decision that is hard to undo, write a status update, write, triage, split or move a
@@ -100,7 +101,8 @@ Every other file is a practice, and maps that practice to Jira in a section of i
    ([Atlassian: enable releases and versions](https://support.atlassian.com/jira-software-cloud/docs/enable-releases-and-versions/)).
 5. The practice links [git.md](../git/git.md) for the branch, commit and pull request names, and
    [refactoring.md](../refactoring/refactoring.md) for how existing work adopts a rule. Copy those
-   folders too, or replace each link with your own rule for that topic.
+   folders too, or replace each link with your own rule for that topic, so no link in this folder
+   points at a file your repository does not have.
 6. Existing projects adopt these rules the way [refactoring.md](../refactoring/refactoring.md)
    section 7 says.
 

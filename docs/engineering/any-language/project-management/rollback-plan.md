@@ -24,17 +24,18 @@ incident there is no time to design the way back.
 
 | Part | What to write | Source |
 |---|---|---|
-| Trigger | A measured deviation, such as the canary's error rate too far from the control, or an alert or a SEV 1 or 2 tied to the release | Google SRE |
+| Trigger | A measured deviation, such as the canary's error rate too far from the control, or an alert or a SEV 1 or 2 tied to the release, so nobody argues whether to roll back | Google SRE |
 | Decider | One named person on call for the release, and one named backup, who decides when the decider does not answer within 15 minutes of being paged | This practice |
 | Steps | Redeploy the previous version, or turn the feature flag off; the way back of each way to release is in [release.md](release.md) section 6 | Fowler (ops toggles) |
 | Data | What happens to data written since the release (section 4) | Fowler, Sadalage |
-| Time | The time from the alert to "restored" ([sla.md](sla.md) section 4), which holds the trigger window, the wait for the decider, the rollback itself and the restored window, fits inside the restore target | [sla.md](sla.md) |
-| Who is told | The people the plan names | This practice |
+| Time | The time from the alert to "restored" ([sla.md](sla.md) section 4), which holds the trigger window, the wait for the decider, the rollback itself and the restored window, fits inside the restore target, so a rollback by the plan does not itself miss the SLA | [sla.md](sla.md) |
+| Who is told | The people the plan names, so those who depend on the release hear of the rollback from the team, not from users | This practice |
 
 No standard names the decider's role. This practice asks for one name, and one backup, so that
 nobody waits for a group to agree, or for an absent decider, while the outage runs. The decider is
-the person on call for the release; when the incident's person on call ([sla.md](sla.md) section 3)
-is someone else, that person pages the decider as soon as the trigger fires.
+the person on call for the release, who knows the change and can be paged at once; when the
+incident's person on call ([sla.md](sla.md) section 3) is someone else, that person pages the
+decider as soon as the trigger fires, so the decision is not held up.
 
 A filled plan for one release is in [project-example.md](project-example.md) section 8.
 
@@ -46,19 +47,21 @@ SLA.
 When the outage correlates with the release, roll back before you look for the cause (Google SRE
 workbook). Rolling back a configuration mitigates an outage much more quickly than a patch, because
 "there is inherently lower confidence that a patch will improve things". After service is back,
-record the root cause as a work item and analyse it (PMI: root cause analysis is "an analytical
-method used to determine the basic underlying reason that causes a variance, defect, or risk"). The
-restore comes first and the cause second, as in [sla.md](sla.md) section 4.
+record the root cause as a work item and analyse it, so the lasting fix is not forgotten (PMI: root
+cause analysis is "an analytical method used to determine the basic underlying reason that causes a
+variance, defect, or risk"). The restore comes first and the cause second, as in [sla.md](sla.md)
+section 4.
 
 This practice's own rule: if service is not restored after the rollback, the decider tells the
-sponsor and the incident continues with its SLA clock running; the next step is a fix rolled forward
-under the same incident, as an emergency release ([release.md](release.md) section 3).
+sponsor, because the plan's way back has failed and the SLA target is at risk, and the incident
+continues with its SLA clock running; the next step is a fix rolled forward under the same
+incident, as an emergency release ([release.md](release.md) section 3).
 
 Also this practice's own: after a rollback the change is still on main, so keep its feature flag off
 in every environment, or revert it on main, before the next deploy (the revert trap is in
 [git.md](../git/git.md) section 5). The fix is an ordinary work item linked to the incident, with its
 own branch and pull request ([tickets.md](tickets.md) section 4), the team's Definition of Done, and
-a new Fix version (section 6).
+a new Fix version (section 6), so it passes the same checks as any other change.
 
 ## 4. Data and schema changes
 
@@ -69,12 +72,14 @@ last.
 - Keep a transition phase, "a period of time when the database supports both the old access pattern
   and the new ones simultaneously" (Sadalage and Fowler). The old release still works with the new
   schema.
-- Keep each database change small: "Our usual rule is to make each database change as small as
-  possible" (Sadalage and Fowler).
-- Before a destructive change such as a delete, test the restore. Atlassian's review of its 2022
-  outage says to test restoring deleted data before running the action in production.
+- Keep each database change small, so a change that fails is easy to find and to undo: "Our usual
+  rule is to make each database change as small as possible" (Sadalage and Fowler).
+- Before a destructive change such as a delete, test the restore, because rolling back the code
+  does not bring deleted data back. Atlassian's review of its 2022 outage says to test restoring
+  deleted data before running the action in production.
 - Name in the plan every change that cannot be undone, so the decider knows that rolling back will
-  not bring it back. For each, the plan names who approves a roll-forward fix instead.
+  not bring it back. For each, the plan names who approves a roll-forward fix instead, so nobody
+  has to find that person during the outage.
 
 A filled data step is in [jira-work-item-example.md](jira-work-item-example.md) section 3 and
 [project-example.md](project-example.md) section 8.
@@ -89,9 +94,10 @@ time, and the time is what the SLA needs.
 ## 6. In Jira
 
 - Keep the plan in the release's version description, or in a Confluence page linked to the version
-  or to the epic.
+  or to the epic, so whoever opens the release finds its way back.
 - When a release is rolled back, record it as a work item linked to the incident with "causes / is
-  caused by" ([tickets.md](tickets.md) section 5).
+  caused by" ([tickets.md](tickets.md) section 5), so the incident and its rollback lead to each
+  other.
 - To tie an incident to a release (this practice's own), open the last production deployment before
   the alert, in the Deployments shown on the work items ([tickets.md](tickets.md) section 1), and the
   flag or setting changes since the symptoms began. Do not start from the version that was released
@@ -103,13 +109,13 @@ time, and the time is what the SLA needs.
 - After a rollback (this practice's own), keep the version, and record the rollback in the rollback
   work item, not on the version, because a Jira version has no comments: its fields are a name, a
   start date, a release date and a description (Atlassian). List in the rollback work item every
-  work item that is no longer live, and add the rollback work item to the released version's Related
-  work section (Atlassian), so a reader of the version finds the rollback. The rolled-back items stay
-  Done in the released version, because a new problem is a new work item
-  ([jira-workflow.md](jira-workflow.md) section 2). Open one Bug per rolled-back item, linked to it
-  and to the incident ([tickets.md](tickets.md) section 5), in a new version that ships the fix, so
-  each fix has an open work item to carry it. Do not change the released version's state or
-  description.
+  work item that is no longer live, since the version still shows them as Done, and add the
+  rollback work item to the released version's Related work section (Atlassian), so a reader of the
+  version finds the rollback. The rolled-back items stay Done in the released version, because a new
+  problem is a new work item ([jira-workflow.md](jira-workflow.md) section 2). Open one Bug per
+  rolled-back item, linked to it and to the incident ([tickets.md](tickets.md) section 5), in a new
+  version that ships the fix, so each fix has an open work item to carry it. Do not change the
+  released version's state or description, so it still records what shipped and when.
 
 ## 7. Sources
 

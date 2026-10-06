@@ -17,8 +17,9 @@ initiation, when you assign the deliverables, and before any decision that is ha
 
 ## 1. The roles
 
-At kickoff, name one person for each role below, and give the sponsor and the project manager to two
-different people.
+At kickoff, name one person for each role below, so each role has one person who answers for it, and
+give the sponsor and the project manager to two different people, because one person in both seats
+would approve their own changes beyond the tolerance (section 5).
 
 | Role | What it is | Source |
 |---|---|---|
@@ -40,46 +41,51 @@ which certifies Scrum Masters, contrasts the two: "In project management, accoun
 the project manager", while "in scrum, there is shared accountability", and an organisation may have
 either or both. When a Scrum team works inside a project, the project manager works around the team:
 the sponsor, the budget, the stakeholders, other teams, the release plan and the risks. The Product
-Owner orders the backlog, and the Developers decide how the work is done (this practice's split; the
-rule against directing how is in [principles.md](principles.md) section 2). On a larger project keep
-the Scrum Master and the project manager apart: Johanna Rothman, an independent PM author, notes that
-a Scrum Master who also manages risks and does technical work has "too much work".
+Owner orders the backlog, and the Developers decide how the work is done, so each accountability keeps
+one holder (this practice's split; the rule against directing how is in [principles.md](principles.md)
+section 2). On a larger project keep the Scrum Master and the project manager apart: Johanna Rothman,
+an independent PM author, notes that a Scrum Master who also manages risks and does technical work
+has "too much work".
 
 ## 2. Responsible and accountable
 
 The Responsible does the work; the Accountable answers for the result. PMI keeps them apart:
 responsibility is "An assignment that can be delegated", while accountability is "The condition of
 being answerable for the outcome of a task or project. It is an individual responsibility and is not
-shared." (PMI Lexicon, 2026) So one item has one Accountable, and one or more Responsible.
+shared." (PMI Lexicon, 2026) So one item has one Accountable, and one or more Responsible: however
+many people do the work, one person answers when it is late or wrong.
 
 ## 3. The RACI matrix
 
 Make a RACI matrix for the deliverables of the WBS and for the few activities that cross teams, not
-for every work item. PMI defines the RACI matrix as "A type of responsibility assignment matrix that
-uses responsible, accountable, consulted, and informed statuses to define the involvement of
-stakeholders in project activities.", and the responsibility assignment matrix as "A grid that shows
-the project resources assigned to each work package." (PMI Lexicon, 2026) The reason for the limit:
-inside one work item the assignee is already the Responsible, so a row per work item copies Jira and
-goes stale in a week.
+for every work item, so each of them names who does it and who answers for it. PMI defines the RACI
+matrix as "A type of responsibility assignment matrix that uses responsible, accountable, consulted,
+and informed statuses to define the involvement of stakeholders in project activities.", and the
+responsibility assignment matrix as "A grid that shows the project resources assigned to each work
+package." (PMI Lexicon, 2026) The reason for the limit: inside one work item the assignee is already
+the Responsible, so a row per work item copies Jira and goes stale in a week.
 
 - Each row has exactly one A. Atlassian's template: "Each task should have precisely one accountable
   person to maintain clear ownership."
-- Each row has at least one R: "Every task needs at least one responsible person, but you can have
-  more than one." (Atlassian)
+- Each row has at least one R, because a row with no R is work nobody does: "Every task needs at
+  least one responsible person, but you can have more than one." (Atlassian)
 - The A of a deliverable's row is the owner in its WBS dictionary entry ([wbs.md](wbs.md) section 6),
   so the two never disagree.
-- C and I come from the stakeholder register ([stakeholders.md](stakeholders.md) section 2).
+- C and I come from the stakeholder register ([stakeholders.md](stakeholders.md) section 2), so the
+  matrix and the register name the same people.
 
 Keep the matrix as a Confluence page from Atlassian's RACI chart template, linked from the charter
-page.
+page, so anyone who opens the charter can find it.
 
 Check: read each row of the matrix: exactly one A, at least one R.
 
 ## 4. Find the gaps in ownership
 
-At kickoff, run Atlassian's "Roles and responsibilities" play: each person writes what they think
-their role holds, the others write what they think it holds, and the team lists the "Unassigned
-responsibilities". Give every unassigned item an owner, a row in the matrix, or take it out of scope.
+At kickoff, run Atlassian's "Roles and responsibilities" play, so the work each person thinks someone
+else holds is found before it is dropped: each person writes what they think their role holds, the
+others write what they think it holds, and the team lists the "Unassigned responsibilities". Give
+every unassigned item an owner, a row in the matrix, or take it out of scope, because an item that
+stays in scope with no owner is still expected, and nobody does it.
 No standard read for this practice names a rule for finding ownership gaps; the play is the check.
 
 After kickoff, three things must each have one owner: a deliverable (section 3), a risk
@@ -116,27 +122,30 @@ and how" (Scrum Guide). The other Developers are Contributors on the DACI page, 
 is "The one person (yes: one!) who makes the decision." (section 6)
 
 A decision outside the team's authority goes to the sponsor, or to a steering committee where the
-organisation has one: PMI defines it as "An advisory body of senior stakeholders who provide
-direction and support for the portfolio, program, or project team and make decisions outside of the
-team's authority." (PMI Lexicon, 2026) In PRINCE2 7 the same place is the project board (PeopleCert,
-2023).
+organisation has one, because a decision the team makes beyond its authority can be reversed by
+someone above it. PMI defines a steering committee as "An advisory body of senior stakeholders who
+provide direction and support for the portfolio, program, or project team and make decisions outside
+of the team's authority." (PMI Lexicon, 2026) In PRINCE2 7 the same place is the project board
+(PeopleCert, 2023).
 
 ## 6. One decision: DACI
 
-For a decision that is hard to undo or crosses teams, use DACI (Atlassian Team Playbook):
+For a decision that is hard to undo or crosses teams, use DACI (Atlassian Team Playbook), so one
+person decides and everyone else knows whether they advise or only hear the result:
 
 - **Driver:** "The person responsible for corralling stakeholders, collating all the necessary
   information, determining the scope of the decision, and getting a decision made by the agreed
   date."
 - **Approver:** "The one person (yes: one!) who makes the decision." The Approver comes from the
-  table in section 5.
+  table in section 5, so the page and the table never name two deciders.
 - **Contributors:** "People who have subject-area knowledge and can make recommendations – i.e., they
   have a voice, but not a vote."
 - **Informed:** "People whose work may be affected by the decision, and should be informed once it's
   been made."
 
 Write the options, the date by which the decision is due, and the outcome on one page, from
-Confluence's DACI decision template.
+Confluence's DACI decision template, so anyone who opens it later sees what was weighed, by when, and
+what was chosen.
 
 ## 7. The decision log
 

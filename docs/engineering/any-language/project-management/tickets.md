@@ -39,7 +39,8 @@ management is to help the team reach the goal, not to track for its own sake
 
 Write a story as "As a [user], I want [goal] so that [reason]" and add acceptance criteria; the
 criteria are the test that the story is done, and without them nobody can tell when to stop
-(Atlassian; Jeffries calls this the Confirmation of his three Cs).
+(Atlassian; Jeffries calls this the Confirmation of his three Cs). The story form names the user and
+the result they want, so the team can check the work from that user's side.
 
 | Part | Holds | Source |
 |---|---|---|
@@ -48,9 +49,10 @@ criteria are the test that the story is done, and without them nobody can tell w
 | Acceptance criteria | "A set of conditions that are met before deliverables are accepted." (PMI Lexicon, 2026) | PMI |
 | Definition of Done | The team's shared checklist for any work item | Scrum Guide, PMI |
 
-- Keep one Definition of Done for the team. The Scrum Guide says: "The Definition of Done is a
-  formal description of the state of the Increment when it meets the quality measures required for
-  the product." A work item that does not meet it is not done.
+- Keep one Definition of Done for the team, so done means the same on every work item. The Scrum
+  Guide says: "The Definition of Done is a formal description of the state of the Increment when
+  it meets the quality measures required for the product." A work item that does not meet it is
+  not done.
 - Write the production deploy into the Definition of Done, so that Done on the board means the
   change is live ([jira-workflow.md](jira-workflow.md) section 2). The Scrum Guide leaves the Definition of
   Done to the team, and a Done that stops at "merged" shows finished work that no user has yet;
@@ -60,9 +62,11 @@ criteria are the test that the story is done, and without them nobody can tell w
   programmer to see the program failing in front of them." Atlassian's bug template puts expected
   against actual in comments; this practice follows Tatham.
 - Check the story against INVEST (Wake, 2003): small enough to finish soon, and testable, so that
-  you could write a test for it.
+  you could write a test for it. The reason: a big story hides its progress, and one that cannot be
+  tested has no clear end.
 - Definition of Ready is PMI's term; the Scrum Guide has no such term. If the team keeps a
-  Definition of Ready, name PMI as its owner and keep it short.
+  Definition of Ready, name PMI as its owner and keep it short, so nobody takes it for a Scrum rule
+  and it does not become a gate that holds work back.
 - Pick the work type by [jira-work-item-types.md](jira-work-item-types.md) section 1, which owns when to
   use a story, a task, a bug, an epic or a subtask.
 
@@ -98,8 +102,9 @@ it took. This rule is this practice's own. Name the branch by [git.md](../git/gi
 which owns branch names, and the pull request by its section 4, which owns one ticket per pull
 request.
 
-Aim to merge each pull request within a day: Atlassian's trunk-based development page asks for
-frequent, daily merges, and DORA says short-lived branches last hours and merge at least daily.
+Aim to merge each pull request within a day, so the branch never drifts far from main: Atlassian's
+trunk-based development page asks for frequent, daily merges, and DORA says short-lived branches
+last hours and merge at least daily.
 Three working days (section 3) is the outer limit; an item that would take longer is split.
 Atlassian: "With small branches, developers can quickly see and review small changes."
 
@@ -146,7 +151,8 @@ A filled branch and commit are in [project-example.md](project-example.md) secti
   Atlassian warns that "If any other fields have been set as required the transition command will
   silently fail", so the item stays where it was and nobody is told.
 - Incidents: link a rollback or a bug to the incident work item with "causes / is caused by"
-  ([rollback-plan.md](rollback-plan.md) section 6).
+  ([rollback-plan.md](rollback-plan.md) section 6), so a reader of the incident sees what caused it
+  and what was done about it.
 
 ## 6. The hierarchy
 

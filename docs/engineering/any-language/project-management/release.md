@@ -18,10 +18,11 @@ and the SDLC phase a release closes is in [life-cycle.md](life-cycle.md) section
 
 ## 1. A release is a version
 
-Plan each release as one Jira version, and mark the version released only after the change runs in
-production. PMI defines a release as "One or more components of one or more products, which are
-intended to be put into production at the same time." (PMI Lexicon, 2026) A version, and the Fix
-version field that puts a work item into it, are defined in [tickets.md](tickets.md) section 5.
+Plan each release as one Jira version, so its release page shows what ships together, and mark the
+version released only after the change runs in production. PMI defines a release as "One or more
+components of one or more products, which are intended to be put into production at the same
+time." (PMI Lexicon, 2026) A version, and the Fix version field that puts a work item into it, are
+defined in [tickets.md](tickets.md) section 5.
 
 Releasing a version in Jira deploys nothing. Jira links a deployment to a work item when "a commit
 associated with the deploy contains the work item key in its commit message" (Atlassian). The reason
@@ -31,16 +32,18 @@ so it must follow the deploy, not announce it.
 ## 2. Environments
 
 Move every change through the same environments, in the same order: development, testing, staging
-and production. These are the four environment types Jira's Deployments feature knows (Atlassian),
-so name the team's environments to match them, and Jira groups the deployments. A team may run
-development and testing as one. What staging is for, and the Pre-prod status that shows a change
-there, are in [jira-workflow.md](jira-workflow.md) section 2.
+and production, so each change passes the same checks before it reaches users. These are the four
+environment types Jira's Deployments feature knows (Atlassian), so name the team's environments to
+match them, and Jira groups the deployments. A team may run development and testing as one. What
+staging is for, and the Pre-prod status that shows a change there, are in
+[jira-workflow.md](jira-workflow.md) section 2.
 
 ## 3. Release criteria and the go or no-go decision
 
 Before a release goes to production, one named person decides go or no-go against a short written
-checklist. Write the decider's name, the decision and its date in the version's description. The
-rule is this practice's own, built on two sources:
+checklist, so one person owns the risk of shipping. Write the decider's name, the decision and its
+date in the version's description, so anyone who opens the version sees who let it ship and when.
+The rule is this practice's own, built on two sources:
 
 - Google SRE gives launch decisions to one role: Launch Coordination Engineers act as "gatekeepers
   and signing off on launches determined to be 'safe'", using a checklist that gives "action items
@@ -72,7 +75,8 @@ canceled, the change would otherwise ship with this release.
 
 The go or no-go decider and the rollback decider of [rollback-plan.md](rollback-plan.md) section 2
 may be the same person; who may decide what is in [roles-and-decisions.md](roles-and-decisions.md)
-section 5. A no-go keeps the version unreleased and names the criterion that failed.
+section 5. A no-go keeps the version unreleased and names the criterion that failed, so the team
+knows what to fix before it asks again.
 
 An emergency release takes a shorter path through the same checklist (this practice's own rule).
 Use it only for a fix rolled forward under an open incident ([rollback-plan.md](rollback-plan.md)
@@ -101,26 +105,29 @@ Check: before you press Release in Jira, find the go or no-go line in the versio
 ## 4. Version numbers
 
 Name each version so a reader can tell what it holds. When other software depends on yours, through
-a library or a public API, number it by Semantic Versioning: MAJOR "when you make incompatible API
-changes", MINOR "when you add functionality in a backward compatible manner", PATCH "when you make
-backward compatible bug fixes". Semantic Versioning starts with a condition: "Software using Semantic
-Versioning MUST declare a public API." An application that nobody calls through an API may use a
-name and a number of the team's own; Jira checks neither, since "Versions are points-in-time for a
-space" (Atlassian).
+a library or a public API, number it by Semantic Versioning, so its users can tell from the number
+whether an upgrade breaks them: MAJOR "when you make incompatible API changes", MINOR "when you add
+functionality in a backward compatible manner", PATCH "when you make backward compatible bug
+fixes". Semantic Versioning starts with a condition: "Software using Semantic Versioning MUST
+declare a public API." An application that nobody calls through an API may use a name and a number
+of the team's own; Jira checks neither, since "Versions are points-in-time for a space"
+(Atlassian).
 
-Never change a released version. Semantic Versioning says "Once a versioned package has been
-released, the contents of that version MUST NOT be modified." A fix goes out in a new version, as
-[rollback-plan.md](rollback-plan.md) section 6 does after a rollback.
+Never change a released version, so a version number always means the same contents. Semantic
+Versioning says "Once a versioned package has been released, the contents of that version MUST NOT
+be modified." A fix goes out in a new version, as [rollback-plan.md](rollback-plan.md) section 6
+does after a rollback.
 
 ## 5. Continuous integration and delivery
 
-Merge to the main branch at least daily, and keep main ready to release. Fowler defines continuous
-integration as merging "into a codebase together with their colleagues changes at least daily", and
-continuous delivery as building software "in such a way that the software can be released to
-production at any time". DORA says the same of delivery, and adds that it "is commonly conflated with
-continuous deployment, but they are separate practices": continuous deployment puts every change
-into production automatically (Fowler). Whether every change also deploys by itself is the team's
-choice; a release that waits for a date still needs main ready to ship.
+Merge to the main branch at least daily, so conflicts stay small, and keep main ready to release, so
+a fix can ship at any time. Fowler defines continuous integration as merging "into a codebase
+together with their colleagues changes at least daily", and continuous delivery as building
+software "in such a way that the software can be released to production at any time". DORA says
+the same of delivery, and adds that it "is commonly conflated with continuous deployment, but they
+are separate practices": continuous deployment puts every change into production automatically
+(Fowler). Whether every change also deploys by itself is the team's choice; a release that waits
+for a date still needs main ready to ship.
 
 PMI's Lexicon defines continuous delivery as "The practice of delivering feature increments
 immediately to customers", which is closer to continuous deployment. This practice uses Fowler's and
@@ -155,7 +162,7 @@ work item.
 
 - **Release warnings.** With a development tool connected, the release page warns about done work
   items that still have open pull requests or unreviewed code. Read them before the go or no-go
-  decision.
+  decision, because the checklist asks for a release page with no warning (section 3).
 - **Deployments.** Connect the CI/CD tool, and keep the work item key in commit messages, so each
   work item shows where it is deployed.
 - **Feature flags.** Jira's flag integrations show a flag's state and rollout percentage on the work

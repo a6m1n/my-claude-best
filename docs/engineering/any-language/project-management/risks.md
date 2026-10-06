@@ -34,9 +34,10 @@ has its own responses in PMI's Lexicon, and this practice does not use them.
 
 ## 2. The register
 
-Create the register in planning, so the plan can include the responses before work starts, and keep every risk in it. PMI defines it as "A repository in
-which outputs of risk management processes are recorded." (PMI Lexicon, 2026) The PMP exam outline
-lists "Maintain a risk register"; Scrum has no register.
+Create the register in planning, so the plan can include the responses before work starts, and keep
+every risk in it, since a risk kept anywhere else is missed at the review. PMI defines it as "A
+repository in which outputs of risk management processes are recorded." (PMI Lexicon, 2026) The PMP
+exam outline lists "Maintain a risk register"; Scrum has no register.
 
 The columns come from Atlassian's Confluence risk register template, with PMI's terms:
 
@@ -48,18 +49,23 @@ The columns come from Atlassian's Confluence risk register template, with PMI's 
 | Impact | 1 to 5 |
 | Score | Probability times impact |
 | Response | One of the five in section 5 |
-| Actions | What is done now, each with a date |
+| Actions | What is done now, each with a date, so the review can see a late one |
 | Owner | One person (section 4) |
 | Trigger | The sign that the risk is about to happen |
 | Status | Open, closed (did not happen), happened (now an issue), or handed over (at closure, to an owner for after the project; [life-cycle.md](life-cycle.md) section 2) |
+
+The table is good because each column a later section relies on is in it: the owner (section 4), the
+response (section 5) and the trigger (section 6).
 
 Writing the risk as cause, event, effect keeps the row specific: a name like "provider risk" tells
 nobody what to watch. A filled register is in [project-example.md](project-example.md) section 5.
 
 Where it lives: keep the register as a Confluence page from Atlassian's risk register template,
-linked to each deliverable epic ([charter.md](charter.md) section 5). Use a custom Risk work type
-only when the team must report risks by JQL; Jira has no Risk work type by default. The ROAM risk board Atlassian describes belongs to SAFe planning, not to the default
-setup. Pick one place and say which in the plan.
+linked to each deliverable epic ([charter.md](charter.md) section 5), so the team sees the risks from
+the work they threaten. Use a custom Risk work type only when the team must report risks by JQL; Jira
+has no Risk work type by default. The ROAM risk board Atlassian describes belongs to SAFe planning,
+not to the default setup. Pick one place and say which in the plan, so nobody keeps a second
+register.
 
 ## 3. The score ranks attention
 
@@ -100,27 +106,34 @@ clear: they know whether to remove the threat, shrink it, pass it on or only wat
   unless it occurs. Acceptance of the risk's implication(s) usually means using schedule and/or
   cost reserves and accepting scope and/or quality reduction(s)."
 
-Mitigation is one of the five, not a general word for any action. PRINCE2 7 names six responses to
-a threat: avoid, reduce, transfer, share, accept, and "prepare contingent plans" (PeopleCert, PRINCE2
-7 Quick Reference Guide, 2023). Pages that list "fallback" in place of the last one describe the
-2017 edition. The PMP exam outline names no threat strategies.
+Mitigation is one of the five, not a general word for any action, so a register that says
+"mitigation" tells the owner to lower the probability or the impact, not just to do something.
+PRINCE2 7 names six responses to a threat: avoid, reduce, transfer, share, accept, and "prepare
+contingent plans" (PeopleCert, PRINCE2 7 Quick Reference Guide, 2023). Pages that list "fallback" in
+place of the last one describe the 2017 edition. The PMP exam outline names no threat strategies.
 
 ## 6. Contingency plans and reserves
 
 For each open threat with an impact of 4 or 5, write a contingency plan when you choose its
 response: the first actions the owner takes when the trigger fires, who takes them, and what they
-cost in time or money. Put it in the Actions column, or link a page from there. PMI defines a
-contingency plan as "A document that describes actions to take if predetermined trigger conditions
-occur." (PMI Lexicon, 2026) The register's Trigger column is that condition. The reason: a plan made
-before the trigger fires is made calmly, and one made after it is made during the damage. PRINCE2 7
-counts "prepare contingent plans" as a response of its own (section 5).
+cost in time or money. Put it in the Actions column, or link a page from there, so the owner finds
+it in the register when the trigger fires. PMI defines a contingency plan as "A document that
+describes actions to take if predetermined trigger conditions occur." (PMI Lexicon, 2026) The
+register's Trigger column is that condition. The reason: a plan made before the trigger fires is
+made calmly, and one made after it is made during the damage; the limit to an impact of 4 or 5 keeps
+that work for the threats that would do the most damage. PRINCE2 7 counts "prepare contingent plans"
+as a response of its own (section 5).
 
-Keep time and money for risks in two reserves, and keep them apart (PMI Lexicon, 2026):
+Keep time and money for risks in two reserves (PMI Lexicon, 2026), and keep them apart, because a
+different person releases each:
 
 | Reserve | PMI's definition | Where it sits | Who releases it |
 |---|---|---|---|
-| Contingency reserve | "Time or money allocated in the schedule or cost baseline for known risks with active response strategies." | Inside the baseline | The project manager, inside the tolerance of [project-plan.md](project-plan.md) section 4 (this practice's own) |
+| Contingency reserve | "Time or money allocated in the schedule or cost baseline for known risks with active response strategies." | Inside the baseline | The project manager, inside the tolerance of [project-plan.md](project-plan.md) section 4, because the sponsor already approved it as part of the baseline (this practice's own) |
 | Management reserve | "Time or money that management sets aside in addition to the schedule or cost baseline and releases for unforeseen work that is within the scope..." | Outside the baseline | The sponsor |
+
+The table is good because it puts where each reserve sits next to who releases it, so nobody spends
+the sponsor's reserve as if it were the project manager's.
 
 Name in the register the risk each part of the contingency reserve is for, and keep it out of the
 estimates of single work items (this practice's own). The reason: a reserve spread inside every
@@ -129,7 +142,8 @@ estimate cannot be seen, so nobody can tell when it is used up.
 When a threat happens and no plan exists, or the plan does not work, the first answer is a
 workaround: "An immediate and temporary response to a realized risk for which a prior response has
 not been planned or was not effective." (PMI Lexicon, 2026) Record it in the work item that the
-happened risk becomes (section 7), and add the risk behind it to the register.
+happened risk becomes (section 7), so the temporary fix is not forgotten, and add the risk behind it
+to the register, so it gets an owner and a lasting response.
 
 Check: at the review, ask whether each open threat with an impact of 4 or 5 has a trigger and a
 contingency plan.

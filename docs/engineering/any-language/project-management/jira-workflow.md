@@ -43,8 +43,9 @@ this file is therefore a choice of this practice, and a team that does not need 
 
 ## 2. The board
 
-Use these seven statuses. The set and the conditions are this practice's own: no standard names
-them, and the sources in section 1 only say that each status needs a written policy.
+Use these seven statuses, so the board shows for each item what it waits for or how it ended. The
+set and the conditions are this practice's own: no standard names them, and the sources in
+section 1 only say that each status needs a written policy.
 
 | Status | Category | Enters when | Leaves when | Who moves it out |
 |---|---|---|---|---|
@@ -55,6 +56,10 @@ them, and the sources in section 1 only say that each status needs a written pol
 | Pre-prod | In progress | The change is merged and deployed to the pre-production (staging) environment | It is checked in staging against its acceptance criteria and deployed to production, or the check fails | The person who runs the release |
 | Done | Done | It is deployed to production and the Definition of Done is met | Never; a new problem is a new work item. A rollback is such a problem: the rolled-back item stays Done, and its fix is a new Bug ([rollback-plan.md](rollback-plan.md) section 6) | Nobody |
 | Canceled | Done | The Product Owner decides the work will not be done (section 5) | Never | Nobody |
+
+The table is good because each status has the written entry and exit conditions that section 1
+asks for and names who moves the item out, so a team can copy it into its board policy and nobody
+has to ask whose move is next.
 
 Notes on the rows:
 
@@ -92,9 +97,10 @@ Notes on the rows:
   section 4.
 
 The seven statuses are for stories, tasks and bugs. This practice's own rule: an epic and a subtask
-need only To do, In progress and Done. The epic's owner moves an epic to Done when the "Done when"
-of its dictionary entry holds ([wbs.md](wbs.md) section 6), and the Developer who does a subtask's
-step moves the subtask.
+need only To do, In progress and Done, because neither has a pull request or a deploy of its own to
+track. The epic's owner moves an epic to Done when the "Done when" of its dictionary entry holds
+([wbs.md](wbs.md) section 6), and the Developer who does a subtask's step moves the subtask,
+because each is the person who knows when that work is finished.
 
 An open item can go back to Backlog when it is returned unfinished (section 7).
 
@@ -146,11 +152,12 @@ this one with its board and see where the board differs.
 ## 4. Blocked
 
 Move an item to Blocked when it waits on someone outside the team: another team, a vendor, or a
-decision that is not the team's to make. The conditions are this practice's own. They follow the one
-case where a Blocked column works, which Bowler states: acceptable "if it's a clear part of the
-workflow and we're blocked on a specific known thing". The Kanban Guide has no blocked column and
-no blocked policy; it asks only for "Unblocking blocked work" as part of active management, so the
-status is a team policy, and this section is that policy.
+decision that is not the team's to make. The status then shows which items wait on someone the
+team has to chase. The conditions are this practice's own. They follow the one case where a
+Blocked column works, which Bowler states: acceptable "if it's a clear part of the workflow and
+we're blocked on a specific known thing". The Kanban Guide has no blocked column and no blocked
+policy; it asks only for "Unblocking blocked work" as part of active management, so the status is a
+team policy, and this section is that policy.
 
 On the move, do three things:
 
@@ -178,7 +185,8 @@ finished and the limit exists to stop people from starting more while things wai
 signal to act. Vacanti: "By definition, any
 work that is blocked or on-hold is not flowing." At the board look of
 [principles.md](principles.md) section 3, ask of each Blocked item who can clear it and when it is
-due, and escalate the oldest first.
+due, and escalate the oldest first, because age is the signal to act and the oldest item has
+waited longest.
 
 What the standards call it:
 
@@ -200,7 +208,8 @@ into it, because the category alone does not set one.
 Check this in your workflow: the unresolved-item behaviour comes from community threads, not from an
 Atlassian page. Open one cancelled item and confirm its Resolution field is filled. If your
 workflow cannot set a resolution on that status, use the fallback: one Done status, and the
-resolution Won't Do for items that end without being done.
+resolution Won't Do for items that end without being done, so those items are still resolved in
+filters and reports.
 
 This practice assumes a company-managed space ([jira-fields.md](jira-fields.md) section 4). In a
 team-managed space the workflow cannot set the resolution: Atlassian says "you don't have the option
@@ -212,9 +221,11 @@ Write a comment when you cancel (section 6): why the item is cancelled, and a li
 or to the decision. The reason: months later, the comment is the only record of why the work did not
 happen.
 
-The Product Owner decides. This is this practice's own rule, built on Cohn's point that "the product
-owner must decide if the work is still valuable". Anyone may propose a cancel; the assignee, or
-the Product Owner when no one is assigned, moves the item after the decision.
+The Product Owner decides, because the Product Owner orders the backlog and so decides what is worth
+doing. This is this practice's own rule, built on Cohn's point that "the product owner must decide
+if the work is still valuable". Anyone may propose a cancel; the assignee, or the Product Owner
+when no one is assigned, moves the item after the decision, because the assignee knows what state
+the work is in, such as a merged change that must be turned off (section 2).
 
 Never use Canceled to close unfinished work. Unfinished work is split or returned to the backlog
 (section 7). The reason: Canceled says "no one needs this", and a half-built feature behind it
@@ -239,14 +250,17 @@ Comment when:
 - The item goes into or out of Blocked (section 4).
 - The item is cancelled (section 5).
 - The item is split (section 7).
-- The item is handed to another person. Say where the work stands and what is left.
+- The item is handed to another person. Say where the work stands and what is left, so the new
+  person can go on without asking.
 
 Do not comment:
 
-- Status the board already shows ("moved to Code Review").
-- "+1" or thanks that carry no decision.
+- Status the board already shows ("moved to Code Review"), because every comment notifies people
+  and this one tells them nothing new.
+- "+1" or thanks that carry no decision, for the same reason.
 - Secrets: passwords, tokens, keys. A comment is visible to everyone who can see the item.
-- A whole chat thread. Summarise the decision in the comment and link the thread.
+- A whole chat thread. Summarise the decision in the comment and link the thread, so a reader finds
+  the decision without reading the chat.
 
 A bug's steps, its expected result and its actual result go in the description, not in comments
 ([tickets.md](tickets.md) section 2).
@@ -284,17 +298,20 @@ its own once it goes through Pre-prod to production, and does it have value with
   item, and the new item starts in the first status. Close the done part: it goes through
   Pre-prod to Done like any item. The rest is a new item in the backlog, and the Product Owner
   orders it. Cohn: unfinished work does not move to the next sprint by itself, "the product owner
-  must decide if the work is still valuable". Estimate each item for what it now holds; Jira's split
-  asks for new estimates.
+  must decide if the work is still valuable". Estimate each item for what it now holds, because the
+  old estimate covers both parts and would count the work twice; Jira's split asks for new
+  estimates.
 - **No: return the whole item.** It goes back to the Product Backlog. The Scrum Guide: "If a Product
   Backlog item does not meet the Definition of Done, it cannot be released or even presented at the
   Sprint Review. Instead, it returns to the Product Backlog for future consideration." The Product
-  Owner re-orders it, and the team re-estimates the rest.
+  Owner re-orders it, and the team re-estimates the rest, so the next Sprint Planning sees the size
+  of the work that is left.
 - **The Product Owner does not want the rest.** Split as above, close the done part, and cancel the
   new item with resolution Won't Do and a comment that says why (section 5).
 
 A team without sprints decides when the item passes the three-working-day limit of
-[tickets.md](tickets.md) section 3, not at a sprint's end.
+[tickets.md](tickets.md) section 3, not at a sprint's end, because it has no sprint end and the
+limit is the point where the item is known to be late.
 
 Two limits apply to every way:
 
@@ -303,8 +320,9 @@ Two limits apply to every way:
   criteria are the test of done ([tickets.md](tickets.md) section 2), and changing the test after
   the work is the same as passing it.
 - Give no partial credit. Cohn: "Teams earn no partial credit toward their velocity for stories that
-  remain unfinished." Count only what meets the Definition of Done. Jira does the same at the end of
-  a sprint: unfinished items move to the backlog, to a future sprint or to a new sprint.
+  remain unfinished." Count only what meets the Definition of Done, so velocity shows finished work
+  and the next planning can rely on it. Jira does the same at the end of a sprint: unfinished items
+  move to the backlog, to a future sprint or to a new sprint.
 
 Not everyone splits. Zacharias calls a split of an unfinished item "a band-aid", and returns it with
 its original points. This practice splits only when the done part stands alone, which is where the

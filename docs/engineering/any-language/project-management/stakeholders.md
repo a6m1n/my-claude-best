@@ -28,7 +28,8 @@ does not fit them.
 ## 2. The stakeholder register
 
 Keep one register per project, as a Confluence page from Atlassian's stakeholder register template,
-linked from the charter page. PMI defines the register as "A project document that contains
+linked from the charter page, so the team keeps one list current and finds it from the page that
+starts the project. PMI defines the register as "A project document that contains
 information about project stakeholders including an assessment and classification of project
 stakeholders." (PMI Lexicon, 2026) Atlassian calls it "a living document". Its template holds name and role, contact and preferred
 communication, influence and interest, concerns and expectations, and an engagement strategy with a
@@ -55,9 +56,10 @@ Jira needs no field for this. A field no decision reads is tracking for its own 
 ## 3. Influence and interest
 
 Place each stakeholder in one of four boxes by influence and interest, as Atlassian's stakeholder
-mapping template does, and let the box set how much of the team's time they get. PMI's Lexicon
-names no model for the classification it asks for, so the boxes and their names below are this
-practice's own:
+mapping template does, and let the box set how much of the team's time they get, so that time goes
+first to those who can change the project or whose work it changes most. PMI's Lexicon names no
+model for the classification it asks for, so the boxes and their names below are this practice's
+own:
 
 |  | Low interest | High interest |
 |---|---|---|
@@ -82,8 +84,10 @@ matrix is "A matrix that compares current and desired stakeholder engagement lev
 surprise.
 
 PMI's free texts define no levels. Agree a short scale in the team and write it at the top of the
-register, for example "does not know, against, neutral, supports, leads" (this practice's own
-example).
+register, so "now" and "wanted" mean the same to everyone who reads it, for example "does not
+know, against, neutral, supports, leads" (this practice's own example). The example is good
+because its levels run in one order, so "below the engagement wanted" in the check below has one
+meaning.
 
 Check: at each phase end, find every stakeholder whose engagement now is below the engagement
 wanted, and the action next to them.
@@ -93,7 +97,8 @@ wanted, and the action next to them.
 In a Scrum team, the Product Owner carries the stakeholders' needs into the Product Backlog, and
 the Sprint Review is where they see the result: "The Scrum Team presents the results of their work
 to key stakeholders and progress toward the Product Goal is discussed." (Scrum Guide, 2020) Invite
-the "Work closely" and "Keep informed" stakeholders to it (this practice's own). How the review is
+the "Work closely" and "Keep informed" stakeholders to it, because the result changes their work
+most (this practice's own). How the review is
 run is in [meetings.md](meetings.md) section 7.
 
 ## 6. Review

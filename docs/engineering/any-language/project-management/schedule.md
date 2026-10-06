@@ -15,10 +15,11 @@ estimate changes. Where the schedule lives in Jira, and how its baseline is kept
 
 ## 1. Link the work that waits
 
-Link two work items when one cannot start, or cannot finish, until the other has. PMI defines a
-dependency as "A logical relationship between two or more activities where the timing, sequencing,
-or completion of one activity is dependent upon another activity." and names four kinds of logical
-relationship (PMI Lexicon, 2026):
+Link two work items when one cannot start, or cannot finish, until the other has, so the wait shows
+on the Timeline and the critical path can be built from it (section 3). PMI defines a dependency as
+"A logical relationship between two or more activities where the timing, sequencing, or completion
+of one activity is dependent upon another activity." and names four kinds of logical relationship
+(PMI Lexicon, 2026):
 
 | Relationship | PMI's definition | A software case |
 |---|---|---|
@@ -40,13 +41,13 @@ with "blocks".
 
 ## 2. Estimate in ranges
 
-Let the people who will do the work estimate it, and give a range, never a single number. The Scrum
-Guide says "The Developers who will be doing the work are responsible for the sizing." PMI's
-multipoint estimating applies "an average or weighted average of optimistic, pessimistic, and most
-likely estimates when there is uncertainty with the individual activity estimates" (PMI Lexicon,
-2026). The reason for the range is measured: Jørgensen reports that when a project leader claims to
-be 90 percent sure of a maximum effort, "the actual probability is typically 60 to 70 percent"
-(IEEE Software, 2005).
+Let the people who will do the work estimate it, since they know what it takes, and give a range,
+never a single number. The Scrum Guide says "The Developers who will be doing the work are
+responsible for the sizing." PMI's multipoint estimating applies "an average or weighted average of
+optimistic, pessimistic, and most likely estimates when there is uncertainty with the individual
+activity estimates" (PMI Lexicon, 2026). The reason for the range is measured: Jørgensen reports that
+when a project leader claims to be 90 percent sure of a maximum effort, "the actual probability is
+typically 60 to 70 percent" (IEEE Software, 2005).
 
 - **Make the range wider than feels right.** A range the team is "90 percent sure" of is too narrow
   by Jørgensen's measure, so set its ends from how far the team's past estimates were off, not from
@@ -61,9 +62,10 @@ be 90 percent sure of a maximum effort, "the actual probability is typically 60 
   sprints and the late date from the slowest, because a fixed 10% band says nothing about how much
   the team's own sprints vary. Give the early and the late date, and name the report and the
   sprints they come from, because two Jira reports can give the same team two different dates.
-- **A team without sprints forecasts per item.** The Kanban Guide's Service Level Expectation is "A
-  forecast of how long it should take a work item to flow from started to finished", with a
-  probability, for example "85% of work items will be finished in eight days or less".
+- **A team without sprints forecasts per item.** It has no velocity to take a range from. The
+  Kanban Guide's Service Level Expectation is "A forecast of how long it should take a work item to
+  flow from started to finished", with a probability, for example "85% of work items will be
+  finished in eight days or less".
 - **Story points are optional.** The Scrum Guide names no unit. Atlassian calls story points "a
   subjective unit of measurement that doesn't correlate to any amount of time", so never convert
   them to hours. Ron Jeffries, who may have invented them, writes "if I did, I'm sorry now", and
@@ -94,7 +96,8 @@ PMI's terms (PMI Lexicon, 2026):
 
 How, in four steps (this practice's own, on PMI's critical path method):
 
-1. List the work packages that lead to the fixed milestone, each with the high end of its range.
+1. List the work packages that lead to the fixed milestone, each with the high end of its range, so
+   the path does not count on every item going well.
 2. Add the finish-to-start links from Jira (section 1).
 3. Walk forward: an item starts when the last item it waits on finishes.
 4. The longest chain to the milestone is the critical path. For every other item, its float is how
@@ -109,7 +112,8 @@ buffer first (below), then moves the milestone, so the project manager checks th
 the tolerance that day ([project-plan.md](project-plan.md) section 4). A delay inside an item's float moves nothing, so it needs no change request.
 
 Keep the schedule's share of the contingency reserve as one named buffer before the milestone, not
-hidden in each estimate ([risks.md](risks.md) section 6 owns the reserves).
+hidden in each estimate, so everyone can see how much of it the delays have used
+([risks.md](risks.md) section 6 owns the reserves).
 
 A filled network for one project is in [project-example.md](project-example.md) section 3.
 
@@ -132,8 +136,8 @@ The table is good because each row puts what Jira does next to its limit, so a r
 Jira will not compute before relying on it.
 
 Compute the critical path on the plan page, as a table, or in a spreadsheet, from the links in
-Jira. Keep the schedule baseline in the plan page's Original and Baseline columns, as
-[project-plan.md](project-plan.md) section 4 says, because Jira keeps none.
+Jira, since Jira does not compute it. Keep the schedule baseline in the plan page's Original and
+Baseline columns, as [project-plan.md](project-plan.md) section 4 says, because Jira keeps none.
 
 ## 5. Sources
 

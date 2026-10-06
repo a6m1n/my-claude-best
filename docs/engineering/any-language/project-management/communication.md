@@ -17,12 +17,13 @@ update, and when a forecast goes beyond the plan's tolerance.
 ## 1. The communication plan
 
 In planning, write one line for each stakeholder group: what they hear, how often, through which
-channel, and from whom. PMI defines the communications management plan as "A component of the
-portfolio, program, or project management plan that describes how, when, and by whom information
-will be administered and disseminated." (PMI Lexicon, 2026) The groups come from the stakeholder
-register ([stakeholders.md](stakeholders.md) section 2), and the plan holds the lines in its
-Communication part ([project-plan.md](project-plan.md) section 2). The PMP exam outline lists the
-same act: "Analyze and tailor communication to stakeholder needs."
+channel, and from whom, so each group gets what it needs and every message has a sender. PMI
+defines the communications management plan as "A component of the portfolio, program, or project
+management plan that describes how, when, and by whom information will be administered and
+disseminated." (PMI Lexicon, 2026) The groups come from the stakeholder register
+([stakeholders.md](stakeholders.md) section 2), and the plan holds the lines in its Communication
+part ([project-plan.md](project-plan.md) section 2). The PMP exam outline lists the same act:
+"Analyze and tailor communication to stakeholder needs."
 
 Atlassian's stakeholder communications plan, run "at the beginning of every project", splits the
 audience in two: Contributors, whose "time, decisions, or expertise are critical to doing the work",
@@ -39,13 +40,15 @@ and a line with no sender is a message nobody sends.
 
 ## 2. The weekly status update
 
-Write one status update a week, in writing, and do not hold a status meeting for it; a meeting must
-decide something ([meetings.md](meetings.md) sections 1 and 10). Atlassian's "Weekly project updates"
-play has four steps: reflect on the week; note the decisions, risks and learnings; "Accurately mark
-your project's status (e.g., 'On Track,' 'At Risk,' or 'Off Track')" and the due date; then add
-comments. Its aim is to "Share a clear, accountable record of project progress".
+Write one status update a week, in writing, so it leaves a record readers can check later, and do
+not hold a status meeting for it; a meeting must decide something ([meetings.md](meetings.md)
+sections 1 and 10). Atlassian's "Weekly project updates" play has four steps: reflect on the week;
+note the decisions, risks and learnings; "Accurately mark your project's status (e.g., 'On Track,'
+'At Risk,' or 'Off Track')" and the due date; then add comments. Its aim is to "Share a clear,
+accountable record of project progress".
 
-The update holds, in this order:
+The update holds, in this order, so the marker comes first and sits next to the forecast it
+follows from:
 
 1. The status marker (section 3).
 2. The forecast of the next milestone as an early and a late date, next to its baseline date
@@ -57,9 +60,10 @@ The update holds, in this order:
 5. What the project needs from its readers: a decision, a person, a date.
 
 Items 2 and 5 are this practice's own; the rest is the play's. Post it where the sponsor and the
-stakeholders read, and link it from the project's epics. PRINCE2 7 calls the same document the
-highlight report, which the project manager sends "to provide the project board (and possibly other
-stakeholders) with a summary of the stage status at intervals defined by them" (PeopleCert, 2023).
+stakeholders read, and link it from the project's epics, so anyone who opens the work finds its
+latest state. PRINCE2 7 calls the same document the highlight report, which the project manager
+sends "to provide the project board (and possibly other stakeholders) with a summary of the stage
+status at intervals defined by them" (PeopleCert, 2023).
 
 ## 3. Status markers
 
@@ -95,7 +99,8 @@ and see that the marker follows from them.
 ## 4. The escalation path
 
 Write the escalation path in the plan: for each level, the one person it goes to, and how soon they
-answer. The PMP exam outline asks the project manager to "Outline governance escalation paths and
+answer, so a problem one level cannot solve reaches a named person and the sender knows how long to
+wait. The PMP exam outline asks the project manager to "Outline governance escalation paths and
 thresholds." PRINCE2 7 sets the levels by tolerance: the business sets the project's tolerances, the
 project board sets each stage's, the project manager sets each work package's, and each level goes to
 the one above when its tolerance is forecast to break (PeopleCert, 2023).
@@ -114,20 +119,22 @@ Who decides at each level is in [roles-and-decisions.md](roles-and-decisions.md)
 
 ## 5. Management by exception
 
-The sponsor hears about a change only when its forecast, with the planned actions, breaks the tolerance. PRINCE2 7 states the
-principle: "A PRINCE2 project establishes limits of delegated authority by defining tolerances for
-performance against its plans." An exception is "a situation where it can be forecast that there will
-be a deviation beyond the tolerance levels agreed", and the exception report goes to the board "to
-inform the project board when a stage plan or project plan is forecast to exceed tolerance levels
-set, and to offer options and recommendations for the way to proceed." (PeopleCert, 2023) The
-tolerance itself is set in [project-plan.md](project-plan.md) section 4.
+The sponsor hears about a change only when its forecast, with the planned actions, breaks the
+tolerance, because inside the tolerance the project manager already has the authority to act.
+PRINCE2 7 states the principle: "A PRINCE2 project establishes limits of delegated authority by
+defining tolerances for performance against its plans." An exception is "a situation where it can
+be forecast that there will be a deviation beyond the tolerance levels agreed", and the exception
+report goes to the board "to inform the project board when a stage plan or project plan is forecast
+to exceed tolerance levels set, and to offer options and recommendations for the way to proceed."
+(PeopleCert, 2023) The tolerance itself is set in [project-plan.md](project-plan.md) section 4.
 
 When the marker turns Off track, the project manager sends the sponsor an exception note the same
-day: the forecast, the cause, two or three options with what each costs, and a recommendation. The
-sponsor decides, and the decision goes into the decision log ([roles-and-decisions.md](roles-and-decisions.md)
-section 7). The note and the split, project manager writes and sponsor decides, are this practice's
-own short form of PRINCE2's exception report. The reason: the sponsor's time goes to the changes that
-move the goal, and the team keeps working to the current baseline while the request waits
+day: the forecast, the cause, two or three options with what each costs, and a recommendation, so
+the sponsor can decide while every option is still open. The sponsor decides, and the decision goes
+into the decision log ([roles-and-decisions.md](roles-and-decisions.md) section 7). The note and the
+split, project manager writes and sponsor decides, are this practice's own short form of PRINCE2's
+exception report. The reason: the sponsor's time goes to the changes that move the goal, and the
+team keeps working to the current baseline while the request waits
 ([project-plan.md](project-plan.md) section 4).
 
 When the sponsor approves an option that moves a date, its change request moves Baseline

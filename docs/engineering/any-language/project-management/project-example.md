@@ -142,6 +142,10 @@ Beyond tolerance: PROJ 1.0 and PROJ 1.1 move two weeks, more than the one-week t
 Approver: Jane Doe, 2026-12-21, for each move above.   # old date, new date, approver and reason for each milestone (project-plan.md section 4)
 ```
 
+The change request is good because it holds, for each milestone, the old date, the new date, the
+reason and the approver, so it is the history of those dates and needs no second list
+([project-plan.md](project-plan.md) section 4).
+
 Review rhythm: every second Monday, 30 minutes, the team reviews the plan to decide which change
 requests to raise and which planning packages to split. Every Thursday, 15 minutes, the team looks
 at the board to decide which top risk needs an action and whether anyone is over the WIP limit
@@ -264,7 +268,7 @@ Changed: the provider's test environment opened on 2026-12-14, four weeks after 
 charter's assumption; the work of 1.1, 1.2 and 3.1 is finished and waits in Pre-prod for PROJ 1.0.
 Decisions: none this week.
 Risks: R-1 unchanged; a new issue: the assumption in the charter failed.
-Needed: Jane Doe's decision on the exception note sent today.
+Needed: Jane Doe's decision on the exception note sent today.   # the ask, so the sponsor knows what to give back (communication.md section 2)
 ```
 
 The exception note sent the same day held the forecast, the cause, two options with what each
@@ -465,7 +469,7 @@ the column. Changes that cannot be undone: none.   # "none" is stated, so the de
 Time: 15 minutes trigger window + up to 15 minutes for the backup + 7 minutes to turn the flag off
 (rehearsal) + 30 minutes until restored = 67 minutes, inside the 4-hour SEV 1 target.   # counted from the alert, as the SLA clock is (rollback-plan.md section 2)
 Who is told: John Smith, Jane Doe, the customer support lead.
-Way to users: the routing flag at 1% of card payments (release.md section 6).
+Way to users: the routing flag at 1% of card payments (release.md section 6).   # it decides the way back, so the plan holds it
 Flag removal: PROJ-150, in epic PROJ-11.   # a flag left in the code is the trap of release.md section 6
 ```
 
