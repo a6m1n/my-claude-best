@@ -751,6 +751,7 @@ export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: strin
   return mutationOptions({
     mutationKey: [...invoiceQueryOptions(apiClient, invoiceId).queryKey, "pay"],
     mutationFn: (method: PaymentMethod) =>
+      // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
       apiClient.request(`/invoices/${encodeURIComponent(invoiceId)}/payments`, {
         method: "POST",
         body: { method },
@@ -787,6 +788,7 @@ export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: strin
   return mutationOptions({
     mutationKey: [...invoiceKeys.detail(invoiceId), "pay"],
     mutationFn: (method: PaymentMethod) =>
+      // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
       apiClient.request(`/invoices/${encodeURIComponent(invoiceId)}/payments`, {
         method: "POST",
         body: { method },

@@ -69,6 +69,8 @@ what to show.
   start a second payment. The application's submit button, with that one problem fixed:
 
   ```tsx
+  {/* Disabled while the payment runs, so a second click cannot send a second payment
+      (ux.md section 2). */}
   <Button type="submit" disabled={payment.isPending}>
     {payment.isPending ? "Paying…" : "Pay invoice"}
   </Button>

@@ -644,6 +644,8 @@ function InvoicesScreen() {
             params={{ invoiceId: invoice.id }}
             className="inline-flex min-h-6 items-center underline underline-offset-2 pointer-coarse:min-h-11"
           >
+            {/* A screen reader that lists the links reads each one out of its row; the extra
+                words say whose invoice it pays (accessibility.md section 3). */}
             Pay<span className="sr-only"> the invoice of {invoice.customerName}</span>
           </Link>
         )}
@@ -804,6 +806,7 @@ export function invoiceQueryOptions(apiClient: ApiClient, invoiceId: string) {
   return queryOptions({
     queryKey: invoiceKeys.detail(invoiceId),
     queryFn: ({ signal }) =>
+      // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
       apiClient.request(`/invoices/${encodeURIComponent(invoiceId)}`, { schema: invoiceSchema, signal }),
   });
 }
@@ -872,6 +875,7 @@ export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: strin
   return mutationOptions({
     mutationKey: [...invoiceKeys.detail(invoiceId), "pay"],
     mutationFn: (method: PaymentMethod) =>
+      // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
       apiClient.request(`/invoices/${encodeURIComponent(invoiceId)}/payments`, {
         method: "POST",
         body: { method },
