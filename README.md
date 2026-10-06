@@ -137,6 +137,7 @@ my-claude-best/
 ├── CLAUDE.local.md        # an example practices section for a project CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
+├── TODO.md                # work planned for each practice and not done yet
 ├── LICENSE                # CC BY 4.0, for the text
 └── LICENSE-CODE           # MIT, for the code
 ```
