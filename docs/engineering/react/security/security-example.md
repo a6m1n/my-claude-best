@@ -173,6 +173,12 @@ Why it is good:
   ([readability.md](../../any-language/readability/readability.md) section 3), and blank lines
   split the request, the check and the parsing
   ([readability.md](../../any-language/readability/readability.md) section 5).
+- **A departure from [file-structure.md](../../any-language/file-structure/file-structure.md)
+  sections 3 and 4:** `ApiError` and the `ApiRequest` type sit in the same file as the class,
+  though a type that `core/` names and a class are different kinds of file. They exist only for
+  this one client: `ApiError` is what its request throws, and `ApiRequest` is the shape of
+  `request`'s argument. The cost: a second client class has no shared place for them, so they
+  move to their own `core/` files first.
 
 ## 2. The public settings
 
@@ -330,6 +336,7 @@ The one caller, a line of `src/billing/pay-invoice/pay-invoice-form.tsx`; the re
 cut.
 
 ```tsx
+      {/* The note is HTML from outside: only SanitizedHtml may put it on the page (security.md section 4). */}
       {invoice.noteHtml === null ? null : <SanitizedHtml html={invoice.noteHtml} />}
 ```
 

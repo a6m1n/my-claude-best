@@ -109,6 +109,10 @@ Why it is good:
   The option carries its reason at the line (section 4 there). `keepalive` and
   `credentials: "omit"` carry theirs at their own lines in `ApiClient.report`, which
   [security-example.md](../security/security-example.md) section 5 quotes.
+- **A departure from [file-structure.md](../../any-language/file-structure/file-structure.md)
+  sections 3 and 4:** the `CoreWebVital` alias sits in this file, next to the logic, though a type
+  and logic are different kinds of file. It exists only for this file's one function. The cost: a
+  second file that names it moves it out to its own `core/` file first.
 - **It leaves out the time from an interaction to its network result**, which performance.md
   section 3 asks for when an interaction waits for the network. The application's one such
   interaction is the payment, and timing it needs a mark at the submit and one when the mutation
