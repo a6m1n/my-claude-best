@@ -76,8 +76,7 @@ advice. A clause such as "fix within 24 hours" names five things:
 - the severity it covers;
 - the clock: 24/7 or business hours, and who is on call outside working hours (or that nobody is,
   and the clock still runs);
-- what counts as restored (for example, checkout success rate is back to its normal level for 30
-  minutes);
+- what counts as restored (for example, at or above 99.5% of checkouts succeed for 30 minutes);
 - how the lasting fix follows: a problem work item with its own target (section 3);
 - the consequence of a miss, without which it is an SLO (section 1).
 

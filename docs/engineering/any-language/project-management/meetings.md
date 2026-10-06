@@ -29,18 +29,18 @@ back.
 |---|---|---|
 | Project kickoff | Whether everyone shares the goal, the scope and the roles, and what happens first | The charter page linked from the project's epics; the first items in the backlog |
 | Sprint Planning | What this Sprint holds and why | A sprint with its goal and its work items; subtasks if the team uses them |
-| Daily Scrum | What the Developers do in the next day | Moves on the board; a blocker is set as [workflow.md](workflow.md) section 4 says |
+| Daily Scrum | What the Developers do in the next day | Moves on the board; a blocker is set as [jira-workflow.md](jira-workflow.md) section 4 says |
 | Backlog refinement | Which items are ready to be picked, and in what order | Items with a description, a rank and a size |
-| Sprint Review | What is Done, and what to do next toward the goal | Done items closed; unfinished items back in the backlog; the backlog re-ordered |
+| Sprint Review | What is Done, and what to do next toward the goal | At Complete sprint, items not Done move to the next sprint or the backlog list, and their status does not change ([jira-workflow.md](jira-workflow.md) section 7); the backlog re-ordered |
 | Sprint Retrospective | Which improvements the team takes on | Actions, each with an owner and a date |
 
 The Jira column is this practice's own: it names where each decision is kept, so that nobody has
 to remember what a meeting decided.
 
-The Scrum Guide (2020) names five events inside a Sprint: Sprint Planning, the Daily Scrum, the
-Sprint Review, the Sprint Retrospective, and the Sprint itself as their container. Backlog
-refinement is not one of them (section 6), and neither is the kickoff, which PMI defines
-(section 3).
+The Scrum Guide (2020) names five events: the Sprint and the four inside it, Sprint Planning, the
+Daily Scrum, the Sprint Review and the Sprint Retrospective. "The Sprint is a container for all
+other events." Backlog refinement is not one of them (section 6), and neither is the kickoff,
+which PMI defines (section 3).
 
 ## 2. The order and the cadence
 
@@ -126,7 +126,7 @@ work decide how much of it fits.
 
 The output in Jira: a sprint, its goal written in the sprint's goal field, the selected items in
 it, and the subtasks the Developers add when they split an item
-([work-item-types.md](work-item-types.md) section 3). Pick only items that were refined: an item
+([jira-work-item-types.md](jira-work-item-types.md) section 3). Pick only items that were refined: an item
 that "can be Done by the Scrum Team within one Sprint" is ready for selection (section 6).
 
 ## 5. Daily Scrum
@@ -166,7 +166,7 @@ Rules for both formats:
 
 - Solve a problem after the meeting, by the people it concerns. This practice's own rule. The
   reason: the other Developers' 15 minutes are not spent on a discussion that is not theirs.
-- A blocker from outside the team goes to Blocked as [workflow.md](workflow.md) section 4 says, with
+- A blocker from outside the team goes to Blocked as [jira-workflow.md](jira-workflow.md) section 4 says, with
   its named blocker and its link; a block the team can clear the same day is flagged and stays where
   it is.
 - The Scrum Master makes sure the meeting happens. The Product Owner joins as a Developer only when
@@ -228,7 +228,9 @@ order of work in the session:
 2. The Developers ask questions and check the acceptance criteria.
 3. They check each item fits three working days ([tickets.md](tickets.md) section 3) and split what
    does not.
-4. They size each item.
+4. The Developers who will do the work size each item. The Scrum Guide: "The Developers who will
+   be doing the work are responsible for the sizing." A size set in a session with only some of
+   them is confirmed at Sprint Planning, because the whole Scrum Team is there (section 4).
 5. The Product Owner re-orders the backlog.
 
 The output in Jira is the item with its description, its rank in the backlog and its size.
@@ -237,23 +239,28 @@ The output in Jira is the item with its description, its rank in the backlog and
 
 Hold it on the last day of the sprint. The order:
 
-1. The Product Owner opens with the Sprint Goal, and says what is Done and what is not Done.
-2. The Developers demonstrate Done items only. The Scrum Guide says an item that does not meet the
-   Definition of Done "cannot be released or even presented at the Sprint Review. Instead, it
+1. The Product Owner opens with the Sprint Goal, and says what is Done and what is not Done. The
+   Scrum Guide 2017 has this step: "The Product Owner explains what Product Backlog items have been
+   'Done' and what has not been 'Done'"; the 2020 Guide does not.
+2. The Developers demonstrate Done items only. The Scrum Guide 2020 says an item that does not meet
+   the Definition of Done "cannot be released or even presented at the Sprint Review. Instead, it
    returns to the Product Backlog for future consideration."
 3. Different team members demonstrate (Atlassian), not always the same one. The reason: the work
    belongs to the team, and every person who did the work can show it.
-4. The stakeholders give feedback.
-5. The group discusses what to do next and the progress toward the Product Goal.
+4. The stakeholders give feedback. The Scrum Guide 2020: "the Scrum Team and stakeholders review
+   what was accomplished in the Sprint".
+5. The group discusses what to do next and the progress toward the Product Goal (Scrum Guide 2020).
 
-The order of the steps is this practice's own; the content of each step is the Scrum Guide's. Keep
-it a conversation: "The Sprint Review is a working session and the Scrum Team should avoid limiting
-it to a presentation." The
-review is not a gate to releasing: the Guide says an Increment may be delivered before the end of
-the Sprint, and that "the Sprint Review should never be considered a gate to releasing value".
-Its output in Jira: the Done items closed, the unfinished items back in the backlog (see
-[workflow.md](workflow.md) for a partly done item), and the backlog re-ordered by the Product
-Owner. The timebox is in section 2.
+The order of the steps is this practice's own, and each step names its source. Keep it a
+conversation (Scrum Guide 2020): "The Sprint Review is a working session and the Scrum Team should
+avoid limiting it to a presentation." The review is not a gate to releasing: the Guide says an
+Increment may be delivered before the end of the Sprint, and that "the Sprint Review should never
+be considered a gate to releasing value".
+Its output in Jira: the backlog re-ordered by the Product Owner. Done items are already Done, from
+their production deploy ([jira-workflow.md](jira-workflow.md) section 2). At Complete sprint, items
+not Done move to the next sprint or the backlog list, and their status does not change
+([jira-workflow.md](jira-workflow.md) section 7, which also covers a partly done item). The
+timebox is in section 2.
 
 ## 8. Sprint Retrospective
 
@@ -316,8 +323,8 @@ is in [communication.md](communication.md) section 2.
 
 ## 11. Sources
 
-- [Scrum Guide (2020)](https://scrumguides.org/scrum-guide.html), 2020-11: the events, their timeboxes and attendees, the Daily Scrum text, refinement, Definition of Done, the review as no gate.
-- [Scrum Guide (2017)](https://scrumguides.org/scrum-guide-2017.html) and [its revisions](https://scrumguides.org/revisions.html), 2017 and 2020: the three Daily Scrum questions as an example, and their removal.
+- [Scrum Guide (2020)](https://scrumguides.org/scrum-guide.html), 2020-11: the events and the Sprint as their container, their timeboxes and attendees, the Daily Scrum text, refinement and who sizes, Definition of Done, the Sprint Review text, the review as no gate.
+- [Scrum Guide (2017)](https://scrumguides.org/scrum-guide-2017.html) and [its revisions](https://scrumguides.org/revisions.html), 2017 and 2020: the three Daily Scrum questions as an example, and their removal; the Product Owner's step in the Sprint Review on what is and is not Done.
 - [PMI Lexicon of Project Management Terms, version 5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), 2026-01: the kickoff meeting and the daily coordination meeting.
 - [Kanban Guide, version 2025.5](https://kanbanguides.org/english/), read 2026-10-06: no prescribed meetings; review of active items.
 - [Atlassian, "Standups"](https://www.atlassian.com/agile/scrum/standups), undated, read 2026-10-06: the three questions, 15 minutes, the board.

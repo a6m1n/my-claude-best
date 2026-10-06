@@ -51,7 +51,7 @@ The columns come from Atlassian's Confluence risk register template, with PMI's 
 | Actions | What is done now, each with a date |
 | Owner | One person (section 4) |
 | Trigger | The sign that the risk is about to happen |
-| Status | Open, closed (did not happen), or happened (now an issue) |
+| Status | Open, closed (did not happen), happened (now an issue), or handed over (at closure, to an owner for after the project; [life-cycle.md](life-cycle.md) section 2) |
 
 Writing the risk as cause, event, effect keeps the row specific: a name like "provider risk" tells
 nobody what to watch. A filled register is in [project-example.md](project-example.md) section 5.

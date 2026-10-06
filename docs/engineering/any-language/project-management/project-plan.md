@@ -40,9 +40,10 @@ say gets one line. A long plan is not kept current, and a stale plan misleads.
 | Communication | Who hears what, how often, in which channel; the escalation path | [communication.md](communication.md) |
 | Change control | How a change to scope, schedule or budget is approved | Section 4 |
 
-As a cross-check, PRINCE2 says a project plan covers the project's products, major activities,
-schedule, resource requirements, tolerances and control arrangements (PRINCE2 guide to the
-project plan). The table above covers each of these except tolerances, which section 4 sets.
+As a cross-check, PRINCE2 7 defines the project plan as "a high-level plan showing the major
+products of the project and when, how, and at what cost they will be delivered." (PeopleCert, 2023)
+The table above covers the products, the when and the how; the cost is the budget the plan must
+fit, which the charter holds ([charter.md](charter.md) section 2).
 
 ## 3. The schedule
 
@@ -75,28 +76,53 @@ control is "A process whereby modifications to documents, deliverables, or basel
 with the project are identified, documented, approved, or rejected." (PMI Lexicon, 2026) The PMP
 exam outline lists the task "Baseline a project schedule."
 
-This practice's own: the baseline dates live in a column on the plan page next to each version's
-current release date in Jira, and nobody edits that column after the sponsor's approval. The status
-against the baseline is that table plus the open change requests (a filled table is in
-[project-example.md](project-example.md) section 3).
+On the plan page, give each milestone (a version in Jira) three dates side by side:
 
-For each change after the baseline, record three things: the change request (a formal proposal to
-modify a document, deliverable or baseline, in PMI's words), who approved it, and why. NASA's WBS
-Handbook asks for the same on a revised WBS baseline: the "change rationale and project manager
-approval" ([wbs.md](wbs.md) section 7).
+- Original: the date approved at the first baseline. Nobody edits it.
+- Baseline: the current approved date. It changes only when the sponsor approves a change request
+  beyond the tolerance, and only for the milestones the request names and the ones linked to them.
+- Now: the current forecast, or the version's release date in Jira. The project manager moves it
+  inside the tolerance.
+
+The three columns are this practice's own layout; the status against the baseline is that table
+plus the open change requests (a filled table is in [project-example.md](project-example.md)
+section 3). Measure the tolerance and the status markers ([communication.md](communication.md)
+section 3) from Baseline, because an approved change is the plan the team now works to. PRINCE2 7
+says "A project baseline is the current approved versions of the management products and project
+products that are subject to change control." (PeopleCert, 2023), and PMI's Practice Standard for
+Scheduling (2nd edition, 2011) rebaselines only the activities a change adds or changes and the ones
+linked to them (section 3.3.5).
+
+Keep Original, because a comparison with the latest baseline alone hides the slip before it. PMI's
+2011 standard compares the schedule with "the original plan—the baseline—to see the slippage
+compared to the original plan" (section 3.3.3), and GAO warns that comparing only with the most
+recent approved baseline "provides an incomplete perspective" (GAO-20-195G, 2020).
+
+Record each change after the baseline as a change request (a formal proposal to modify a document,
+deliverable or baseline, in PMI's words) that holds the old date, the new date, who approved it and
+why. Together the change requests are the revision log, so the history of each date needs no second
+list. NASA's WBS Handbook asks for the same on a revised WBS baseline: the "change rationale and
+project manager approval" ([wbs.md](wbs.md) section 7).
+
+Never move Baseline to match progress, because then no marker can show a slip; GAO calls a baseline
+that keeps moving to hide variances a "rubber baseline" (GAO-20-195G, 2020). A re-baseline is rare:
+"A rebaselined schedule should be rare." (GAO-16-89G, 2015) At closure, compare the actual dates
+with both Original and Baseline, so the sponsor sees the whole slip and the part each approved change
+explains.
 
 When you baseline the plan, agree a tolerance with the sponsor (for example, a milestone may move up
-to one week from its baseline date, so the sponsor's time goes to changes that move the goal, not
+to one week from its Baseline date, so the sponsor's time goes to changes that move the goal, not
 to routine slips). Inside it the project manager decides and records the change; only a change beyond it
 goes to the sponsor. While a request waits, the team keeps working to the current baseline. Tolerance
-and management by exception are PRINCE2's ("manage by stages and by exception",
+comes from PRINCE2 7's principle "manage by exception" (PeopleCert, 2023;
 [principles.md](principles.md) section 4); the one-week number is an example.
 
-In Jira, one way is a work item per change request, with the approver and the reason in its
-description and a link to the epic it changes. A change to the charter's goal, scope boundary,
-budget or sponsor goes to the sponsor ([charter.md](charter.md) section 3).
+In Jira, one way is a work item per change request, with the old date, the new date, the approver
+and the reason in its description and a link to the epic it changes. A change to the charter's goal,
+scope boundary, budget or sponsor goes to the sponsor ([charter.md](charter.md) section 3).
 
-Check: when the baseline moves, ask where the request, the approver and the reason are written.
+Check: when Baseline changes, ask for the change request that holds the old date, the new date, the
+approver and the reason.
 
 ## 5. Plan near work in detail
 
@@ -108,8 +134,9 @@ they need to change their requirements significantly within a few months."
 PMI calls this "An iterative planning technique in which the work to be accomplished in the near
 term is planned in detail, while the work in the future is planned at a higher level." (PMI
 Lexicon, 2026, rolling wave planning) NASA does the same inside the WBS with work packages for
-near-term work and planning packages for far-term work ([wbs.md](wbs.md) section 5). PRINCE2 makes
-stage plans "shortly before work begins" (PRINCE2 guide to the project plan).
+near-term work and planning packages for far-term work ([wbs.md](wbs.md) section 5). PRINCE2 7's
+principle "manage by stages" plans a project "on a stage-by-stage basis", and the next stage plan
+is prepared at the stage boundary, "at, or close to, the end of each stage" (PeopleCert, 2023).
 
 ## 6. Keep it current
 
@@ -126,7 +153,10 @@ changes, and change it if reviews find many.
 
 - [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: project management plan, project schedule, Gantt chart, baseline, change control, change request, rolling wave planning.
 - [PMP examination content outline](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf), July 2026 exam: create, maintain the plan; baseline a project schedule.
-- [PRINCE2, what is a project plan](https://www.prince2.com/usa/blog/what-is-a-project-plan-in-prince2-project-management-and-how-do-you-build-one), 2026-08-12: plan content, stage plans.
+- PeopleCert, [PRINCE2 7 Foundation Quick Reference Guide](https://www.nilc.co.uk/wp-content/uploads/2023/10/PRINCE2-Quick-Reference-Guide.pdf), 2023, a PeopleCert document hosted by a training organisation: the project plan, the project baseline, the principles "manage by stages" and "manage by exception", managing a stage boundary.
+- PMI, [Practice Standard for Scheduling, 2nd edition](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/practice-standard-scheduling.pdf), 2011, sections 3.3.3 and 3.3.5: comparing with the original plan; rebaselining only new or changed activities and the ones linked to them. The 3rd edition (2019) was not read.
+- GAO, [Schedule Assessment Guide, GAO-16-89G](https://www.gao.gov/assets/gao-16-89g.pdf), December 2015, p. 140: a rebaselined schedule should be rare.
+- GAO, [Cost Estimating and Assessment Guide, GAO-20-195G](https://www.gao.gov/assets/gao-20-195g.pdf), March 2020, pp. 15-16 and 236: comparing only with the latest baseline; the "rubber baseline".
 - [NASA WBS Handbook, Rev E](https://www.nasa.gov/wp-content/uploads/2025/06/nasa-wbs-handbook.pdf), June 2025, section 3.3.6: revision rationale and approval.
 - [Martin Fowler, Waterfall process](https://martinfowler.com/bliki/WaterfallProcess.html), 2019-11-13.
 - [Atlassian, write an effective project plan](https://www.atlassian.com/blog/project-management/write-an-effective-project-plan), 2023-07-20.

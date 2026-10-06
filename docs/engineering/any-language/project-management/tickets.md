@@ -10,7 +10,7 @@ open a branch. The key's form in branches, commits and pull requests is owned by
 - [1. Why work lives in work items](#1-why-work-lives-in-work-items)
 - [2. A good work item](#2-a-good-work-item)
 - [3. Small work items](#3-small-work-items)
-- [4. One branch and one pull request per work item](#4-one-branch-and-one-pull-request-per-work-item)
+- [4. One open pull request at a time per work item](#4-one-open-pull-request-at-a-time-per-work-item)
 - [5. Links in Jira](#5-links-in-jira)
 - [6. The hierarchy](#6-the-hierarchy)
 - [7. Sources](#7-sources)
@@ -52,7 +52,7 @@ criteria are the test that the story is done, and without them nobody can tell w
   formal description of the state of the Increment when it meets the quality measures required for
   the product." A work item that does not meet it is not done.
 - Write the production deploy into the Definition of Done, so that Done on the board means the
-  change is live ([workflow.md](workflow.md) section 2). The Scrum Guide leaves the Definition of
+  change is live ([jira-workflow.md](jira-workflow.md) section 2). The Scrum Guide leaves the Definition of
   Done to the team, and a Done that stops at "merged" shows finished work that no user has yet;
   Humble puts it as "They are done when it is working in production."
 - Write a bug's steps, its expected result and its actual result in the description, not in
@@ -63,10 +63,12 @@ criteria are the test that the story is done, and without them nobody can tell w
   you could write a test for it.
 - Definition of Ready is PMI's term; the Scrum Guide has no such term. If the team keeps a
   Definition of Ready, name PMI as its owner and keep it short.
-- Pick the work type by [work-item-types.md](work-item-types.md) section 1, which owns when to
+- Pick the work type by [jira-work-item-types.md](jira-work-item-types.md) section 1, which owns when to
   use a story, a task, a bug, an epic or a subtask.
 
-One ideal work item of each type is in [work-item-example.md](work-item-example.md); the story is
+What each Jira field holds, and when to fill it, is in [jira-fields.md](jira-fields.md).
+
+One ideal work item of each type is in [jira-work-item-example.md](jira-work-item-example.md); the story is
 in its section 2.
 
 ## 3. Small work items
@@ -87,16 +89,19 @@ set its own number, below a week.
 Check: before you move a work item to In Progress, ask whether its acceptance criteria can be met in
 three working days. If not, split it.
 
-## 4. One branch and one pull request per work item
+## 4. One open pull request at a time per work item
 
-Name the branch and the pull request by [git.md](../git/git.md) sections 2 and 4, which own the
-one-branch and one-ticket rules. The Jira reason: each change then maps to one work item, one
-review and one rollback.
+Keep one open pull request at a time per work item. A fix after the merge, such as for a failed
+staging check or a revert, is a new branch and a new pull request with the same key. The reason:
+each change still maps to one work item and one review, and the work item shows every pull request
+it took. This rule is this practice's own. Name the branch by [git.md](../git/git.md) section 2,
+which owns branch names, and the pull request by its section 4, which owns one ticket per pull
+request.
 
-Aim to merge each work item's one pull request within a day: Atlassian's trunk-based development
-page asks for frequent, daily merges, and DORA says short-lived branches last hours and merge at
-least daily. Three working days (section 3) is the outer limit; an item that would take longer is
-split. Atlassian: "With small branches, developers can quickly see and review small changes."
+Aim to merge each pull request within a day: Atlassian's trunk-based development page asks for
+frequent, daily merges, and DORA says short-lived branches last hours and merge at least daily.
+Three working days (section 3) is the outer limit; an item that would take longer is split.
+Atlassian: "With small branches, developers can quickly see and review small changes."
 
 The work item key is the only link Jira needs to show the branch, the commit and the deployment on
 the work item. Jira makes the link itself when three things hold (Atlassian, "Reference work items
@@ -136,8 +141,10 @@ A filled branch and commit are in [project-example.md](project-example.md) secti
   [release.md](release.md) section 3.
 - Dependencies: link with "blocks" and "is blocked by". Use "relates to" for any other connection. A
   reader then sees at once what waits for what.
-- Smart commits: a commit message can add a comment to a work item or move it to the next status.
-  Time logging through smart commits stays optional.
+- Smart commits: use only `#comment`, and move the status as [jira-workflow.md](jira-workflow.md)
+  section 2 says. The reason: a smart commit moves an item only by naming a transition, and
+  Atlassian warns that "If any other fields have been set as required the transition command will
+  silently fail", so the item stays where it was and nobody is told.
 - Incidents: link a rollback or a bug to the incident work item with "causes / is caused by"
   ([rollback-plan.md](rollback-plan.md) section 6).
 

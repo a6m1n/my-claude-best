@@ -101,10 +101,19 @@ The defaults, each owned by the file named:
 | A change inside the agreed tolerance | The project manager | [project-plan.md](project-plan.md) section 4 |
 | A change beyond the tolerance | The sponsor | [project-plan.md](project-plan.md) section 4, [communication.md](communication.md) section 5 |
 | The order of the Product Backlog | The Product Owner | Scrum Guide |
-| How a work item is built | The Developers | [principles.md](principles.md) section 2 |
-| Canceling a work item | The Product Owner | [workflow.md](workflow.md) section 5 |
+| How a work item is built | The Developer who takes the item | [principles.md](principles.md) section 2 |
+| A technical choice that is hard to undo or crosses work items (a data store, a framework, the architecture) | One Developer the Developers name for the project, written in the plan | this section; DACI in section 6 |
+| Canceling a work item | The Product Owner | [jira-workflow.md](jira-workflow.md) section 5 |
 | Go or no-go for a release | The named release decider | [release.md](release.md) section 3 |
 | Rolling back a release | The rollback decider | [rollback-plan.md](rollback-plan.md) section 2 |
+
+The table is good because each row names who decides and the file that owns the rule, so nobody
+has to guess who decides or where the rule is.
+
+The Developers name the decider for a hard-to-undo technical choice themselves, so the choice stays
+inside the team: Scrum Teams are self-managing, "meaning they internally decide who does what, when,
+and how" (Scrum Guide). The other Developers are Contributors on the DACI page, since its Approver
+is "The one person (yes: one!) who makes the decision." (section 6)
 
 A decision outside the team's authority goes to the sponsor, or to a steering committee where the
 organisation has one: PMI defines it as "An advisory body of senior stakeholders who provide
@@ -153,7 +162,7 @@ decide.
 ## 9. Sources
 
 - [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: sponsor, project manager, stakeholder, responsibility, accountability, responsibility assignment matrix, RACI matrix, steering committee, issue log. Read as raw text on 2026-10-06.
-- [The Scrum Guide](https://scrumguides.org/scrum-guide.html), November 2020: the Product Owner, the Scrum Master, the Developers.
+- [The Scrum Guide](https://scrumguides.org/scrum-guide.html), November 2020: the Product Owner, the Scrum Master, the Developers; self-managing Scrum Teams.
 - PeopleCert, [PRINCE2 7 Foundation Quick Reference Guide](https://www.nilc.co.uk/wp-content/uploads/2023/10/PRINCE2-Quick-Reference-Guide.pdf), 2023, an official training PDF hosted by a training organisation: executive, senior user, senior supplier, project board.
 - Scrum Alliance, ["Key Differences Between Project Managers and Scrum Masters"](https://resources.scrumalliance.org/Article/difference-project-managers-scrum-masters), Natalie Barnes, undated.
 - Rothman, ["The Agile Project Manager: To Facilitate, Serve and Protect"](https://www.jrothman.com/articles/2010/01/the-agile-project-manager-to-facilitate-serve-and-protect/), 2010-01-01.

@@ -4,7 +4,7 @@ Which Jira work type to pick for a piece of work, where the line between two typ
 creates each one, and what the project management standards ask of a work item. Read it before you
 create a work item, and when two types both seem to fit. How to write the item once you have picked
 its type is in [tickets.md](tickets.md) section 2, and one ideal item of each type is in
-[work-item-example.md](work-item-example.md).
+[jira-work-item-example.md](jira-work-item-example.md).
 
 **Navigation**
 
@@ -35,11 +35,13 @@ below is this practice's own reading of them. Take the first row that fits:
 
 | What you have | Type | Why |
 |---|---|---|
-| Something is broken: the product does less than it should | Bug | A bug is a defect, and its report is a different shape from a feature ([work-item-example.md](work-item-example.md) section 4). |
+| Something is broken: the product does less than it should | Bug | A bug is a defect, and its report is a different shape from a feature ([jira-work-item-example.md](jira-work-item-example.md) section 4). |
 | An outcome a user can see, that fits in three working days ([tickets.md](tickets.md) section 3) | Story | The story names the user and the result, so the team can check the result. |
 | Work with no outcome a user can see (a migration, a setup, a contract step), that fits in three working days | Task | A task has no user to write "As a ..." for; the acceptance criteria carry the proof instead. |
 | A deliverable that needs more than one work item | Epic | The epic groups the work items and answers "is the deliverable done?". |
 | A step inside one work item | Subtask, and only if the team wants it | A subtask is a step, not a unit of work with its own value (section 3). |
+
+The fields of each type, and when to fill them, are in [jira-fields.md](jira-fields.md).
 
 Check: read the summary of the item. If you cannot say who sees the result and what they see, it
 is a task or a bug, not a story.
@@ -100,7 +102,7 @@ From these, three rules. They are this practice's own, built on the Jira facts a
   Jira anti-patterns, and it is his view, read as a snippet, not a standard (Wolpers, undated).
   The same point in this folder is [principles.md](principles.md) section 2: agree what the item
   must deliver, and leave the way to the people. A filled bad and good case is in
-  [work-item-example.md](work-item-example.md) section 6.
+  [jira-work-item-example.md](jira-work-item-example.md) section 6.
 
 Check: before you add a subtask, ask whether the step takes a day or less and has no owner but the
 Developers. If it takes longer, make it a task.
@@ -143,7 +145,7 @@ what the method cares about (measurable criteria, a named agreement), not as a q
 manual.
 
 One ideal item of each type, with what each standard contributes to it, is in
-[work-item-example.md](work-item-example.md).
+[jira-work-item-example.md](jira-work-item-example.md).
 
 ## 6. Sources
 

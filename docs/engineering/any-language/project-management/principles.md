@@ -34,7 +34,7 @@ explains it: professional sports teams "focus on
 performance and picking the right person for every position". The point for this practice is one
 shared goal and a clear place for each person, not the company's staffing policy.
 
-When you assign a work item, trust the person with how it is done (section 2).
+When a person takes a work item, trust them with how it is done (section 2).
 Principle 5 of the Agile Manifesto
 says: "Build projects around motivated individuals. Give them the environment and support they
 need, and trust them to get the job done."
@@ -57,7 +57,7 @@ Martin Fowler argues that productivity cannot be measured reasonably, and that "
 make things worse". A report that no decision reads is tracking for its own sake.
 
 When the team sets up Jira, leave time logging off unless a named decision needs hours. Jira's smart commits can log time, add a comment and move a
-work item, and the practice uses the transition and the comment. No rule in this folder needs hours
+work item, and the practice uses only the comment ([tickets.md](tickets.md) section 5). No rule in this folder needs hours
 per person, so logging them would be tracking for its own sake.
 
 Check: before you add a field, a report or a recurring status meeting, write one sentence: "We
@@ -73,21 +73,31 @@ elapsed time between when a work item started and when it finished). PMI describ
 a tool that shows work in progress "to help identify bottlenecks and overcommitments" (PMI Lexicon,
 2026).
 
-How a Blocked item counts against the limit is in [workflow.md](workflow.md) section 4.
+How a Blocked item counts against the limit is in [jira-workflow.md](jira-workflow.md) section 4.
 
-When a person or the team holds more work in process than the agreed limit, the project manager
-delays or moves work. The project manager does not ask for more hours. The reason, from DORA's
-research on work-in-process limits: when people are given more at once, "the result is that tasks
-take longer to get done, and the team burns out in the process." The Agile Manifesto asks for the
-same from the other side (principle 8): "The sponsors, developers, and users should be able to
+At the weekly board look (the team sets its day), the project manager shows who holds more work in
+process than the agreed limit. The project manager does not ask for more hours. The reason, from
+DORA's research on work-in-process limits: when people are given more at once, "the result is that
+tasks take longer to get done, and the team burns out in the process." The Agile Manifesto asks for
+the same from the other side (principle 8): "The sponsors, developers, and users should be able to
 maintain a constant pace indefinitely."
 
-The project manager then tells the sponsor what the delay costs: which date moves, or which scope
-leaves. This is the "adapt" half of the rule: the plan changes through the change control of
-[project-plan.md](project-plan.md), and the team does not absorb the difference.
+Inside a sprint, the Developers decide who stops an item or hands it over, and the Product Owner
+decides what leaves the sprint, because the sprint's plan is theirs, not the project manager's.
+The Scrum Guide (2020) says the Developers "internally decide who does what, when, and how", and
+calls the Sprint Backlog "a plan by and for the Developers". A team without sprints decides at the
+same board look.
 
-Check: at the weekly board look (the team sets its day), count the work items in progress for each person against
-the limit. A person over it has one item moved or delayed that same day.
+The project manager then records what the change costs: which date moves, or which scope leaves.
+Inside the tolerance it is a recorded change ([project-plan.md](project-plan.md) section 4); beyond
+it, the project manager writes the exception note ([communication.md](communication.md) section 5).
+This is the "adapt" half of the rule: the plan changes, and the team does not absorb the
+difference.
+
+Check: at the weekly board look, count the work items in progress for each person against the
+limit. For each person over it, ask who chose the item that stops or changes hands that day. The
+answer is the Developers (in a team without sprints, the team), or the Product Owner for an item
+that leaves the sprint.
 
 ## 4. The standards behind this practice
 
@@ -98,7 +108,7 @@ bodies do not name the same artifacts, so never write "all the certifications re
 |---|---|---|
 | PMI Lexicon of Project Management Terms v5.0 (PMI, 2026), the definitions behind the PMBOK Guide and the PMP | The PMI standard behind the PMP | Charter, plan, baseline, change control, WBS, work package, risk register, the five threat responses |
 | PMP exam content outline (PMI, July 2026 exam) | What the exam tests | "Create an integrated project management plan", "Break down scope", "Baseline a project schedule", "Maintain a risk register", "Execute the change control process" |
-| PRINCE2 7 (PeopleCert, 2023) | A project management method | The project initiation document (PID) as its charter-like document; manage by stages and by exception; six threat responses (PeopleCert's PRINCE2 7 Quick Reference Guide) |
+| PRINCE2 7 (PeopleCert, 2023) | A project management method | The project initiation document (PID) as its charter-like document; the principles "manage by stages" and "manage by exception"; six threat responses (PeopleCert's PRINCE2 7 Quick Reference Guide) |
 | Scrum Guide (2020), behind CSM and PSM | The Scrum framework | The Definition of Done and a refined backlog; sprints if the team works in them; no charter, WBS or risk register |
 
 The PMBOK Guide 8th edition (2025) was read only through its table of contents.
@@ -114,8 +124,10 @@ kept current, and one that is not kept current misleads.
 Keep the goal, the work and the code in one place, and make the work item key the link between
 them. Jira connects a branch, a commit and a pull request to a work item when the key is in their
 names, and it links a deployment to a work item when a commit of the deploy has the key in its
-message (Atlassian, "Reference issues in your development work" and "View release information for
-an issue"). The branch, commit and pull request names are owned by [git.md](../git/git.md)
+message. Branches, commits and pull requests show on a work item only after a Jira admin connects
+the repository host to Jira, and deployments only after the CI/CD tool is connected too (Atlassian,
+"Reference work items in your development spaces" and "View release information for a work item").
+The branch, commit and pull request names are owned by [git.md](../git/git.md)
 sections 2 to 4. Read the rule there, and do not copy it.
 
 The reason: with the key in every name, anyone can go from the goal to an epic, to a work item, to
@@ -127,7 +139,7 @@ in [tickets.md](tickets.md) section 5, and Timeline is the view of epics and wor
 inside one space.
 
 Check: pick one released work item and follow it from the epic to its pull request and its
-deployment. A missing link means a key was left out of a name.
+deployment. A missing link means a key was left out of a name or the tool is not connected.
 
 This practice uses Jira because the reader's team does, and takes its rules from the standards of
 section 4.
@@ -174,11 +186,11 @@ neither, it is operations.
 
 - [PMI Lexicon of Project Management Terms, version 5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: project, servant leadership, kanban board, tailoring, sponsor, constraint, project success; no entry for operations or quality. Read as raw text on 2026-10-05 and 2026-10-06.
 - [PMP Examination Content Outline, July 2026 exam](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf?rev=b618cf45573e4276a54151e7636c97bf), PMI, 2026: a beginning and an end; schedule, budget and scope as traditional metrics.
-- PeopleCert, [PRINCE2 7 Foundation Quick Reference Guide](https://www.nilc.co.uk/wp-content/uploads/2023/10/PRINCE2-Quick-Reference-Guide.pdf), 2023, and [PRINCE2 7 Foundation sample paper 1 with rationales](https://www.serview.de/fileadmin/redakteur/medien/downloads/Musterpr%C3%BCfungen_f%C3%BCr_neuen_Downloadbereich/P2-7_FND_SamplePaper1_Rationales_v1-1_EN.pdf), official training PDFs hosted by training organisations: the project definition, business as usual, the seven performance targets, the quality target.
+- PeopleCert, [PRINCE2 7 Foundation Quick Reference Guide](https://www.nilc.co.uk/wp-content/uploads/2023/10/PRINCE2-Quick-Reference-Guide.pdf), 2023, and [PRINCE2 7 Foundation sample paper 1 with rationales](https://www.serview.de/fileadmin/redakteur/medien/downloads/Musterpr%C3%BCfungen_f%C3%BCr_neuen_Downloadbereich/P2-7_FND_SamplePaper1_Rationales_v1-1_EN.pdf), official training PDFs hosted by training organisations: the project definition, business as usual, the seven performance targets, the quality target, the project initiation documentation (PID), the six threat responses.
 - [PMBOK Guide eighth edition, table of contents](https://www.pmi.org/-/media/pmi/documents/public/pdf/publications/pmbok-guide-eighth-edition_table-of-contents.pdf), PMI, 2025: six principles and seven performance domains. The full text is paid, so this folder takes its definitions from the free PMI Lexicon.
 - [PMBOK 7 "12 project management principles"](https://www.pmi.org/-/media/pmi/documents/public/pdf/pmbok-standards/12-project-management-principles.pdf?rev=03749f118ff84aca97a64af1d49bb1ac), PMI, 2021: tailoring principle ("just enough" process); value as the indicator of success. Edition 7, not 8.
-- [PRINCE2 7 Foundation](https://www.peoplecert.org/browse-certifications/project-programme-and-portfolio-management/PRINCE2-2/PRINCE2-7-foundation-3579), PeopleCert, current: syllabus areas. PRINCE2 7 launched in September 2023 ([PRINCE2 blog](https://www.prince2.com/usa/blog/what-is-prince2-version-7-and-what-changed-from-6th-edition), 2026-09-16); the PID is described in [its beginner's guide](https://www.prince2.com/usa/blog/a-beginners-guide-to-the-project-initiation-document-pid-what-is-it-and-why-does-it-matter) (2025-08-19). These are secondary pages, not the paid PeopleCert text. The six threat responses come from PeopleCert's own Quick Reference Guide, listed below.
-- [The Scrum Guide](https://scrumguides.org/scrum-guide.html), Schwaber and Sutherland, November 2020: Definition of Done, and the absence of the other artifacts. [CSM](https://www.scrumalliance.org/get-certified/scrum-master-track/certified-scrummaster) teaches the Scrum framework.
+- [PRINCE2 7 Foundation](https://www.peoplecert.org/browse-certifications/project-programme-and-portfolio-management/PRINCE2-2/PRINCE2-7-foundation-3579), PeopleCert, current: syllabus areas. PRINCE2 7 launched in September 2023 ([PRINCE2 blog](https://www.prince2.com/usa/blog/what-is-prince2-version-7-and-what-changed-from-6th-edition), 2026-09-16), a secondary page, not the paid PeopleCert text. The PID and the six threat responses come from PeopleCert's own Quick Reference Guide, listed above.
+- [The Scrum Guide](https://scrumguides.org/scrum-guide.html), Schwaber and Sutherland, November 2020: Definition of Done, and the absence of the other artifacts; the Developers decide who does what, and the Sprint Backlog is their plan. [CSM](https://www.scrumalliance.org/get-certified/scrum-master-track/certified-scrummaster) teaches the Scrum framework.
 - [Netflix culture page](https://jobs.netflix.com/culture), undated, and [the culture memo post](http://about.netflix.com/en/news/sharing-our-latest-culture-memo), 2024-06-24.
 - [Agile Manifesto principles](https://agilemanifesto.org/principles.html), 2001: principles 5 and 8.
 - [Google re:Work, "Following the data: the research behind great managers"](https://rework.withgoogle.com/intl/en/guides/following-the-data-the-research-behind-great-managers), 2008 to 2016. Google's internal study of its own managers.
@@ -187,4 +199,4 @@ neither, it is operations.
 - [Atlassian, "Process issues with smart commits"](https://support.atlassian.com/jira-software-cloud/docs/process-issues-with-smart-commits/): comment, time and transition commands. Read 2026-10-05.
 - [DORA, work in process limits](https://dora.dev/capabilities/wip-limits/), undated. A survey-based measure.
 - [Kanban Guide](https://kanbanguides.org/english/), version 2025.5: work in process, throughput, work item age, cycle time.
-- Atlassian: [Reference issues in your development work](https://support.atlassian.com/jira-software-cloud/docs/reference-issues-in-your-development-work/) and [View release information for an issue](https://support.atlassian.com/jira-software-cloud/docs/view-release-information-for-an-issue/), read 2026-10-05; [What is a version](https://support.atlassian.com/jira-software-cloud/docs/what-is-a-version/); [Work is the new collective term for items tracked in Jira](https://community.developer.atlassian.com/t/work-is-the-new-collective-term-for-items-tracked-in-jira/88552), 2025-02-06; [Jira work item hierarchy](https://www.atlassian.com/software/jira/guides/issues/overview); [What is the Timeline](https://support.atlassian.com/jira-software-cloud/docs/what-is-the-roadmap/); [Configure the issue type hierarchy](https://support.atlassian.com/jira-cloud-administration/docs/configure-the-issue-type-hierarchy/).
+- Atlassian: [Reference work items in your development spaces](https://support.atlassian.com/jira-software-cloud/docs/reference-issues-in-your-development-work/) and [View release information for a work item](https://support.atlassian.com/jira-software-cloud/docs/view-release-information-for-an-issue/), read 2026-10-06: the keys in names and messages, and the connected tools each needs; [What is a version](https://support.atlassian.com/jira-software-cloud/docs/what-is-a-version/); [Work is the new collective term for items tracked in Jira](https://community.developer.atlassian.com/t/work-is-the-new-collective-term-for-items-tracked-in-jira/88552), 2025-02-06; [Jira work item hierarchy](https://www.atlassian.com/software/jira/guides/issues/overview); [What is the Timeline](https://support.atlassian.com/jira-software-cloud/docs/what-is-the-roadmap/); [Configure the issue type hierarchy](https://support.atlassian.com/jira-cloud-administration/docs/configure-the-issue-type-hierarchy/).

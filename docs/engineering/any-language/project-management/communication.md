@@ -84,9 +84,7 @@ managers are overly optimistic in their perceptions, and executives receive stat
 different from reality" (IEEE Transactions on Engineering Management, 2002, read from the abstract),
 and Park, Im and Keil found that the "mum effect", a reluctance to report bad news, contributes to
 project failure (Journal of the AIS, 2008, a laboratory experiment, read from the abstract).
-Atlassian's guide names the result: "watermelon" status, green outside and red inside. Johanna
-Rothman, an independent PM author, makes the same point: status lights work "as long as they are
-binary and prompt people to action".
+Atlassian's guide names the result: "watermelon" status, green outside and red inside.
 
 Answer an At risk with help, not blame. Atlassian's play warns: "If teams are penalized for setbacks,
 they'll either set less ambitious goals or hide when projects veer off course".
@@ -105,7 +103,7 @@ the one above when its tolerance is forecast to break (PeopleCert, 2023).
 A software project's path is usually four steps (this practice's own mapping):
 
 1. A Developer to the Scrum Master or the project manager, for a blocker the team cannot remove
-   ([workflow.md](workflow.md) section 4).
+   ([jira-workflow.md](jira-workflow.md) section 4).
 2. The project manager to the sponsor, when a forecast leaves the tolerance (section 5).
 3. The sponsor to a steering committee, where the organisation has one, for a decision "outside of
    the team's authority" (PMI Lexicon, 2026).
@@ -132,6 +130,10 @@ own short form of PRINCE2's exception report. The reason: the sponsor's time goe
 move the goal, and the team keeps working to the current baseline while the request waits
 ([project-plan.md](project-plan.md) section 4).
 
+When the sponsor approves an option that moves a date, its change request moves Baseline
+([project-plan.md](project-plan.md) section 4). From the next update the marker measures from the
+new Baseline, so a slip the sponsor has accepted does not keep the project Off track.
+
 ## 6. Sources
 
 - [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: communications management plan, steering committee. Read as raw text on 2026-10-06.
@@ -140,4 +142,3 @@ move the goal, and the team keeps working to the current baseline while the requ
 - Atlassian Team Playbook, ["Weekly project updates"](https://www.atlassian.com/team-playbook/plays/weekly-project-updates) and ["Stakeholder communications plan"](https://www.atlassian.com/team-playbook/plays/stakeholder-communications-plan), undated; and Atlassian, ["Define your status markers"](https://www.atlassian.com/dam/jcr:d164f7ba-1fe7-4c1f-bec7-22967945c8b4/Loop-Technique_3-3_define-your-status-markers.pdf), 2021.
 - Snow and Keil, ["The challenge of accurate software project status reporting"](https://www.researchgate.net/publication/3076745_The_challenge_of_accurate_software_project_status_reporting_A_two-stage_model_incorporating_status_errors_and_reporting_bias), IEEE Transactions on Engineering Management, 2002, abstract.
 - Park, Im and Keil, ["Overcoming the Mum Effect in IT Project Reporting"](https://aisel.aisnet.org/jais/vol9/iss7/17/), Journal of the AIS 9(7), 2008, abstract.
-- Rothman, ["Traffic Lights and Project Status"](https://www.jrothman.com/mpd/project-management/2011/03/traffic-lights-and-project-status/), 2011-03-02.

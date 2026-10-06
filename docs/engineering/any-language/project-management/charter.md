@@ -78,9 +78,11 @@ the poster or the plan page, not the charter.
 
 ## 4. Other standards
 
-PRINCE2 has no charter by that name. It builds a Project Brief at the start and extends it into
-the Project Initiation Documentation (PID), "the primary reference point for how the project will
-be managed, by whom, and to what end." (PRINCE2 guide to the PID) The PMP exam outline does not
+PRINCE2 has no charter by that name. When it starts up a project it assembles a project brief,
+which "ensures that the project has a commonly understood and well-defined starting point", and
+when it initiates the project it assembles the project initiation documentation (PID), "an
+aggregation of many of the management products created or updated during initiation and used to
+gain authorization for the project to proceed." (PeopleCert, 2023) The PMP exam outline does not
 use the word "charter" at all (PMP exam content outline, July 2026); the term comes from the PMI
 Lexicon above. Scrum has no charter.
 
@@ -96,6 +98,6 @@ types is not settled in the docs, so link the deliverable epics and nothing else
 - [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: project charter, sponsor, business need, assumption, assumption log.
 - [Atlassian Team Playbook, "Project poster"](https://www.atlassian.com/team-playbook/plays/project-poster), undated: unvalidated assumptions.
 - [Atlassian, project charter](https://www.atlassian.com/work-management/project-management/project-planning/project-charter), undated, read 2026-10-05: content, mistakes, project poster.
-- [PRINCE2, guide to the PID](https://www.prince2.com/usa/blog/a-beginners-guide-to-the-project-initiation-document-pid-what-is-it-and-why-does-it-matter), updated 2026-05-27, and [guide to project briefs](https://www.prince2.com/usa/blog/a-guide-to-project-briefs), 2020-10-30.
+- PeopleCert, [PRINCE2 7 Foundation Quick Reference Guide](https://www.nilc.co.uk/wp-content/uploads/2023/10/PRINCE2-Quick-Reference-Guide.pdf), 2023, a PeopleCert document on a third-party host: the project brief and the project initiation documentation.
 - [PMP examination content outline](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf), July 2026 exam: no use of "charter".
 - [Atlassian, link a Confluence page to an epic](https://support.atlassian.com/jira-software-cloud/docs/link-a-confluence-page-to-an-epic/), undated.

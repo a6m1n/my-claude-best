@@ -21,6 +21,9 @@ sources behind them, are in [principles.md](principles.md).
 
 ## What is here
 
+A file named `jira-…` is about one Jira object, such as the work types, the fields or the board.
+Every other file is a practice, and maps that practice to Jira in a section of its own.
+
 - [principles.md](principles.md): what project management is for, what it never does (micromanage,
   track for its own sake), how to see and limit workload, which standard names which artifact, and
   why Jira is the tool, and what a project is, what limits it and what its success means. Read it
@@ -50,14 +53,17 @@ sources behind them, are in [principles.md](principles.md).
   contingency plans and reserves, and the review. Read it when you open the register, add a risk or review the register.
 - [tickets.md](tickets.md): what a work item holds, how big it is, how it links to a branch, a pull
   request and a release. Read it when you write or triage a work item.
-- [work-item-types.md](work-item-types.md): the five Jira work types, story or epic, task or
+- [jira-work-item-types.md](jira-work-item-types.md): the five Jira work types, story or epic, task or
   subtask, who creates each, and what PMI, PRINCE2 and Scrum ask of a unit of work. Read it when
   you pick a work item's type.
-- [work-item-example.md](work-item-example.md): one ideal work item of each type, with what each
+- [jira-work-item-example.md](jira-work-item-example.md): one ideal work item of each type, with what each
   standard contributes. Read it when you write the first work item of a type.
-- [workflow.md](workflow.md): the board's statuses and when an item moves between them, the
+- [jira-workflow.md](jira-workflow.md): the board's statuses and when an item moves between them, the
   workflow diagram, Blocked, Canceled, comments, and a work item that is only partly done. Read it
   when you move a work item, comment on one, or set up a board.
+- [jira-fields.md](jira-fields.md): what each Jira field holds and when to fill it, components or
+  labels, and what differs in a team-managed space. Read it when you fill a work item's fields or
+  set up a space.
 - [meetings.md](meetings.md): the kickoff and the sprint meetings, their order, cadence and
   timebox, and who speaks in what order. Read it when you plan or run a team meeting.
 - [communication.md](communication.md): the communication plan, the weekly status update and its
@@ -76,29 +82,37 @@ sources behind them, are in [principles.md](principles.md).
 ## How to adopt
 
 1. Copy this folder into your repository at `docs/engineering/any-language/project-management/`.
-2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you open a project, plan or change its
-   scope or schedule, write a stakeholder register, a RACI matrix or a status update, make a
-   decision that is hard to undo, write, triage or move a work item, plan a release or its rollback,
-   agree an SLA, or run a team meeting, read `docs/engineering/any-language/project-management/README.md`
-   and the file it points to."
+2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you open a project, write or change
+   its charter, plan, scope, schedule, WBS, risk register, stakeholder register or RACI matrix, make
+   or record a decision that is hard to undo, write a status update, write, triage, split or move a
+   Jira work item, fill its fields or comment on one, set up a board or a space, plan a release or
+   its rollback, open or run an incident or roll a release back, agree an SLA, or plan or run a team
+   meeting, read `docs/engineering/any-language/project-management/README.md` and the files it
+   routes to for that work."
    Without it an agent never opens the folder.
-3. In Jira, turn on releases and versions. This adds the Fix versions field that
-   [life-cycle.md](life-cycle.md) and [tickets.md](tickets.md) use to tie work to a release
+3. In Jira, use a company-managed software space, because components, Affects versions and a
+   shared workflow that sets the resolution are there only, and a space that later changes type
+   loses its components. What differs in a team-managed space is in [jira-fields.md](jira-fields.md)
+   section 4.
+4. Make sure the space has the Fix versions field that [life-cycle.md](life-cycle.md) and
+   [tickets.md](tickets.md) use to tie work to a release. A company-managed space already has it;
+   in a team-managed space, turn on releases and versions
    ([Atlassian: enable releases and versions](https://support.atlassian.com/jira-software-cloud/docs/enable-releases-and-versions/)).
-4. The practice links [git.md](../git/git.md) for the branch, commit and pull request names, and
+5. The practice links [git.md](../git/git.md) for the branch, commit and pull request names, and
    [refactoring.md](../refactoring/refactoring.md) for how existing work adopts a rule. Copy those
    folders too, or replace each link with your own rule for that topic.
-5. Existing projects adopt these rules the way [refactoring.md](../refactoring/refactoring.md)
+6. Existing projects adopt these rules the way [refactoring.md](../refactoring/refactoring.md)
    section 7 says.
 
 ## The points to adapt
 
 - The SLA numbers and severity levels: each company sets its own ([sla.md](sla.md)).
+- The space type: this practice assumes a company-managed space ([jira-fields.md](jira-fields.md) section 4).
 - Levels above the epic in Jira: what a team without them does is in [wbs.md](wbs.md) section 7.
 - Where the risk register lives: one place per project ([risks.md](risks.md) section 2).
 - PRINCE2 terms: PID for the charter, its own six threat responses ([risks.md](risks.md) section 5).
 - The board's statuses: a team with no pre-production environment drops Pre-prod
-  ([workflow.md](workflow.md) section 2).
+  ([jira-workflow.md](jira-workflow.md) section 2).
 - The sprint length, which sets every meeting's timebox ([meetings.md](meetings.md) section 2).
 - What each status marker means, in ten words or fewer ([communication.md](communication.md) section 3).
 - Who is on the escalation path, and how fast each level answers ([communication.md](communication.md) section 4).

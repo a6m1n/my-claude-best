@@ -108,16 +108,28 @@ A work package too big for one work item becomes several work items;
 [tickets.md](tickets.md) section 3 says how to size them and section 2 how to write them. Levels above the epic need Jira Plans on a Premium or Enterprise
 licence, so a team without it stays with project, epic and work item.
 
-After the baseline, a change to the WBS records its rationale and the approval, as NASA asks:
-"formal documentation of the revision ... to include the associated change rationale and project
-manager approval." (section 3.3.6) Use the change request of [project-plan.md](project-plan.md)
-section 4.
+After the baseline, raise a change request ([project-plan.md](project-plan.md) section 4) when a
+deliverable (an epic) is added or removed, or when its WBS dictionary entry (scope, owner, done
+criteria; section 6) changes, because these change what the sponsor approved. For such a revision of
+the baselined WBS, NASA asks for "formal documentation of the revision ... to include the associated
+change rationale and project manager approval." (section 3.3.6)
+
+Work items added, split or reordered inside an epic's dictionary scope are refinement: the Product
+Owner decides them, with no change request. The Scrum Guide makes the Product Owner accountable for
+"Creating and clearly communicating Product Backlog items". A date that refinement moves is caught
+by the tolerance ([project-plan.md](project-plan.md) section 4).
+
+This boundary is this practice's own. PMI's scope baseline, "The approved version of formal scope
+documents that can be changed using formal change control procedures" (PMI Lexicon, 2026), holds the
+whole WBS. But rolling wave planning (section 5) creates work packages after the baseline by design,
+and a change request for each new work item would block the Product Owner.
 
 ## 8. Sources
 
-- [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: WBS, work package, WBS dictionary.
+- [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: WBS, work package, WBS dictionary, scope baseline.
 - [NASA WBS Handbook, Rev E](https://www.nasa.gov/wp-content/uploads/2025/06/nasa-wbs-handbook.pdf), June 2025: sections 2.1, 3.2, 3.3.4, 3.3.5, 3.3.6, 3.4.4, 3.5.2.
 - [PMP examination content outline](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf), July 2026 exam: "Break down scope."
+- [The Scrum Guide](https://scrumguides.org/scrum-guide.html), November 2020: the Product Owner's accountability for Product Backlog items.
 - [Atlassian, work breakdown structure](https://www.atlassian.com/work-management/project-management/work-breakdown-structure), undated, read 2026-10-05.
 - [Atlassian, user stories](https://www.atlassian.com/agile/project-management/user-stories), undated.
 - Jira hierarchy: [work types](https://support.atlassian.com/jira-cloud-administration/docs/what-are-issue-types/) and [issue type hierarchy](https://support.atlassian.com/jira-cloud-administration/docs/configure-the-issue-type-hierarchy/), both undated.

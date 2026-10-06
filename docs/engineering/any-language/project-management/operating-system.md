@@ -46,7 +46,7 @@ plan, which is the point of a loop, and that the charter changes only through a 
 | Organise | Roles, RACI, decider table; stakeholder register | [roles-and-decisions.md](roles-and-decisions.md), [stakeholders.md](stakeholders.md) | Who does, decides and hears what |
 | Scope | WBS and its dictionary | [wbs.md](wbs.md) | The epics in Jira |
 | Plan | Plan, development approach, schedule, risk register | [project-plan.md](project-plan.md), [life-cycle.md](life-cycle.md) section 4, [schedule.md](schedule.md), [risks.md](risks.md) | The baseline and the tolerance |
-| Deliver | Work items on the board, sprints or a flow | [tickets.md](tickets.md), [work-item-types.md](work-item-types.md), [workflow.md](workflow.md), [meetings.md](meetings.md) | Done work in production |
+| Deliver | Work items on the board, sprints or a flow | [tickets.md](tickets.md), [jira-work-item-types.md](jira-work-item-types.md), [jira-fields.md](jira-fields.md), [jira-workflow.md](jira-workflow.md), [meetings.md](meetings.md) | Done work in production |
 | Release | Version, go or no-go, rollback plan | [release.md](release.md), [rollback-plan.md](rollback-plan.md) | What users have |
 | Report | Weekly status update; an exception note | [communication.md](communication.md) | The sponsor's decisions |
 | Decide | Decision log; change requests | [roles-and-decisions.md](roles-and-decisions.md) section 7, [project-plan.md](project-plan.md) section 4 | A changed plan |

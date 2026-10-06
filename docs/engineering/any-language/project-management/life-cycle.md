@@ -52,7 +52,7 @@ its artifact is not ended.
 |---|---|---|---|
 | Initiation | The goal, the scope in outline, the sponsor and the project manager's authority are written down | The charter ([charter.md](charter.md)) | The sponsor, who issues it |
 | Planning | The work is broken down, scheduled and risk-assessed, and the plan is baselined | The plan, the WBS and the risk register ([project-plan.md](project-plan.md), [wbs.md](wbs.md), [risks.md](risks.md)) | The sponsor approves the baseline |
-| Execution | The team builds and releases the work, one release at a time | Releases ([tickets.md](tickets.md), [rollback-plan.md](rollback-plan.md)) | The team, when the Definition of Done is met; the rollback plan names who can stop it |
+| Execution | The team builds and releases the work, one release at a time | Releases ([tickets.md](tickets.md), [rollback-plan.md](rollback-plan.md)) | One named person decides go or no-go for each release ([release.md](release.md) section 3) |
 | Monitoring | Status is compared with the baseline, changes go through change control, the register is reviewed, the SLA is met | The status against the baseline ([project-plan.md](project-plan.md) section 4), and the decisions on change requests ([sla.md](sla.md) for the SLA) | The sponsor decides a change beyond the agreed tolerance ([project-plan.md](project-plan.md) section 4) |
 | Closure | The sponsor accepts the result, and the team looks back at how the work went | Acceptance and the lessons learned | The sponsor accepts |
 
@@ -71,14 +71,19 @@ What the phases and their artifacts rest on:
 
 The assignment of who approves each phase is this practice's own, built on the PMI definitions: the
 sponsor is "accountable for enabling success" (PMI Lexicon, 2026), so the sponsor approves the
-artifacts that fix the goal and the baseline, and the team approves the releases it runs, against its
-Definition of Done ([tickets.md](tickets.md) section 2).
+artifacts that fix the goal and the baseline. A release has its go or no-go decider instead
+([release.md](release.md) section 3), because the Definition of Done ends with the production
+deploy ([tickets.md](tickets.md) section 2), so it cannot be the gate before the deploy.
 
 This practice's own Closure rule: the sponsor accepts the result in writing against the charter's
 success criteria, not against the plan, so the result is judged by the goal and not by the schedule.
 The team holds a retrospective ([meetings.md](meetings.md) section 8) and records each lesson with
-an owner and a date. The epics are
-closed, and so are the open rows of the risk register. A filled closure is in
+an owner and a date. The epics are closed.
+
+Give each open risk a named owner for after the project and a follow-on action, then mark its row
+handed over, so no risk is dropped when the team moves on. PRINCE2 7 asks the same of closing a
+project: "ensure provision has been made to address all open issues and risks, with follow-on
+action recommendations" (PeopleCert, 2023). A filled closure is in
 [project-example.md](project-example.md) section 9.
 
 Check: before you start the next phase, find the approval of the current phase's artifact (a
@@ -126,8 +131,9 @@ Lexicon, 2026):
 | Adaptive | "A development approach in which the requirements are subject to a high level of uncertainty and volatility and are likely to change throughout the project." | The work is complex, it changes often, or stakeholders see the scope differently |
 | Hybrid | "A combination of elements from both adaptive and predictive approaches that is useful when there is uncertainty or risk around the requirements." | Some deliverables are fixed and others are not |
 
-The Predictive and Adaptive cells of the "It fits when" column are the Agile Practice Guide's, and
-the Hybrid cell is this practice's own: "Predictive life cycles expect to take
+The Predictive cell of the "It fits when" column is the Agile Practice Guide's, the Adaptive cell
+comes from its text on iterative life cycles (section 3.1.2), and the Hybrid cell is this practice's
+own: "Predictive life cycles expect to take
 advantage of high certainty around firm requirements, a stable team, and low risk", and an iterative
 life cycle suits "when complexity is high, when the project incurs frequent changes, or when the
 scope is subject to differing stakeholders' views" (PMI and Agile Alliance, first edition, 2017; a
@@ -161,6 +167,7 @@ Check: open the plan and find, for each deliverable, its approach and the reason
 - [Atlassian, "Software development life cycle (SDLC)"](https://www.atlassian.com/agile/software-development/sdlc), undated, read 2026-10-05: the seven phases; requirements in planning.
 - [PMI Lexicon of Project Management Terms, version 5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: sponsor; requirement; predictive, adaptive and hybrid approach.
 - [PMP Examination Content Outline, July 2026 exam](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf?rev=b618cf45573e4276a54151e7636c97bf), PMI, 2026: change control, lessons learned, recommending a development approach.
+- PeopleCert, [PRINCE2 7 Foundation Quick Reference Guide](https://www.nilc.co.uk/wp-content/uploads/2023/10/PRINCE2-Quick-Reference-Guide.pdf), 2023, a PeopleCert document on a third-party host: closing a project, open issues and risks with follow-on action recommendations.
 - PMI and Agile Alliance, [Agile Practice Guide](https://www.agilealliance.org/wp-content/uploads/2021/02/AgilePracticeGuide.pdf), first edition, 2017: when predictive and iterative life cycles fit; one project may mix approaches.
 - Kuhrmann et al., ["Hybrid software and system development in practice: waterfall, scrum, and beyond"](https://dl.acm.org/doi/pdf/10.1145/3084100.3084104) (the HELENA study), ICSSP 2017: hybrid use, not success.
 - [The Scrum Guide](https://scrumguides.org/scrum-guide.html), 2020, and the [Kanban Guide](https://kanbanguides.org/english/), version 2025.5: the Sprint Goal; no sprints in Kanban.

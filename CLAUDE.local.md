@@ -127,24 +127,26 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   splitting or caching. The check: a change that claims a gain names the metric, its percentile, its
   source and its date in the pull request's Verification (`performance.md` section 4), and every
   image the change adds has `width` and `height` (`performance.md` section 5).
-- Before you open a project, write or change its charter, plan, schedule, work breakdown structure,
-  risk register, stakeholder register or RACI matrix, record a decision that is hard to undo, write
-  a status update, write, split or move a Jira work item, comment on one, set up a board, plan a
-  release or its rollback, agree an SLA, or plan or run a team meeting, read
-  `docs/engineering/any-language/project-management/README.md` and the file it routes to for that
+- Before you open a project, write or change its charter, plan, scope, schedule, WBS, risk
+  register, stakeholder register or RACI matrix, make or record a decision that is hard to undo,
+  write a status update, write, triage, split or move a Jira work item, fill its fields or comment
+  on one, set up a board or a space, plan a release or its rollback, open or run an incident or
+  roll a release back, agree an SLA, or plan or run a team meeting, read
+  `docs/engineering/any-language/project-management/README.md` and the files it routes to for that
   work, and `docs/engineering/any-language/project-management/project-example.md` when you write a
   project's first charter, plan, stakeholder register or risk register,
-  `docs/engineering/any-language/project-management/work-item-example.md` when you write the first
-  work item of a type. The check: every risk the change adds has one owner and one of the five
-  threat responses (`risks.md` section 5), every work item it adds has the type `work-item-types.md`
-  section 1 gives its work, can be done in three working days and gets its own branch and pull
-  request (`tickets.md` sections 3 and 4), every move to Blocked or Canceled it makes carries a
-  comment that names the blocker or the reason (`workflow.md` sections 4 and 5), every RACI row it
-  adds has exactly one Accountable (`roles-and-decisions.md` section 3), every status update it
-  writes sets its marker from the forecast against the plan's tolerance (`communication.md` section
-  3), every meeting it plans names the decision it makes (`meetings.md` section 1), and every
-  release it plans has one go or no-go decider (`release.md` section 3) and a rollback plan with a
-  trigger, one decider and a time that fits the SLA (`rollback-plan.md` section 2).
+  `docs/engineering/any-language/project-management/jira-work-item-example.md` when you write the
+  first work item of a type. The check: every risk the change adds has one owner and one of the
+  five threat responses (`risks.md` sections 4 and 5), every work item it adds has the type
+  `jira-work-item-types.md` section 1 gives its work, every story, task or bug it adds can be done
+  in three working days and gets its own branch and one open pull request at a time (`tickets.md`
+  sections 3 and 4), every move to Blocked or Canceled it makes carries a comment that names the
+  blocker or the reason (`jira-workflow.md` sections 4 and 5), every RACI row it adds has exactly
+  one Accountable (`roles-and-decisions.md` section 3), every status update it writes sets its
+  marker from the forecast against the plan's tolerance (`communication.md` section 3), every
+  meeting it plans names the decision it makes (`meetings.md` section 1), and every release it
+  plans has one go or no-go decider (`release.md` section 3) and a rollback plan with a trigger,
+  one decider and a time that fits the SLA (`rollback-plan.md` section 2).
 - Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
   first. The check: the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`

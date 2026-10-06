@@ -52,7 +52,7 @@ restore comes first and the cause second, as in [sla.md](sla.md) section 4.
 
 This practice's own rule: if service is not restored after the rollback, the decider tells the
 sponsor and the incident continues with its SLA clock running; the next step is a fix rolled forward
-under the same incident.
+under the same incident, as an emergency release ([release.md](release.md) section 3).
 
 Also this practice's own: after a rollback the change is still on main, so keep its feature flag off
 in every environment, or revert it on main, before the next deploy (the revert trap is in
@@ -76,7 +76,7 @@ last.
 - Name in the plan every change that cannot be undone, so the decider knows that rolling back will
   not bring it back. For each, the plan names who approves a roll-forward fix instead.
 
-A filled data step is in [work-item-example.md](work-item-example.md) section 3 and
+A filled data step is in [jira-work-item-example.md](jira-work-item-example.md) section 3 and
 [project-example.md](project-example.md) section 8.
 
 ## 5. Rehearse it
@@ -92,15 +92,24 @@ time, and the time is what the SLA needs.
   or to the epic.
 - When a release is rolled back, record it as a work item linked to the incident with "causes / is
   caused by" ([tickets.md](tickets.md) section 5).
-- To tie an incident to a release (this practice's own), open the version that was released last
-  before the alert and read its work items and deployments; the work item key links the deployment
-  ([tickets.md](tickets.md) section 1). If nothing was released and no flag or setting was changed
-  since the symptoms began, there is nothing to roll back: restore by other means and keep the SLA
-  clock running ([sla.md](sla.md) section 5).
-- After a rollback (this practice's own), keep the version, add a comment on it naming the rollback
-  work item, and ship the fix in a new version. Before you move any item, list in that comment every
-  work item that is no longer live; then move each to the new version, so the release page shows
-  only what runs. Do not change the released version's state or description.
+- To tie an incident to a release (this practice's own), open the last production deployment before
+  the alert, in the Deployments shown on the work items ([tickets.md](tickets.md) section 1), and the
+  flag or setting changes since the symptoms began. Do not start from the version that was released
+  last: a version is marked Released only after its production deploy is checked
+  ([release.md](release.md) section 1), so right after a deploy the running version is not yet
+  Released. If nothing was deployed and no flag or setting was changed since the symptoms began,
+  there is nothing to roll back: restore by other means and keep the SLA clock running
+  ([sla.md](sla.md) section 5).
+- After a rollback (this practice's own), keep the version, and record the rollback in the rollback
+  work item, not on the version, because a Jira version has no comments: its fields are a name, a
+  start date, a release date and a description (Atlassian). List in the rollback work item every
+  work item that is no longer live, and add the rollback work item to the released version's Related
+  work section (Atlassian), so a reader of the version finds the rollback. The rolled-back items stay
+  Done in the released version, because a new problem is a new work item
+  ([jira-workflow.md](jira-workflow.md) section 2). Open one Bug per rolled-back item, linked to it
+  and to the incident ([tickets.md](tickets.md) section 5), in a new version that ships the fix, so
+  each fix has an open work item to carry it. Do not change the released version's state or
+  description.
 
 ## 7. Sources
 
@@ -130,3 +139,7 @@ time, and the time is what the SLA needs.
   ["Link a Confluence page to an
   epic"](https://support.atlassian.com/jira-software-cloud/docs/link-a-confluence-page-to-an-epic/),
   undated.
+- Atlassian, ["Manage versions"](https://support.atlassian.com/jira-cloud-administration/docs/manage-versions/)
+  (the fields of a version) and ["Create release
+  notes"](https://support.atlassian.com/jira-cloud-administration/docs/create-release-notes/) (the
+  Related work section of a version), undated, read 2026-10-06.

@@ -29,10 +29,15 @@ does not change behavior, and the tests and mypy pass on the result. The edit ca
 commit with nothing else in it. A CI check can stop the old layout from coming back. Formatting
 only on touch would put layout noise into every feature diff for years.
 
-**What lands.** One pull request with three commits. The first holds only the formatter's output:
+**What lands.** The sweep is a task, PROJ-110 "Format all Python code with ruff", written before
+the work starts ([tickets.md](../project-management/tickets.md) section 1). Its branch is
+`chore/PROJ-110-format-with-ruff`, and its one pull request,
+`chore [PROJ-110]: format all Python code with ruff`, carries three commits. The key in the
+branch, each commit title and the pull request links all of them to the task in Jira
+([git.md](../git/git.md) sections 2, 3 and 4). The first commit holds only the formatter's output:
 
 ```
-chore(billing): format all Python code with ruff
+chore [PROJ-110]: format all Python code with ruff
 
 - Every file now has the layout ruff format gives it, so review
   diffs show real changes instead of layout noise.
@@ -43,7 +48,7 @@ chore(billing): format all Python code with ruff
 The second hides the sweep from `git blame`:
 
 ```
-chore(git): skip the format commit in git blame
+chore [PROJ-110]: skip the format commit in git blame
 
 - .git-blame-ignore-revs lists the format commit, so git blame shows
   the last real change to each line.
@@ -52,7 +57,7 @@ chore(git): skip the format commit in git blame
 The third turns the check on:
 
 ```
-chore(ci): check formatting with ruff
+chore [PROJ-110]: check formatting with ruff in CI
 
 - CI runs the ruff format hook on all files and fails when it would
   change one, so the old layout cannot come back.
@@ -61,7 +66,7 @@ chore(ci): check formatting with ruff
 `.git-blame-ignore-revs` at the repository root:
 
 ```
-# chore(billing): format all Python code with ruff
+# chore [PROJ-110]: format all Python code with ruff
 3f9c2a7d1e5b8a0c4f6e2d9b7a1c3e5f7a9b0c2d
 ```
 
@@ -150,9 +155,9 @@ docs [PROJ-141]: use httpx for outgoing HTTP calls
 ```
 
 **The tracking issue**, PROJ-140, is the epic of the migration. It holds the owner, the end date
-and the count, and each module's change is its own work item with one branch and one pull request
-([tickets.md](../project-management/tickets.md) sections 3 and 4). It records the count before each
-step:
+and the count, and each module's change is its own work item with its own branch and one open pull
+request at a time ([tickets.md](../project-management/tickets.md) sections 3 and 4). It records the
+count before each step:
 
 ```
 Migrate from requests to httpx

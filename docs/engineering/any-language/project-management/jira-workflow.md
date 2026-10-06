@@ -53,7 +53,7 @@ them, and the sources in section 1 only say that each status needs a written pol
 | Blocked | In progress | The item waits on someone outside the team (section 4) | The blocker is gone | The assignee |
 | Code Review | In progress | The pull request is open and ready for review | The pull request is merged and deployed to staging, or the reviewer asks for changes | The author |
 | Pre-prod | In progress | The change is merged and deployed to the pre-production (staging) environment | It is checked in staging against its acceptance criteria and deployed to production, or the check fails | The person who runs the release |
-| Done | Done | It is deployed to production and the Definition of Done is met | Never; a new problem is a new work item | Nobody |
+| Done | Done | It is deployed to production and the Definition of Done is met | Never; a new problem is a new work item. A rollback is such a problem: the rolled-back item stays Done, and its fix is a new Bug ([rollback-plan.md](rollback-plan.md) section 6) | Nobody |
 | Canceled | Done | The Product Owner decides the work will not be done (section 5) | Never | Nobody |
 
 Notes on the rows:
@@ -73,6 +73,13 @@ Notes on the rows:
   team with no staging environment drops Pre-prod, because no Jira template has such a status and
   an unused one only adds complexity. A team that drops Pre-prod moves an item from Code Review to
   Done when it is merged and deployed to production.
+- **A merged item that moves back or is canceled.** Once an item has moved from Code Review to
+  Pre-prod, its change is on main. Before the next production deploy, turn the change off with its
+  feature flag, or revert it on main with a pull request under the same key; the trap in reverting
+  a merge is in [git.md](../git/git.md) section 5. The fix for a failed staging check is a new
+  branch and pull request with the same key ([tickets.md](tickets.md) section 4). The reason:
+  otherwise the change ships with the next release although its item is not Done. The go or no-go
+  checklist carries the line for it ([release.md](release.md) section 3).
 - **Done.** It means deployed to production with the Definition of Done met. The Definition of Done
   names the production deploy ([tickets.md](tickets.md) section 2 owns that rule and its reason).
   Atlassian's own example of a Definition of Done stops earlier: "Product increment has been
@@ -195,6 +202,12 @@ Atlassian page. Open one cancelled item and confirm its Resolution field is fill
 workflow cannot set a resolution on that status, use the fallback: one Done status, and the
 resolution Won't Do for items that end without being done.
 
+This practice assumes a company-managed space ([jira-fields.md](jira-fields.md) section 4). In a
+team-managed space the workflow cannot set the resolution: Atlassian says "you don't have the option
+to manually set or view the Resolution field on those project types". There, add an Automation rule
+that sets the resolution Won't Do on the transition to Canceled. The reason: without it, every
+canceled item stays unresolved in filters and reports.
+
 Write a comment when you cancel (section 6): why the item is cancelled, and a link to the duplicate
 or to the decision. The reason: months later, the comment is the only record of why the work did not
 happen.
@@ -297,12 +310,18 @@ Not everyone splits. Zacharias calls a split of an unfinished item "a band-aid",
 its original points. This practice splits only when the done part stands alone, which is where the
 two views meet.
 
+An item in Pre-prod at the end of a sprint is not partly done, so none of the three ways applies.
+At Complete sprint it keeps its status and moves to the next sprint, and it counts in the sprint
+where it reaches Done. The reason: its work is finished and waits only for its version's release
+([release.md](release.md) section 3), and Jira's Complete sprint only moves open items, to the
+backlog, a future sprint or a new sprint, so the status stays as it is.
+
 A worked case, from the Acme Corp payments project of [project-example.md](project-example.md).
 On day 6 of a 10-day sprint, John Smith sees that `PROJ-135` will not finish. It is a story in Code
 Review:
 
 ```
-PROJ-135  Story    Epic: PROJ-10    Status: Code Review
+PROJ-135  Story    Parent: PROJ-10    Status: Code Review
 Show payment errors to the shopper
 As a shopper, I want to see why my payment failed so that I can try again or pay another way.
 
@@ -319,7 +338,7 @@ deployed, so the item is split.
 ```
 Split on day 6, in the backlog view (Split work item)
 
-PROJ-135  Story    Epic: PROJ-10    Status: Code Review -> Pre-prod -> Done after the production deploy
+PROJ-135  Story    Parent: PROJ-10    Status: Code Review -> Pre-prod -> Done after the production deploy
 Show payment errors to the shopper (English)
 As a shopper, I want to see why my payment failed so that I can try again or pay another way.
 1. A declined card shows the message "Your card was declined."
@@ -327,7 +346,7 @@ As a shopper, I want to see why my payment failed so that I can try again or pay
 Comment: Split on day 6. Translation (criterion 3) moves to PROJ-139, unchanged.
          Done part meets the Definition of Done on its own. Jane Doe agreed.
 
-PROJ-139  Story    Epic: PROJ-10    Status: Backlog    (linked to PROJ-135 by the split)
+PROJ-139  Story    Parent: PROJ-10    Status: Backlog    (linked to PROJ-135 by the split)
 Show payment errors in the shop's three languages
 As a shopper, I want the payment errors in my language so that I can read them.
 3. Both messages are shown in the shop's three languages.
@@ -356,7 +375,8 @@ says why, and criterion 3 appears in exactly one of them.
 - [Atlassian, "Link work items"](https://support.atlassian.com/jira-software-cloud/docs/link-issues/), undated: "blocks" and "is blocked by".
 - Atlassian, ["Watch, share and comment on a work item"](https://support.atlassian.com/jira-software-cloud/docs/watch-share-and-comment-on-an-issue/) and ["Voters, watchers, comment and attachment permissions"](https://support.atlassian.com/jira-cloud-administration/docs/voters-watchers-comment-and-attachment-permissions/), undated, read 2026-10-06, and ["Restrict the comment visibility in a team-managed project"](https://support.atlassian.com/jira/kb/restrict-the-comment-visibility-in-a-team-managed-project/), 2025-09-26: @mentions notify; who may add, edit and delete comments.
 - [Atlassian, "Use your scrum backlog"](https://support.atlassian.com/jira-software-cloud/docs/use-your-scrum-backlog/), undated: Split work item and what it copies.
-- [Atlassian, "Complete a sprint"](https://support.atlassian.com/jira-software-cloud/docs/complete-a-sprint/), undated: where unfinished items go.
+- [Atlassian, "Complete a sprint"](https://support.atlassian.com/jira-software-cloud/docs/complete-a-sprint/), undated, read 2026-10-06: where unfinished items go; the page describes a move only, with no change of status.
+- [Atlassian, "Set Resolution field for Team Managed project in Jira Cloud"](https://support.atlassian.com/jira/kb/set-resolution-field-for-team-managed-project-jira-issues/), knowledge base, 2025-09-26, read 2026-10-06: no resolution field in a team-managed space; an Automation rule on the transition sets it.
 - [Atlassian, "Definition of done"](https://www.atlassian.com/agile/project-management/definition-of-done), undated, read 2026-10-06: the staging example.
 - [Atlassian, "Bug report template"](https://www.atlassian.com/software/jira/templates/bug-report), undated, read 2026-10-06: expected against actual in comments.
 - Atlassian Community threads ["Canceled remain unresolved"](https://community.atlassian.com/forums/Jira-questions/Canceled-remain-quot-unresolved-quot/qaq-p/1754420), ["Multiple Done statuses vs Resolution"](https://community.atlassian.com/forums/Jira-questions/Multiple-quot-Done-quot-statuses-vs-quot-Resolution-quot-best/qaq-p/3169604) and ["Cancelled issues dragged on from sprint to sprint"](https://community.atlassian.com/t5/Jira-Software-questions/Cancelled-issues-dragged-on-from-sprint-to-sprint/qaq-p/1019310), undated or 2025 and later: a cancelled item stays unresolved without a resolution. Anecdotes, so the check in section 5 is to open one item in your own workflow.

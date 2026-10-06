@@ -54,10 +54,13 @@ be 90 percent sure of a maximum effort, "the actual probability is typically 60 
 - **Forecast a date from a range of past throughput, not one average.** Cohn forecasts with a range
   of velocity ("this team is likely to complete between 27 and 36 points per sprint") and writes "A
   useful agile forecast does not pretend to remove uncertainty." A team without points uses the
-  number of items it finished per sprint. Jira's reports forecast from an average (section 4); only
-  the version report adds an optimistic and a pessimistic line. Give the early and the late date,
-  and name the report and the sprints they come from, because two Jira reports can give the same
-  team two different dates.
+  number of items it finished per sprint. Jira's reports forecast from an average (section 4). The
+  version report's optimistic and pessimistic lines are not a range from past sprints: "The
+  'optimistic' date is calculated by adding 10% to the average daily velocity", and the pessimistic
+  date by subtracting 10% (Atlassian). So take the early date from the fastest of the named past
+  sprints and the late date from the slowest, because a fixed 10% band says nothing about how much
+  the team's own sprints vary. Give the early and the late date, and name the report and the
+  sprints they come from, because two Jira reports can give the same team two different dates.
 - **A team without sprints forecasts per item.** The Kanban Guide's Service Level Expectation is "A
   forecast of how long it should take a work item to flow from started to finished", with a
   probability, for example "85% of work items will be finished in eight days or less".
@@ -120,13 +123,16 @@ late item had.
 | See dependencies of one space | The Timeline, with "blocks" links | "A timeline can only show work items from one space."; finish-to-start only |
 | Plan across spaces and teams | Jira Plans: dependencies across spaces, capacity, scenarios | Premium and Enterprise only |
 | Past velocity, sprint by sprint | The velocity chart | Shows "the average amount of work a scrum team completes during a sprint"; read the spread yourself |
-| Forecast a release date | The version report shows a "Predicted Release Date ... based on your average daily velocity", with an optimistic and a pessimistic line; the release burndown predicts sprints from the last three sprints | Scrum boards; one average, so the two reports can disagree |
+| Forecast a release date | The version report shows a "Predicted Release Date ... based on your average daily velocity", with an optimistic and a pessimistic line at that average plus and minus 10%; the release burndown predicts sprints from the last three sprints | Scrum boards; one average, so the two reports can disagree; the two lines are a fixed band, not the spread of past sprints (section 2) |
 | Release on track in a plan | Jira Plans marks a release off track when "the sprint ends after the release date" | Uses sprint dates, not ranges |
 | Cycle time and its spread | The control chart: a rolling average, with the standard deviation shaded | No forecast; useful for a Kanban team's Service Level Expectation |
 | Critical path, float, schedule baseline | Not computed | No Jira help page describes them; Atlassian's guide to the critical path method defines the critical path and float, not a schedule baseline; the request "Add in Critical Path Analysis" (`JSWCLOUD-21122`) has been open since 2021 |
 
+The table is good because each row puts what Jira does next to its limit, so a reader sees what
+Jira will not compute before relying on it.
+
 Compute the critical path on the plan page, as a table, or in a spreadsheet, from the links in
-Jira. Keep the schedule baseline in the plan page's baseline column, as
+Jira. Keep the schedule baseline in the plan page's Original and Baseline columns, as
 [project-plan.md](project-plan.md) section 4 says, because Jira keeps none.
 
 ## 5. Sources

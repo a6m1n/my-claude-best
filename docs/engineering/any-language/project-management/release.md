@@ -34,7 +34,7 @@ Move every change through the same environments, in the same order: development,
 and production. These are the four environment types Jira's Deployments feature knows (Atlassian),
 so name the team's environments to match them, and Jira groups the deployments. A team may run
 development and testing as one. What staging is for, and the Pre-prod status that shows a change
-there, are in [workflow.md](workflow.md) section 2.
+there, are in [jira-workflow.md](jira-workflow.md) section 2.
 
 ## 3. Release criteria and the go or no-go decision
 
@@ -58,15 +58,43 @@ The checklist:
 
 | Criterion | Where the rule lives |
 |---|---|
-| Every work item in the version is in Pre-prod and meets every line of the Definition of Done except the production deploy | [workflow.md](workflow.md) section 2 (Pre-prod); [tickets.md](tickets.md) section 2 (the Definition of Done, which ends with the deploy). The Scrum Guide ties release to it: "If a Product Backlog item does not meet the Definition of Done, it cannot be released" |
-| No work item outside Pre-prod is left unresolved in the version, and the release page shows no warning | Jira (section 7); a Pre-prod item has no resolution until it is Done ([workflow.md](workflow.md) section 1) |
-| The change ran in staging | [workflow.md](workflow.md) section 2 |
+| Every work item in the version is in Pre-prod and meets every line of the Definition of Done except the production deploy | [jira-workflow.md](jira-workflow.md) section 2 (Pre-prod); [tickets.md](tickets.md) section 2 (the Definition of Done, which ends with the deploy). The Scrum Guide ties release to it: "If a Product Backlog item does not meet the Definition of Done, it cannot be released" |
+| No work item outside Pre-prod is left unresolved in the version, and the release page shows no warning | Jira (section 7); a Pre-prod item has no resolution until it is Done ([jira-workflow.md](jira-workflow.md) section 1) |
+| main holds no change of a work item outside this version, unless its feature flag is off or it is reverted | [jira-workflow.md](jira-workflow.md) section 2 |
+| The change ran in staging | [jira-workflow.md](jira-workflow.md) section 2 |
 | The rollback plan is written and was rehearsed | [rollback-plan.md](rollback-plan.md) sections 2 and 5 |
 | The way the release reaches users is chosen | Section 6 |
+
+The checklist is good because each line is one question the decider can answer yes or no, and points
+to the rule that owns it, the "pointers to more information" of the SRE checklist. The line on main
+is there because a change stays on main after its merge: when its work item moved back or was
+canceled, the change would otherwise ship with this release.
 
 The go or no-go decider and the rollback decider of [rollback-plan.md](rollback-plan.md) section 2
 may be the same person; who may decide what is in [roles-and-decisions.md](roles-and-decisions.md)
 section 5. A no-go keeps the version unreleased and names the criterion that failed.
+
+An emergency release takes a shorter path through the same checklist (this practice's own rule).
+Use it only for a fix rolled forward under an open incident ([rollback-plan.md](rollback-plan.md)
+section 3) or for a security patch, because in those two cases a delay costs more than the skipped
+checks. The same go or no-go decider decides, as for any release, so one person still owns the risk.
+The decider may skip the lines "The change ran in staging" and "The rollback plan is written and was
+rehearsed" when their time does not fit the SLA target ([sla.md](sla.md) section 4), or, for a
+security patch, the date it must be live by; the go line in the version's description names each
+skipped line and why, so a reader sees what was not checked. When the staging line is skipped, the
+item skips Pre-prod too and moves from Code Review to Done after the production deploy, as on a
+board with no staging ([jira-workflow.md](jira-workflow.md) section 2), so the first line of the
+checklist then asks only for the Definition of Done. Do the skipped checks afterwards in a work item
+linked to the incident ([tickets.md](tickets.md) section 5), or, for a security patch with no
+incident, to the patch's own work item, so they are not dropped once the pressure is off. The fix
+gets its own patch version (section 4), because a released version never changes.
+
+Atlassian describes the same trade. Emergency changes are "Those changes that must be implemented as
+soon as possible; to resolve an incident, roll back a deployment or implement a security patch", and
+"Emergency changes should be subject to the same testing, assessment, and authorization as normal
+changes, but sometimes it will be necessary to implement the change with less testing due to time
+constraints." A rollback, Atlassian's third case, is not a release here: it follows the rollback plan
+([rollback-plan.md](rollback-plan.md) section 2).
 
 Check: before you press Release in Jira, find the go or no-go line in the version's description.
 
@@ -147,4 +175,4 @@ work item.
 - Kubernetes, ["Performing a Rolling Update"](https://kubernetes.io/docs/tutorials/kubernetes-basics/update/update-intro/), undated, live.
 - Knight Capital Group, [Form 10-Q for the quarter ended 2012-06-30](https://www.sec.gov/Archives/edgar/data/0001060749/000119312512346917/d361681d10q.htm), filed with the SEC, 2012: the loss.
 - Securities and Exchange Commission, [In the Matter of Knight Capital Americas LLC, Release No. 34-70694](https://www.sec.gov/files/litigation/admin/2013/34-70694.pdf), 2013-10-16: the repurposed flag and the eight servers.
-- Atlassian: ["Set up your deployment integration"](https://support.atlassian.com/jira-cloud-administration/docs/set-up-your-deployment-integration/); ["Link GitHub workflows and deployments to Jira"](https://support.atlassian.com/jira-cloud-administration/docs/link-github-workflows-and-deployments-to-jira-issues/) (environment types); ["Release a version"](https://support.atlassian.com/jira-software-cloud/docs/release-a-version-in-your-classic-project/); ["Check the release status of a version"](https://support.atlassian.com/jira-software-cloud/docs/check-the-release-status-of-a-version/); ["Manage versions"](https://support.atlassian.com/jira-cloud-administration/docs/manage-versions/); ["Integrate with feature flags"](https://support.atlassian.com/jira-cloud-administration/docs/integrate-with-feature-flags/). All undated, read 2026-10-06.
+- Atlassian: ["Set up your deployment integration"](https://support.atlassian.com/jira-cloud-administration/docs/set-up-your-deployment-integration/); ["Link GitHub workflows and deployments to Jira"](https://support.atlassian.com/jira-cloud-administration/docs/link-github-workflows-and-deployments-to-jira-issues/) (environment types); ["Release a version"](https://support.atlassian.com/jira-software-cloud/docs/release-a-version-in-your-classic-project/); ["Check the release status of a version"](https://support.atlassian.com/jira-software-cloud/docs/check-the-release-status-of-a-version/); ["Manage versions"](https://support.atlassian.com/jira-cloud-administration/docs/manage-versions/); ["Integrate with feature flags"](https://support.atlassian.com/jira-cloud-administration/docs/integrate-with-feature-flags/); ["What are changes?"](https://support.atlassian.com/jira-service-management-cloud/docs/what-are-changes/) (emergency changes). All undated, read 2026-10-06.
