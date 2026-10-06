@@ -180,6 +180,7 @@ table cut:
             {invoice.customerUrl === null ? (
               invoice.customerName
             ) : (
+              // The address came from outside the application: only ExternalLink may link it (security.md section 3).
               <ExternalLink href={invoice.customerUrl}>{invoice.customerName}</ExternalLink>
             )}
           </th>

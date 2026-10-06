@@ -970,6 +970,7 @@ Good: the same line in `src/billing/pay-invoice/pay-invoice-form.tsx`, and the c
 [component-example.md](../components/component-example.md), "The form".
 
 ```tsx
+      {/* The note is HTML from outside: only SanitizedHtml may put it on the page (security.md section 4). */}
       {invoice.noteHtml === null ? null : <SanitizedHtml html={invoice.noteHtml} />}
 ```
 

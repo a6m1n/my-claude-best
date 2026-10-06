@@ -236,6 +236,7 @@ export function InvoiceList({ apiClient, today, renderPayLink }: InvoiceListProp
                 {invoice.customerUrl === null ? (
                   invoice.customerName
                 ) : (
+                  // The address came from outside the application: only ExternalLink may link it (security.md section 3).
                   <ExternalLink href={invoice.customerUrl}>{invoice.customerName}</ExternalLink>
                 )}
               </th>
@@ -408,6 +409,7 @@ export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormP
         Amount due: <span className="font-medium tabular-nums">{moneyText(invoice.amountCents)}</span>
       </p>
 
+      {/* The note is HTML from outside: only SanitizedHtml may put it on the page (security.md section 4). */}
       {invoice.noteHtml === null ? null : <SanitizedHtml html={invoice.noteHtml} />}
 
       <fieldset className="flex flex-col gap-2">
