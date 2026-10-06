@@ -26,7 +26,7 @@ incident there is no time to design the way back.
 |---|---|---|
 | Trigger | A measured deviation, such as the canary's error rate too far from the control, or an alert or a SEV 1 or 2 tied to the release | Google SRE |
 | Decider | One named person on call for the release, and one named backup, who decides when the decider does not answer within 15 minutes of being paged | This practice |
-| Steps | Redeploy the previous version, or turn the feature flag off | Fowler (ops toggles) |
+| Steps | Redeploy the previous version, or turn the feature flag off; the way back of each way to release is in [release.md](release.md) section 6 | Fowler (ops toggles) |
 | Data | What happens to data written since the release (section 4) | Fowler, Sadalage |
 | Time | The time from the alert to "restored" ([sla.md](sla.md) section 4), which holds the trigger window, the wait for the decider, the rollback itself and the restored window, fits inside the restore target | [sla.md](sla.md) |
 | Who is told | The people the plan names | This practice |

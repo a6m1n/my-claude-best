@@ -11,7 +11,8 @@ whether an artifact, a report or a meeting is worth its cost.
 - [3. Workload: see it and adapt it](#3-workload-see-it-and-adapt-it)
 - [4. The standards behind this practice](#4-the-standards-behind-this-practice)
 - [5. Jira as the tool](#5-jira-as-the-tool)
-- [6. Sources](#6-sources)
+- [6. A project, its limits and its success](#6-a-project-its-limits-and-its-success)
+- [7. Sources](#7-sources)
 
 ## 1. What project management is for
 
@@ -97,7 +98,7 @@ bodies do not name the same artifacts, so never write "all the certifications re
 |---|---|---|
 | PMI Lexicon of Project Management Terms v5.0 (PMI, 2026), the definitions behind the PMBOK Guide and the PMP | The PMI standard behind the PMP | Charter, plan, baseline, change control, WBS, work package, risk register, the five threat responses |
 | PMP exam content outline (PMI, July 2026 exam) | What the exam tests | "Create an integrated project management plan", "Break down scope", "Baseline a project schedule", "Maintain a risk register", "Execute the change control process" |
-| PRINCE2 7 (PeopleCert, 2023) | A project management method | The project initiation document (PID) as its charter-like document; manage by stages and by exception; six threat responses (a secondary source of unknown edition) |
+| PRINCE2 7 (PeopleCert, 2023) | A project management method | The project initiation document (PID) as its charter-like document; manage by stages and by exception; six threat responses (PeopleCert's PRINCE2 7 Quick Reference Guide) |
 | Scrum Guide (2020), behind CSM and PSM | The Scrum framework | The Definition of Done and a refined backlog; sprints if the team works in them; no charter, WBS or risk register |
 
 The PMBOK Guide 8th edition (2025) was read only through its table of contents.
@@ -131,13 +132,52 @@ deployment. A missing link means a key was left out of a name.
 This practice uses Jira because the reader's team does, and takes its rules from the standards of
 section 4.
 
-## 6. Sources
+## 6. A project, its limits and its success
 
-- [PMI Lexicon of Project Management Terms, version 5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: project, servant leadership, kanban board, tailoring, sponsor. Read as raw text on 2026-10-05.
-- [PMP Examination Content Outline, July 2026 exam](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf?rev=b618cf45573e4276a54151e7636c97bf), PMI, 2026.
+Before you write a charter, check that the work is a project. A project ends, and it makes a change:
+PRINCE2 7 calls it "a temporary organization that is created for the purpose of delivering one or
+more business products according to an agreed business case", and says that once the change is in
+place "business as usual resumes (in its new form), and the need for the project is removed"
+(PeopleCert, 2023). The PMP exam outline adds that "The temporary nature of a project indicates a
+beginning and an end". Work with no end, such as running a service or answering support requests,
+is operations: run it on the team's board, with an SLA where users depend on it
+([sla.md](sla.md)), and give it no charter. The reason: a charter, a baseline and a closure only
+mean something for work that ends. The PMI Lexicon defines no "operations", so the line between the
+two is drawn here from PRINCE2.
+
+Write the project's limits into the charter as constraints, and say which of them is fixed. PMI
+defines a constraint as "A limiting factor that affects the execution of a portfolio, program,
+project, or process." (PMI Lexicon, 2026) The PMP exam outline calls "schedule, budget, and scope"
+the "traditional metrics" of project success, and PRINCE2 7 sets tolerances for seven performance
+targets: benefits, cost, time, quality, scope, sustainability and risk (PeopleCert, 2023). Neither
+PMI's Lexicon nor any other standard read for this practice defines a "triple constraint". When one
+of them is fixed, a change must come out of another, so the charter names the fixed one (this
+practice's own). The reason: a team that knows the date is fixed cuts scope when work runs late,
+and a team that does not know asks for more time, or quietly cuts quality. PRINCE2 7 states the quality target as "What is delivered by the project
+must be fit for purpose." (PeopleCert, 2023) PMI's Lexicon has no entry for quality itself. This
+practice measures quality by the acceptance criteria and the Definition of Done of each work item
+([tickets.md](tickets.md) section 2), and by the charter's success criteria (this practice's own).
+
+Judge success by the value of the result, against the charter's success criteria, not by the
+schedule alone. PMI defines project success as "The consensus view across intended beneficiaries,
+other stakeholders, and project participants that a project was perceived to have delivered value
+that was worth the effort and expense." (PMI Lexicon, 2026), and PMBOK 7 says "Value is the ultimate
+indicator of project success." Schedule, budget and scope stay in the picture as the traditional
+metrics above, but they are not the whole of it. The success criteria are written in the
+charter ([charter.md](charter.md) section 2), and the sponsor accepts the result against them at
+closure ([life-cycle.md](life-cycle.md) section 2).
+
+Check: before you write a charter, ask what change the work delivers and when it ends. If it has
+neither, it is operations.
+
+## 7. Sources
+
+- [PMI Lexicon of Project Management Terms, version 5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: project, servant leadership, kanban board, tailoring, sponsor, constraint, project success; no entry for operations or quality. Read as raw text on 2026-10-05 and 2026-10-06.
+- [PMP Examination Content Outline, July 2026 exam](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf?rev=b618cf45573e4276a54151e7636c97bf), PMI, 2026: a beginning and an end; schedule, budget and scope as traditional metrics.
+- PeopleCert, [PRINCE2 7 Foundation Quick Reference Guide](https://www.nilc.co.uk/wp-content/uploads/2023/10/PRINCE2-Quick-Reference-Guide.pdf), 2023, and [PRINCE2 7 Foundation sample paper 1 with rationales](https://www.serview.de/fileadmin/redakteur/medien/downloads/Musterpr%C3%BCfungen_f%C3%BCr_neuen_Downloadbereich/P2-7_FND_SamplePaper1_Rationales_v1-1_EN.pdf), official training PDFs hosted by training organisations: the project definition, business as usual, the seven performance targets, the quality target.
 - [PMBOK Guide eighth edition, table of contents](https://www.pmi.org/-/media/pmi/documents/public/pdf/publications/pmbok-guide-eighth-edition_table-of-contents.pdf), PMI, 2025: six principles and seven performance domains. The full text is paid, so this folder takes its definitions from the free PMI Lexicon.
-- [PMBOK 7 "12 project management principles"](https://www.pmi.org/-/media/pmi/documents/public/pdf/pmbok-standards/12-project-management-principles.pdf?rev=03749f118ff84aca97a64af1d49bb1ac), PMI, 2021: tailoring principle ("just enough" process). Edition 7, not 8.
-- [PRINCE2 7 Foundation](https://www.peoplecert.org/browse-certifications/project-programme-and-portfolio-management/PRINCE2-2/PRINCE2-7-foundation-3579), PeopleCert, current: syllabus areas. PRINCE2 7 launched in September 2023 ([PRINCE2 blog](https://www.prince2.com/usa/blog/what-is-prince2-version-7-and-what-changed-from-6th-edition), 2026-09-16); the PID is described in [its beginner's guide](https://www.prince2.com/usa/blog/a-beginners-guide-to-the-project-initiation-document-pid-what-is-it-and-why-does-it-matter) (2025-08-19). These are secondary pages, not the paid PeopleCert text. The six threat responses also come from a secondary source, because the PeopleCert text is paid.
+- [PMBOK 7 "12 project management principles"](https://www.pmi.org/-/media/pmi/documents/public/pdf/pmbok-standards/12-project-management-principles.pdf?rev=03749f118ff84aca97a64af1d49bb1ac), PMI, 2021: tailoring principle ("just enough" process); value as the indicator of success. Edition 7, not 8.
+- [PRINCE2 7 Foundation](https://www.peoplecert.org/browse-certifications/project-programme-and-portfolio-management/PRINCE2-2/PRINCE2-7-foundation-3579), PeopleCert, current: syllabus areas. PRINCE2 7 launched in September 2023 ([PRINCE2 blog](https://www.prince2.com/usa/blog/what-is-prince2-version-7-and-what-changed-from-6th-edition), 2026-09-16); the PID is described in [its beginner's guide](https://www.prince2.com/usa/blog/a-beginners-guide-to-the-project-initiation-document-pid-what-is-it-and-why-does-it-matter) (2025-08-19). These are secondary pages, not the paid PeopleCert text. The six threat responses come from PeopleCert's own Quick Reference Guide, listed below.
 - [The Scrum Guide](https://scrumguides.org/scrum-guide.html), Schwaber and Sutherland, November 2020: Definition of Done, and the absence of the other artifacts. [CSM](https://www.scrumalliance.org/get-certified/scrum-master-track/certified-scrummaster) teaches the Scrum framework.
 - [Netflix culture page](https://jobs.netflix.com/culture), undated, and [the culture memo post](http://about.netflix.com/en/news/sharing-our-latest-culture-memo), 2024-06-24.
 - [Agile Manifesto principles](https://agilemanifesto.org/principles.html), 2001: principles 5 and 8.

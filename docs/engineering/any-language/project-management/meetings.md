@@ -298,18 +298,21 @@ This practice's own rule: a team without sprints keeps a daily board review, wal
 right to left as in section 5, and a regular retrospective, and it refines when the Backlog runs
 low. The reasons: the daily review keeps the age of items visible, the retrospective changes how
 the team works, and refining on need keeps the Backlog from growing stale. Where the Kanban Guide
-lists no cadence, the team picks it, and writes it down.
+lists no cadence, the team picks it, and writes it down. When a team should work without sprints
+is in [life-cycle.md](life-cycle.md) section 4.
 
 ## 10. PRINCE2 and PMBOK: reports, not meetings
 
-PRINCE2 prescribes reports and stage decisions, not team meetings. A Checkpoint Report goes out at
-the frequency the Work Package sets, and a Highlight Report goes to the Project Board (a
-secondary source, prince2.wiki, of unknown edition). PMI defines the kickoff meeting and the
-daily coordination meeting (section 3 and section 5).
+PRINCE2 prescribes reports and stage decisions, not team meetings. In PRINCE2 7 a Checkpoint Report
+goes from the team manager to the project manager "at a frequency defined in the work package", and
+the project manager issues a Highlight Report to the project board "at intervals defined by them"
+(PeopleCert's PRINCE2 7 sample paper). PMI defines the kickoff meeting and the daily coordination
+meeting (section 3 and section 5).
 
 No standard read for this practice requires a weekly status meeting. The check of
 [principles.md](principles.md) section 2 applies to any such meeting: write "We will decide X
-from this", and if you cannot, do not hold it.
+from this", and if you cannot, do not hold it. The weekly written status update that takes its place
+is in [communication.md](communication.md) section 2.
 
 ## 11. Sources
 
@@ -327,4 +330,5 @@ from this", and if you cannot, do not hold it.
 - [Cohn, "What happens when during a sprint"](https://www.mountaingoatsoftware.com/agile/what-happens-when-during-a-sprint), undated: the order in a two-week sprint.
 - [Hammarberg, "Comments on board practices 7"](https://www.marcusoft.net/2017/03/comments-on-board-practices-7.html), 2017-03-04: walk the board right to left.
 - [Scrum.org, "Daily Scrum tips and tactics"](https://www.scrum.org/resources/blog/daily-scrum-tips-tactics), undated, seen as a search snippet only: the same walk.
-- [prince2.wiki, "Work Package"](https://prince2.wiki/management-products/baselines/work-package/), undated, a secondary source: reporting arrangements; checkpoint and highlight reports.
+- [prince2.wiki, "Work Package"](https://prince2.wiki/management-products/baselines/work-package/), undated, a secondary source: reporting arrangements.
+- PeopleCert, [PRINCE2 7 Foundation sample paper 1 with rationales](https://www.serview.de/fileadmin/redakteur/medien/downloads/Musterpr%C3%BCfungen_f%C3%BCr_neuen_Downloadbereich/P2-7_FND_SamplePaper1_Rationales_v1-1_EN.pdf), 2023, an official training PDF hosted by a training organisation: checkpoint and highlight reports.

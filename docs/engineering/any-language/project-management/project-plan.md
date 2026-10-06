@@ -33,10 +33,11 @@ say gets one line. A long plan is not kept current, and a stale plan misleads.
 | Part | What it says | Where the detail lives |
 |---|---|---|
 | Scope | The deliverables and the work to make them | [wbs.md](wbs.md) |
-| Schedule | Milestones, and dates for the work near now | Section 3 |
-| Roles and resources | Who owns which deliverable, who is on the team | The WBS dictionary entries |
+| Development approach | Predictive, adaptive or hybrid, for each deliverable, and why | [life-cycle.md](life-cycle.md) section 4 |
+| Schedule | Milestones, and dates for the work near now | Section 3; dependencies, estimates and the critical path in [schedule.md](schedule.md) |
+| Roles and resources | Who owns which deliverable, who is on the team, who decides what | The WBS dictionary entries; [roles-and-decisions.md](roles-and-decisions.md) |
 | Risks | The top risks and who owns them | [risks.md](risks.md) |
-| Communication | Who hears what, how often, in which channel | This page |
+| Communication | Who hears what, how often, in which channel; the escalation path | [communication.md](communication.md) |
 | Change control | How a change to scope, schedule or budget is approved | Section 4 |
 
 As a cross-check, PRINCE2 says a project plan covers the project's products, major activities,
@@ -58,6 +59,9 @@ In Jira, keep the schedule in the Timeline, so the plan and the work are one thi
 - A milestone is a version (the Fix version field) with a planned release date. The Releases
   feature shows how much work in a version is done.
 - A plan across several spaces needs Jira Plans ([wbs.md](wbs.md) section 7).
+
+How to link the work that waits, estimate it and find the critical path is in
+[schedule.md](schedule.md).
 
 ## 4. Baseline and change control
 

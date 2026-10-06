@@ -38,14 +38,28 @@ plan. Each part below is a short section of the page.
 
 | Part | What to write | Why it is there |
 |---|---|---|
-| Purpose | Why the project exists, in two or three sentences | A team that knows the reason can judge a change |
+| Purpose and business need | The problem or opportunity the project answers, in two or three sentences | A team that knows the reason can judge a change |
 | Objectives and success criteria | Measurable goals, each with the number that shows it is met | A goal nobody can measure cannot be called done |
 | Scope | What is in and what is out, at high level | The WBS ([wbs.md](wbs.md)) is cut from this boundary |
 | People | Sponsor, project manager and the project manager's authority | The authority is the point of the document |
-| Stakeholders and approvers | Who must agree, and on what | Approvals found late delay the project |
+| Stakeholders and approvers | Who must agree, and on what; the full list goes to the [stakeholder register](stakeholders.md) | Approvals found late delay the project |
 | Key milestones | Dates of the big steps, not tasks | The plan starts its schedule from them |
 | Budget summary | One total, or one range | The limit the plan must fit |
-| Top risks and assumptions | The few that could stop the goal | They seed the [risk register](risks.md) |
+| Constraints | The limits the project works within, and which of them is fixed ([principles.md](principles.md) section 6) | A team that knows what is fixed knows what to cut when work runs late |
+| Assumptions | What the plan takes as true without proof, each with a date by which it must be confirmed | An assumption that turns out false is a risk that has already happened |
+| Top risks | The few that could stop the goal | They seed the [risk register](risks.md) |
+
+PMI defines the business need as "The impetus for a change in an organization, based on an existing
+problem or opportunity. The business need provides the rationale for initiating a program or
+project." (PMI Lexicon, 2026)
+
+PMI defines an assumption as "A factor in the planning process considered to be true, real, or
+certain, without proof or demonstration.", and keeps both in an assumption log: "A project document
+used to record all assumptions and constraints throughout the project." (PMI Lexicon, 2026)
+Atlassian's project poster gives the reason to write them down: "Unidentified and unvalidated
+assumptions can significantly contribute to project failures." The date on each assumption is this
+practice's own: an assumption with no date to check it by stays untested until it fails. When one is
+proved false, it goes to the [risk register](risks.md) as an issue.
 
 A filled charter for one project is in [project-example.md](project-example.md) section 2.
 
@@ -79,7 +93,8 @@ types is not settled in the docs, so link the deliverable epics and nothing else
 
 ## 6. Sources
 
-- [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: project charter, sponsor.
+- [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: project charter, sponsor, business need, assumption, assumption log.
+- [Atlassian Team Playbook, "Project poster"](https://www.atlassian.com/team-playbook/plays/project-poster), undated: unvalidated assumptions.
 - [Atlassian, project charter](https://www.atlassian.com/work-management/project-management/project-planning/project-charter), undated, read 2026-10-05: content, mistakes, project poster.
 - [PRINCE2, guide to the PID](https://www.prince2.com/usa/blog/a-beginners-guide-to-the-project-initiation-document-pid-what-is-it-and-why-does-it-matter), updated 2026-05-27, and [guide to project briefs](https://www.prince2.com/usa/blog/a-guide-to-project-briefs), 2020-10-30.
 - [PMP examination content outline](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf), July 2026 exam: no use of "charter".

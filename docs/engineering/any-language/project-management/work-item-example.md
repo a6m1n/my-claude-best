@@ -35,6 +35,7 @@ Done when: with the flag off every payment goes to the old provider, and at 100%
 Child work items
 - PROJ-123  Story  Route card payments by flag
 - PROJ-131  Bug    Saved-card payment ignores the flag
+- PROJ-150  Task   Remove the routing flag once all traffic is on the new provider   # made with the flag, so the flag does not outlive the move (release.md section 6)
 - ...              # the rest are cut when their version is one release away (wbs.md section 5)
 ```
 

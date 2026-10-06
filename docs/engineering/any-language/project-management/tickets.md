@@ -132,7 +132,8 @@ A filled branch and commit are in [project-example.md](project-example.md) secti
 
 - Release: put each work item in the Fix version of the release that ships it. A version is "a set
   of features and fixes released together as a single update to your app" (Atlassian). The release
-  page then shows how much work is done.
+  page then shows how much work is done. What a release needs before it ships is in
+  [release.md](release.md) section 3.
 - Dependencies: link with "blocks" and "is blocked by". Use "relates to" for any other connection. A
   reader then sees at once what waits for what.
 - Smart commits: a commit message can add a comment to a work item or move it to the next status.

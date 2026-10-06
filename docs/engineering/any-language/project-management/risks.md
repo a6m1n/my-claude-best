@@ -1,8 +1,9 @@
 # Risks
 
 A risk is something that might happen and would change whether the project reaches its goal. This
-file says how to record risks, rank them, answer them and review them. Read it in the planning
-phase, when you create the register, and again at each weekly review and phase end. The
+file says how to record risks, rank them, answer them, plan for the moment one happens, and review
+them. Read it in the planning phase, when you create the register, and again at each weekly review
+and phase end. The
 [project plan](project-plan.md) links the register; a threat that has happened becomes a work item
 ([tickets.md](tickets.md)).
 
@@ -13,9 +14,10 @@ phase, when you create the register, and again at each weekly review and phase e
 - [3. The score ranks attention](#3-the-score-ranks-attention)
 - [4. One owner per risk](#4-one-owner-per-risk)
 - [5. The five threat responses](#5-the-five-threat-responses)
-- [6. Review](#6-review)
-- [7. Find risks early](#7-find-risks-early)
-- [8. Sources](#8-sources)
+- [6. Contingency plans and reserves](#6-contingency-plans-and-reserves)
+- [7. Review](#7-review)
+- [8. Find risks early](#8-find-risks-early)
+- [9. Sources](#9-sources)
 
 ## 1. Terms
 
@@ -98,11 +100,41 @@ clear: they know whether to remove the threat, shrink it, pass it on or only wat
   unless it occurs. Acceptance of the risk's implication(s) usually means using schedule and/or
   cost reserves and accepting scope and/or quality reduction(s)."
 
-Mitigation is one of the five, not a general word for any action. PRINCE2 names six responses:
-avoid, reduce, fallback, transfer, accept and share (a secondary source; PeopleCert's own text is
-paywalled). The PMP exam outline names no threat strategies.
+Mitigation is one of the five, not a general word for any action. PRINCE2 7 names six responses to
+a threat: avoid, reduce, transfer, share, accept, and "prepare contingent plans" (PeopleCert, PRINCE2
+7 Quick Reference Guide, 2023). Pages that list "fallback" in place of the last one describe the
+2017 edition. The PMP exam outline names no threat strategies.
 
-## 6. Review
+## 6. Contingency plans and reserves
+
+For each open threat with an impact of 4 or 5, write a contingency plan when you choose its
+response: the first actions the owner takes when the trigger fires, who takes them, and what they
+cost in time or money. Put it in the Actions column, or link a page from there. PMI defines a
+contingency plan as "A document that describes actions to take if predetermined trigger conditions
+occur." (PMI Lexicon, 2026) The register's Trigger column is that condition. The reason: a plan made
+before the trigger fires is made calmly, and one made after it is made during the damage. PRINCE2 7
+counts "prepare contingent plans" as a response of its own (section 5).
+
+Keep time and money for risks in two reserves, and keep them apart (PMI Lexicon, 2026):
+
+| Reserve | PMI's definition | Where it sits | Who releases it |
+|---|---|---|---|
+| Contingency reserve | "Time or money allocated in the schedule or cost baseline for known risks with active response strategies." | Inside the baseline | The project manager, inside the tolerance of [project-plan.md](project-plan.md) section 4 (this practice's own) |
+| Management reserve | "Time or money that management sets aside in addition to the schedule or cost baseline and releases for unforeseen work that is within the scope..." | Outside the baseline | The sponsor |
+
+Name in the register the risk each part of the contingency reserve is for, and keep it out of the
+estimates of single work items (this practice's own). The reason: a reserve spread inside every
+estimate cannot be seen, so nobody can tell when it is used up.
+
+When a threat happens and no plan exists, or the plan does not work, the first answer is a
+workaround: "An immediate and temporary response to a realized risk for which a prior response has
+not been planned or was not effective." (PMI Lexicon, 2026) Record it in the work item that the
+happened risk becomes (section 7), and add the risk behind it to the register.
+
+Check: at the review, ask whether each open threat with an impact of 4 or 5 has a trigger and a
+contingency plan.
+
+## 7. Review
 
 Review the top risks every week, and the whole register at each phase end. Atlassian's template
 asks for a weekly "top 5" list and reviews at milestones, so the register is read while it can
@@ -116,19 +148,19 @@ A response can cause a new risk (PMI: a secondary risk, "A risk that arises as a
 implementing a risk response") and leave some risk behind (a residual risk, "The risk that remains
 after risk responses have been implemented"). Add both to the register as new rows, so each new or remaining risk has an owner too.
 
-## 7. Find risks early
+## 8. Find risks early
 
 In planning, run a pre-mortem with the team: imagine the project has failed, and write down why.
 This finds risks while the plan can still change. Atlassian's Team Playbook describes it as thinking
 about "what could happen in a project - good or bad - and make a plan before it starts." Each
 action that comes out gets an owner and a deadline, or it is not an action.
 
-## 8. Sources
+## 9. Sources
 
-- [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: risk, threat, issue, risk register, risk owner, the five responses, secondary and residual risk.
+- [PMI Lexicon of Project Management Terms, v5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: risk, threat, issue, risk register, risk owner, the five responses, secondary and residual risk, contingency plan, contingency reserve, management reserve, workaround.
 - [PMP examination content outline](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf), July 2026 exam: register, risk becomes issue, no threat strategies.
 - [PMBOK 7, the 12 project management principles (PDF)](https://www.pmi.org/-/media/pmi/documents/public/pdf/pmbok-standards/12-project-management-principles.pdf?rev=03749f118ff84aca97a64af1d49bb1ac), 2021: risk principle.
 - [Atlassian, Confluence risk register template](https://www.atlassian.com/software/confluence/templates/risk-register), undated: columns, weekly top 5.
 - [Atlassian Team Playbook, pre-mortem](https://www.atlassian.com/team-playbook/plays/pre-mortem), undated.
 - [Cox, What's wrong with risk matrices?, Risk Analysis, 2008](https://onlinelibrary.wiley.com/doi/10.1111/j.1539-6924.2008.01030.x): read from the abstract.
-- [PRINCE2 threat responses](https://prince2.wiki/practices/risk/), undated, secondary source.
+- PeopleCert, [PRINCE2 7 Foundation Quick Reference Guide](https://www.nilc.co.uk/wp-content/uploads/2023/10/PRINCE2-Quick-Reference-Guide.pdf), 2023, an official training PDF hosted by a training organisation: the six threat responses.

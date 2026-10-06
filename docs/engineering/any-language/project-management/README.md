@@ -23,20 +23,31 @@ sources behind them, are in [principles.md](principles.md).
 
 - [principles.md](principles.md): what project management is for, what it never does (micromanage,
   track for its own sake), how to see and limit workload, which standard names which artifact, and
-  why Jira is the tool. Read it before you open a project, and when you doubt whether an artifact
-  or a report is worth its cost.
+  why Jira is the tool, and what a project is, what limits it and what its success means. Read it
+  before you open a project, and when you doubt whether an artifact or a report is worth its cost.
+- [operating-system.md](operating-system.md): how the artifacts below work as one loop, the rhythm
+  that keeps them current, and which conditional artifacts a project keeps. Read it when you
+  start a project and choose its artifacts, and when someone asks what happens when.
 - [life-cycle.md](life-cycle.md): the five phases of a project, the artifact each one ends with and
   who approves it, and the seven SDLC phases each release passes through, with their Jira homes.
-  Read it when you start a project, a phase or a release, and when you decide whether a phase is
-  over.
+  Read it when you start a project, a phase or a release, when you decide whether a phase is
+  over, and when you pick the development approach.
 - [charter.md](charter.md): the project charter, what it holds, who issues it, and how it differs
   from the plan. Read it when you open a project.
+- [stakeholders.md](stakeholders.md): the stakeholder register, influence and interest, and
+  engagement now and wanted. Read it in initiation, before the kickoff, and at each phase end.
+- [roles-and-decisions.md](roles-and-decisions.md): the roles, one Accountable per deliverable in
+  the RACI matrix, who decides what, DACI and the decision log. Read it when you assign the
+  deliverables, and before a decision that is hard to undo.
 - [project-plan.md](project-plan.md): the project plan, its schedule (the Gantt chart, the Jira Timeline), its baseline and how it
   stays current. Read it when you plan a project, or change its scope or schedule.
+- [schedule.md](schedule.md): dependencies and what Jira can draw, estimates in ranges, and the
+  critical path when a date is fixed. Read it when you plan the schedule, link work that waits, or
+  give a date.
 - [wbs.md](wbs.md): the work breakdown structure, its rules, and how it maps to epics, work items
   and subtasks in Jira. Read it when you break the scope into work.
-- [risks.md](risks.md): the risk register, the scoring, the five ways to respond to a threat (mitigation is one of them)
-  and the review. Read it when you open the register, add a risk or review the register.
+- [risks.md](risks.md): the risk register, the scoring, the five ways to respond to a threat (mitigation is one of them),
+  contingency plans and reserves, and the review. Read it when you open the register, add a risk or review the register.
 - [tickets.md](tickets.md): what a work item holds, how big it is, how it links to a branch, a pull
   request and a release. Read it when you write or triage a work item.
 - [work-item-types.md](work-item-types.md): the five Jira work types, story or epic, task or
@@ -49,8 +60,14 @@ sources behind them, are in [principles.md](principles.md).
   when you move a work item, comment on one, or set up a board.
 - [meetings.md](meetings.md): the kickoff and the sprint meetings, their order, cadence and
   timebox, and who speaks in what order. Read it when you plan or run a team meeting.
+- [communication.md](communication.md): the communication plan, the weekly status update and its
+  three markers, the escalation path, and management by exception. Read it when you plan who hears
+  what, each week when you write the update, and when a forecast leaves the tolerance.
 - [sla.md](sla.md): what an SLA is, how it differs from an SLO, severity levels, and what "fixed"
   means in it. Read it when you agree or change an SLA.
+- [release.md](release.md): what a release is, environments, the go or no-go decision, version
+  numbers, CI/CD, and how a release reaches users. Read it when you plan a release and before you
+  mark a version released.
 - [rollback-plan.md](rollback-plan.md): the rollback plan of a release, its trigger, owner and
   steps, and how data changes are handled. Read it when you plan a release.
 - [project-example.md](project-example.md): one small project with every artifact filled in, with
@@ -60,8 +77,9 @@ sources behind them, are in [principles.md](principles.md).
 
 1. Copy this folder into your repository at `docs/engineering/any-language/project-management/`.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you open a project, plan or change its
-   scope or schedule, write, triage or move a work item, plan a release or its rollback, agree an
-   SLA, or run a team meeting, read `docs/engineering/any-language/project-management/README.md`
+   scope or schedule, write a stakeholder register, a RACI matrix or a status update, make a
+   decision that is hard to undo, write, triage or move a work item, plan a release or its rollback,
+   agree an SLA, or run a team meeting, read `docs/engineering/any-language/project-management/README.md`
    and the file it points to."
    Without it an agent never opens the folder.
 3. In Jira, turn on releases and versions. This adds the Fix versions field that
@@ -82,3 +100,7 @@ sources behind them, are in [principles.md](principles.md).
 - The board's statuses: a team with no pre-production environment drops Pre-prod
   ([workflow.md](workflow.md) section 2).
 - The sprint length, which sets every meeting's timebox ([meetings.md](meetings.md) section 2).
+- What each status marker means, in ten words or fewer ([communication.md](communication.md) section 3).
+- Who is on the escalation path, and how fast each level answers ([communication.md](communication.md) section 4).
+- The engagement scale of the stakeholder register ([stakeholders.md](stakeholders.md) section 4).
+- Which conditional artifacts a project keeps ([operating-system.md](operating-system.md) section 3).
