@@ -79,8 +79,8 @@ against, neutral, supports, leads.
 | Jane Doe, sponsor | Checkout not tied to one provider; cost inside the budget | High | High | supports → leads | Weekly update, exception notes, every Sprint Review | John Smith |
 | Head of security, approver of the provider contract | Card data handled as the contract and the law require | High | Low | neutral → supports | A briefing before the contract is signed; milestone updates | John Smith |
 | Customer support lead | Fewer failed-payment tickets; the cut-over dates in advance | Low | High | does not know → supports | Weekly update, Sprint Review | Mary Major |
-| Finance | Provider fees inside the quote | Low | Low | neutral → neutral | Weekly update | John Smith |
-| Account manager at Globex, the new provider | The go-live date and the volume | High | High | supports → supports | A shared channel; each milestone | Richard Roe |
+| Finance; the finance controller speaks for it | Provider fees inside the quote | Low | Low | neutral → neutral | Weekly update | John Smith |
+| Account manager at Globex, the new provider | The go-live date and the volume | High | High | supports → supports | A shared channel; each milestone; every Sprint Review | Richard Roe |
 
 Actions for the gaps, each with an owner and a date ([stakeholders.md](stakeholders.md) section 4):
 
@@ -106,9 +106,9 @@ Written in planning, after the charter, and baselined by Jane Doe on 2026-11-16.
 | Scope | Three deliverables, listed in section 4 |
 | Development approach | Chosen per deliverable ([life-cycle.md](life-cycle.md) section 4). Adaptive, in two-week sprints, for `PROJ-10`, `PROJ-12` and the flag code of `PROJ-11` (2.1), because the provider's API and the old payment records will show the team things the charter could not know. Predictive, as dated milestones, for the traffic steps of `PROJ-11` (2.2 to 2.4) and the provider contract, because their order and dates are agreed with the provider in advance |
 | Schedule | Four milestones as Jira versions (below), shown on the Timeline of `PROJ` |
-| Roles and resources | `PROJ-10` John Smith, `PROJ-11` Richard Roe, `PROJ-12` Mary Major; the payments team of four; the RACI matrix and deciders below |
+| Roles and resources | `PROJ-10` John Smith, `PROJ-11` Richard Roe, `PROJ-12` Mary Major; the payments team of four, with John Smith also the Product Owner and Mary Major the Scrum Master; the RACI matrix and deciders below |
 | Risks | The register in section 5, a Confluence page linked to `PROJ-10`, `PROJ-11` and `PROJ-12` |
-| Communication | The team uses the `PROJ` board daily; a status update every Friday (below); escalation from a Developer to John Smith to Jane Doe, who answers an exception note within one working day |
+| Communication | The team uses the `PROJ` board daily; a status update every Friday (below); escalation from a Developer to John Smith, who answers the same working day, and from him to Jane Doe, who answers an exception note within one working day |
 | Change control | A change request is a work item; a milestone may move up to one week from its baseline date on John Smith's decision, a larger move goes to Jane Doe (below) |
 
 Milestones, each a version with a planned release date:
@@ -151,9 +151,11 @@ The plan is good because the baseline date stays next to the current one, so eve
 
 Artifacts kept ([operating-system.md](operating-system.md) section 3): every artifact the rule files
 ask for, each kept short, plus the conditional ones whose condition holds here: the critical path
-(the date of `PROJ 1.0` waits on the provider's test environment, a date set outside the team),
+(`PROJ 1.0` has a fixed date, 2027-02-12, set by the change request `PROJ-127`, and its test payments wait on two other work packages),
 contingency plans for R-1 and R-2 (impact 5 and 4), a DACI page for D-3 (moving payment traffic is
 hard to undo), and an exception note when the marker turned Off track.
+
+The list is good because each conditional artifact names the condition that holds for it, so a reader can check the choice against the project ([operating-system.md](operating-system.md) section 3).
 
 ### Roles and decisions
 
@@ -173,7 +175,11 @@ WBS dictionary entry in section 4, so the two never disagree.
 Deciders ([roles-and-decisions.md](roles-and-decisions.md) section 5): a milestone move of up to one
 week, John Smith; a larger move, Jane Doe; signing the provider contract, Jane Doe, after the head of
 security agrees to the data clauses; go or no-go for each release, Richard Roe; a rollback, the
-decider of section 8.
+decider of section 8; the order of the Product Backlog and canceling a work item, John Smith as
+Product Owner. The other kinds follow the defaults of
+[roles-and-decisions.md](roles-and-decisions.md) section 5.
+
+The list is good because each kind of decision has one name, so nobody waits for a second decider ([roles-and-decisions.md](roles-and-decisions.md) section 5).
 
 One entry of the decision log, a Confluence page from the DACI template
 ([roles-and-decisions.md](roles-and-decisions.md) sections 6 and 7):
@@ -182,6 +188,7 @@ One entry of the decision log, a Confluence page from the DACI template
 D-3  2026-11-09  Move traffic by the routing flag in steps (1%, 10%, all), not in one night
 Driver: John Smith. Approver: Jane Doe. Contributors: Richard Roe, head of security.
 Informed: customer support lead.
+Due: 2026-11-13, before the plan is baselined on 2026-11-16.
 Options: one night for all traffic; steps by flag; split by card brand.
 Reason: the flag turns traffic back in minutes, and one night has no way back without
 a new deploy (rollback-plan.md section 2).   # the reason is what a later reader cannot rebuild
@@ -194,20 +201,20 @@ the epic that carries it out.
 ### Schedule and critical path
 
 Drawn on 2026-12-21 with the change request `PROJ-127`, after the provider's test environment opened
-late. Days are working days from 2026-12-21, with the team off from 2026-12-24 to 2027-01-01, and each
+late. It runs to `PROJ 1.0`, the fixed date the work below leads to; the later milestones keep their planning packages (section 4) until their work is cut. Days are working days from 2026-12-21, with the team off from 2026-12-24 to 2027-01-01, and each
 duration is the high end of its range; float is counted to the end of the path, day 32
 ([schedule.md](schedule.md) sections 2 and 3):
 
 | Work package | Waits on | Days | Finishes on day | Float (days) |
 |---|---|---|---|---|
-| 2.1 Flag and routing code | — | 4 | 4 (2027-01-04) | 3 |
+| 2.1 Flag and routing code | — | 3 | 3 (2026-12-23) | 4 |
 | 3.2 Write the provider on each payment | — | 7 | 7 (2027-01-07) | 0 |
 | 1.3 Test payments in staging | 2.1, 3.2 | 12 | 19 (2027-01-25) | 0 |
 | 1.4 Load test at 2x peak | 1.3 | 8 | 27 (2027-02-04) | 0 |
 | The week of reserve named in R-3 (section 5) | 1.4 | 5 | 32 (2027-02-11) | — |
 
 The critical path is 3.2, 1.3, 1.4 and the reserve; it ends on 2027-02-11, one day before the new
-date of `PROJ 1.0 test payments`, 2027-02-12. A slip of up to three days in 2.1 moves nothing on the
+date of `PROJ 1.0 test payments`, 2027-02-12. A slip of up to four days in 2.1 moves nothing on the
 path. A slip in 3.2, 1.3 or 1.4 first uses the week of reserve and the one spare day; only a slip of
 more than six working days moves the milestone. The load test date in R-1 moves with `PROJ-127`.
 
@@ -233,11 +240,12 @@ Risks: R-1 unchanged; a new issue: the assumption in the charter failed.
 Needed: Jane Doe's decision on the exception note sent today.
 ```
 
-The exception note sent the same day held the forecast, the cause, three options (move `PROJ 1.0`
-and `PROJ 1.1` by two weeks and shorten the hold at 10%; load test at 1x peak instead of 2x; pay the
-provider for an earlier test slot, which it refused) and John Smith's recommendation, the first.
+The exception note sent the same day held the forecast, the cause, two options with what each costs (move `PROJ 1.0`
+and `PROJ 1.1` by two weeks and shorten the hold at 10%, which costs two weeks on both milestones; load test at 1x peak instead of 2x, which costs no time but leaves the timeouts of R-1 untested at peak) and John Smith's recommendation, the first, because it keeps the load test that R-1 relies on.
 Jane Doe chose it on 2026-12-21, and it became the change request `PROJ-127` above
 ([communication.md](communication.md) section 5).
+
+The note is good because each option says what it costs, so the sponsor can decide in one reply ([communication.md](communication.md) section 5).
 
 The update is good because the marker can be checked against the forecast and the tolerance, and
 the last line tells the sponsor what is needed from them.
@@ -260,6 +268,7 @@ Payment provider integration
    2.2  1% live trial                            (work package)
    2.3  Ramp to 10%                              (planning package)   # far work, split when near (wbs.md section 5)
    2.4  Ramp to all traffic                      (planning package)   # same reason
+   2.5  Remove the routing flag                  (work package)   # task PROJ-150, made with the flag (release.md section 6)
 3  PROJ-12  Payment records migration (epic)
    3.1  Nullable provider column                 (work package)   # task PROJ-124
    3.2  Write the provider on each payment       (work package)
@@ -279,7 +288,7 @@ Owner: John Smith. Done when: test payments pass in staging and the load test at
 passes.
 
 PROJ-11 Routing flag (epic)
-Scope: the flag that sends each card payment to the old or the new provider, and the steps that move traffic from 1% to all.
+Scope: the flag that sends each card payment to the old or the new provider, the steps that move traffic from 1% to all, and the removal of the flag after the move.
 Owner: Richard Roe. Done when: with the flag off every payment goes to the old provider, and at 100% every card payment goes to the new one.
 
 PROJ-12 Payment records migration (epic)
@@ -312,7 +321,9 @@ only ranks attention. R-1 and R-2 grew from the charter's top risks. R-2, R-3 an
 the pre-mortem on 2026-11-02, where the team wrote down why the project had failed.
 
 The register is good because every risk is specific enough to watch: cause, event and effect
-([risks.md](risks.md) section 2).
+([risks.md](risks.md) section 2), each threat with an impact of 4 or more has a contingency plan with
+its trigger and its cost, and the one reserve is named in the register, not hidden in the estimates,
+so anyone can see when it is used up ([risks.md](risks.md) section 6).
 
 ## 6. Work items
 

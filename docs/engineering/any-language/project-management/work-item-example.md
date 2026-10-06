@@ -28,7 +28,7 @@ description is the WBS dictionary entry ([wbs.md](wbs.md) section 6):
 PROJ-11  Epic    Owner: Richard Roe    Fix versions: PROJ 1.0 test payments, PROJ 1.1 1% live
 Routing flag
 
-Scope: the flag that sends each card payment to the old or the new provider, and the steps that move traffic from 1% to all.
+Scope: the flag that sends each card payment to the old or the new provider, the steps that move traffic from 1% to all, and the removal of the flag after the move.
 Owner: Richard Roe.
 Done when: with the flag off every payment goes to the old provider, and at 100% every card payment goes to the new one.
 
