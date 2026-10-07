@@ -133,7 +133,9 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   on one, set up a board or a space, plan a release or its rollback, open or run an incident or
   roll a release back, agree an SLA, or plan or run a team meeting, read
   `docs/engineering/any-language/project-management/README.md` and the files it routes to for that
-  work, and `docs/engineering/any-language/project-management/project-example.md` when you write a
+  work, and `docs/engineering/any-language/project-management/adoption-guide.md` when you start a
+  project with the practice or bring it into a project that is already running,
+  `docs/engineering/any-language/project-management/project-example.md` when you write a
   project's first charter, plan, stakeholder register or risk register,
   `docs/engineering/any-language/project-management/jira-work-item-example.md` when you write the
   first work item of a type. The check: every risk the change adds has one owner and one of the
