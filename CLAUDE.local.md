@@ -165,3 +165,7 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   folder the first prints has a bullet that names it in this section, in the shape above (the
   moment, the file, the check), and the second prints nothing but `docs/engineering/CLAUDE.md`.
 ```
+
+The block is good because each bullet names the moment it fires, the file to read and a check a
+reviewer can run on the diff, so an agent opens the practice before the work starts and a review can
+see whether the work followed it.

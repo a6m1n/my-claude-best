@@ -209,7 +209,7 @@ responsibilities? Which of the responsibilities others named for you do you acce
 unclear about the goal or the scope?
 
 **You end with** the roles named, every unassigned responsibility given an owner or taken out of
-scope, and the sponsor's comment on the charter page that the work has started
+scope, and, on a new project, the sponsor's comment on the charter page that the work has started
 ([meetings.md](meetings.md) section 3).
 
 ## 4. Planning
@@ -794,10 +794,10 @@ whom to ask.
 | 2 | Sponsor named, a project that ends, decision log with its first entries | <link> | <project manager> | |
 | 3 | Charter page issued by the sponsor and approved in writing | <link> | <project manager> | |
 | 4 | Stakeholder register, linked from the charter page | <link> | <project manager> | |
-| 5 | Kickoff held, roles named, every responsibility owned or out of scope, sponsor's start comment on the charter page | <link> | <project manager> | |
+| 5 | Roles named, every responsibility owned or out of scope; on a new project also the sponsor's start comment on the charter page | <link> | <project manager> | |
 | 6 | WBS with dictionary, deliverable epics, RACI matrix | <link> | <project manager> | |
 | 7 | Approach per deliverable, versions with dates, linked dependencies, estimates as ranges, critical path where schedule.md section 3 asks for one | <link> | <project manager> | |
-| 8 | Risk register after a pre-mortem, linked to each deliverable epic | <link> | <project manager> | |
+| 8 | Risk register, linked to each deliverable epic | <link> | <project manager> | |
 | 9 | Communication lines in the plan, escalation path | <link> | <project manager> | |
 | 10 | Plan approved by the sponsor as the baseline, with tolerance, deciders and rhythm, and marker definitions | <link> | <project manager> | |
 | 11 | Definition of Done, work-in-progress limits, sprint length or flow, meetings in the team's calendar | <link> | <Scrum Master> | |
@@ -808,12 +808,13 @@ whom to ask.
 | 16 | Sponsor's acceptance on the charter page, or the logged decision to stop, every open risk handed over, lessons with owners, epics closed | <link> | <project manager> | |
 ```
 
-The checklist is good because each row has one owner, so a step nobody did shows as a name, not a
-gap, and the Link column points at the real artifact, so the checklist holds no copy of it that
-could go stale. The Done on column lets the sponsor see in one look what is in place. The sponsor
-reads it at each plan review to see which step is late and whose it is, and asks that owner for a
-date. When every row is done no decision reads it, so archive it
-([principles.md](principles.md) section 4).
+The checklist is this practice's own. It is good because each row has one owner, so a step nobody
+did shows as a name, not a gap, and the Link column points at the real artifact, so the checklist
+holds no copy of it that could go stale. The Done on column lets the sponsor see in one look what is
+in place. The project manager reads it at each plan review to see which step is late and whose it
+is, and asks that owner for a date. A late step that pushes a forecast beyond the tolerance reaches
+the sponsor in the exception note ([communication.md](communication.md) section 5). When every row
+is done no decision reads it, so archive it ([principles.md](principles.md) section 4).
 
 ## 11. Sources
 
