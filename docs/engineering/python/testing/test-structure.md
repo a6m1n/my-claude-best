@@ -5,10 +5,6 @@ inputs. Where the file goes is [layout.md](layout.md); where its setup comes fro
 [fixtures.md](fixtures.md). A test is code, so [readability.md](../../any-language/readability/readability.md) holds
 for it unchanged: blank lines between arrange, act and assert are its section 5.
 
-The examples test `needs_reminder` from
-[any-language/readability/module-example.md](../../any-language/readability/module-example.md): an overdue invoice gets a
-reminder after its due date, at most once a week. Their imports are left out.
-
 **Navigation**
 
 - [1. A class per unit under test](#1-a-class-per-unit-under-test)
@@ -20,6 +16,10 @@ reminder after its due date, at most once a week. Their imports are left out.
 - [7. When a table is the wrong tool](#7-when-a-table-is-the-wrong-tool)
 - [8. Where it stops holding](#8-where-it-stops-holding)
 - [9. Sources](#9-sources)
+
+The examples test `needs_reminder` from
+[any-language/readability/module-example.md](../../any-language/readability/module-example.md): an overdue invoice gets a
+reminder after its due date, at most once a week. Their imports are left out.
 
 ## 1. A class per unit under test
 

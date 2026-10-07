@@ -137,10 +137,14 @@ rows = client.search(term, expand=True)  # type: ignore[call-arg]  # stub lacks 
   anything; with pyright, turn on `reportUnnecessaryTypeIgnoreComment`, which is off in every mode.
 - **Silence a module, not the world.** A setting that turns a rule off for the whole repository
   hides every future case too. Scope it to the one module in `[[tool.mypy.overrides]]` or ruff's
-  `per-file-ignores`.
+  `per-file-ignores`. A rule a practice turns off for all code on purpose, as the testing practice
+  turns off `PT003` ([running-tests.md](../testing/running-tests.md) section 11), is not a
+  suppression: it is part of choosing the rules, set in the config next to the comment section 2
+  asks for. The practice judged every case, so none is hidden.
 
 Check: before you merge,
-`grep -rnE "# (type: ignore|pyright: ignore|noqa)(\[[^]]*\]|: [A-Z0-9, ]+)?$" src/ tests/` prints
+`grep -rnE "# (type: ignore|pyright: ignore|noqa)(\[[^]]*\]|: [A-Z0-9, ]+)?$" src/ tests/`, with
+`evals/` added where the repository has one ([evals.md](../evals/evals.md) section 4), prints
 nothing: no suppression ends without a reason.
 
 ## 7. Where it stops holding

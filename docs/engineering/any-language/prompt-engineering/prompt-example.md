@@ -27,9 +27,15 @@ from dataclasses import dataclass
 from enum import StrEnum, unique
 from typing import Literal, TypeAlias
 
+from openai.types import ChatModel
+
 # The vendor owns the ids; this is the set this project has tested its prompts on.
 # Each id names one fixed build, never a moving alias (python/evals/production.md section 6).
-LlmModel: TypeAlias = Literal["acme-large-2", "acme-small-3"]
+LlmModel: TypeAlias = Literal["acme-large-2-2026-08-19", "acme-small-3-2026-06-02"]
+
+# The models either client can name: AcmeAiClient takes an LlmModel, the OpenAI chat model a
+# ChatModel. core/errors.py names it, so the type lives here (file-structure.md section 4).
+ModelName: TypeAlias = LlmModel | ChatModel
 
 
 @unique
@@ -154,7 +160,10 @@ class AcmeAiClient:
         # the vendor's stop reason to StopReason: a content-filter stop maps to REFUSAL, and a
         # reason it does not know yet to UNKNOWN. Any SDK error becomes
         # ModelUnavailable(model, status), raised from None, because the vendor's message can
-        # quote the prompt (logging.md section 10).
+        # quote the prompt (logging.md section 10). It records each call as a
+        # generation under the current span through core/langfuse_client.py (a
+        # function there, not shown), with its model, prompt, answer and usage: the
+        # trace keeps the content the log never holds (logging.md section 8).
         ...
 
 
@@ -168,13 +177,13 @@ def _parse_answer(model: LlmModel, text: str, answer_type: type[AnswerT]) -> Ans
 
 ```python
 # core/errors.py
-from acme.core.schemas import LlmModel
+from acme.core.schemas import ModelName
 
 
 class ModelUnavailable(Exception):
-    """The vendor failed; the message names the model and the status, never the vendor's text."""
+    """The provider failed; the message names the model and status, never the provider's text."""
 
-    def __init__(self, model: LlmModel, status: int | None) -> None:
+    def __init__(self, model: ModelName, status: int | None) -> None:
         super().__init__(f"model {model} unavailable (status {status})")
         self.model = model
         self.status = status
@@ -183,26 +192,30 @@ class ModelUnavailable(Exception):
 class ModelRefused(Exception):
     """The model refused; the message names the model, never the prompt or the answer."""
 
-    def __init__(self, model: LlmModel) -> None:
+    def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} refused")
         self.model = model
 
 
 class ModelOutputCutOff(Exception):
-    """The answer hit the model's output limit, so it may not match the schema."""
+    """The answer hit the model's output limit; the message names the model, never the answer."""
 
-    def __init__(self, model: LlmModel) -> None:
+    def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} stopped at its output limit")
         self.model = model
 
 
 class ModelAnswerInvalid(Exception):
-    """The answer did not match the schema; the message names the model, never the text."""
+    """The answer did not match the schema; the message names the model, never the answer."""
 
-    def __init__(self, model: LlmModel) -> None:
+    def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} gave an answer that does not match the schema")
         self.model = model
 ```
+
+The OpenAI chat model of [agent-example.md](../../python/logging/agent-example.md) raises the same
+errors, so `core/errors.py` is one file in both examples and its errors take `ModelName` from
+`core/schemas.py` above. Change both copies together.
 
 What it does for the rules:
 
@@ -235,7 +248,7 @@ from typing import Final
 
 from acme.core.schemas import LlmModel, ReasoningEffort
 
-TRIAGE_LLM_MODEL: Final[LlmModel] = "acme-small-3"
+TRIAGE_LLM_MODEL: Final[LlmModel] = "acme-small-3-2026-06-02"
 # low, not none: the task reads a date (prompt-engineering.md section 15);
 # the sweep on the case set keeps or changes it.
 TRIAGE_LLM_REASONING_EFFORT: Final = ReasoningEffort.LOW
@@ -322,8 +335,8 @@ Classify this ticket."""
 # The layer: what only one model needs. An entry starts empty and gains a line only when the case
 # set shows that model needs it. A model with no entry cannot run this prompt.
 MODEL_NOTES: Final[Mapping[LlmModel, str]] = {
-    "acme-large-2": "",
-    "acme-small-3": "Write the reasoning in three sentences or fewer.",
+    "acme-large-2-2026-08-19": "",
+    "acme-small-3-2026-06-02": "Write the reasoning in three sentences or fewer.",
 }
 ```
 
@@ -385,18 +398,21 @@ The value checks section 11 asks for after the parse belong to the use case, not
 
 ## Changing the model
 
-A new model comes out, and the team wants `acme-large-2` for triage. The template turns the change
-into four steps, each one a small diff:
+A new model comes out, and the team wants `acme-large-2-2026-08-19` for triage. The template turns
+the change into four steps, each one a small diff:
 
-1. **Add the model with an empty layer.** `"acme-large-2"` is already in `LlmModel`; its entry in
-   `MODEL_NOTES` is `""`. A model not yet in the project gets both lines in this step.
-2. **Run the base unchanged.** The case set runs the current setup, `acme-small-3` at `low` with
-   its notes, against `acme-large-2` with the base alone, at each effort level the model offers,
-   with repeats (sections 15 and 18). Before the run, write the decision rule down: each
-   criterion's pass rate over the set, with every case run three times, falls no more than a stated
-   margin below the old model's on the same cases ([evals.md](../../python/evals/evals.md) section 7,
-   [repeated-runs.md](../../python/evals/repeated-runs.md) section 5). The prompt text does not change in
-   this step, so the result measures the model.
+1. **Add the model with an empty layer.** `"acme-large-2-2026-08-19"` is already in `LlmModel`; its
+   entry in `MODEL_NOTES` is `""`. A model not yet in the project gets both lines in this step.
+2. **Run the base unchanged.** The case set runs the current setup, `acme-small-3-2026-06-02` at
+   `low` with its notes, against `acme-large-2-2026-08-19` with the base alone, at each effort level
+   the model offers, with repeats (sections 15 and 18). Before the run, write the decision rule
+   down: each criterion's pass rate over the set, with every case run three times, falls no more
+   than a stated margin below the old model's on the same cases
+   ([evals.md](../../python/evals/evals.md) section 7,
+   [repeated-runs.md](../../python/evals/repeated-runs.md) section 5); the share of runs that set
+   `problem_first_occurred_on` to null is read apart, on the cases that state a date and on those
+   that do not (section 8). The prompt text does not change in this step, so the result measures
+   the model.
 3. **Tune only the layer.** Where the new model fails cases the old one passed, add a line to its
    entry in `MODEL_NOTES`, and run the set again. The base does not change unless every model
    needs the change; then it is a prompt change, tested as one.

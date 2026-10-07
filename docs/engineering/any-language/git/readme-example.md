@@ -12,7 +12,7 @@ root.
 
 Self-hosted document ingestion: PDFs, Word files and scans in, page-aware text and tables out.
 
-![build](https://img.shields.io/badge/build-passing-brightgreen)
+![build](https://github.com/acme-corp/docparse/actions/workflows/checks.yml/badge.svg?branch=main)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 ![python](https://img.shields.io/badge/python-3.11%2B-blue)
 
@@ -68,7 +68,7 @@ Run the service:
 ```bash
 git clone https://github.com/acme-corp/docparse.git
 cd docparse
-cp .env.example .env          # the defaults work for a local run
+cp .env.example .env          # its values work for a local run
 make up                       # API on http://localhost:8080, plus the worker and Postgres
 curl -F file=@invoice.pdf http://localhost:8080/documents
 ```
@@ -77,13 +77,18 @@ Scans need an OCR engine on the host. `docs/guides/ocr.md` has the setup for eac
 
 ### Configuration
 
-Every key is read from the environment, or from `docparse.toml` when that file exists.
+Every key is read from the environment, or from `docparse.toml` when that file exists. A key
+with no default is required: the service does not start without it, so a deployment that forgets
+one stops at once instead of writing to a database on `localhost`.
 
 | Key | Default | What it changes |
 | --- | --- | --- |
 | `ingest.max_upload_mb` | `50` | Rejects an upload above this size, before anything is written. |
 | `ingest.ocr_engine` | `tesseract` | Engine used for pages with no text layer. `none` skips them. |
-| `store.dsn` | `postgresql://localhost/docparse` | Where documents and tables are stored. |
+| `store.host` | none, required | The Postgres host where documents and tables are stored. |
+| `store.name` | none, required | The database on that host. |
+| `store.user` | none, required | The user `docparse` connects as. |
+| `store.password` | none, required | That user's password; a secret, so never in `docparse.toml`. |
 
 ## How the parts fit together
 
@@ -148,7 +153,7 @@ conventions, and `make check` has to pass before review.
 
 ## License
 
-MIT, © 2026 Acme Corp. See the `LICENSE` file in the repository root.
+MIT License, © 2026 Acme Corp. See the `LICENSE` file in the repository root.
 
 ---
 

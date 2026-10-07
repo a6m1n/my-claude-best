@@ -84,9 +84,11 @@ points at a tool that broke or at a model that now calls it wrong.
 
 **Should.** Run an LLM judge on a sample of live traces only when it is validated and pinned
 ([judges.md](judges.md) sections 4 and 6), and read its score as a trend over days, never as an alert
-on one trace. In one production system with 21 judges, 0.6% of the failures they flagged at first
-were real; unanimous panels and softer rubrics raised that to 48.9%. A vendor's model update dropped
-one judge's pass rate from 97% to 11% in a day.
+on one trace. On Langfuse, run it as an evaluator on observations, such as the request's root span,
+which carries the request's input and output ([logging.md](../logging/logging.md) section 8): on
+Langfuse Cloud, judges on trace-level input stop on 16 November 2026. In one production system with
+21 judges, 0.6% of the failures they flagged at first were real; unanimous panels and softer rubrics
+raised that to 48.9%. A vendor's model update dropped one judge's pass rate from 97% to 11% in a day.
 
 For an agent whose end state cannot be checked on live traffic, a judge of whether the task was done
 sees the tool calls and their results, not only the final answer, and it picks traces to read; it
@@ -189,6 +191,9 @@ prompts from elsewhere. A rule-based guardrail is tested like any code
 - Production judges: MagicSchool, arXiv:2609.28478, 2026; a production ordering agent,
   arXiv:2606.10315, 2026; "Who drifted", arXiv:2606.15474, 2026; a vendor alias over 19 months,
   arXiv:2608.11803, 2026; Anthropic, "A postmortem of three recent issues", 2025-09-17.
+- Trace-level judges: Langfuse FAQ, "How do I upgrade trace-level evaluators to observation-level
+  evaluators?" (langfuse.com/faq/all/llm-as-a-judge-migration), read 2026-10-01: on Langfuse Cloud
+  they stop at the v4 cutover on 2026-11-16.
 - Eugene Yan, "An LLM eval process", 2025-04; Hamel Husain and Shreya Shankar, evals FAQ, "How often
   should I run my evals".
 - User feedback: Nam et al., arXiv:2509.18361, 2025; Langfuse docs, "User feedback", "Alerts",

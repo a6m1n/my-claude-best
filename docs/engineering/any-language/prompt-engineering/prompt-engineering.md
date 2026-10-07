@@ -598,7 +598,7 @@ Good — one message per turn, each with its role:
 ```text
 system:    You are a support engineer answering customers of Acme Corp.
 user:      Where is my order? Ticket PROJ-123.
-assistant: [calls lookup_order(ticket="PROJ-123")]
+assistant: [calls lookup_order(ticket_key="PROJ-123")]
 tool:      {"status": "shipped", "carrier": "..."}
 ```
 
@@ -794,7 +794,8 @@ goes at the very start of the system prompt, followed by a newline;
 and where the vendor or a gateway in between has its own switch to skip a cache, the setting turns
 that on too. Apply it in the one client every model call goes through
 ([file-structure.md](../file-structure/file-structure.md) section 4). A request id for tracing
-goes into the request's metadata, never into the prompt.
+never goes into the prompt; it goes on the request's root span
+([logging.md](../../python/logging/logging.md) section 8 for Python).
 
 Why: the vendors' prompt caches do not change the answer. Anthropic's and OpenAI's docs both state
 that a cached request returns the same output as an uncached one; the cache saves cost and time
@@ -810,7 +811,8 @@ only. The switch is for the caches that do change what you get, and for measurin
 Caches match the request from its start, so a first line that differs on every request matches
 nothing after it; one report measured a changing UUID in a system prompt missing the whole cached
 prefix. A UUID later in the request would leave the part before it cached. A request id
-in the prompt would change the prompt itself on every call, which is why it goes into metadata.
+in the prompt would change the prompt itself on every call, which is why it goes on the root span
+instead.
 The switch is also visible in the environment, off unless it says otherwise, so it cannot be left
 on by a forgotten edit.
 
@@ -883,7 +885,8 @@ and grown, how each case is graded, and how the two versions are compared is
 an existing prompt or model runs old against new on it. What is particular to a prompt:
 
 - On a model change, keep the prompt fixed, so the test measures the model.
-- Keep options in one fixed order, or shuffle them across runs; parse leniently before you score.
+- Keep options in one fixed order, or shuffle them across runs.
+- Score an answer that does not parse as [evals.md](../../python/evals/evals.md) section 6 says.
 
 **Should.** When you try a technique this practice marks Should, such as a role, examples, a
 reasoning field, definitions, the order of the parts, a per-model layer or a reasoning level, run
@@ -899,8 +902,8 @@ application (Husain and Shankar), and they keep prompts "versioned, reviewed, an
 atomically with the application code". A generic "better" prompt can make the results worse
 (When "Better" Prompts Hurt, 2026). Whether a technique helps depends on the pass criterion you
 chose (Wharton Prompting Science Report 1, 2025). Parse errors alone deflated one model's score by
-up to 206% (arXiv:2607.22969), and shuffling the input order cost 3 to 12 points
-(arXiv:2502.04134). Grading on accuracy alone rewards guessing (Kalai et al., 2025).
+up to 206% (arXiv:2607.22969), so one rule decides how they count. Shuffling the input order cost
+3 to 12 points (arXiv:2502.04134). Grading on accuracy alone rewards guessing (Kalai et al., 2025).
 
 ## 19. Where it stops holding
 

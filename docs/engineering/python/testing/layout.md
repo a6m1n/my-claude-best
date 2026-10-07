@@ -174,8 +174,8 @@ One unit's tests split by subject when its class docstring needs "and"
 `Test<Unit>` and is named `test_<subject>.py`.
 
 - **Move the first file in a commit of its own, before the commit that adds the second**:
-  [file-structure.md](../../any-language/file-structure/file-structure.md) section 6 owns the separate move
-  commit.
+  [refactoring.md](../../any-language/refactoring/refactoring.md) section 3, rule 3, owns the
+  separate move commit.
 - **A promoted folder is the deepest level**; when the source file becomes a folder itself, its
   tests take the paths section 3 gives the new files, in the same move commit.
 
@@ -244,7 +244,7 @@ stands in for or per kind of data, named with its role first, `fake_mailer.py` h
 - **Code moves to `support/` when a second test file needs it**, not before. A fake or a builder
   one file uses stays in that file.
 - **No fixtures in `support/`.** It is imported, so an import line says where a name came from; a
-  fixture is requested by name, so fixtures live in `conftest.py` files
+  fixture is requested by name, so fixtures live in a test file or a `conftest.py`
   ([fixtures.md](fixtures.md) section 4). Check: `grep -rn "@pytest.fixture" tests/support/`
   prints nothing.
 - **A file a test reads is built in the test when its bytes do not matter**, with `tmp_path`, and

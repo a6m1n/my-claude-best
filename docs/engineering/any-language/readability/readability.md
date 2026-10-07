@@ -178,6 +178,13 @@ What a comment holds:
   exists for security. The missing comment is as common as the useless one. To decide whether a
   comment earns its place, imagine the line without it: if the next editor would then likely
   make the mistake it warns about, keep it.
+- **In code that others copy, the reason for each line a copier would otherwise change or
+  delete**: an example in a doc, a template, a snippet in a README. The prose around such code
+  stays behind when it is copied, so the reason has to sit at the line. MDN's code style guide
+  says why: "Readers will copy and paste examples into their own code and may put it into
+  production." The test above still decides which lines get one; Microsoft's style guide sets the
+  same limit: "Help developers determine what to modify. Add comments to explain details, but
+  don't overdo it. Don't state the obvious."
 - **The code as it is now.** Change a comment in the same edit as the line it describes. A
   comment that describes old behavior is worse than none, because the reader believes it.
 
@@ -191,7 +198,9 @@ Where other text goes:
 
 - **The story of a change goes in the commit message**, not in the code. A note such as "moved
   to X, since Y took too long" helps whoever reviews that diff ([git.md](../git/git.md) section
-  3). The next reader of the code needs the constraint, not the story of the diff.
+  3). The next reader of the code needs the constraint, not the story of the diff. A test that
+  holds down a fixed bug is the one exception: its docstring tells that story
+  ([python/testing/test-structure.md](../../python/testing/test-structure.md) section 5).
 - **What the caller needs goes in the docstring.** A docstring is for the caller and says what
   the function does, returns and raises (PEP 257); a `#` comment is for the maintainer and says
   why the body is the way it is.
@@ -409,6 +418,10 @@ def late_fee(invoice: Invoice, days_overdue: int) -> Decimal:
   and 7 still pay for themselves, since someone will read it again.
 - **A shape a framework requires**, such as the signature of a pytest fixture or a view the
   framework calls, keeps the framework's names and form.
+- **A name another practice fixes**, such as the boolean setting `disable_prompt_cache` of
+  [prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 17, keeps that name,
+  though section 7 asks a boolean to read as a question: every code base that follows that
+  practice then calls the switch by one name.
 
 ## 9. Review checklist
 
@@ -437,4 +450,5 @@ Bernhardt, "Functional Core, Imperative Shell" (2012). Brandon Rhodes, "Hoist Yo
 2015). PEP 8 (blank lines, comments), PEP 257 (docstrings) and PEP 544 (protocols); the mypy
 documentation on protocols and structural subtyping. Black's code style ("Empty lines") and ruff's
 formatter notes on its deviations from Black; ruff's rules `RET505`, `RET506` and `ERA001` (ruff
-0.16).
+0.16). MDN Web Docs, "Code style guide" (last modified 2026-09-14), and the Microsoft Writing Style
+Guide, "Code examples", on comments in code that readers copy.

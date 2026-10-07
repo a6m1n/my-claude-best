@@ -72,7 +72,7 @@ src/<app>/
 
 | Folder | Holds | Imports |
 |---|---|---|
-| `core/` | settings, logging, shared errors and types, one client class per external system | only libraries |
+| `core/` | settings, logging, shared errors and types, one client class per external system | other `core/` files and libraries |
 | `<domain>/<module>/` | one feature: its entry point, its data, its doers | `core/` and libraries; never another module, never an adapter |
 | an adapter (`api/`, `cli/`) | turns a request into a call to one `usecase.py` and the result back into a response | modules, `core/`, its own framework; never another adapter |
 
@@ -141,7 +141,8 @@ Check: for every file, "this file holds only ___" has one answer, and the file n
 - settings, read from the environment once (`config.py`);
 - logging setup;
 - the base error that every adapter maps, and errors every module raises;
-- types two or more modules use (`schemas.py`), and limits every module obeys (`consts.py`);
+- types two or more modules use, or that a `core/` file names (`schemas.py`), and limits every
+  module obeys (`consts.py`);
 - **data two or more modules share**: a table both modules read or write (`models.py`), named for
   what it holds and split by move 2 when it grows. The queries stay in each module's own
   `repository.py`.
@@ -149,15 +150,24 @@ Check: for every file, "this file holds only ___" has one answer, and the file n
   on: the class every call to that system goes through, so timeouts, retries, tracing and spend
   limits are written once. A second path to the same system is a bug waiting for the day the first
   one gains a limit. One instance is built at startup by the adapter (section 5) and handed in as a
-  parameter ([python.md](../../python/language/python.md) section 2).
+  parameter ([python.md](../../python/language/python.md) section 2). A client whose SDK keeps one
+  process-wide instance that its own integrations read, such as Langfuse's `get_client()`, is
+  configured once at startup by the adapter and read from the SDK, only inside its one client
+  file: a handle passed in would add nothing. Code outside the application, such as `evals/`
+  (section 9), uses the SDK's own API: the eval commands call Langfuse's experiment runner
+  directly.
 
 Rules:
 
 - `core/` imports no module and no adapter.
 - **Code moves into `core/` when a second module needs it and no single module owns it**: it
   carries the knowledge of neither, or, like a shared table, of both alike. Not before: a type used
-  by one module lives in that module, even when it looks general. The clients above are the
-  exception: each sits in `core/` from the first module on.
+  by one module, and named by no `core/` file, lives in that module, even when it looks general.
+  The clients above are the exception: each sits in `core/` from the first module on.
+- **A type that a `core/` file names sits in `core/schemas.py`, whoever else uses it**, such as a
+  client's own closed set or id, or the type of a setting: `core/` imports no module, so the type
+  cannot live in the module that receives it; constants, data models and logic never share a file
+  (section 3); and a file that reads the settings then does not also import a client and its SDK.
 - `core/` grows by the same moves as a module: a file that holds several clients becomes
   `core/clients/`, one file per client (section 6, move 2).
 

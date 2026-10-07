@@ -29,10 +29,15 @@ does not change behavior, and the tests and mypy pass on the result. The edit ca
 commit with nothing else in it. A CI check can stop the old layout from coming back. Formatting
 only on touch would put layout noise into every feature diff for years.
 
-**What lands.** One pull request with three commits. The first holds only the formatter's output:
+**What lands.** The sweep is a task, PROJ-110 "Format all Python code with ruff", written before
+the work starts ([tickets.md](../project-management/tickets.md) section 1). Its branch is
+`chore/PROJ-110-format-with-ruff`, and its one pull request,
+`chore [PROJ-110]: format all Python code with ruff`, carries three commits. The key in the
+branch, each commit title and the pull request links all of them to the task in Jira
+([git.md](../git/git.md) sections 2, 3 and 4). The first commit holds only the formatter's output:
 
 ```
-chore(billing): format all Python code with ruff
+chore [PROJ-110]: format all Python code with ruff
 
 - Every file now has the layout ruff format gives it, so review
   diffs show real changes instead of layout noise.
@@ -43,7 +48,7 @@ chore(billing): format all Python code with ruff
 The second hides the sweep from `git blame`:
 
 ```
-chore(git): skip the format commit in git blame
+chore [PROJ-110]: skip the format commit in git blame
 
 - .git-blame-ignore-revs lists the format commit, so git blame shows
   the last real change to each line.
@@ -52,7 +57,7 @@ chore(git): skip the format commit in git blame
 The third turns the check on:
 
 ```
-chore(ci): check formatting with ruff
+chore [PROJ-110]: check formatting with ruff in CI
 
 - CI runs the ruff format hook on all files and fails when it would
   change one, so the old layout cannot come back.
@@ -61,7 +66,7 @@ chore(ci): check formatting with ruff
 `.git-blame-ignore-revs` at the repository root:
 
 ```
-# chore(billing): format all Python code with ruff
+# chore [PROJ-110]: format all Python code with ruff
 3f9c2a7d1e5b8a0c4f6e2d9b7a1c3e5f7a9b0c2d
 ```
 
@@ -118,7 +123,10 @@ feat [PROJ-123]: refund part of an order
 ```
 
 The `refactor` commit changes how the tests build their input, from a `dict` to a `PaidOrder`, but
-no expected value. That is what makes it a refactoring (section 3, rule 4).
+no expected value. That is what makes it a refactoring (section 3, rule 4). It shares the
+feature's pull request because it changes only `refund()`, which the feature edits anyway, and its
+one caller: a small cleanup in the lines the change edits (section 3, rule 7). A move across
+files, as in case 4, is its own pull request.
 
 **What stays.** `src/billing/reporting/daily.py` also reads orders as a `dict`, and PROJ-123
 does not touch it. It stays as it is. The pull request names it as a follow-up and links
@@ -133,25 +141,32 @@ code and one place to set timeouts.
 ways to set timeouts and retries, and new code would copy whichever one it saw first. Moving code
 only on touch would never finish. Jane Doe changed the practice, so she owns the migration.
 
-**The practice change** is one commit, and its body says how existing code responds (section 7):
+**The practice change** is one commit for its own work item, PROJ-141, under the epic PROJ-140, and
+its body says how existing code responds (section 7):
 
 ```
-docs [PROJ-140]: use httpx for outgoing HTTP calls
+docs [PROJ-141]: use httpx for outgoing HTTP calls
 
 - New code calls external services through httpx, which gives sync
   and async code one client and one place to set timeouts.
 - Migration: owner Jane Doe, end 2026-12-18, tracked in PROJ-140.
-  Count: grep -rn "import requests" src/ | wc -l, 31 today.
+  Count of import and from lines, 31 today:
+  grep -rnE "^[[:space:]]*(import|from) requests([ .]|$)" src/ | wc -l
 ```
 
-**The tracking issue**, PROJ-140, records the count before each step:
+**The tracking issue**, PROJ-140, is the epic of the migration. It holds the owner, the end date
+and the count, and each module's change is its own work item with its own branch and one open pull
+request at a time ([tickets.md](../project-management/tickets.md) sections 3 and 4). It records the
+count before each step:
 
 ```
 Migrate from requests to httpx
 
 Owner: Jane Doe
 End date: 2026-12-18
-Count: grep -rn "import requests" src/ | wc -l
+Count: grep -rnE "^[[:space:]]*(import|from) requests([ .]|$)" src/ | wc -l
+The search counts "from requests import Session" lines too, so the
+count reaches zero only when no use is left.
 
 | Date       | Count | What happened                               |
 |------------|-------|---------------------------------------------|
@@ -239,12 +254,15 @@ def get_open_invoices(customer_id: str, request: Request) -> list[InvoiceRow]:
 - The name does not say which of the four things the file holds
   ([file-structure.md](../file-structure/file-structure.md) sections 3 and 7).
 
-**What lands.** Two pull requests, both for PROJ-160. The split is a larger refactoring, so it is
-its own pull request and merges first (section 3, rule 7). It starts with a `test` commit that
-pins today's rows and the limit of 50, as in case 2, then splits the file:
+**What lands.** Two pull requests, one per work item: PROJ-161 for the refactor, which blocks
+PROJ-160, and PROJ-160 for the change itself ([tickets.md](../project-management/tickets.md)
+sections 4 and 5). The split is a larger refactoring, so it is its own pull request and merges
+first (section 3, rule 7). Its branch is `refactor/PROJ-161-split-open-invoices`
+([git.md](../git/git.md) section 2). It starts with a `test` commit that pins today's rows and the
+limit of 50, as in case 2, then splits the file:
 
 ```text
-refactor [PROJ-160]: split open-invoice code by role
+refactor [PROJ-161]: split open-invoice code by role
 
 - The route and its handler move to the HTTP adapter, the query to
   the repository and the limit to the constants, both in a new
@@ -254,7 +272,11 @@ refactor [PROJ-160]: split open-invoice code by role
   passes, and a search for billing.invoices finds no use left.
 ```
 
-The second pull request is the feature, and the test's expected limit changes in it:
+The second pull request is the feature. Its `test` commit first rewrites the limit test around
+the constant: it stores `MAX_OPEN_INVOICES + 1` open invoices and expects `MAX_OPEN_INVOICES`
+back, so raising the limit changes no expected value
+([python/testing/what-to-test.md](../../python/testing/what-to-test.md) section 3). The feature
+commit follows:
 
 ```text
 feat [PROJ-160]: show up to 100 open invoices

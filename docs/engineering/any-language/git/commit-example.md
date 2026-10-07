@@ -20,6 +20,9 @@ at all.
   extractor needs to report the right page.
 - A file above the size limit is rejected at upload with the limit in
   the message, instead of timing out later in the pipeline.
+- The configuration key ingest.max_text_mb is now ingest.max_upload_mb,
+  since the limit covers every upload; a deployment that still sets the
+  old key does not start, and the error names the new one.
 ```
 
 Why it works: the title names the change in business terms and reads on its own. The paragraph
