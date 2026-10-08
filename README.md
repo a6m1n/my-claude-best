@@ -34,7 +34,7 @@ It is for teams that write code with an AI coding agent. The code examples are i
 The practices sit in group folders: `any-language/` for the ones whose rules work in any language (their code examples are still in Python), `python/` for the ones written for Python, and `react/` for the ones written for a React application. [docs/engineering/CLAUDE.md](docs/engineering/CLAUDE.md) says how a practice's group is picked. In the order to read them:
 
 - [any-language/git](docs/engineering/any-language/git/) — branches, commits, pull requests and merging, with no rewriting of pushed history.
-- [any-language/project-management](docs/engineering/any-language/project-management/) — how a project runs with Jira: its phases, charter, plan, work breakdown, risks, work items, SLA and rollback plan.
+- [any-language/project-management](docs/engineering/any-language/project-management/) — how a project runs with Jira: a step-by-step guide to adopting it, then its phases, charter, plan, work breakdown, risks, work items and board, meetings, status updates, releases, SLA and rollback plan.
 - [python/language](docs/engineering/python/language/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
 - [any-language/refactoring](docs/engineering/any-language/refactoring/) — how old code reaches a practice without a rewrite of the whole repository.
 - [any-language/file-structure](docs/engineering/any-language/file-structure/) — where code lives in an application, and file names that say what a file holds.

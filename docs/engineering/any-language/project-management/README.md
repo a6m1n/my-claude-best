@@ -22,8 +22,27 @@ sources behind them, are in [principles.md](principles.md).
 ## What is here
 
 A file named `jira-…` is about one Jira object, such as the work types, the fields or the board.
-Every other file is a practice, and maps that practice to Jira in a section of its own.
+[adoption-guide.md](adoption-guide.md) gives the order in which a project takes up the others, and
+[project-example.md](project-example.md) fills them all in for one project. Every other file is a
+practice, and maps that practice to Jira in a section of its own.
 
+Start here: read [principles.md](principles.md), then [operating-system.md](operating-system.md),
+then [adoption-guide.md](adoption-guide.md), which walks the files below in the order a project
+uses them. By role:
+
+- A developer: [tickets.md](tickets.md), [jira-work-item-types.md](jira-work-item-types.md),
+  [jira-workflow.md](jira-workflow.md) and [meetings.md](meetings.md).
+- A Scrum Master: the developer's four files, and [principles.md](principles.md) section 3 on
+  workload.
+- A project manager: the adoption guide, and each file its steps send you to.
+- An agent: the file whose "Read it when" line below matches the task.
+
+The files:
+
+- [adoption-guide.md](adoption-guide.md): the steps that bring this practice into a project, new or
+  already running, each with what to do, why, what goes wrong without it and the questions to ask,
+  and a checklist to copy. Read it when you start a project with this practice, or bring the
+  practice into a project that is already running.
 - [principles.md](principles.md): what project management is for, what it never does (micromanage,
   track for its own sake), how to see and limit workload, which standard names which artifact, and
   why Jira is the tool, and what a project is, what limits it and what its success means. Read it
@@ -82,7 +101,7 @@ Every other file is a practice, and maps that practice to Jira in a section of i
 ## How to adopt
 
 1. Copy this folder into your repository at `docs/engineering/any-language/project-management/`,
-   so the path in step 2 and the links to other practices in step 5 still work.
+   so the path in step 2 and the links to other practices in step 4 still work.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you open a project, write or change
    its charter, plan, scope, schedule, WBS, risk register, stakeholder register or RACI matrix, make
    or record a decision that is hard to undo, write a status update, write, triage, split or move a
@@ -91,20 +110,14 @@ Every other file is a practice, and maps that practice to Jira in a section of i
    meeting, read `docs/engineering/any-language/project-management/README.md` and the files it
    routes to for that work."
    Without it an agent never opens the folder.
-3. In Jira, use a company-managed software space, because components, Affects versions and a
-   shared workflow that sets the resolution are there only, and a space that later changes type
-   loses its components. What differs in a team-managed space is in [jira-fields.md](jira-fields.md)
-   section 4.
-4. Make sure the space has the Fix versions field that [life-cycle.md](life-cycle.md) and
-   [tickets.md](tickets.md) use to tie work to a release. A company-managed space already has it;
-   in a team-managed space, turn on releases and versions
-   ([Atlassian: enable releases and versions](https://support.atlassian.com/jira-software-cloud/docs/enable-releases-and-versions/)).
-5. The practice links [git.md](../git/git.md) for the branch, commit and pull request names, and
-   [refactoring.md](../refactoring/refactoring.md) for how existing work adopts a rule. Copy those
+3. Set Jira and the team's pages up once, before the first project, as step 1 of
+   [adoption-guide.md](adoption-guide.md) says, so the first sprint does not wait for admin work.
+4. The practice links [git.md](../git/git.md) for the branch, commit and pull request names, and
+   [refactoring.md](../refactoring/refactoring.md) for how existing code adopts a rule. Copy those
    folders too, or replace each link with your own rule for that topic, so no link in this folder
    points at a file your repository does not have.
-6. Existing projects adopt these rules the way [refactoring.md](../refactoring/refactoring.md)
-   section 7 says.
+5. Bring each project in by [adoption-guide.md](adoption-guide.md): a new project from its section
+   2, a project that is already running from its section 8.
 
 ## The points to adapt
 
@@ -120,3 +133,8 @@ Every other file is a practice, and maps that practice to Jira in a section of i
 - Who is on the escalation path, and how fast each level answers ([communication.md](communication.md) section 4).
 - The engagement scale of the stakeholder register ([stakeholders.md](stakeholders.md) section 4).
 - Which conditional artifacts a project keeps ([operating-system.md](operating-system.md) section 3).
+- The work-in-progress limits, per person and for the team, and the day of the weekly board look
+  ([principles.md](principles.md) section 3).
+- The tolerance ([project-plan.md](project-plan.md) section 4) and the rhythm of the plan review
+  ([project-plan.md](project-plan.md) section 6).
+- The Definition of Done ([tickets.md](tickets.md) section 2).
