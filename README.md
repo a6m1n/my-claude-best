@@ -50,19 +50,20 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 - [react/security](docs/engineering/react/security/) — what the browser side of an application must and must not do.
 - [react/performance](docs/engineering/react/performance/) — what fast means, how to measure it, and what to fix first, with SEO in brief.
 
-Two more parts are about Claude Code itself:
+Three more parts are about Claude Code itself:
 
 - [The status line](claude-config/statusline/) — context, usage limits, the prompt cache and each agent's progress, under the Claude Code prompt.
 - [The CLAUDE.md guide](docs/claude-code/claude-md.md) — what belongs in a `CLAUDE.md` and what does not.
+- [Two skills for a copied practice](skills/README.md) — copy a practice in, record why your copy differs, and merge new commits from this repository without losing your changes.
 
 What it does not do:
 
 - It is not a standard. The practices are one author's choices: change or drop any rule in your copy.
-- It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself.
+- It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself. The skills in `skills/` bring in new commits only when you run them.
 - It has no examples in languages other than Python and TypeScript.
 - It is not an official Anthropic project, and Anthropic does not endorse it.
 
-Two skills, for commits and pull requests, are planned. The `skills/` folder has none yet.
+Two more skills, for commits and pull requests, are planned.
 
 ## Why it is useful
 
@@ -70,6 +71,7 @@ Two skills, for commits and pull requests, are planned. The `skills/` folder has
 - Each rule is one act at one moment, such as "before you stage" or "when you add a log call", and a new or changed rule gives its reason. An agent can follow it, a reviewer can check that it did, and a reader can tell when it does not apply.
 - Every rule comes from public practice, never from what one codebase happens to do. Most practices end with the sources behind their rules.
 - A good example follows every practice that governs what it shows, not only the one it illustrates. You, or your agent, will copy the example and not the rules around it, so each new practice reaches every example written after it. A line you might otherwise change or delete carries its reason in a comment, which comes along when you copy the code. A bad example names its problem and sits next to the fixed version.
+- You can change a copied practice for your project and still take later updates from this one. With Claude Code, the two skills in `skills/` record why your copy differs and keep those changes when they merge new commits.
 - It works with any agent that reads `CLAUDE.md` or `AGENTS.md`, not only Claude Code.
 - The English is plain: short sentences and common words, for readers whose first language is not English.
 
@@ -79,7 +81,7 @@ You need a git repository and a coding agent that reads `CLAUDE.md` or `AGENTS.m
 
 ### Adopt one practice
 
-The steps use the git practice. Every practice is adopted the same way. Its `README.md` lists any extra step under "How to adopt".
+The steps use the git practice. Every practice is adopted the same way. Its `README.md` lists any extra step under "How to adopt". With Claude Code, two skills can copy the practice and note its commit for you, in place of steps 1 and 2, and keep the copy in step later: read [Keep your changes when the source changes](#keep-your-changes-when-the-source-changes) before you copy.
 
 1. Clone this repository next to your project: the green Code button on the repository page copies its address. Note the commit you copy from:
 
@@ -115,6 +117,31 @@ git pull
 git log --oneline 1a2b3c4..HEAD -- docs/engineering/any-language/git
 ```
 
+### Keep your changes when the source changes
+
+With Claude Code, two skills keep a copied practice in step with this repository. `/sync-best-practice` copies a practice in, and later merges this repository's new commits into your copy. `/update-best-practice` writes down why your copy differs, so a merge keeps your changes. Both keep one record per practice in `docs/adopted-practices/` of your project. Follow these steps in place of steps 1 and 2 above.
+
+1. Clone this repository next to your project, as in step 1 above, and copy both skills into your project. Keep them side by side: `update-best-practice` reads shared files from the other folder. The skills need git 2.39 or newer.
+
+   ```bash
+   mkdir -p ../your-project/.claude/skills
+   cp -R skills/sync-best-practice skills/update-best-practice ../your-project/.claude/skills/
+   ```
+
+2. Start Claude Code in your project and adopt the practice, with the address you cloned in step 1. The skill clones this repository into a temp folder, copies the practice to the same path, and writes down the commit it came from, so you do not note the commit yourself.
+
+   ```
+   /sync-best-practice adopt docs/engineering/any-language/git source=<address>
+   ```
+
+   It creates `docs/adopted-practices/git.md` and ends with a report whose **Source** line names the commit the copy came from. The skill also offers its own line for your `CLAUDE.md`, which tells Claude to record each later change: say yes. That line does not replace the practice's trigger line from step 3 above, so add that one too. Then commit the copy and the record together, before you change anything. After that commit, do any other step the practice's `README.md` lists under "How to adopt": step 3 below records the edits those steps make to the copy.
+
+3. Change the copy as your project needs. When Claude makes the change, the line from step 2 tells it to run `/update-best-practice` before the commit: it asks you why and writes your answer into the record. When you change the copy yourself, run `/update-best-practice` before you commit. Commit the change and the record together.
+
+4. Later, `/sync-best-practice status git` tells you whether this repository has new commits for the practice. `/sync-best-practice sync git` shows you the new text and merges it on your yes, with your recorded changes kept.
+
+[skills/README.md](skills/README.md) lists every command, and what to do with a copy you made by hand.
+
 ### Try the status line
 
 ![The status line under the Claude Code prompt: context, model and effort, 5-hour and weekly limits, cache, burn](claude-config/statusline/img/statusline.svg)
@@ -133,7 +160,7 @@ my-claude-best/
 │   └── claude-code/       # guides on instructing Claude Code
 ├── claude-config/
 │   └── statusline/        # the status line: the script, its install guide, its images
-├── skills/                # planned skills to read and copy; none yet
+├── skills/                # skills to read and copy into .claude/skills/ of your project
 ├── CLAUDE.local.md        # an example practices section for a project CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md
@@ -147,7 +174,7 @@ Every practice folder has the same shape. It holds a `README.md` that maps the f
 ## Where to get help
 
 - A question, or a mistake in a practice: open an issue in this repository. Name the file and the section, and quote the line. [CONTRIBUTING.md](CONTRIBUTING.md) says what a useful issue holds.
-- A security problem in the status line script: never describe it in a public issue. [SECURITY.md](SECURITY.md) says how to report it privately.
+- A security problem in the status line script or in a skill: never describe it in a public issue. [SECURITY.md](SECURITY.md) says how to report it privately.
 
 I read issues when I can. There is no set response time.
 
