@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:modelcontextprotocol.io)",
+      "WebFetch(domain:docs.astral.sh)",
+      "Bash(uv run ruff check:*)",
+      "Bash(uv run ruff format:*)",
+      "Bash(uv run pyright:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(uv sync:*)",
+      "Bash(pnpm test:*)",
+      "Bash(pnpm typecheck:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run lint:*)",
+      "Bash(make test:*)",
+      "Bash(make check:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(npm run build:*)",
+      "Bash(git show:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Grep|Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$(git -C \"${CLAUDE_PROJECT_DIR}\" rev-parse --path-format=absolute --git-common-dir)/../.claude/hooks/block-env-read.py\"",
+            "onFailure": "block"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION": "3000"
+  }
+}
