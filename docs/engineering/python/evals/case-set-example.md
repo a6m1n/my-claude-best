@@ -4,7 +4,7 @@ A worked example for [evals.md](evals.md) and [repeated-runs.md](repeated-runs.m
 triage call of [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md): `support/triage/` reads a
 customer's ticket and returns its kind and the date its problem first occurred. Here the call gets
 its case set, its eval in Langfuse and the CI job that runs it. The eval calls the house client,
-`AcmeAiClient`, because that example sends every model call through the one client in `core/`; a
+`AcmeAIClient`, because that example sends every model call through the one client in `core/`; a
 LangChain app keeps the same case set, graders and gate, and changes only how the task reaches the
 model ([With LangChain](#with-langchain)).
 Every name is a placeholder, the tickets are invented, and the rates are example values.
@@ -119,7 +119,10 @@ ending disagree, so the rule between the two fields is on the type, not in a com
 
 ```python
 # evals/triage/experiment_triage.py
-"""The triage eval: every case three times against the real model, graded by code, gated on its baseline."""
+"""The triage eval.
+
+Every case three times against the real model, graded by code, gated on its baseline.
+"""
 
 import logging.config
 import uuid
@@ -136,9 +139,13 @@ from langfuse.experiment import (
     LocalExperimentItem,
 )
 
-from acme.core.acme_ai_client import AcmeAiClient
+from acme.core.acme_ai_client import AcmeAIClient
 from acme.core.config import Settings
-from acme.core.errors import ModelAnswerInvalid, ModelOutputCutOff, ModelRefused
+from acme.core.errors import (
+    ModelAnswerInvalidError,
+    ModelOutputCutOffError,
+    ModelRefusedError,
+)
 from acme.core.langfuse_client import start_tracing
 from acme.core.logging import build_logging_config
 from acme.support.triage.consts import TRIAGE_LLM_MODEL, TRIAGE_LLM_REASONING_EFFORT
@@ -157,7 +164,8 @@ CASES_FILE: Final = Path(__file__).with_name("cases_triage.jsonl")
 # Three runs of each case, one rate over all: one run shows no rate
 # (repeated-runs.md sections 5 and 7).
 RUNS_PER_CASE: Final = 3
-# The pass rates of the version on main. The pull request that changes them explains why.
+# The pass rates of the version on main. The pull request that changes them
+# explains why.
 BASELINE: Final[Mapping[Criterion, float]] = {
     Criterion.KIND_MATCHES: 0.95,
     Criterion.DATE_MATCHES: 0.88,
@@ -169,7 +177,7 @@ MARGIN: Final = 0.06
 
 
 def experiment(context: RunnerContext) -> ExperimentResult:
-    """The entry the langfuse/experiment-action calls; `python -m` starts at main()."""
+    """Run the eval for the langfuse/experiment-action; `python -m` starts at main()."""
     return run_triage_eval(context, Settings())
 
 
@@ -200,7 +208,7 @@ def run_triage_eval(context: RunnerContext, settings: Settings) -> ExperimentRes
     )
 
     report = rate_report(result, rates, baseline=BASELINE, margin=MARGIN)
-    print(report)  # noqa: T201  # the report is this command's output
+    print(report)  # noqa: T201  # The report is this command's output
 
     # Raised after the report, so a red run's log holds every rate too.
     if breach is not None:
@@ -235,7 +243,7 @@ def date_matches(
 def date_way_out(
     *, item_results: list[ExperimentItemResult], **kwargs: object
 ) -> Evaluation:
-    """The share of answered runs that took the way out, a null date.
+    """Return the share of answered runs that took the way out, a null date.
 
     The comment counts the answered runs, then gives the two-by-two table of evals.md
     section 4: expected null or a date, returned null or a date. A run that did not
@@ -264,7 +272,10 @@ def date_way_out(
 def _answered(
     item_results: Iterable[ExperimentItemResult],
 ) -> Iterator[tuple[TriageCase, TicketTriage]]:
-    """Each run that answered, with its case; this eval's items are local dicts."""
+    """Yield each run that answered, with its case.
+
+    This eval's items are local dicts.
+    """
     for run in item_results:
         case = run.item["expected_output"] if isinstance(run.item, dict) else None
         if (
@@ -276,7 +287,10 @@ def _answered(
 
 
 def _failed_run(criterion: Criterion, ended: TriageEnd) -> Evaluation:
-    """A run with no triage fails every criterion; the comment says how it ended."""
+    """Return a failing grade of `criterion` for a run with no triage.
+
+    The comment says how it ended.
+    """
     return Evaluation(name=criterion, value=False, comment=f"run ended: {ended}")
 
 
@@ -299,9 +313,9 @@ def _item(case: TriageCase) -> LocalExperimentItem:
     )
 
 
-def _triage(item: LocalExperimentItem, client: AcmeAiClient) -> TriageRun:
-    # The model's own failure is a failed case. ModelUnavailable, the provider's, is not
-    # caught: it is an error of the run (evals.md section 6).
+def _triage(item: LocalExperimentItem, client: AcmeAIClient) -> TriageRun:
+    # The model's own failure is a failed case. ModelUnavailableError, the provider's,
+    # is not caught: it is an error of the run (evals.md section 6).
     try:
         triage = triage_ticket(
             item["input"],
@@ -309,19 +323,19 @@ def _triage(item: LocalExperimentItem, client: AcmeAiClient) -> TriageRun:
             model=TRIAGE_LLM_MODEL,
             reasoning_effort=TRIAGE_LLM_REASONING_EFFORT,
         )
-    except ModelRefused:
+    except ModelRefusedError:
         return TriageRun(ended=TriageEnd.REFUSED, triage=None)
-    except ModelOutputCutOff:
+    except ModelOutputCutOffError:
         return TriageRun(ended=TriageEnd.CUT_OFF, triage=None)
-    except ModelAnswerInvalid:
+    except ModelAnswerInvalidError:
         return TriageRun(ended=TriageEnd.INVALID_ANSWER, triage=None)
 
     return TriageRun(ended=TriageEnd.ANSWERED, triage=triage)
 
 
-def _uncached_client(settings: Settings) -> AcmeAiClient:
-    """The one model client with the cache switch on, so every run reaches the model."""
-    return AcmeAiClient(
+def _uncached_client(settings: Settings) -> AcmeAIClient:
+    """Build the one client with the cache switch on, so every run reaches the model."""
+    return AcmeAIClient(
         AcmeAiSdk(api_key=settings.acme_ai_api_key.get_secret_value()),
         disable_prompt_cache=True,
         new_request_uuid=uuid.uuid4,
@@ -360,7 +374,10 @@ if __name__ == "__main__":
 
 ```python
 # evals/rate_gate.py
-"""The gate of every eval run: each run graded, and each rate within its margin of the baseline."""
+"""The gate of every eval run.
+
+Each run graded, and each rate within its margin of the baseline.
+"""
 
 from collections import Counter
 from collections.abc import Iterable, Mapping
@@ -384,8 +401,10 @@ def check_rates(
     baseline: Mapping[CriterionT, float],
     margin: float,
 ) -> tuple[dict[CriterionT, float], RegressionError | None]:
-    """Each criterion's rate over the runs the cases asked for, and an error for the
-    first rate below its baseline, left for the caller to raise once the report is out.
+    """Return each criterion's rate and an error for the first rate below its baseline.
+
+    A rate is over the runs the cases asked for. The error is left for the caller to
+    raise once the report is out.
 
     Raises RegressionError when a run has no grade: no rate can be told then.
     """
@@ -395,7 +414,8 @@ def check_rates(
         run for run in result.item_results if len(run.evaluations) == len(baseline)
     ]
 
-    # run_experiment leaves out a run whose task raised, so the runs are checked against the cases.
+    # run_experiment leaves out a run whose task raised, so the runs are checked against
+    # the cases.
     missing = runs_asked - Counter(_case_id(run) for run in graded)
     if missing:
         raise RegressionError(
@@ -426,7 +446,7 @@ def rate_report(
     baseline: Mapping[CriterionT, float],
     margin: float,
 ) -> str:
-    """Each rate with its baseline and the margin, then each run measure."""
+    """Format each rate with its baseline and the margin, then each run measure."""
     lines = [
         f"{criterion}: {rate:.3f} over the runs asked; "
         f"baseline {baseline[criterion]:.2f}, margin {margin:.2f}"
@@ -441,7 +461,7 @@ def rate_report(
 
 
 def _case_id(run: ExperimentItemResult) -> str:
-    """The case id an experiment put into the item's metadata."""
+    """Return the case id an experiment put into the item's metadata."""
     metadata = run.item["metadata"] if isinstance(run.item, dict) else run.item.metadata
     return str((metadata or {})[CASE_ID_METADATA_KEY])
 
@@ -480,7 +500,7 @@ Why it looks like this:
 - **Every run counted** ([evals.md](evals.md) section 6): a refusal, an answer cut off or one that
   does not parse is the model's own answer, so `_triage` returns it as a `TriageRun` with no
   triage and its `TriageEnd`, and each grader fails the run with that ending as its comment. Only
-  `ModelUnavailable`, the provider's failure, raises. `run_experiment` leaves a run out when its
+  `ModelUnavailableError`, the provider's failure, raises. `run_experiment` leaves a run out when its
   task raised, so the gate compares the graded runs with the runs each case asked for, and a
   missing grade fails the gate with the case ids instead of raising the rate. The rate is divided
   by the runs the case set asked for, never by the results that came back.
@@ -510,7 +530,7 @@ Why it looks like this:
   [python/logging/agent-example.md](../logging/agent-example.md). The `langfuse/experiment-action` GitHub
   Action calls `experiment(context)` instead, and adds a comment to the pull request.
 
-`AcmeAiClient`, `AcmeAiSdk`, `Settings`, `triage_ticket`, `TicketTriage`, `TRIAGE_LLM_MODEL`,
+`AcmeAIClient`, `AcmeAiSdk`, `Settings`, `triage_ticket`, `TicketTriage`, `TRIAGE_LLM_MODEL`,
 `TRIAGE_LLM_REASONING_EFFORT` and the `acme.core.errors` classes are those of
 [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), `build_logging_config` and the
 settings fields `log_level` and `log_format` those of

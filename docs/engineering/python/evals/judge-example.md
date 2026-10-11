@@ -31,11 +31,11 @@ changes with the agent's case set.
 
 from typing import Final
 
-from acme.core.schemas import LlmModel, ReasoningEffort
+from acme.core.schemas import LLMModel, ReasoningEffort
 
-# Chosen 2026-09 on the held-back labels: the smaller model kept TPR and TNR above 0.9, the
-# bar this team chose. Another family than the agent's model (judges.md section 4).
-UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL: Final[LlmModel] = "acme-small-3-2026-06-02"
+# Chosen 2026-09 on the held-back labels: the smaller model kept TPR and TNR above 0.9,
+# the bar this team chose. Another family than the agent's model (judges.md section 4).
+UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL: Final[LLMModel] = "acme-small-3-2026-06-02"
 UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT: Final = ReasoningEffort.LOW
 
 # How far a rate of the agent's eval may fall below its baseline: two standard
@@ -132,17 +132,17 @@ class Verdict(StrEnum):
 class Split(StrEnum):
     """Which part of the labels a reply belongs to (judges.md section 6)."""
 
-    EXAMPLES = "examples"  # may be shown in the prompt
-    DEV = "dev"  # the prompt is tuned on these
-    TEST = "test"  # held back: the judge is measured on these only
+    EXAMPLES = "examples"  # May be shown in the prompt
+    DEV = "dev"  # The prompt is tuned on these
+    TEST = "test"  # Held back: the judge is measured on these only
 
 
 @unique
 class NoVerdict(StrEnum):
     """Why the judge gave no verdict on a labelled reply (evals.md section 6)."""
 
-    JUDGE_FAILED = "judge_failed"  # refused, cut off or unparsable: a wrong verdict
-    PROVIDER_FAILED = "provider_failed"  # an error of the run, never a verdict
+    JUDGE_FAILED = "judge_failed"  # Refused, cut off or unparsable: a wrong verdict
+    PROVIDER_FAILED = "provider_failed"  # An error of the run, never a verdict
 
 
 class PromiseVerdict(BaseModel):
@@ -150,17 +150,20 @@ class PromiseVerdict(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
-    evidence: str  # first: the quote leads to the verdict, and stays short
+    evidence: str  # First: the quote leads to the verdict, and stays short
     verdict: Verdict
 
 
 class LabelledReply(BaseModel):
-    """One line of labels_unsupported_promise.jsonl: a real reply and a person's verdict on it."""
+    """One line of labels_unsupported_promise.jsonl.
+
+    A real reply and a person's verdict on it.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
     reply_id: str
-    # None: the agent saw no order, as in the agent's eval
+    # None: the agent saw no order, as in the agent's eval.
     order_status: OrderStatus | None
     reply: str
     label: Verdict
@@ -182,8 +185,8 @@ order store's client names it
 
 ```python
 # evals/chat/judge_unsupported_promise.py
-from acme.core.acme_ai_client import AcmeAiClient
-from acme.core.schemas import LlmModel, OrderStatus, ReasoningEffort
+from acme.core.acme_ai_client import AcmeAIClient
+from acme.core.schemas import LLMModel, OrderStatus, ReasoningEffort
 from evals.chat.prompts import NO_ORDER_STATUS, SYSTEM, USER
 from evals.chat.schemas import PromiseVerdict
 
@@ -191,9 +194,9 @@ from evals.chat.schemas import PromiseVerdict
 def judge_unsupported_promise(
     reply: str,
     order_status: OrderStatus | None,
-    client: AcmeAiClient,
+    client: AcmeAIClient,
     *,
-    model: LlmModel,
+    model: LLMModel,
     reasoning_effort: ReasoningEffort,
 ) -> PromiseVerdict:
     return client.complete(
@@ -213,7 +216,7 @@ The call goes through the one client of the vendor
 `PromiseVerdict` and turns a refusal or a malformed answer into a named error. The model and the
 effort are parameters, so the validation below can try a cheaper model on the same labels.
 
-`AcmeAiClient`, `LlmModel` and `ReasoningEffort` are those of
+`AcmeAIClient`, `LLMModel` and `ReasoningEffort` are those of
 [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md); `OrderStatus` is the order
 store's closed set in `core/schemas.py`, not shown.
 
@@ -265,13 +268,13 @@ from langfuse.experiment import (
     LocalExperimentItem,
 )
 
-from acme.core.acme_ai_client import AcmeAiClient
+from acme.core.acme_ai_client import AcmeAIClient
 from acme.core.config import Settings
 from acme.core.errors import (
-    ModelAnswerInvalid,
-    ModelOutputCutOff,
-    ModelRefused,
-    ModelUnavailable,
+    ModelAnswerInvalidError,
+    ModelOutputCutOffError,
+    ModelRefusedError,
+    ModelUnavailableError,
 )
 from acme.core.langfuse_client import start_tracing
 from acme.core.logging import build_logging_config
@@ -314,7 +317,7 @@ class JudgedReply:
     """One label's result, which the run records as the case's output."""
 
     outcome: Outcome
-    evidence: str  # the judge's quote; "" when it gave no verdict
+    evidence: str  # The judge's quote; "" when it gave no verdict
 
 
 @dataclass(frozen=True)
@@ -372,9 +375,9 @@ def main() -> int:
     return 0 if passed else 1
 
 
-def _uncached_client(settings: Settings) -> AcmeAiClient:
-    """The one model client with the cache switch on, so every run reaches the model."""
-    return AcmeAiClient(
+def _uncached_client(settings: Settings) -> AcmeAIClient:
+    """Build the one client with the cache switch on, so every run reaches the model."""
+    return AcmeAIClient(
         AcmeAiSdk(api_key=settings.acme_ai_api_key.get_secret_value()),
         disable_prompt_cache=True,
         new_request_uuid=uuid.uuid4,
@@ -383,13 +386,13 @@ def _uncached_client(settings: Settings) -> AcmeAiClient:
 
 def measure_judge(
     langfuse: Langfuse,
-    client: AcmeAiClient,
+    client: AcmeAIClient,
     labels: Sequence[LabelledReply],
     passes: Callable[[JudgeScores], bool],
     *,
     commit: str,
 ) -> bool:
-    """Runs the judge on the labels, prints a report, says if its scores pass."""
+    """Run the judge on the labels, print a report, and say whether its scores pass."""
     # One trace per label, so a wrong verdict can be opened; a plain loop leaves none
     # (evals.md section 9).
     result = langfuse.run_experiment(
@@ -416,7 +419,7 @@ def measure_judge(
     outcomes = Counter(run.output.outcome for run in result.item_results)
     scores = _scores(outcomes)
 
-    print(_report(outcomes, scores))  # noqa: T201  # the report is this command's output
+    print(_report(outcomes, scores))  # noqa: T201  # The report is the command's output
 
     return passes(scores)
 
@@ -468,12 +471,12 @@ def _missing_reply_ids(
 
 
 def _reply_id(run: ExperimentItemResult) -> str:
-    """The reply id `_item` put into the item's metadata."""
+    """Return the reply id `_item` put into the item's metadata."""
     metadata = run.item["metadata"] if isinstance(run.item, dict) else run.item.metadata
     return str((metadata or {})[REPLY_ID_METADATA_KEY])
 
 
-def _judge(labelled: LabelledReply, client: AcmeAiClient) -> JudgedReply:
+def _judge(labelled: LabelledReply, client: AcmeAIClient) -> JudgedReply:
     try:
         judged = judge_unsupported_promise(
             labelled.reply,
@@ -482,7 +485,7 @@ def _judge(labelled: LabelledReply, client: AcmeAiClient) -> JudgedReply:
             model=UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL,
             reasoning_effort=UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT,
         )
-    except (ModelRefused, ModelOutputCutOff, ModelAnswerInvalid) as exc:
+    except (ModelRefusedError, ModelOutputCutOffError, ModelAnswerInvalidError) as exc:
         # The judge's own answer: a wrong verdict, counted against TPR or TNR, so an
         # expected outcome, at INFO (logging.md section 4). The error names only the
         # model, never the reply (logging.md section 10).
@@ -491,12 +494,10 @@ def _judge(labelled: LabelledReply, client: AcmeAiClient) -> JudgedReply:
         return JudgedReply(
             outcome=(labelled.label, NoVerdict.JUDGE_FAILED), evidence=""
         )
-    except ModelUnavailable:
+    except ModelUnavailableError:
         # The provider's failure: an error of the run, which fails the check. This code
         # decides, so it logs it at ERROR, with the traceback (logging.md section 5).
-        logger.exception(
-            "Reply %s not judged: the provider failed", labelled.reply_id
-        )
+        logger.exception("Reply %s not judged: the provider failed", labelled.reply_id)
 
         return JudgedReply(
             outcome=(labelled.label, NoVerdict.PROVIDER_FAILED), evidence=""
@@ -535,7 +536,10 @@ def _scores(outcomes: Counter[Outcome]) -> JudgeScores:
 
 
 def _may_gate(scores: JudgeScores) -> bool:
-    """Enough labels, all judged, both rates over the bar, and the pass rates close."""
+    """Return whether the judge may gate the agent's eval.
+
+    Enough labels, all judged, both rates over the bar, and the pass rates close.
+    """
     enough_labels = min(scores.real_passes, scores.real_fails) >= MIN_LABELS_PER_VERDICT
     # Further apart than the agent gate's margin, the judge's errors alone could flip
     # that gate's decision (judges.md section 6).
@@ -552,7 +556,10 @@ def _may_gate(scores: JudgeScores) -> bool:
 
 
 def _held_steady(scores: JudgeScores) -> bool:
-    """All judged, TPR and TNR within the drift margin of the last run, over the bar."""
+    """Return whether the judge held steady since the last run.
+
+    All judged, TPR and TNR within the drift margin of the last run, over the bar.
+    """
     return (
         scores.errors == 0
         and scores.tpr >= MIN_TPR
@@ -595,7 +602,7 @@ Why it looks like this:
   further apart, its errors alone could flip the agent's gate ([judges.md](judges.md) section 6).
 - **Every label counted** ([evals.md](evals.md) section 6): a refusal, an answer cut off or one that
   does not parse is the judge's own answer on that reply, so it is a wrong verdict. It counts
-  against TPR or TNR, and the report shows it as "no verdict". Only `ModelUnavailable`, the
+  against TPR or TNR, and the report shows it as "no verdict". Only `ModelUnavailableError`, the
   provider's failure, is an error of the run: it is counted apart and fails the check, never
   dropped. `_judge` decides both, so it logs each once, with the reply's id: a wrong verdict at
   `INFO`, a provider failure at `ERROR` with its traceback ([logging.md](../logging/logging.md)
@@ -628,7 +635,7 @@ Why it looks like this:
 - **The same run chooses the model** ([judges.md](judges.md) section 8): run it with a stronger model
   and a cheaper one by changing the two constants, and keep the cheapest that clears the bar.
 
-`AcmeAiClient`, `AcmeAiSdk`, `Settings` and the `acme.core.errors` classes are those of
+`AcmeAIClient`, `AcmeAiSdk`, `Settings` and the `acme.core.errors` classes are those of
 [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), `build_logging_config` and the
 settings fields `log_level` and `log_format` those of
 [python/logging/setup-example.md](../logging/setup-example.md), and `start_tracing` that of

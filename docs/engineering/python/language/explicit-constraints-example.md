@@ -69,7 +69,7 @@ from shop.sales.checkout.schemas import Order
 
 # Card fraud clusters in a new customer's first large order, so the risk
 # team checks those by hand before any money moves.
-MANUAL_REVIEW_THRESHOLD: Final = Decimal("1000")
+MANUAL_REVIEW_THRESHOLD: Final = Decimal(1000)
 
 
 def charge_card(order: Order) -> PaymentId | None:
@@ -196,7 +196,7 @@ from typing import Final
 
 # Card fraud clusters in a new customer's first large order, so the risk
 # team checks those by hand before any money moves.
-MANUAL_REVIEW_THRESHOLD: Final = Decimal("1000")
+MANUAL_REVIEW_THRESHOLD: Final = Decimal(1000)
 
 
 def needs_manual_review(total: Decimal, previous_orders: int) -> bool:

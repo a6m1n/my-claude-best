@@ -101,11 +101,11 @@ with async tests and with every other plugin, and shows every answer when it fai
 
 ```python
 # tests/integration/triage/test_service_triage.py
-def run_triage(ticket_text: str, client: AcmeAiClient) -> TriageRun:
-    """One run of the triage call; the model's own failure ends it with no triage.
+def run_triage(ticket_text: str, client: AcmeAIClient) -> TriageRun:
+    """Run the triage call once; the model's own failure ends it with no triage.
 
-    ModelUnavailable, the provider's failure, is not caught: the test fails on it as
-    an error of the run (evals.md section 6).
+    ModelUnavailableError, the provider's failure, is not caught: the test fails on it
+    as an error of the run (evals.md section 6).
     """
     try:
         triage = triage_ticket(
@@ -114,11 +114,11 @@ def run_triage(ticket_text: str, client: AcmeAiClient) -> TriageRun:
             model=TRIAGE_LLM_MODEL,
             reasoning_effort=TRIAGE_LLM_REASONING_EFFORT,
         )
-    except ModelRefused:
+    except ModelRefusedError:
         return TriageRun(ended=TriageEnd.REFUSED, triage=None)
-    except ModelOutputCutOff:
+    except ModelOutputCutOffError:
         return TriageRun(ended=TriageEnd.CUT_OFF, triage=None)
-    except ModelAnswerInvalid:
+    except ModelAnswerInvalidError:
         return TriageRun(ended=TriageEnd.INVALID_ANSWER, triage=None)
 
     return TriageRun(ended=TriageEnd.ANSWERED, triage=triage)
@@ -129,7 +129,7 @@ class TestTriageTicket:
     """The triage call files a ticket under its kind."""
 
     def test_a_crash_report_is_filed_as_a_bug_in_two_runs_of_three(
-        self, uncached_model_client: AcmeAiClient
+        self, uncached_model_client: AcmeAIClient
     ) -> None:
         runs = [run_triage(CRASH_ON_EXPORT, uncached_model_client) for _ in range(3)]
 
@@ -149,7 +149,7 @@ that does not parse is the model's own answer, so `run_triage` ends the run with
 counts as a wrong one. `run_triage` returns one type: an untagged union of a kind and three errors
 would make the test write an `isinstance` check for each run, and a run with no triage holds
 `None`, the documented form for no result ([python.md](../language/python.md) section 3). Only
-`ModelUnavailable`, the provider's failure, raises, and the test fails on it as an error of the run
+`ModelUnavailableError`, the provider's failure, raises, and the test fails on it as an error of the run
 ([evals.md](evals.md) section 6). The assert's message is the list of runs, so a red run shows
 every answer, and the loop makes three calls unless the provider fails.
 

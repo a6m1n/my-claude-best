@@ -112,7 +112,7 @@ PLACEHOLDER_SECRET: Final = "changethis"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="ACME_",
-        env_file=".env",  # local runs only; a deployment sets real variables
+        env_file=".env",  # Local runs only; a deployment sets real variables
         env_ignore_empty=True,  # Compose and CI pass an unset secret as ""
         frozen=True,
         # A failed start shows what it read in the error text; this keeps it out.
@@ -127,7 +127,7 @@ class Settings(BaseSettings):
     payments_api_key: SecretStr
     allowed_origins: tuple[str, ...] = ()
     log_level: LogLevel = "INFO"
-    # ACME_LOG_FORMAT=json in deployed environments
+    # ACME_LOG_FORMAT=json in deployed environments.
     log_format: LogFormat = LogFormat.CONSOLE
 
     @field_validator("database_password", "payments_api_key")
@@ -199,7 +199,10 @@ a name and a reason; the methods, left out, pass it on each call, as the search 
 `src/acme/api/app.py`
 
 ```python
-"""Builds the HTTP app: the settings, one instance of each client, and the routes that use them."""
+"""Builds the HTTP app.
+
+The settings, one instance of each client, and the routes that use them.
+"""
 
 import httpx
 from fastapi import FastAPI
@@ -213,7 +216,7 @@ from acme.core.payments_client import PaymentGateway
 
 
 def create_app() -> RequestIdMiddleware:
-    """The factory uvicorn calls once in each worker, at startup."""
+    """Build the app; uvicorn calls this factory once in each worker, at startup."""
     # Outside FastAPI's own error middleware, so the id is set first and its header
     # reaches a 500 too (logging.md section 7).
     return RequestIdMiddleware(build_app(Settings()))
@@ -248,7 +251,10 @@ middleware of [python/logging/setup-example.md](../logging/setup-example.md)
 `src/acme/api/main.py`
 
 ```python
-"""The HTTP process: reads the settings first, then starts uvicorn with the app factory."""
+"""The HTTP process.
+
+Reads the settings first, then starts uvicorn with the app factory.
+"""
 
 import uvicorn
 
@@ -298,7 +304,7 @@ VALID_ENVIRONMENT: Final = {
 def environment(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     """The valid environment and nothing else: the machine's own ACME_ variables go."""
     for name in list(os.environ):
-        # names match in any case, so acme_database_host is one of them too
+        # Names match in any case, so acme_database_host is one of them too.
         if name.upper().startswith("ACME_"):
             monkeypatch.delenv(name)
 
@@ -324,7 +330,7 @@ class TestSettings:
             # (python.md section 5).
             Settings(_env_file=None)
 
-        # include_input=False: the message shows each field and holds no value it read
+        # include_input=False: the message shows each field and holds no value it read.
         errors = caught.value.errors(include_input=False)
         assert [error["type"] for error in errors] == ["missing"], errors
 

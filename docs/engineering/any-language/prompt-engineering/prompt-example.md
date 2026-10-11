@@ -30,17 +30,22 @@ from typing import Literal, TypeAlias
 from openai.types import ChatModel
 
 # The vendor owns the ids; this is the set this project has tested its prompts on.
-# Each id names one fixed build, never a moving alias (python/evals/production.md section 6).
-LlmModel: TypeAlias = Literal["acme-large-2-2026-08-19", "acme-small-3-2026-06-02"]
+# Each id names one fixed build, never a moving alias
+# (python/evals/production.md section 6).
+LLMModel: TypeAlias = Literal["acme-large-2-2026-08-19", "acme-small-3-2026-06-02"]
 
-# The models either client can name: AcmeAiClient takes an LlmModel, the OpenAI chat model a
-# ChatModel. core/errors.py names it, so the type lives here (file-structure.md section 4).
-ModelName: TypeAlias = LlmModel | ChatModel
+# The models either client can name: AcmeAIClient takes an LLMModel, the OpenAI chat
+# model a ChatModel. core/errors.py names it, so the type lives here
+# (file-structure.md section 4).
+ModelName: TypeAlias = LLMModel | ChatModel
 
 
 @unique
 class ReasoningEffort(StrEnum):
-    """This project's levels. The vendor's client maps each to what the current model accepts."""
+    """This project's levels.
+
+    The vendor's client maps each to what the current model accepts.
+    """
 
     NONE = "none"
     LOW = "low"
@@ -50,12 +55,15 @@ class ReasoningEffort(StrEnum):
 
 @unique
 class StopReason(StrEnum):
-    """Why the model stopped, in the client's words; the client maps the vendor's reasons to these."""
+    """Why the model stopped, in the client's words.
+
+    The client maps the vendor's reasons to these.
+    """
 
     END = "end"
     REFUSAL = "refusal"
     OUTPUT_LIMIT = "output_limit"
-    UNKNOWN = "unknown"  # a reason the vendor added after this client was written
+    UNKNOWN = "unknown"  # A reason the vendor added after this client was written
 
 
 @dataclass(frozen=True)
@@ -74,7 +82,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # ACME_DISABLE_PROMPT_CACHE=true only while debugging or measuring
+    # ACME_DISABLE_PROMPT_CACHE=true only while debugging or measuring.
     disable_prompt_cache: bool = False
 ```
 
@@ -95,13 +103,17 @@ from typing import TypeVar, assert_never
 from acme_ai import AcmeAiSdk
 from pydantic import BaseModel, ValidationError
 
-from acme.core.errors import ModelAnswerInvalid, ModelOutputCutOff, ModelRefused
-from acme.core.schemas import LlmModel, RawReply, ReasoningEffort, StopReason
+from acme.core.errors import (
+    ModelAnswerInvalidError,
+    ModelOutputCutOffError,
+    ModelRefusedError,
+)
+from acme.core.schemas import LLMModel, RawReply, ReasoningEffort, StopReason
 
 AnswerT = TypeVar("AnswerT", bound=BaseModel)
 
 
-class AcmeAiClient:
+class AcmeAIClient:
     def __init__(
         self,
         sdk: AcmeAiSdk,
@@ -116,7 +128,7 @@ class AcmeAiClient:
     def complete(
         self,
         *,
-        model: LlmModel,
+        model: LLMModel,
         reasoning_effort: ReasoningEffort,
         system: str,
         user: str,
@@ -131,9 +143,9 @@ class AcmeAiClient:
             case StopReason.END | StopReason.UNKNOWN:
                 return _parse_answer(model, reply.text, answer_type)
             case StopReason.REFUSAL:
-                raise ModelRefused(model)
+                raise ModelRefusedError(model)
             case StopReason.OUTPUT_LIMIT:
-                raise ModelOutputCutOff(model)
+                raise ModelOutputCutOffError(model)
             case _ as unreachable:
                 assert_never(unreachable)
 
@@ -147,32 +159,33 @@ class AcmeAiClient:
 
     def _send(
         self,
-        model: LlmModel,
+        model: LLMModel,
         reasoning_effort: ReasoningEffort,
         system: str,
         user: str,
         answer_type: type[BaseModel],
     ) -> RawReply:
-        # Left out: the SDK call. It passes the model; the effort under the vendor's own name and
-        # values; system as the system prompt and user as the one user message;
-        # answer_type.model_json_schema() through the vendor's structured-output feature; and the
-        # vendor's no-cache switch, where one exists, when self._disable_prompt_cache is on. It maps
-        # the vendor's stop reason to StopReason: a content-filter stop maps to REFUSAL, and a
-        # reason it does not know yet to UNKNOWN. Any SDK error becomes
-        # ModelUnavailable(model, status), raised from None, because the vendor's message can
-        # quote the prompt (logging.md section 10). It records each call as a
-        # generation under the current span through core/langfuse_client.py (a
+        # Left out: the SDK call. It passes the model; the effort under the vendor's own
+        # name and values; system as the system prompt and user as the one user message;
+        # answer_type.model_json_schema() through the vendor's structured-output
+        # feature; and the vendor's no-cache switch, where one exists, when
+        # self._disable_prompt_cache is on. It maps the vendor's stop reason to
+        # StopReason: a content-filter stop maps to REFUSAL, and a reason it does not
+        # know yet to UNKNOWN. Any SDK error becomes
+        # ModelUnavailableError(model, status), raised from None, because the vendor's
+        # message can quote the prompt (logging.md section 10). It records each call as
+        # a generation under the current span through core/langfuse_client.py (a
         # function there, not shown), with its model, prompt, answer and usage: the
         # trace keeps the content the log never holds (logging.md section 8).
         ...
 
 
-def _parse_answer(model: LlmModel, text: str, answer_type: type[AnswerT]) -> AnswerT:
+def _parse_answer(model: LLMModel, text: str, answer_type: type[AnswerT]) -> AnswerT:
     try:
         return answer_type.model_validate_json(text)
     except ValidationError:
-        # from None: pydantic's message can quote the answer
-        raise ModelAnswerInvalid(model) from None
+        # Raised from None: pydantic's message can quote the answer.
+        raise ModelAnswerInvalidError(model) from None
 ```
 
 ```python
@@ -180,8 +193,11 @@ def _parse_answer(model: LlmModel, text: str, answer_type: type[AnswerT]) -> Ans
 from acme.core.schemas import ModelName
 
 
-class ModelUnavailable(Exception):
-    """The provider failed; the message names the model and status, never the provider's text."""
+class ModelUnavailableError(Exception):
+    """The provider failed.
+
+    The message names the model and status, never the provider's text.
+    """
 
     def __init__(self, model: ModelName, status: int | None) -> None:
         super().__init__(f"model {model} unavailable (status {status})")
@@ -189,24 +205,33 @@ class ModelUnavailable(Exception):
         self.status = status
 
 
-class ModelRefused(Exception):
-    """The model refused; the message names the model, never the prompt or the answer."""
+class ModelRefusedError(Exception):
+    """The model refused.
+
+    The message names the model, never the prompt or the answer.
+    """
 
     def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} refused")
         self.model = model
 
 
-class ModelOutputCutOff(Exception):
-    """The answer hit the model's output limit; the message names the model, never the answer."""
+class ModelOutputCutOffError(Exception):
+    """The answer hit the model's output limit.
+
+    The message names the model, never the answer.
+    """
 
     def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} stopped at its output limit")
         self.model = model
 
 
-class ModelAnswerInvalid(Exception):
-    """The answer did not match the schema; the message names the model, never the answer."""
+class ModelAnswerInvalidError(Exception):
+    """The answer did not match the schema.
+
+    The message names the model, never the answer.
+    """
 
     def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} gave an answer that does not match the schema")
@@ -230,8 +255,8 @@ What it does for the rules:
   ([python.md](../../python/language/python.md) section 2). Each arm is one line, so `complete` reads at one
   level of detail ([readability.md](../readability/readability.md) section 2). A refusal and a
   stop at the model's output limit become named errors before the parser sees the text. The parse
-  sits in `_parse_answer`, where a reply that does not match the type becomes `ModelAnswerInvalid`.
-  An SDK error becomes `ModelUnavailable`. The errors name the model, never the text, so they are
+  sits in `_parse_answer`, where a reply that does not match the type becomes `ModelAnswerInvalidError`.
+  An SDK error becomes `ModelUnavailableError`. The errors name the model, never the text, so they are
   safe in a log ([logging.md](../../python/logging/logging.md) section 10).
 - **`AcmeAiSdk`**, the vendor's SDK object from its package `acme_ai`, is built once by the
   adapter at startup, with the vendor's key from `Settings` as a `SecretStr`
@@ -246,10 +271,10 @@ What it does for the rules:
 
 from typing import Final
 
-from acme.core.schemas import LlmModel, ReasoningEffort
+from acme.core.schemas import LLMModel, ReasoningEffort
 
-TRIAGE_LLM_MODEL: Final[LlmModel] = "acme-small-3-2026-06-02"
-# low, not none: the task reads a date (prompt-engineering.md section 15);
+TRIAGE_LLM_MODEL: Final[LLMModel] = "acme-small-3-2026-06-02"
+# LOW, not NONE: the task reads a date (prompt-engineering.md section 15);
 # the sweep on the case set keeps or changes it.
 TRIAGE_LLM_REASONING_EFFORT: Final = ReasoningEffort.LOW
 ```
@@ -274,13 +299,16 @@ class TicketKind(StrEnum):
 
 
 class TicketTriage(BaseModel):
-    """The answer of the triage call; the client sends its JSON schema as the response format."""
+    """The answer of the triage call.
+
+    The client sends its JSON schema as the response format.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
-    reasoning: str  # first: the model writes top to bottom, so this leads to the kind
+    reasoning: str  # First: the model writes top to bottom, so this leads to the kind
     kind: TicketKind
-    # None is the way out: the ticket gives no date
+    # None is the way out: the ticket gives no date.
     problem_first_occurred_on: date | None
 ```
 
@@ -301,10 +329,10 @@ condition in the prompt below.
 from collections.abc import Mapping
 from typing import Final
 
-from acme.core.schemas import LlmModel
+from acme.core.schemas import LLMModel
 
-# The base: the goal, the steps, the definitions and the way out. It holds for every model, and a
-# model change runs it unchanged first.
+# The base: the goal, the steps, the definitions and the way out. It holds for every
+# model, and a model change runs it unchanged first.
 SYSTEM: Final = """\
 Classify the support ticket in <ticket>, and find the date its problem first occurred.
 
@@ -332,9 +360,9 @@ USER: Final = """\
 
 Classify this ticket."""
 
-# The layer: what only one model needs. An entry starts empty and gains a line only when the case
-# set shows that model needs it. A model with no entry cannot run this prompt.
-MODEL_NOTES: Final[Mapping[LlmModel, str]] = {
+# The layer: what only one model needs. An entry starts empty and gains a line only when
+# the case set shows that model needs it. A model with no entry cannot run this prompt.
+MODEL_NOTES: Final[Mapping[LLMModel, str]] = {
     "acme-large-2-2026-08-19": "",
     "acme-small-3-2026-06-02": "Write the reasoning in three sentences or fewer.",
 }
@@ -360,20 +388,21 @@ Why it looks like this:
 
 ```python
 # support/triage/services/service_triage.py
-from acme.core.acme_ai_client import AcmeAiClient
-from acme.core.schemas import LlmModel, ReasoningEffort
+from acme.core.acme_ai_client import AcmeAIClient
+from acme.core.schemas import LLMModel, ReasoningEffort
 from acme.support.triage.prompts import MODEL_NOTES, SYSTEM, USER
 from acme.support.triage.schemas import TicketTriage
 
 
 def triage_ticket(
     ticket_text: str,
-    client: AcmeAiClient,
+    client: AcmeAIClient,
     *,
-    model: LlmModel,
+    model: LLMModel,
     reasoning_effort: ReasoningEffort,
 ) -> TicketTriage:
-    # Indexing, not .get(): a model never added to MODEL_NOTES fails instead of running with no layer.
+    # Indexing, not .get(): a model never added to MODEL_NOTES fails instead of running
+    # with no layer.
     notes = MODEL_NOTES[model]
     system = f"{SYSTEM}\n{notes}" if notes else SYSTEM
 
@@ -401,7 +430,7 @@ The value checks section 11 asks for after the parse belong to the use case, not
 A new model comes out, and the team wants `acme-large-2-2026-08-19` for triage. The template turns
 the change into four steps, each one a small diff:
 
-1. **Add the model with an empty layer.** `"acme-large-2-2026-08-19"` is already in `LlmModel`; its
+1. **Add the model with an empty layer.** `"acme-large-2-2026-08-19"` is already in `LLMModel`; its
    entry in `MODEL_NOTES` is `""`. A model not yet in the project gets both lines in this step.
 2. **Run the base unchanged.** The case set runs the current setup, `acme-small-3-2026-06-02` at
    `low` with its notes, against `acme-large-2-2026-08-19` with the base alone, at each effort level

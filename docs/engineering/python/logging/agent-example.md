@@ -76,8 +76,9 @@ def _run_summary(
     messages: Sequence[BaseMessage], duration_ms: int
 ) -> dict[str, object]:
     return {
-        # A run that returns ended on its reply, so this is normally "stop"; a reply cut at the
-        # model's output limit raised ModelOutputCutOff before this line (core/openai_client.py).
+        # A run that returns ended on its reply, so this is normally "stop"; a reply cut
+        # at the model's output limit raised ModelOutputCutOffError before this line
+        # (core/openai_client.py).
         "outcome": messages[-1].response_metadata.get("finish_reason", "-"),
         "duration_ms": duration_ms,
         "messages": len(messages),
@@ -94,7 +95,7 @@ is down, propagates to the HTTP adapter, and uvicorn logs it once with the trace
 (logging.md section 5). Neither the provider's text nor the answer's text reaches that traceback:
 `ProviderErrorMiddleware` and `AnswerErrorMiddleware` in `core/openai_client.py` replace the errors
 that carry them with the errors in `core/errors.py`, which name only the model and, for
-`ModelUnavailable`, the status (logging.md section 10). The `ERROR` record and the summary line of
+`ModelUnavailableError`, the status (logging.md section 10). The `ERROR` record and the summary line of
 a good run both carry the same `request_id` and `thread_id`, so one filter finds a dialogue's
 whole history. `answer` leaves out the value check
 [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 11 asks for after the
@@ -184,7 +185,7 @@ names would leave the setting a bare `str` ([python.md](../language/python.md) s
 
 ```python
 # core/schemas.py, not consts.py: a type, not a named value
-# (file-structure.md section 3)
+# (file-structure.md section 3).
 from typing import Literal, TypeAlias
 
 # This application's deployments. Settings checks the value at startup and only passes
@@ -195,7 +196,10 @@ TracingEnvironment: TypeAlias = Literal["development", "staging", "production"]
 
 ```python
 # core/langfuse_client.py
-"""The one client of Langfuse: every other file reaches the trace store through these functions."""
+"""The one client of Langfuse.
+
+Every other file reaches the trace store through these functions.
+"""
 
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -235,7 +239,10 @@ def stop_tracing() -> None:
 
 
 class RequestTrace:
-    """The root span of one request, as the adapter sees it: the place its answer is recorded."""
+    """The root span of one request, as the adapter sees it.
+
+    The place its answer is recorded.
+    """
 
     def __init__(self, root: LangfuseSpan) -> None:
         self._root = root
@@ -245,7 +252,8 @@ class RequestTrace:
         self._root.update(output=output)
 
     def mark_cut(self) -> None:
-        # The client left before the end: the output is partial, and the root's level says so.
+        # The client left before the end: the output is partial, and the root's level
+        # says so.
         self._root.update(
             level="WARNING", status_message="client disconnected before the end"
         )
@@ -260,19 +268,19 @@ def request_trace(
     session_id: str | None = None,
     user_id: str | None = None,
 ) -> Iterator[RequestTrace]:
-    with get_client().start_as_current_observation(
-        as_type="span",
-        name=name,
-        input=request_input,
-        metadata={"request_id": request_id},
-    ) as root:
-        # The root and every span created inside this block get the attributes; any
-        # other span created earlier does not, so the block opens before any model
-        # call (logging.md section 8).
-        with propagate_attributes(
-            trace_name=name, session_id=session_id, user_id=user_id
-        ):
-            yield RequestTrace(root)
+    # The root and every span created inside this block get the attributes; any
+    # other span created earlier does not, so the block opens before any model
+    # call (logging.md section 8).
+    with (
+        get_client().start_as_current_observation(
+            as_type="span",
+            name=name,
+            input=request_input,
+            metadata={"request_id": request_id},
+        ) as root,
+        propagate_attributes(trace_name=name, session_id=session_id, user_id=user_id),
+    ):
+        yield RequestTrace(root)
 
 
 def callback_handler() -> BaseCallbackHandler:
@@ -299,7 +307,10 @@ policy; neither is shown ([logging.md](logging.md) section 8).
 
 ```python
 # core/openai_client.py
-"""The one client of the model provider: every model call passes through these middlewares."""
+"""The one client of the model provider.
+
+Every model call passes through these middlewares.
+"""
 
 import uuid
 from collections.abc import Awaitable, Callable
@@ -313,10 +324,10 @@ from openai.types import ChatModel
 from pydantic import SecretStr
 
 from acme.core.errors import (
-    ModelAnswerInvalid,
-    ModelOutputCutOff,
-    ModelRefused,
-    ModelUnavailable,
+    ModelAnswerInvalidError,
+    ModelOutputCutOffError,
+    ModelRefusedError,
+    ModelUnavailableError,
 )
 
 
@@ -330,7 +341,7 @@ def provider_middlewares(
     disable_prompt_cache: bool,
     new_request_uuid: Callable[[], uuid.UUID],
 ) -> list[AgentMiddleware]:
-    """Every agent's required middlewares, in order; the agent lists them last."""
+    """Return the middlewares every agent needs, in order; the agent lists them last."""
     return [
         # Required: disable_prompt_cache reaches the model only through this entry
         # (prompt-engineering.md section 17).
@@ -347,7 +358,10 @@ def provider_middlewares(
 
 
 class PromptCacheSwitchMiddleware(AgentMiddleware):
-    """disable_prompt_cache: a fresh first line of the system prompt on every call, so nothing from there on hits a cache."""
+    """disable_prompt_cache: a fresh first line of the system prompt on every call.
+
+    Nothing from there on hits a cache.
+    """
 
     def __init__(
         self, *, disable_prompt_cache: bool, new_request_uuid: Callable[[], uuid.UUID]
@@ -377,7 +391,10 @@ class PromptCacheSwitchMiddleware(AgentMiddleware):
 
 
 class ProviderErrorMiddleware(AgentMiddleware):
-    """Replaces a provider error with ModelUnavailable, which names only the model and the status."""
+    """Replaces a provider error with ModelUnavailableError.
+
+    The error names only the model and the status.
+    """
 
     def __init__(self, model: ChatModel) -> None:
         super().__init__()
@@ -391,17 +408,20 @@ class ProviderErrorMiddleware(AgentMiddleware):
         try:
             return await handler(request)
         except openai.APIStatusError as exc:
-            # from None: the provider's message can quote the prompt; the model and
-            # the status say enough (logging.md section 10)
-            raise ModelUnavailable(self._model, exc.status_code) from None
+            # Raised from None: the provider's message can quote the prompt; the
+            # model and the status say enough (logging.md section 10).
+            raise ModelUnavailableError(self._model, exc.status_code) from None
         except openai.APIError:
-            # every other provider error (connection, timeout, context overflow) has no
-            # status we need, only text we must not log (logging.md section 10)
-            raise ModelUnavailable(self._model, None) from None
+            # Every other provider error (connection, timeout, context overflow) has no
+            # status we need, only text we must not log (logging.md section 10).
+            raise ModelUnavailableError(self._model, None) from None
 
 
 class AnswerErrorMiddleware(AgentMiddleware):
-    """Replaces an answer the agent cannot use with an error that names only the model."""
+    """Replaces an answer the agent cannot use with an error.
+
+    The error names only the model.
+    """
 
     def __init__(self, model: ChatModel) -> None:
         super().__init__()
@@ -412,24 +432,25 @@ class AnswerErrorMiddleware(AgentMiddleware):
         request: ModelRequest,
         handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
     ) -> ModelResponse:
-        # from None in every raise: the SDK's error and the parse error can carry the
-        # answer's text (logging.md section 10)
+        # Every raise here is from None: the SDK's error and the parse error can
+        # carry the answer's text (logging.md section 10).
         try:
             return await handler(request)
         except openai.LengthFinishReasonError:
-            raise ModelOutputCutOff(self._model) from None
+            raise ModelOutputCutOffError(self._model) from None
         except openai.ContentFilterFinishReasonError:
             # To the caller, a stop by the provider's content filter is a refusal.
-            raise ModelRefused(self._model) from None
+            raise ModelRefusedError(self._model) from None
         except StructuredOutputValidationError as exc:
             if _is_refusal(exc.ai_message):
-                raise ModelRefused(self._model) from None
+                raise ModelRefusedError(self._model) from None
 
-            raise ModelAnswerInvalid(self._model) from None
+            raise ModelAnswerInvalidError(self._model) from None
 
 
 def _is_refusal(reply: AIMessage) -> bool:
-    # A refusal has no JSON, so it fails the parse; langchain-openai keeps its text under this key.
+    # A refusal has no JSON, so it fails the parse; langchain-openai keeps its text
+    # under this key.
     return bool(reply.additional_kwargs.get("refusal"))
 ```
 
@@ -438,8 +459,11 @@ def _is_refusal(reply: AIMessage) -> bool:
 from acme.core.schemas import ModelName
 
 
-class ModelUnavailable(Exception):
-    """The provider failed; the message names the model and status, never the provider's text."""
+class ModelUnavailableError(Exception):
+    """The provider failed.
+
+    The message names the model and status, never the provider's text.
+    """
 
     def __init__(self, model: ModelName, status: int | None) -> None:
         super().__init__(f"model {model} unavailable (status {status})")
@@ -447,24 +471,33 @@ class ModelUnavailable(Exception):
         self.status = status
 
 
-class ModelRefused(Exception):
-    """The model refused; the message names the model, never the prompt or the answer."""
+class ModelRefusedError(Exception):
+    """The model refused.
+
+    The message names the model, never the prompt or the answer.
+    """
 
     def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} refused")
         self.model = model
 
 
-class ModelOutputCutOff(Exception):
-    """The answer hit the model's output limit; the message names the model, never the answer."""
+class ModelOutputCutOffError(Exception):
+    """The answer hit the model's output limit.
+
+    The message names the model, never the answer.
+    """
 
     def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} stopped at its output limit")
         self.model = model
 
 
-class ModelAnswerInvalid(Exception):
-    """The answer did not match the schema; the message names the model, never the answer."""
+class ModelAnswerInvalidError(Exception):
+    """The answer did not match the schema.
+
+    The message names the model, never the answer.
+    """
 
     def __init__(self, model: ModelName) -> None:
         super().__init__(f"model {model} gave an answer that does not match the schema")
@@ -473,7 +506,7 @@ class ModelAnswerInvalid(Exception):
 
 `core/errors.py` is the same file as in
 [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md): the application's two
-model clients, `AcmeAiClient` there and the OpenAI chat model here, raise these errors, so they
+model clients, `AcmeAIClient` there and the OpenAI chat model here, raise these errors, so they
 take `ModelName`, which that example's `core/schemas.py` declares. Change both copies together.
 
 ## `support/chat/consts.py` and `support/chat/schemas.py`: the model, the trace name and the reply's shape
@@ -496,12 +529,15 @@ SUPPORT_CHAT_TRACE_NAME: Final = "answer-chat"
 ```
 
 ```python
-# support/chat/schemas.py, next to Answer and Question
+# support/chat/schemas.py, next to Answer and Question.
 from pydantic import BaseModel, ConfigDict
 
 
 class ChatReply(BaseModel):
-    """The agent's final reply, the text the customer reads; the provider returns it as JSON in this shape."""
+    """The agent's final reply, the text the customer reads.
+
+    The provider returns it as JSON in this shape.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -564,7 +600,7 @@ def build_agent(
         # (prompt-engineering.md section 11).
         response_format=ProviderStrategy(ChatReply, strict=True),
         middleware=[
-            # Required when the model should recover: turns a ToolFailure into a
+            # Required when the model should recover: turns a ToolFailureError into a
             # message it reads, logged once (logging.md section 8).
             ToolErrorMiddleware(on_error=report_tool_failure),
             CallLoggingMiddleware(),
@@ -591,19 +627,19 @@ cannot carry them: `provider_middlewares` hands the list to each agent. A unit t
 agent lists them ([agent-eval-example.md](../evals/agent-eval-example.md), the cache switch).
 
 The two error middlewares split the ways a call fails by what failed. `ProviderErrorMiddleware`
-handles the provider: a status error or any other API error becomes `ModelUnavailable`.
+handles the provider: a status error or any other API error becomes `ModelUnavailableError`.
 `AnswerErrorMiddleware` handles the answer, which is parsed inside the agent, in the call both
 middlewares wrap:
 
 - When a reply stops at the model's output limit, the OpenAI SDK raises
   `openai.LengthFinishReasonError` before LangChain parses the reply, and `AnswerErrorMiddleware`
-  replaces it with `ModelOutputCutOff`.
+  replaces it with `ModelOutputCutOffError`.
 - A stop by the provider's content filter raises `openai.ContentFilterFinishReasonError` at the
-  same point, and `AnswerErrorMiddleware` replaces it with `ModelRefused`.
+  same point, and `AnswerErrorMiddleware` replaces it with `ModelRefusedError`.
 - A refusal or a reply that does not match the schema reaches LangChain's parse, whose
   `StructuredOutputValidationError` can quote the answer, so `AnswerErrorMiddleware` replaces it
-  before any other code sees it: with `ModelRefused` when `_is_refusal` finds the refusal, and
-  `ModelAnswerInvalid` otherwise.
+  before any other code sees it: with `ModelRefusedError` when `_is_refusal` finds the refusal, and
+  `ModelAnswerInvalidError` otherwise.
 
 The SDK's two errors are `OpenAIError`s but not `APIError`s, so `ProviderErrorMiddleware` lets them
 through. Each error names only the model, and each propagates like any failure the use case cannot
@@ -622,7 +658,7 @@ reads no module-level client, and the model, which fills only `order_id`, never 
 from langchain_core.tools import BaseTool, tool
 
 from acme.core.order_store_client import OrderStore
-from acme.support.chat.errors import ToolFailure
+from acme.support.chat.errors import ToolFailureError
 from acme.support.chat.schemas import ToolFailureReason
 
 
@@ -637,9 +673,9 @@ def order_tools(orders: OrderStore) -> list[BaseTool]:
         try:
             order = orders.get(order_id)
         except ConnectionError:
-            # from None: the store's error text could quote the order; the fixed code
-            # says enough (logging.md section 10)
-            raise ToolFailure(ToolFailureReason.ORDER_STORE_UNAVAILABLE) from None
+            # Raised from None: the store's error text could quote the order; the
+            # fixed code says enough (logging.md section 10).
+            raise ToolFailureError(ToolFailureReason.ORDER_STORE_UNAVAILABLE) from None
 
         if order is None:
             # An expected outcome is a normal result, so no log line
@@ -652,7 +688,7 @@ def order_tools(orders: OrderStore) -> list[BaseTool]:
 ```
 
 ```python
-# support/chat/schemas.py, next to ChatReply
+# support/chat/schemas.py, next to ChatReply.
 from enum import StrEnum, unique
 
 
@@ -669,7 +705,7 @@ class ToolFailureReason(StrEnum):
 from acme.support.chat.schemas import ToolFailureReason
 
 
-class ToolFailure(Exception):
+class ToolFailureError(Exception):
     """A tool failure the model can read and work around."""
 
     def __init__(self, reason: ToolFailureReason) -> None:
@@ -683,19 +719,22 @@ tool-failure handler below.
 ## `support/chat/tool_failure_handler.py`: required when the model should recover
 
 ```python
-"""The one place a tool failure the model can work around is handled, so the one place it is logged."""
+"""The one place a tool failure the model can work around is handled.
+
+That makes it the one place the failure is logged.
+"""
 
 import logging
 
 from langchain.agents.middleware import ToolCallRequest
 
-from acme.support.chat.errors import ToolFailure
+from acme.support.chat.errors import ToolFailureError
 
 logger = logging.getLogger(__name__)
 
 
 def report_tool_failure(exc: Exception, request: ToolCallRequest) -> str | None:
-    if not isinstance(exc, ToolFailure):
+    if not isinstance(exc, ToolFailureError):
         # Not ours: it propagates, and the caller that decides logs it once
         # (logging.md section 5).
         return None
@@ -706,14 +745,17 @@ def report_tool_failure(exc: Exception, request: ToolCallRequest) -> str | None:
 ```
 
 `create_agent`'s tool node handles only a model's invalid tool arguments and re-raises everything
-else. So an agent whose model should recover from a `ToolFailure` needs this handler, passed to
-`ToolErrorMiddleware` in `graph.py`: it turns the failure into an error message the model reads,
-and it logs the one `WARNING`.
+else. So an agent whose model should recover from a `ToolFailureError` needs this handler, passed
+to `ToolErrorMiddleware` in `graph.py`: it turns the failure into an error message the model
+reads, and it logs the one `WARNING`.
 
 ## `support/chat/call_logging.py`: optional, one line per call
 
 ```python
-"""Optional: one terminal line per model call and per tool call; the content stays in Langfuse."""
+"""Optional: one terminal line per model call and per tool call.
+
+The content stays in Langfuse.
+"""
 
 import logging
 import time

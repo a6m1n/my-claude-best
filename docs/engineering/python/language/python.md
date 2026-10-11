@@ -7,11 +7,13 @@
 - [3. Strict types: the checker reads every signature](#3-strict-types-the-checker-reads-every-signature)
 - [4. Pydantic at the edge: outside data becomes a model once](#4-pydantic-at-the-edge-outside-data-becomes-a-model-once)
 - [5. Application settings: one typed class, read once at startup](#5-application-settings-one-typed-class-read-once-at-startup)
+- [6. PEP 8: the base style, with the departures written down](#6-pep-8-the-base-style-with-the-departures-written-down)
 
 ## 1. Purpose
 
 This file is for everyone who writes Python in the repository: people and AI agents alike.
-Read it before you add a module, a type, or a check.
+Read it before you add a module, a type, or a check, and section 6 before you write any Python
+at all.
 
 Each section below is one principle. Each says when it fires, what you do, and how anyone
 tells that it happened.
@@ -20,7 +22,7 @@ The code here assumes Python 3.11 or newer (`python --version`); `typing.assert_
 `enum.StrEnum` are the newest features used. Section 3 takes `override` and `TypeIs` from
 `typing_extensions`, which backports them to 3.11. Sections 4 and 5 use Pydantic 2 and
 pydantic-settings 2; the behaviour they describe was checked on pydantic 2.13.5 and
-pydantic-settings 2.15.0.
+pydantic-settings 2.15.0. Section 6 names ruff's rule codes as they stand in ruff 0.16.10.
 
 ## 2. Explicit is better than implicit: the reader sees what happens at the line they read
 
@@ -40,7 +42,7 @@ least astonishment. The test is not the word count. Explicit code sometimes cost
 Alyssa Coghlan's PEP 642, rejected in favour of a shorter syntax, argued for a longer pattern
 syntax because its meaning does not change when a nearby lookup is refactored. It never means
 spelling out what the language already makes clear, and PEP 8 prefers `if not items:` to a length
-check.
+check ([readability.md](../../any-language/readability/readability.md) section 3).
 
 ### A business decision is an `if` in the use case
 
@@ -340,7 +342,11 @@ on ruff's `ANN` rules as well. Everything else in this section is review.
   (`typing_extensions` on 3.11): renaming or removing the parent's method then fails the check. A
   framework's hook methods need none: the settings that force the decorator on every override,
   mypy's `explicit-override` and pyright's `reportImplicitOverride`, stay off, since they flag every
-  method a framework subclass defines.
+  method a framework subclass defines. The exception is a method that overrides a method the parent
+  class defines and whose name ruff's `N802` flags, such as `logging.Formatter.formatMessage`
+  ([readability.md](../../any-language/readability/readability.md) section 7 says which names it
+  flags): there `@override` tells `N802` that the name is the parent's, not yours to change, and
+  lets the type checker confirm the parent has it.
 - **A decorator keeps the signature it wraps**: type it with `ParamSpec`,
   `def retry(func: Callable[P, R]) -> Callable[P, R]`, and use `functools.wraps`. Strict mode
   rejects an untyped decorator.
@@ -650,3 +656,128 @@ docs page on the mypy plugin; pydantic-settings issue #201; Redowan Delowar, "Pa
 settings in pytest" (2024); the Docker Compose docs on variable interpolation; the GitHub Actions
 docs on using secrets; uvicorn's settings docs (`--factory`, `--workers`); the FastAPI CLI help
 (fastapi-cli 0.0.32); the Dynaconf README.
+
+## 6. PEP 8: the base style, with the departures written down
+
+When you write or change Python code, follow PEP 8, apart from the departures in the table
+below. A formatter and a linter hold most of it; review holds the rest.
+
+### What PEP 8 is
+
+PEP 8, "Style Guide for Python Code", is the guide Guido van Rossum and Barry Warsaw wrote in
+2001 for the code of Python's standard library; Alyssa Coghlan joined them as an author in its
+2013 revision. The core developers still change it; the last change was on 2025-04-04. It covers
+the layout of code (indentation, line length, line breaks, blank lines, whitespace, string
+quotes), imports, comments, naming, and a list of programming recommendations. Docstrings it
+leaves to its companion, PEP 257. The tools are built around it: Black and ruff's formatter
+produce a consistent subset of its layout, and pycodestyle and pep8-naming, whose rules ruff
+carries as `E`, `W` and `N`, check parts of the rest.
+
+Why follow it: "code is read much more often than it is written", PEP 8 says, and its rules aim
+to make code readable and the same across projects. A reader who knows PEP 8 reads any file that
+follows it without learning a house style, and a team with one guide stops arguing about style in
+review; Google's engineers call consistency what "enables any engineer to jump into an unfamiliar
+part of the codebase and get to work fairly quickly". Do not expect a measured effect from each
+rule. Studies of single style rules, such as the case of identifiers or the depth of indentation,
+gave mixed or null results (Oliveira et al., 2023). On line length, the one study in that review
+asked 62 people which code looked more legible, and they chose lines of at most 80 characters
+(Santos and Gerosa, 2018); none measured how line length changes reading. So the reason to follow
+PEP 8 is consistency with the code readers already know, not a measured gain from each rule.
+
+### A guide for people, so the departures are written down
+
+- **A project's own guide wins, and this practice is one.** PEP 8: "In the event of any
+  conflicts, such project-specific guides take precedence for that project." Every departure this
+  practice makes is in the table below, with the section that owns it and gives its reason, so a
+  reader can tell a chosen departure from a mistake.
+- **Break a rule in new or touched code only for two of PEP 8's own reasons**, from "A Foolish
+  Consistency is the Hobgoblin of Little Minds": following it would make the code less readable,
+  even for someone used to PEP 8; or the code must run on a Python that lacks what the rule needs.
+  When you break a rule on one line, silence its check on that line and give the reason there
+  ([static-checks.md](../static-checks/static-checks.md) section 6); when you exempt a name, a
+  decorator or a folder in `pyproject.toml`, give the reason in a comment beside the entry; when
+  only review checks the rule, give the reason in a comment at the line. PEP 8's other two reasons,
+  code around it that breaks the rule and code older than the rule, are about old code, which
+  follows [refactoring.md](../../any-language/refactoring/refactoring.md): code no change touches
+  stays as it is (section 2), and a repository that turns these checks on sweeps or marks the old
+  hits (section 4).
+- **The linter checks PEP 8; it is not PEP 8.** Guido van Rossum asked for the `pep8` checker to
+  be renamed, and it became pycodestyle in 2016, because "A style guide is a document written for
+  humans, and has lots of subtlety", and a tool read as its law starts "pointless discussion about
+  the letter of the PEP". Never bend a line into something harder to read to please the tool.
+
+| PEP 8 says | The section that says how this practice departs, and why |
+|---|---|
+| every line at 79 characters, or up to 99 for a team that agrees on it, "provided that comments and docstrings are still wrapped at 72 characters"; no exception for a long string or a URL | [readability.md](../../any-language/readability/readability.md) section 8 |
+| blank lines inside a function "sparingly" | [readability.md](../../any-language/readability/readability.md) section 5 |
+| a docstring for every public module, function, class and method, and a comment after the `def` line of a non-public method that says what the method does | [readability.md](../../any-language/readability/readability.md) section 4 |
+| PEP 257, the companion: a docstring opens with a one-line summary, and a function's or method's summary is a command | [readability.md](../../any-language/readability/readability.md) section 4 |
+| package names in lower case, where "the use of underscores is discouraged" | [file-structure.md](../../any-language/file-structure/file-structure.md) section 7 |
+| relative imports are "an acceptable alternative" | [file-structure.md](../../any-language/file-structure/file-structure.md) section 7 |
+| modules "should explicitly declare the names in their public API using the `__all__` attribute" | [readability.md](../../any-language/readability/readability.md) section 7 |
+| a resource local to one section of code: "use a `with` statement … A try/finally statement is also acceptable" | this section's [Programming recommendations](#programming-recommendations) |
+| a bare `except:` limited "to two cases": a handler that logs the traceback, or one that cleans up and re-raises | this section's [Programming recommendations](#programming-recommendations) |
+
+### Who holds each part
+
+| Part of PEP 8 | Owner |
+|---|---|
+| Layout: indentation, line breaks, blank lines between definitions, whitespace, quotes, trailing commas | [readability.md](../../any-language/readability/readability.md) section 8 |
+| Line width: code, comments and docstrings, and the long string that may run past it | [readability.md](../../any-language/readability/readability.md) section 8 |
+| Comments | [readability.md](../../any-language/readability/readability.md) section 4 |
+| Docstrings, by PEP 257 | [readability.md](../../any-language/readability/readability.md) section 4 |
+| Naming conventions | [readability.md](../../any-language/readability/readability.md) section 7 |
+| Imports: their place, order and grouping, and no wildcard | [readability.md](../../any-language/readability/readability.md) section 8 |
+| Imports: absolute, never relative | [file-structure.md](../../any-language/file-structure/file-structure.md) section 7 |
+| Programming recommendations on how the code reads: a condition written as one test, a context manager's name, whitespace inside a string | [readability.md](../../any-language/readability/readability.md) sections 3, 7 and 8 |
+| Programming recommendations | this section |
+
+A project selects these checks by code, as [static-checks.md](../static-checks/static-checks.md)
+section 2 says; the lines are in [setup-example.md](../static-checks/setup-example.md) section 1.
+
+### Programming recommendations
+
+Where Python lets you write a thing two ways, PEP 8 picks one, and where it accepts both, this
+practice picks one. Write the first column:
+
+| Write | Not | Why | Check |
+|---|---|---|---|
+| `if result is None:` | `if result == None:` | `None` is one object, and a class can redefine `==` | `E711` |
+| `if result is not None:` | `if result:`, meaning "not None" | an empty list, `0` and `""` are false too (section 2) | review |
+| `isinstance(amount, Decimal)` | `type(amount) == Decimal` | `isinstance` also accepts a subclass | `E721` |
+| `def shipping_cost(order: Order) -> Decimal:` | `shipping_cost = lambda order: ...` | a `def` gives the function its name in a traceback | `E731` |
+| in a function that returns a value on one path, `return None` on the others and an explicit `return` at the end | a bare `return`, or falling off the end, in such a function | PEP 8's "Be consistent in return statements": a function that falls off its end by mistake returns `None` with no sign of it | `RET502`, `RET503` |
+| `except ValueError:` | `except:` | a bare `except` also catches Control-C and `sys.exit()`; for PEP 8's two allowed uses, `except Exception:` with `logger.exception` logs the traceback ([logging.md](../logging/logging.md) section 5), and `try`/`finally` cleans up, which PEP 8 says "can be a better way" | `E722`; a bare `except` that ends in `raise` passes it, so review |
+| a `try` around the one call that can raise | a `try` around the whole block | a wider `try` catches errors it was not written for | review |
+| `with open(path) as report:` | `report = open(path)` | the file is closed on every path, and the close sits with the open; PEP 8 also accepts `try`/`finally`, which `SIM115` flags, so this practice keeps the one form | `SIM115` |
+
+ruff marks its fix for `E711` unsafe: NumPy, pandas and SQLAlchemy redefine `==`, so there
+`x == None` and `x is None` give different results. `E721` has no fix at all. `ruff check --fix`
+applies only safe fixes, so those lines wait for a person. In a SQLAlchemy query, where `== None`
+builds the SQL, write `column.is_(None)`.
+
+The rest of PEP 8's recommendations hold as the PEP writes them; review reads them there.
+
+### Where it stops holding
+
+1. **A name the standard library or a framework fixes** keeps its spelling:
+   [readability.md](../../any-language/readability/readability.md) section 7 has the Python case.
+
+**Check.** `uv run --locked pre-commit run --all-files` passes with the rules
+[setup-example.md](../static-checks/setup-example.md) section 1 selects. In review, every
+departure from PEP 8 in the change is one the departures table at the start of this section points
+to, or carries its reason where its check is silenced: on its line (`# noqa: <code>` with the
+reason) or beside the `pyproject.toml` entry that exempts a name, a decorator or a folder
+(`extend-ignore-names`, `property-decorators`, `per-file-ignores`); or, where only review checks the
+rule, in a comment at the line.
+
+Sources: PEP 8, "Style Guide for Python Code" (Guido van Rossum and Barry Warsaw, 2001, with
+Alyssa Coghlan from 2013; last changed 2025-04-04): Introduction, "A Foolish Consistency is the
+Hobgoblin of Little Minds", Imports, Programming Recommendations; PEP 257, "Docstring
+Conventions"; Guido van Rossum in pycodestyle issue #466, "Please rename this tool" (2016);
+Black's code style documentation; the ruff documentation at 0.16.10: the 0.16.0 changelog on the
+default rule set, the rules `E711`–`E714`, `E721`, `E722`, `E731`, `RET502`, `RET503` and `SIM115`,
+and ruff issue #4560 on unsafe fixes; *Software Engineering at Google* (2020), chapter 8, "Style
+Guides and Rules"; Delano Oliveira et al., "A Systematic Literature Review on the Impact of
+Formatting Elements on Code Legibility", *Journal of Systems and Software* 203 (2023); Santos and
+Gerosa (ICPC 2018), as reported by Oliveira et al.

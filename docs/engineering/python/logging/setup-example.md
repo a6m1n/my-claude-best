@@ -21,6 +21,7 @@ from datetime import UTC, datetime
 from typing import Final, Literal
 
 from opentelemetry import trace
+from typing_extensions import override
 
 from acme.core.schemas import LogFormat, LogLevel
 
@@ -35,7 +36,7 @@ _STANDARD_ATTRIBUTES: Final = frozenset(
     vars(logging.LogRecord("", 0, "", 0, "", None, None))
 ) | {"message", "asctime"}
 _CONTEXT_IDS: Final = ("request_id", "thread_id", "trace_id")
-# uvicorn's coloured copy of its own message
+# uvicorn's coloured copy of its own message.
 _DROPPED_ATTRIBUTES: Final = frozenset({"color_message"})
 
 
@@ -70,13 +71,19 @@ def _extra_fields(record: logging.LogRecord) -> dict[str, object]:
 
 
 class ConsoleFormatter(logging.Formatter):
-    """For a person at a terminal: the usual line, then the extra= fields as key=value."""
+    """For a person at a terminal.
+
+    The usual line, then the extra= fields as key=value.
+    """
 
     def __init__(self) -> None:
         super().__init__(
             "%(asctime)s %(levelname)-8s %(name)s [%(request_id)s] %(message)s"
         )
 
+    # logging names this hook in mixedCase; @override keeps the name past ruff's
+    # N802 and lets the checker confirm the parent has it (python.md section 3).
+    @override
     def formatMessage(self, record: logging.LogRecord) -> str:
         # formatMessage, not format: a traceback still comes after the fields.
         line = super().formatMessage(record)
@@ -88,7 +95,7 @@ class ConsoleFormatter(logging.Formatter):
         return f"{line} {rendered_fields}" if rendered_fields else line
 
 
-class JsonFormatter(logging.Formatter):
+class JSONFormatter(logging.Formatter):
     """One JSON object per line, for a log store searched by field."""
 
     def format(self, record: logging.LogRecord) -> str:
@@ -121,7 +128,10 @@ def build_logging_config(
     log_format: LogFormat,
     stream: Literal["stdout", "stderr"] = "stdout",
 ) -> dict[str, object]:
-    """The one logging config of a process; main() applies it, directly or through uvicorn."""
+    """Build the one logging config of a process.
+
+    main() applies it, directly or through uvicorn.
+    """
     return {
         "version": 1,
         # The default True silences loggers created before this call
@@ -130,7 +140,7 @@ def build_logging_config(
         "filters": {"context": {"()": ContextFilter}},
         "formatters": {
             LogFormat.CONSOLE: {"()": ConsoleFormatter},
-            LogFormat.JSON: {"()": JsonFormatter},
+            LogFormat.JSON: {"()": JSONFormatter},
         },
         "handlers": {
             "stream": {
@@ -159,7 +169,7 @@ def build_logging_config(
 ```
 
 The console formatter is the default, because a person reads the log while the code is written.
-`JsonFormatter` is switched on by `ACME_LOG_FORMAT=json` once the logs go to a store searched by
+`JSONFormatter` is switched on by `ACME_LOG_FORMAT=json` once the logs go to a store searched by
 field (logging.md section 6). Both read the same Filter, so a line has the same ids in either
 format.
 
@@ -170,7 +180,7 @@ in `core/schemas.py` ([file-structure.md](../../any-language/file-structure/file
 section 4).
 
 ```python
-# core/schemas.py: the types core/ files share (file-structure.md section 4)
+# core/schemas.py: the types core/ files share (file-structure.md section 4).
 from enum import StrEnum, unique
 from typing import Literal, TypeAlias
 
@@ -199,7 +209,7 @@ from acme.core.schemas import LogFormat, LogLevel
 
 class Settings(BaseSettings):
     log_level: LogLevel = "INFO"
-    # ACME_LOG_FORMAT=json in deployed environments
+    # ACME_LOG_FORMAT=json in deployed environments.
     log_format: LogFormat = LogFormat.CONSOLE
 ```
 
@@ -208,7 +218,7 @@ The types reject a misspelt level or format when the process starts, not at the 
 ## `api/main.py` and `cli/main.py`: the only places that apply the config
 
 ```python
-# api/main.py: uvicorn applies the dict in every worker process
+# api/main.py: uvicorn applies the dict in every worker process.
 import uvicorn
 
 from acme.core.config import Settings
@@ -228,7 +238,7 @@ def main() -> None:
 
 ```python
 # cli/main.py: the CLI keeps stdout for its output, so its log goes to stderr
-# (logging.md section 6)
+# (logging.md section 6).
 import logging.config
 import sys
 from collections.abc import Mapping
@@ -358,7 +368,7 @@ still reach every log line, but the 500 response would leave without its header.
 Imports are left out of the two files below; only the log lines matter here.
 
 ```python
-# core/search_client.py: the one client of the search API; retrying is its job
+# core/search_client.py: the one client of the search API; retrying is its job.
 logger = logging.getLogger(__name__)
 
 # The search API answers in well under a second, so three tries of five seconds
@@ -382,9 +392,9 @@ class SearchClient:
                 return parse_sections(response.content)
             except httpx.TimeoutException:
                 if attempt == MAX_ATTEMPTS:
-                    # from None: the error text could repeat the request; the
-                    # attempts say enough (logging.md section 10)
-                    raise SearchUnavailable(attempts=attempt) from None
+                    # Raised from None: the error text could repeat the request;
+                    # the attempts say enough (logging.md section 10).
+                    raise SearchUnavailableError(attempts=attempt) from None
 
                 logger.warning(
                     "Search API timed out, retry %d of %d", attempt, MAX_ATTEMPTS - 1
@@ -399,14 +409,14 @@ class SearchClient:
 
 ```python
 # reports/generate_report/usecase.py: this code decides what a failed search means,
-# so it logs it, once (logging.md section 5)
+# so it logs it, once (logging.md section 5).
 logger = logging.getLogger(__name__)
 
 
 async def generate_report(request: ReportRequest, search: SearchClient) -> ReportResult:
     try:
         sections = await search.find_sections(request.topic)
-    except SearchUnavailable:
+    except SearchUnavailableError:
         logger.exception("Report %s failed: search unavailable", request.report_id)
 
         return ReportResult.failed(request.report_id)

@@ -28,7 +28,7 @@ SUPPORT_TICKET_TRACE_NAME: Final = "answer-ticket"
 ```
 
 ```python
-# support/answer_ticket/schemas.py, next to Ticket and TicketAnswer
+# support/answer_ticket/schemas.py, next to Ticket and TicketAnswer.
 from enum import StrEnum, unique
 
 

@@ -18,12 +18,16 @@ running the code: the formatter, the linter, the type checker and the import con
 AI agents alike read it before they add or change a check, a hook, the CI job that runs them, or a
 comment that silences one.
 
-It says how the checks run. Which rules each check turns on belongs to the practice the rule serves:
-the import contracts and the relative-import ban to
-[file-structure.md](../../any-language/file-structure/file-structure.md) sections 7 and 11, the logging rules to
-[logging.md](../logging/logging.md) section 11, the readability rules to
-[readability.md](../../any-language/readability/readability.md) sections 3 and 4, and what typed code looks like to
-[python.md](../language/python.md) section 3.
+It says how the checks run. The practice a rule serves says which rules each check turns on:
+
+- The import contracts and the relative-import ban:
+  [file-structure.md](../../any-language/file-structure/file-structure.md) sections 7 and 11.
+- The logging rules: [logging.md](../logging/logging.md) section 11.
+- The readability rules, with PEP 8's naming, comment, docstring, line-width and import rules and
+  its recommendations on how code reads:
+  [readability.md](../../any-language/readability/readability.md) sections 3, 4, 7 and 8.
+- The other PEP 8 programming recommendations: [python.md](../language/python.md) section 6.
+- What typed code looks like: [python.md](../language/python.md) section 3.
 
 The one rule: **CI is the gate, and a hook is an early copy of it.** Every check is one command,
 run from one pinned version of its tool. CI runs it on every pull request and blocks the merge when
@@ -44,7 +48,7 @@ Why it matters:
 | Job | Tool | Command (hook and CI) | Rules come from |
 |---|---|---|---|
 | Lint | ruff | `ruff check --fix --force-exclude` | each practice's own list (section 1), plus section 6 of this file |
-| Format | ruff format | `ruff format --force-exclude` | the formatter's defaults |
+| Format | ruff format | `ruff format --force-exclude` | the formatter's defaults ([readability.md](../../any-language/readability/readability.md) section 8) |
 | Types | one checker in strict mode | `mypy` (or `pyright`) | [python.md](../language/python.md) section 3 |
 | Import contracts | import-linter | `lint-imports` | [file-structure.md](../../any-language/file-structure/file-structure.md) section 11 |
 
@@ -54,9 +58,14 @@ CI runs these through the hook file (section 5), so each command is the same in 
   ignore comments. Pick one as the gate. mypy is the default here: it has the widest plugin support,
   Django's included. pyright in strict mode is an equal choice. pyrefly reached 1.0 in May 2026 and
   may be the checker of a new project. ty was still beta in September 2026 and is not a gate yet.
-- **Turn rules on by name.** A linter's default set is small: ruff's covers only a few rule groups.
-  A rule a practice relies on is selected by its code in `pyproject.toml`, next to a comment that
-  names the practice section it serves.
+- **Turn rules on by name.** A linter's default set is not chosen for any practice: ruff 0.16's
+  holds no rule that ruff counts as formatting and, of those it counts as pedantic, only seven
+  `DTZ` rules, and those two categories hold most of the PEP 8 checks: most `N` rules and `E711`
+  are pedantic, and `E501` and `W505` are formatting. The set also moves: ruff 0.17.0 dropped those
+  seven `DTZ` rules, and nothing fails when an upgrade drops a rule. So a rule a practice relies on
+  is selected by its code in `pyproject.toml`, even while the default set holds it, next to a
+  comment that names the practice section it serves. `extend-select` adds to the default set and
+  keeps it.
 
 ## 3. One pinned version per tool
 
@@ -119,18 +128,21 @@ When a check is wrong for one line, silence that rule on that line and say why. 
 ships types, but its stub for `search` lacks the `expand` argument its API accepts:
 
 ```python
-rows = client.search(term, expand=True)  # type: ignore[call-arg]  # stub lacks expand
+rows = client.search(term, expand=True)  # type: ignore[call-arg]  # Stub lacks expand
 ```
 
-- **Name the rule.** `# type: ignore[code]`, `# noqa: CODE`, `# pyright: ignore[rule]`. A bare
-  suppression silences every rule on the line, including the ones nobody meant to silence.
+- **Name the rule.** `# type: ignore[code]`, `# noqa: CODE`, `# ruff: ignore[CODE]`,
+  `# pyright: ignore[rule]`. A bare `# type: ignore`, `# noqa` or `# pyright: ignore` silences every
+  rule on the line, including the ones nobody meant to silence; a bare `# ruff: ignore` silences
+  nothing, so the hit it was meant to hide still fails. A bare `# ruff: noqa` at the top of a file
+  silences every rule in that file.
 - **Give the reason** on the same line, after a second `#`
   ([readability.md](../../any-language/readability/readability.md) section 4): mypy rejects other text inside its
   own comment. A mark left on old code until a change touches it, as
   [refactoring.md](../../any-language/refactoring/refactoring.md) section 4 describes, gives `legacy` as its
   reason: `# type: ignore[arg-type]  # legacy`.
 - **The tools enforce the name and catch a stale suppression; the reason is review.** ruff's
-  `PGH003` and `PGH004` fail on a bare `# type: ignore` or `# noqa`, and mypy's
+  `PGH003` and `PGH004` fail on a bare `# type: ignore`, `# noqa` or `# ruff: noqa`, and mypy's
   `ignore-without-code` does the same for its own comments. Upstream pyright cannot require a rule
   name; basedpyright's `reportIgnoreCommentWithoutRule` can. ruff's `RUF100` and mypy's
   `warn_unused_ignores` (part of `--strict`) fail on a suppression that no longer suppresses
@@ -143,8 +155,8 @@ rows = client.search(term, expand=True)  # type: ignore[call-arg]  # stub lacks 
   asks for. The practice judged every case, so none is hidden.
 
 Check: before you merge,
-`grep -rnE "# (type: ignore|pyright: ignore|noqa)(\[[^]]*\]|: [A-Z0-9, ]+)?$" src/ tests/`, with
-`evals/` added where the repository has one ([evals.md](../evals/evals.md) section 4), prints
+`grep -rnE "# (type: ignore|pyright: ignore|noqa|ruff: (ignore|disable|noqa))(\[[^]]*\]|: ?[A-Z0-9, ]+)?$" src/ tests/`,
+with `evals/` added where the repository has one ([evals.md](../evals/evals.md) section 4), prints
 nothing: no suppression ends without a reason.
 
 ## 7. Where it stops holding
@@ -163,7 +175,9 @@ nothing: no suppression ends without a reason.
 mypy documentation (2.3): "The mypy command line" (`--strict`), "Error codes for optional checks"
 (`ignore-without-code`, `exhaustive-match`), "Running mypy and managing imports". pyright
 `configuration.md` (1.1.414): `typeCheckingMode`, `reportUnnecessaryTypeIgnoreComment`. ruff rule
-reference (0.16): `PGH003`, `PGH004`, `RUF100`. The ruff-pre-commit README (hook order).
+reference (0.16): `PGH003`, `PGH004`, `RUF100`; the ruff 0.16.0 and 0.17.0 changelogs (the
+default rule set) and the linter documentation (rule categories). The ruff-pre-commit README (hook
+order).
 basedpyright documentation, new diagnostic rules (`reportIgnoreCommentWithoutRule`). pre-commit
 documentation and pull request #3577 (the `unsupported` rename, 4.4.0); the pre-commit-hooks README
 (`check-added-large-files`, `check-merge-conflict`); the mirrors-mypy README; prek documentation

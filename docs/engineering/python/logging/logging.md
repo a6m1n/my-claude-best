@@ -97,12 +97,12 @@ At every log call:
   too, so they are no way out.
 
 ```python
-# good: a constant message, the value as an argument, a filterable field with its unit
+# Good: a constant message, the value as an argument, a filterable field with its unit.
 logger.info("Report %s generated", report_id, extra={"sections": 6, "duration_ms": 412})
 
-# bad: every record is a new message to the log store
+# Bad: every record is a new message to the log store.
 logger.info(f"Report {report_id} generated")
-# bad: "level" is the JSON formatter's own key
+# Bad: "level" is the JSON formatter's own key.
 logger.info("Order %s escalated", order_id, extra={"level": escalation.tier})
 ```
 
@@ -162,25 +162,26 @@ error"). uvicorn then writes one `ERROR` on the `uvicorn.error` logger, with the
   line already carries their status.
 
 ```python
-# core/search_client.py: retrying is this client's job, so it logs each retry and raises the last
+# core/search_client.py: retrying is this client's job, so it logs each retry
+# and raises the last.
 for attempt in range(1, MAX_ATTEMPTS + 1):
     try:
         return await self._fetch(topic)
     except httpx.TimeoutException:
         if attempt == MAX_ATTEMPTS:
-            # from None: the error text could repeat the request; the attempts say
-            # enough (logging.md section 10)
-            raise SearchUnavailable(attempts=attempt) from None
+            # Raised from None: the error text could repeat the request; the
+            # attempts say enough (logging.md section 10).
+            raise SearchUnavailableError(attempts=attempt) from None
 
         logger.warning(
             "Search API timed out, retry %d of %d", attempt, MAX_ATTEMPTS - 1
         )
 
 # reports/generate_report/usecase.py: this code decides (the report fails),
-# so it logs, once
+# so it logs, once.
 try:
     sections = await search.find_sections(topic)
-except SearchUnavailable:
+except SearchUnavailableError:
     logger.exception("Report %s failed: search unavailable", report_id)
 
     return ReportResult.failed(report_id)
@@ -421,13 +422,13 @@ than the logging system". OpenTelemetry's GenAI conventions make the same choice
 "By default, no prompt content or tool arguments are captured".
 
 ```python
-# good: what a reader needs to find and size the event
+# Good: what a reader needs to find and size the event.
 logger.info("Document %s indexed", doc_id, extra={"pages": 12, "sha256_8": digest[:8]})
 
-# bad, at any level
-logger.debug("Prompt: %s", prompt)  # user content
-logger.info("Fetched %s", presigned_url)  # a URL that is a credential
-logger.warning("Tool failed: %s", exc)  # a tool's error text can repeat its input
+# Bad, at any level.
+logger.debug("Prompt: %s", prompt)  # User content
+logger.info("Fetched %s", presigned_url)  # A URL that is a credential
+logger.warning("Tool failed: %s", exc)  # A tool's error text can repeat its input
 ```
 
 ## 11. Checks: reasonable, not strict

@@ -130,7 +130,8 @@ produced it; the id of the item when the row holds a secret or a customer's text
 reminded_rows = [row for row in exported_rows if row["reminded_on"] is not None]
 assert [row["invoice_id"] for row in reminded_rows] == ["inv-1001", "inv-1002"]
 
-# Bad: the message is a sentence with no data, so the report cannot say which row failed.
+# Bad: the message is a sentence with no data, so the report cannot say
+# which row failed.
 for row in reminded_rows:
     assert row["reminded_on"] > row["due_on"], "reminded too early"
 

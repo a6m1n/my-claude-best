@@ -298,7 +298,11 @@ and touches no other module.
 - **The same role has the same name in every module.** `schemas.py` is always the schemas. A reader
   who knows one module can find their way in all of them.
 - File and folder names are `lower_with_under` (Google Python Style Guide) and state one job: a name
-  you could not finish with "this file holds only ___" is not done.
+  you could not finish with "this file holds only ___" is not done. PEP 8 asks for short lower-case
+  package names and discourages underscores in them, though it allows them in module names "if it
+  improves readability"; this practice uses `lower_with_under` for folders as for files, because a
+  folder name here is a business term of several words, read in every absolute import path, and
+  the underscore is what keeps those words apart.
 - **Imports are always absolute, never relative**: `from <app>.<domain>.<module>.schemas import
   <Name>`, never `from .schemas import <Name>` or `from ..core import config`. An absolute import
   names the file's place in the tree, so the import line alone tells a reader, a search and a
@@ -306,9 +310,10 @@ and touches no other module.
   file becomes a folder, every import of it shows up in the diff. PEP 8 recommends absolute imports
   but still allows relative ones; this practice takes the stricter line of the Google Python Style
   Guide: "Do not use relative names in imports. Even if the module is in the same package, use the
-  full package name. This helps prevent unintentionally importing a package twice." It takes only
-  that part: the same guide also asks you to import modules rather than names, which this practice
-  leaves to the project.
+  full package name." It takes only that part: the same guide also asks you to import modules
+  rather than names, which this practice leaves to the project. PEP 8 allows relative imports where
+  absolute ones "would be unnecessarily verbose"; this practice pays the longer line, because the
+  full path is what tells the reader, the search and the reviewer where the name lives.
 
   Check: ruff's `TID252` rule with `ban-relative-imports = "all"` fails the build on any relative
   import. The rule is not on by default, so `pyproject.toml` selects it

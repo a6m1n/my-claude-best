@@ -193,7 +193,10 @@ fixture or a test, never at module level.
   ```python
   @pytest.fixture(scope="module")
   def sdk_without_retries_for_module() -> Iterator[None]:
-      """No retries for the module's shared client; monkeypatch cannot reach this scope."""
+      """No retries for the module's shared client.
+
+      monkeypatch cannot reach this scope.
+      """
       with pytest.MonkeyPatch.context() as patch:
           patch.setattr("acme_sdk.DEFAULT_RETRIES", 0)
           yield
@@ -249,7 +252,7 @@ DUE_ON: Final = date(2026, 9, 1)
 def an_invoice(
     *, due_on: date = DUE_ON, last_reminded_on: date | None = None
 ) -> Invoice:
-    """An invoice with safe defaults; a test sets only the dates it is about."""
+    """Build an invoice with safe defaults; a test sets only the dates it is about."""
     return Invoice(
         invoice_id=InvoiceId("INV-1001"),
         customer_email="jane.doe@example.com",
@@ -291,7 +294,7 @@ that fills one `Protocol` ([readability.md](../../any-language/readability/reada
     scope="function",
     params=[
         pytest.param(DiskStore, id="disk"),
-        pytest.param(SqliteStore, id="sqlite"),
+        pytest.param(SQLiteStore, id="sqlite"),
     ],
 )
 def store(request: pytest.FixtureRequest, tmp_path: Path) -> DocumentStore:

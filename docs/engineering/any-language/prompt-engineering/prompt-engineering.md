@@ -499,7 +499,7 @@ class TicketKind(StrEnum):
 class TicketTriage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    reasoning: str  # first, so it leads to the kind: section 12
+    reasoning: str  # First, so it leads to the kind: section 12
     kind: TicketKind
 ```
 
@@ -545,7 +545,7 @@ Good — the same fields, the reasoning first:
 class TicketTriage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    reasoning: str  # first, so it leads to the kind
+    reasoning: str  # First, so it leads to the kind
     kind: TicketKind
 ```
 
@@ -824,11 +824,12 @@ Bad — a hand edit to the prompt is the cache switch:
 ```python
 # core/<vendor>_client.py
 class ProviderClient:
-    def __init__(self, api: ProviderApi) -> None:
+    def __init__(self, api: ProviderAPI) -> None:
         self._api = api
 
     def complete(self, system: str, user: str) -> ModelResponse:
-        # TODO remove before commit: forces a cache miss while I debug the empty summaries
+        # TODO remove before commit: forces a cache miss while I debug the empty
+        # summaries
         system = f"debug 3 {system}"
 
         return self._api.complete(system=system, user=user)
@@ -843,7 +844,7 @@ other fields are left out; they are [python.md](../../python/language/python.md)
 ```python
 # core/config.py
 class Settings(BaseSettings):
-    # true only while debugging or measuring
+    # True only while debugging or measuring.
     disable_prompt_cache: bool = False
 
 
@@ -851,7 +852,7 @@ class Settings(BaseSettings):
 class ProviderClient:
     def __init__(
         self,
-        api: ProviderApi,
+        api: ProviderAPI,
         *,
         disable_prompt_cache: bool,
         new_request_uuid: Callable[[], UUID],
