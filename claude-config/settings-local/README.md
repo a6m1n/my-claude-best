@@ -84,13 +84,13 @@ The `.env` guard here is the hook, not a deny rule.
 
 ## How the hook decides
 
-The script reads `tool_name` and `tool_input` from stdin and checks the tool's fields against one rule. It decodes stdin as UTF-8 itself, because on Windows Python would read a pipe in the ANSI code page. A protected name is the last part of a path that is `.env`, or starts with `.env.` (a variant such as `.env.local`), or starts with `.env*`, `.env?` or `.env[` (a pattern that matches `.env` files). `.env.example` and `.env.local.example` are not protected. Backslashes count as `/`, so Windows paths work.
+The script reads `tool_name` and `tool_input` from stdin and checks the tool's fields against one rule. It decodes stdin as UTF-8 itself, because on Windows Python would read a pipe in the ANSI code page. A protected name is the last part of a path that is `.env`, or starts with `.env.` (a variant such as `.env.local`), or starts with `.env*`, `.env?` or `.env[` (a pattern that matches `.env` files). `.env.example` and `.env.local.example` are not protected. Names are compared in lower case, because macOS and Windows open `.env` for `.ENV`. Backslashes count as `/`, so Windows paths work.
 
 | Tool | Field it reads | It blocks when |
 |---|---|---|
 | `Read` | `file_path` | The path ends in a protected name. |
-| `Grep` | `path`, `glob` | The path ends in a protected name, or a part of the glob is one. The glob is split into parts at `{`, `}`, `,` and `/`. |
-| `Bash`, `PowerShell` | `command` | A word of the command ends in a protected name. The command is split into words at whitespace, quotes, shell operators, redirections, `=` and `:`, and each word is checked. The hook does not run or parse the command. |
+| `Grep` | `path`, `glob` | The path ends in a protected name, or a part of the glob is one. The glob is split into parts at whitespace, `{`, `}`, `,` and `/`. |
+| `Bash`, `PowerShell` | `command` | A word of the command ends in a protected name. The command is split into words at whitespace, quotes, shell operators, redirections, `,`, `=` and `:`, and each word is checked. The hook does not run or parse the command. |
 
 To block, the script prints this JSON and exits with 0:
 
@@ -108,16 +108,16 @@ Claude Code then blocks the call and shows the reason to Claude, so Claude knows
 
 ## What the hook blocks and what it lets through
 
-I ran the script on these inputs (macOS, Python 3.9, 2026-10-11).
+I ran the script on these inputs (macOS, Python 3.9, 2026-10-12).
 
 | Input | Result | Why |
 |---|---|---|
-| Read `.env`, `.env.local`, `.env.production.local`, and the Windows path `C:\repo\.env` | blocked | Protected file names. |
+| Read `.env`, `.env.local`, `.env.production.local`, `.ENV`, `.Env.Local`, and the Windows path `C:\repo\.env` | blocked | Protected file names, in any case. |
 | Read `C:\Проекты\app\.env`, with stdin in the Windows ANSI code page (simulated with `PYTHONIOENCODING=cp1252`) | blocked | The script decodes stdin as UTF-8 itself, so a non-ASCII path does not switch the check off. |
-| Grep with glob `.env*`, `**/.env*` or `{.env.example,.env}`, or with path `.env` | blocked | The search targets protected files. |
+| Grep with glob `.env*`, `**/.env*`, `{.env.example,.env}` or `*.yml .env*`, or with path `.env` | blocked | The search targets protected files. |
 | `cat .env`, `cat ./.env`, `grep KEY .env.local`, `sed -n '1,10p' apps/api/.env`, `cat .env.production.local`, `cat .env.local.bak`, `source .env.test.local`, `cat .env.*`, `grep API_URL .env*`, `docker run --env-file=.env app` | blocked | The command names a protected file, or a pattern that matches one. |
 | `python -c "open('.env').read()"`, `cp .env /tmp/x` | blocked | Same: the hook reads the text, not the program. |
-| PowerShell `Get-Content .env`, `Get-Content -Path .\.env.local` | blocked | The same rule as in Bash. On Windows without Git Bash the hook does not run at all (see `"command"` in [The hook](#the-hook)). |
+| PowerShell `Get-Content .env`, `Get-Content -Path .\.env.local` | blocked | The same rule as in Bash. On Windows without Git Bash the script does not run at all (see `"command"` in [The hook](#the-hook)). |
 | Read `.env.example`, `.env.local.example`, `.envrc`, `config.env` | allowed | Not protected files, on purpose. |
 | `cat .env.example`, `cat .env.local.example` | allowed | The allowed example files. |
 | `echo 'copy .env.example to .env'` | blocked | A false block: the text names `.env`, though nothing reads it. |
@@ -125,7 +125,7 @@ I ran the script on these inputs (macOS, Python 3.9, 2026-10-11).
 | `grep -r KEY .` | allowed | A gap: a folder search never names the file. |
 | Grep over a whole folder with no glob | allowed | A gap: the hook checks only `path` and `glob`. |
 | Grep with glob `*.env` or `*.env*` | allowed | A gap: the hook checks only names that start with `.env`. |
-| Input that is not a JSON object (bad JSON, a JSON array, bad UTF-8) | allowed | The script exits with 0 and prints nothing. |
+| Input that is not a JSON object (bad JSON, a JSON array, bad UTF-8), or a field that is not a string | allowed | The script exits with 0 and prints nothing. |
 
 If the hook cannot run under `sh` or Git Bash (see `onFailure` in [The hook](#the-hook)), Claude Code blocks every Read, Grep, Bash and PowerShell call and shows a hook error, so a broken guard is loud. On Windows without Git Bash it is silent: see `"command"` in [The hook](#the-hook). I checked the loud case with Claude Code 2.1.296: with the script missing, a Read was blocked; without `onFailure`, the same Read went through.
 
