@@ -82,7 +82,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # ACME_DISABLE_PROMPT_CACHE=true only while debugging or measuring.
+    # Set ACME_DISABLE_PROMPT_CACHE=true only while you debug or measure.
     disable_prompt_cache: bool = False
 ```
 
@@ -165,11 +165,11 @@ class AcmeAIClient:
         user: str,
         answer_type: type[BaseModel],
     ) -> RawReply:
-        # Left out: the SDK call. It passes the model; the effort under the vendor's own
-        # name and values; system as the system prompt and user as the one user message;
-        # answer_type.model_json_schema() through the vendor's structured-output
-        # feature; and the vendor's no-cache switch, where one exists, when
-        # self._disable_prompt_cache is on. It maps the vendor's stop reason to
+        # The SDK call is left out. It passes the model; the effort under the vendor's
+        # own name and values; system as the system prompt and user as the one user
+        # message; answer_type.model_json_schema() through the vendor's
+        # structured-output feature; and the vendor's no-cache switch, where one exists,
+        # when self._disable_prompt_cache is on. It maps the vendor's stop reason to
         # StopReason: a content-filter stop maps to REFUSAL, and a reason it does not
         # know yet to UNKNOWN. Any SDK error becomes
         # ModelUnavailableError(model, status), raised from None, because the vendor's
@@ -331,8 +331,8 @@ from typing import Final
 
 from acme.core.schemas import LLMModel
 
-# The base: the goal, the steps, the definitions and the way out. It holds for every
-# model, and a model change runs it unchanged first.
+# The base states the goal, the steps, the definitions and the way out. It holds for
+# every model, and a model change runs it unchanged first.
 SYSTEM: Final = """\
 Classify the support ticket in <ticket>, and find the date its problem first occurred.
 
@@ -352,7 +352,7 @@ Classify the support ticket in <ticket>, and find the date its problem first occ
    as "about a week ago" is not a date: set it to null.
 """
 
-# The part that changes on every call: the ticket in its tag, then the question, last.
+# This part changes on every call: the ticket in its tag, then the question, last.
 USER: Final = """\
 <ticket>
 {ticket_text}
@@ -360,8 +360,9 @@ USER: Final = """\
 
 Classify this ticket."""
 
-# The layer: what only one model needs. An entry starts empty and gains a line only when
-# the case set shows that model needs it. A model with no entry cannot run this prompt.
+# The layer holds what only one model needs. An entry starts empty and gains a line only
+# when the case set shows that model needs it. A model with no entry cannot run this
+# prompt.
 MODEL_NOTES: Final[Mapping[LLMModel, str]] = {
     "acme-large-2-2026-08-19": "",
     "acme-small-3-2026-06-02": "Write the reasoning in three sentences or fewer.",

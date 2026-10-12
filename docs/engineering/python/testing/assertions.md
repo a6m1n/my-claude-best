@@ -29,7 +29,7 @@ ever after.
 assert result
 assert mailer.sent
 
-# Good: the value the name promises, and the one email it promises.
+# Good: it checks the value the name promises, and the one email it promises.
 assert result is ReminderResult.SENT
 assert [email.to for email in mailer.sent] == ["jane.doe@example.com"]
 ```
@@ -60,7 +60,8 @@ stored = get_invoice(database, invoice_id)
 assert stored.last_reminded_on == TODAY
 assert stored.due_on == DUE_ON
 
-# Good: the whole invoice the run should have left, built by the file's builder.
+# Good: it compares the whole invoice the run should have left, built by the file's
+# builder.
 assert get_invoice(database, invoice_id) == an_invoice(last_reminded_on=TODAY)
 ```
 
@@ -107,7 +108,7 @@ not what a two-decimal share means.
 # here.
 assert share_overdue == 0.33
 
-# Good: two decimals, the precision the report shows.
+# Good: it checks two decimals, the precision the report shows.
 assert share_overdue == pytest.approx(0.33, abs=0.005)
 ```
 
@@ -174,7 +175,7 @@ never reaches it.
 # Bad: nothing positive is asserted, so a run that logged nothing passes the check.
 caplog.set_level(logging.DEBUG)
 
-with pytest.raises(PaymentUnavailable, match="status 503"):
+with pytest.raises(PaymentUnavailableError, match="status 503"):
     unavailable_gateway.charge(PaymentId("pay-1001"), Decimal("120.00"))
 
 assert not any("key-for-tests" in repr(vars(record)) for record in caplog.records)
@@ -182,7 +183,7 @@ assert not any("key-for-tests" in repr(vars(record)) for record in caplog.record
 # Good: the level is set, a WARNING record is found first, and then the key is not.
 caplog.set_level(logging.DEBUG)
 
-with pytest.raises(PaymentUnavailable, match="status 503"):
+with pytest.raises(PaymentUnavailableError, match="status 503"):
     unavailable_gateway.charge(PaymentId("pay-1001"), Decimal("120.00"))
 
 assert any(record.levelno == logging.WARNING for record in caplog.records)
@@ -191,9 +192,9 @@ assert not any("key-for-tests" in repr(vars(record)) for record in caplog.record
 
 `unavailable_gateway` is the gateway of [fakes-and-boundaries.md](fakes-and-boundaries.md)
 section 3 with a transport that answers 503. Left out are `charge`, its retries and
-`PaymentUnavailable`, which belong to the client. It logs
+`PaymentUnavailableError`, which belong to the client. It logs
 `Payments API answered 503, retry %d of %d` at `WARNING` before each retry, and after the last it
-raises `PaymentUnavailable`, which names the status, as [logging.md](../logging/logging.md)
+raises `PaymentUnavailableError`, which names the status, as [logging.md](../logging/logging.md)
 section 5 asks of the one client of an external system.
 
 - **A check that a value is absent needs a check that the output could have held it**, as the

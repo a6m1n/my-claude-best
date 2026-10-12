@@ -130,14 +130,14 @@ def keeps_to_order_status() -> GEval:
             "Fail the reply if it promises anything the status does not support.",
         ],
         evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT, SingleTurnParams.CONTEXT],
-        # The judge's model from its constant, never DeepEval's default
+        # The judge's model comes from its constant, never from DeepEval's default
         # (prompt-engineering.md section 15).
         model=OpenAIModel(
             model=REPLY_JUDGE_LLM_MODEL,
             api_key=settings.openai_api_key.get_secret_value(),
         ),
-        # Pass or fail; without it the metric passes at a score of 0.5
-        # (judges.md section 7).
+        # Strict mode makes the verdict pass or fail; without it the metric passes at a
+        # score of 0.5 (judges.md section 7).
         strict_mode=True,
     )
 

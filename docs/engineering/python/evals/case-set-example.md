@@ -164,15 +164,15 @@ CASES_FILE: Final = Path(__file__).with_name("cases_triage.jsonl")
 # Three runs of each case, one rate over all: one run shows no rate
 # (repeated-runs.md sections 5 and 7).
 RUNS_PER_CASE: Final = 3
-# The pass rates of the version on main. The pull request that changes them
+# These are the pass rates of the version on main. The pull request that changes them
 # explains why.
 BASELINE: Final[Mapping[Criterion, float]] = {
     Criterion.KIND_MATCHES: 0.95,
     Criterion.DATE_MATCHES: 0.88,
 }
-# Two standard errors of the lowest baseline, 0.88, over 40 cases x 3 runs if the runs
-# were independent; they are not, so the real error is larger (repeated-runs.md
-# section 5).
+# The margin is two standard errors of the lowest baseline, 0.88, over 40 cases x 3 runs
+# if the runs were independent; they are not, so the real error is larger
+# (repeated-runs.md section 5).
 MARGIN: Final = 0.06
 
 
@@ -193,7 +193,8 @@ def run_triage_eval(context: RunnerContext, settings: Settings) -> ExperimentRes
         data=[_item(case) for case in cases for _ in range(RUNS_PER_CASE)],
         task=lambda *, item, **kwargs: _triage(item, client),
         evaluators=[kind_matches, date_matches],
-        # The way out, a null date, counted apart from the rates (evals.md section 4).
+        # The way out, a null date, is counted apart from the rates
+        # (evals.md section 4).
         run_evaluators=[date_way_out],
         # The prompt is in git, so the commit is its version (evals.md section 9).
         metadata={
@@ -256,8 +257,8 @@ def date_way_out(
         )
         for case, triage in _answered(item_results)
     )
-    took_way_out = table[True, True] + table[False, True]
 
+    took_way_out = table[True, True] + table[False, True]
     return Evaluation(
         name=RunMeasure.DATE_WAY_OUT,
         value=took_way_out / table.total() if table else 0.0,
@@ -461,9 +462,16 @@ def rate_report(
 
 
 def _case_id(run: ExperimentItemResult) -> str:
-    """Return the case id an experiment put into the item's metadata."""
+    """Return the case id an experiment put into the item's metadata.
+
+    Raises ValueError when the item carries no metadata.
+    """
     metadata = run.item["metadata"] if isinstance(run.item, dict) else run.item.metadata
-    return str((metadata or {})[CASE_ID_METADATA_KEY])
+
+    if metadata is None:
+        raise ValueError("the item carries no metadata")
+
+    return str(metadata[CASE_ID_METADATA_KEY])
 
 
 def _passes(runs: Iterable[ExperimentItemResult], criterion: StrEnum) -> int:

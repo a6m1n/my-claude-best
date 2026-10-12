@@ -267,7 +267,8 @@ def migrated_database(postgres_url: str) -> Iterator[Database]:
     engine.dispose()
 
 
-# The default, written out to show the lifetime (fixtures.md section 1); PT003 is off.
+# This is the default, written out to show the lifetime (fixtures.md section 1);
+# PT003 is off.
 @pytest.fixture(scope="function")
 def database(migrated_database: Database) -> Iterator[Database]:
     """The run's database, emptied after each test so no test sees another's rows."""
@@ -329,7 +330,8 @@ def insert_invoice(db: Database, invoice: Invoice) -> None:
     ...  # Left out: one INSERT into the invoices table
 
 
-# The default, written out to show the lifetime (fixtures.md section 1); PT003 is off.
+# This is the default, written out to show the lifetime (fixtures.md section 1);
+# PT003 is off.
 @pytest.fixture(scope="function")
 def mailer() -> FakeMailer:
     """A mailer that keeps what it was asked to send, new for each test."""

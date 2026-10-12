@@ -127,7 +127,7 @@ class Settings(BaseSettings):
     payments_api_key: SecretStr
     allowed_origins: tuple[str, ...] = ()
     log_level: LogLevel = "INFO"
-    # ACME_LOG_FORMAT=json in deployed environments.
+    # Deployed environments set ACME_LOG_FORMAT=json.
     log_format: LogFormat = LogFormat.CONSOLE
 
     @field_validator("database_password", "payments_api_key")

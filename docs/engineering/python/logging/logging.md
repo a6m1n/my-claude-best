@@ -97,7 +97,8 @@ At every log call:
   too, so they are no way out.
 
 ```python
-# Good: a constant message, the value as an argument, a filterable field with its unit.
+# Good: the message is constant, the value is an argument, and a filterable field
+# carries its unit.
 logger.info("Report %s generated", report_id, extra={"sections": 6, "duration_ms": 412})
 
 # Bad: every record is a new message to the log store.
@@ -161,10 +162,14 @@ error"). uvicorn then writes one `ERROR` on the `uvicorn.error` logger, with the
 - `HTTPException` and validation errors are handled responses. Nothing logs them, and the access
   line already carries their status.
 
+The two excerpts below leave out the rest of the client's method and of the use case.
+
 ```python
 # core/search_client.py: retrying is this client's job, so it logs each retry
 # and raises the last.
-for attempt in range(1, MAX_ATTEMPTS + 1):
+attempt = 1
+
+while True:
     try:
         return await self._fetch(topic)
     except httpx.TimeoutException:
@@ -176,6 +181,8 @@ for attempt in range(1, MAX_ATTEMPTS + 1):
         logger.warning(
             "Search API timed out, retry %d of %d", attempt, MAX_ATTEMPTS - 1
         )
+
+        attempt += 1
 
 # reports/generate_report/usecase.py: this code decides (the report fails),
 # so it logs, once.
@@ -422,7 +429,7 @@ than the logging system". OpenTelemetry's GenAI conventions make the same choice
 "By default, no prompt content or tool arguments are captured".
 
 ```python
-# Good: what a reader needs to find and size the event.
+# Good: the line holds what a reader needs to find and size the event.
 logger.info("Document %s indexed", doc_id, extra={"pages": 12, "sha256_8": digest[:8]})
 
 # Bad, at any level.

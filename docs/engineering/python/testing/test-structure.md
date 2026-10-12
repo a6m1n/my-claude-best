@@ -149,7 +149,7 @@ def test_a_first_reminder_goes_out_and_a_second_waits_for_the_interval(self) -> 
     )
 
 
-# Good: the split the name asked for. Each guarantee fails on its own line in the
+# Good: it is split as the name asked. Each guarantee fails on its own line in the
 # report.
 def test_an_invoice_never_reminded_gets_its_first_reminder_after_the_due_date(
     self,
@@ -196,7 +196,7 @@ class TestNeedsReminder:
             today=date(2026, 9, 2) + REMINDER_INTERVAL - timedelta(days=1),
         )
 
-    # Good: the bug in the past tense, then what holds now.
+    # Good: the docstring gives the bug in the past tense, then what holds now.
     def test_a_reminder_goes_out_on_the_day_the_interval_ends(self) -> None:
         """Regression (PROJ-123): the check used > where it meant >=, so each repeat
         reminder went out one day late.
@@ -232,7 +232,8 @@ a list, the forms ruff's `PT006` and `PT007` check.
 class TestNeedsReminder:
     """An overdue invoice gets a reminder after its due date, at most once a week."""
 
-    # Good: one guarantee, three named rows. A fourth case is one more `pytest.param`.
+    # Good: one guarantee has three named rows. A fourth case is one more
+    # `pytest.param`.
     @pytest.mark.parametrize(
         ("last_reminded_on", "today"),
         [

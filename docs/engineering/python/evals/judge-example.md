@@ -33,16 +33,17 @@ from typing import Final
 
 from acme.core.schemas import LLMModel, ReasoningEffort
 
-# Chosen 2026-09 on the held-back labels: the smaller model kept TPR and TNR above 0.9,
-# the bar this team chose. Another family than the agent's model (judges.md section 4).
+# The team chose it in 2026-09 on the held-back labels: the smaller model kept TPR and
+# TNR above 0.9, the bar this team chose. It comes from another family than the agent's
+# model (judges.md section 4).
 UNSUPPORTED_PROMISE_JUDGE_LLM_MODEL: Final[LLMModel] = "acme-small-3-2026-06-02"
 UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT: Final = ReasoningEffort.LOW
 
-# How far a rate of the agent's eval may fall below its baseline: two standard
-# errors of its lowest baseline, 0.85, over 50 cases x 3 runs if the runs were
-# independent; they are not, so the real error is larger (repeated-runs.md
-# section 5). The judge's validation reads it too: the judge's pass rate stays this
-# close to the labels' (judges.md section 6).
+# A rate of the agent's eval may fall this far below its baseline: two standard errors
+# of its lowest baseline, 0.85, over 50 cases x 3 runs if the runs were independent;
+# they are not, so the real error is larger (repeated-runs.md section 5). The judge's
+# validation reads it too: the judge's pass rate stays this close to the labels'
+# (judges.md section 6).
 CHAT_EVAL_MARGIN: Final = 0.06
 ```
 
@@ -92,8 +93,8 @@ USER: Final = """\
 
 Judge this reply."""
 
-# Stands in <order_status> when the agent saw no order's status: it looked up none,
-# the id matched none, or the store did not answer.
+# This text stands in <order_status> when the agent saw no order's status: it looked
+# up none, the id matched none, or the store did not answer.
 NO_ORDER_STATUS: Final = "No order status: the agent saw none."
 ```
 
@@ -290,17 +291,17 @@ LABELS_FILE: Final = Path(__file__).with_name("labels_unsupported_promise.jsonl"
 # _item writes the reply id under this key and _reply_id reads it, so the key is one
 # name: a typo in one of them stops the run with a KeyError (python.md section 3).
 REPLY_ID_METADATA_KEY: Final = "reply_id"
-# The gate's needs: at least 0.9 of real passes passed and of real fails failed, a
-# bar this team chose (judges.md section 6 sets none), measured on at least 30 of
-# each verdict, the lower end of the count section 6 asks for.
+# The gate needs at least 0.9 of real passes passed and of real fails failed, a bar this
+# team chose (judges.md section 6 sets none), measured on at least 30 of each verdict,
+# the lower end of the count section 6 asks for.
 MIN_TPR: Final = 0.9
 MIN_TNR: Final = 0.9
 MIN_LABELS_PER_VERDICT: Final = 30
-# TPR and TNR on every label, about 200, from the last scheduled run. The pull request
-# that changes them explains why.
+# These are TPR and TNR on every label, about 200, from the last scheduled run. The pull
+# request that changes them explains why.
 ALL_LABELS_TPR_BEFORE: Final = 0.95
 ALL_LABELS_TNR_BEFORE: Final = 0.93
-# How far TPR or TNR may fall below its last scheduled run before the job fails: two
+# TPR or TNR may fall this far below its last scheduled run before the job fails: two
 # standard errors of a rate of 0.9, the bar, over about 100 labels of one verdict
 # (repeated-runs.md section 5).
 DRIFT_MARGIN: Final = 0.06
@@ -340,6 +341,8 @@ def main() -> int:
         action="store_true",
         help="the scheduled run: every label, against the last scheduled run",
     )
+    # A Namespace attribute is Any; the annotation keeps it out of the rest of main()
+    # (python.md section 3).
     drift: bool = parser.parse_args().drift
 
     settings = Settings()
@@ -471,9 +474,16 @@ def _missing_reply_ids(
 
 
 def _reply_id(run: ExperimentItemResult) -> str:
-    """Return the reply id `_item` put into the item's metadata."""
+    """Return the reply id `_item` put into the item's metadata.
+
+    Raises ValueError when the item carries no metadata.
+    """
     metadata = run.item["metadata"] if isinstance(run.item, dict) else run.item.metadata
-    return str((metadata or {})[REPLY_ID_METADATA_KEY])
+
+    if metadata is None:
+        raise ValueError("the item carries no metadata")
+
+    return str(metadata[REPLY_ID_METADATA_KEY])
 
 
 def _judge(labelled: LabelledReply, client: AcmeAIClient) -> JudgedReply:
@@ -486,17 +496,18 @@ def _judge(labelled: LabelledReply, client: AcmeAIClient) -> JudgedReply:
             reasoning_effort=UNSUPPORTED_PROMISE_JUDGE_LLM_REASONING_EFFORT,
         )
     except (ModelRefusedError, ModelOutputCutOffError, ModelAnswerInvalidError) as exc:
-        # The judge's own answer: a wrong verdict, counted against TPR or TNR, so an
-        # expected outcome, at INFO (logging.md section 4). The error names only the
-        # model, never the reply (logging.md section 10).
+        # The judge's own answer is a wrong verdict, counted against TPR or TNR, so it
+        # is an expected outcome, logged at INFO (logging.md section 4). The error names
+        # only the model, never the reply (logging.md section 10).
         logger.info("Reply %s got no verdict: %s", labelled.reply_id, exc)
 
         return JudgedReply(
             outcome=(labelled.label, NoVerdict.JUDGE_FAILED), evidence=""
         )
     except ModelUnavailableError:
-        # The provider's failure: an error of the run, which fails the check. This code
-        # decides, so it logs it at ERROR, with the traceback (logging.md section 5).
+        # The provider's failure is an error of the run, which fails the check. This
+        # code decides, so it logs it at ERROR, with the traceback
+        # (logging.md section 5).
         logger.exception("Reply %s not judged: the provider failed", labelled.reply_id)
 
         return JudgedReply(

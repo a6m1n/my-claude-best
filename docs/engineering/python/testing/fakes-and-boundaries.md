@@ -107,7 +107,7 @@ mailer.send.assert_called_once_with(
     "jane.doe@example.com", subject="Your invoice is overdue", body=ANY
 )
 
-# Good: pins who got an email, which is the guarantee.
+# Good: it pins who got an email, which is the guarantee.
 assert [email.to for email in mailer.sent] == ["jane.doe@example.com"]
 ```
 

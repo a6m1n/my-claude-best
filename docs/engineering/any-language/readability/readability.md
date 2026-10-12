@@ -96,7 +96,7 @@ def issue_invoice(
 ```
 
 ```python
-# Good: the same flow, with each detail in a function named for it. The body
+# Good: the same flow puts each detail in a function named for it. The body
 # reads as three steps at one level: build, save, send. The email body now
 # changes in render_invoice_email alone, and build_invoice is tested with
 # plain values.
@@ -154,7 +154,7 @@ def parse_discount_code(raw: str) -> DiscountCode:
 ```
 
 ```python
-# Good: the same checks as guards. Each error sits next to its condition, and
+# Good: the same checks become guards. Each error sits next to its condition, and
 # what is left at the end is the main path, at the first level.
 def parse_discount_code(raw: str) -> DiscountCode:
     code = raw.strip().upper()
@@ -346,7 +346,7 @@ def renew_subscription(
 ```
 
 ```python
-# Good: the same lines, split at each stage: load, decide (act, then return),
+# Good: the same lines are split at each stage: load, decide (act, then return),
 # charge, extend, return. The shape of the flow shows before a word is read.
 def renew_subscription(
     subscription_id: SubscriptionId,
@@ -475,7 +475,7 @@ def compute_value(entry: Entry, days: int) -> Decimal:
 ```
 
 ```python
-# Good: the same body in the business's words. The signature alone says what
+# Good: the same body uses the business's words. The signature alone says what
 # the function answers, and a finance colleague can check the formula.
 def late_fee(invoice: Invoice, days_overdue: int) -> Decimal:
     if days_overdue <= GRACE_DAYS:

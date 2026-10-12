@@ -838,13 +838,14 @@ class ProviderClient:
 The prefix changes on every attempt, it changes the text the model reads, and one day it is
 committed. Nothing tells the next reader which answers were produced with it.
 
-Good — the same client, with the switch as a setting. The settings class's `model_config` and its
-other fields are left out; they are [python.md](../../python/language/python.md) section 5:
+Good — the same client, with the switch as a setting. Both files' imports, and the settings class's
+`model_config` and other fields, are left out; the settings follow
+[python.md](../../python/language/python.md) section 5:
 
 ```python
 # core/config.py
 class Settings(BaseSettings):
-    # True only while debugging or measuring.
+    # Set it to true only while you debug or measure.
     disable_prompt_cache: bool = False
 
 

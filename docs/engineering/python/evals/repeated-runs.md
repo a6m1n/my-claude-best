@@ -97,7 +97,8 @@ least two times in three, p ≥ 2/3. What checks that claim:
 How to run "2 of 3" in pytest:
 
 **Should.** A plain loop in the test, with the count as the assertion. It needs no plugin, works
-with async tests and with every other plugin, and shows every answer when it fails:
+with async tests and with every other plugin, and shows every answer when it fails. The file
+below leaves out its imports, its constants and its fixtures:
 
 ```python
 # tests/integration/triage/test_service_triage.py

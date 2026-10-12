@@ -272,6 +272,8 @@ section 18; this section is how such a test runs under pytest.
   in ten. Each `RERUN` line under `-raR` is a wrong answer; `-ra` prints none. To run a case more
   than once, count its passes in a loop ([repeated-runs.md](../evals/repeated-runs.md) section 5).
 
+The test file below leaves out its imports.
+
 ```python
 # tests/integration/triage/test_service_triage.py
 CRASH_ON_EXPORT: Final = "Since yesterday the CSV export crashes with error 500."

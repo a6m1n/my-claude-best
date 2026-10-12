@@ -50,7 +50,7 @@ class FakeOrderStore(OrderStore):
         self.asked.append(order_id)
 
         if order_id in self._unavailable:
-            # The error the real tool catches when the store is down.
+            # The real tool catches this error when the store is down.
             raise ConnectionError("order store unavailable")
 
         status = self._statuses.get(order_id)
@@ -131,8 +131,8 @@ class ScriptedProvider:
         self.request_bodies.append(request.content)
 
         message = next(self._messages)
-        finish_reason = "tool_calls" if message.get("tool_calls") else "stop"
 
+        finish_reason = "tool_calls" if message.get("tool_calls") else "stop"
         return httpx.Response(
             200,
             json={
@@ -223,8 +223,8 @@ class TestBuildAgent:
         assert offered_tools(provider.request_bodies[0]) == [
             {
                 "name": "find_order",
-                # As the docstring gives it, indentation included: the bytes the
-                # model reads (agents.md section 5).
+                # The text is the docstring as it is, indentation included: the bytes
+                # the model reads (agents.md section 5).
                 "description": (
                     "Look up one order by its id, such as A-1042, and return its status.\n\n"
                     "        Call it when the customer asks where an order is or what happened to it.\n"
@@ -363,10 +363,10 @@ successful run lowers them in the pull request that shows it. Its seconds are th
 of the case's successful runs at the eval's `MAX_CONCURRENCY`, never the fastest run.
 
 ```python
-# evals/chat/schemas.py, next to Verdict, Split, NoVerdict, PromiseVerdict and
-# LabelledReply of judge-example.md, with PositiveInt, NonNegativeInt,
-# PositiveFloat and model_validator imported from pydantic, OrderStatus from
-# acme.core.schemas, Self from typing, and dataclass from dataclasses.
+# These go in evals/chat/schemas.py, next to Verdict, Split, NoVerdict, PromiseVerdict
+# and LabelledReply of judge-example.md, with PositiveInt, NonNegativeInt, PositiveFloat
+# and model_validator imported from pydantic, OrderStatus from acme.core.schemas, Self
+# from typing, and dataclass from dataclasses.
 @unique
 class ToolName(StrEnum):
     FIND_ORDER = "find_order"
@@ -387,7 +387,7 @@ class RunEnd(StrEnum):
 class Criterion(StrEnum):
     """What the agent's eval grades; each has one grader and one rate."""
 
-    # The headline: the run passed every other criterion.
+    # This is the headline: the run passed every other criterion.
     TASK_SUCCEEDED = "task_succeeded"
     REQUIRED_TOOLS_CALLED = "required_tools_called"
     ONLY_ALLOWED_TOOLS_CALLED = "only_allowed_tools_called"
@@ -429,11 +429,11 @@ class ChatCase(BaseModel):
     case_id: str
     question: str
     order_statuses: dict[str, OrderStatus]
-    # The ids the fake store fails on, as the real one does when it is down.
+    # The fake store fails on these ids, as the real one does when it is down.
     unavailable_order_ids: frozenset[str] = frozenset()
     required_tools: frozenset[ToolName]
     allowed_tools: frozenset[ToolName]
-    # The status word the reply must state, when the order exists.
+    # The reply must state this status word when the order exists.
     status_in_reply: OrderStatus | None
     budget: Budget
 
@@ -472,7 +472,7 @@ class ChatRun:
 
     ended: RunEnd
     reply: str
-    # The names the model asked for, which can include a tool that does not exist: not
+    # The model can ask for a tool that does not exist, so these are names, not
     # ToolName.
     tools_called: frozenset[str]
     order_status_seen: OrderStatus | None
@@ -569,12 +569,12 @@ CASES_FILE: Final = Path(__file__).with_name("cases_chat.jsonl")
 # Three runs of each case, one rate over all: one run shows no rate
 # (repeated-runs.md sections 5 and 7).
 RUNS_PER_CASE: Final = 3
-# How many runs are in flight at once in the one event loop. A run's seconds are
+# This many runs are in flight at once in the one event loop. A run's seconds are
 # wall-clock at this concurrency, so a time budget is compared only with runs at the
 # same concurrency.
 MAX_CONCURRENCY: Final = 5
-# The pass rates of the version on main, the headline first. The pull request that
-# changes them explains why.
+# These are the pass rates of the version on main, the headline first. The pull request
+# that changes them explains why.
 BASELINE: Final[Mapping[Criterion, float]] = {
     Criterion.TASK_SUCCEEDED: 0.85,
     Criterion.REQUIRED_TOOLS_CALLED: 0.97,
@@ -582,8 +582,8 @@ BASELINE: Final[Mapping[Criterion, float]] = {
     Criterion.REPLY_STATES_THE_STATUS: 0.93,
     Criterion.REPLY_KEEPS_TO_THE_STATUS: 0.90,
 }
-# Tokens per successful run of the version on main, read next to the pass rate, not
-# gated.
+# The version on main used this many tokens per successful run; it is read next to the
+# pass rate, not gated.
 TOKENS_PER_SUCCESS_BEFORE: Final = 1_900
 
 
@@ -685,7 +685,6 @@ async def _run_agent(
         return _ended_early(RunEnd.INVALID_ANSWER, seconds=clock() - started)
 
     usage = _usage(output.value["messages"], seconds=clock() - started)
-
     return ChatRun(
         ended=RunEnd.REPLY,
         reply=output.value["structured_response"].text,
@@ -717,7 +716,7 @@ def _usage(messages: Iterable[AnyMessage], *, seconds: float) -> RunUsage:
         tokens=sum(
             reply.usage_metadata["total_tokens"]
             for reply in replies
-            if reply.usage_metadata
+            if reply.usage_metadata is not None
         ),
         seconds=seconds,
     )
@@ -813,8 +812,8 @@ def _failed_run(criterion: Criterion, ended: RunEnd) -> Evaluation:
 
 def task_succeeded(*, evaluations: list[Evaluation], **kwargs: object) -> Evaluation:
     """Return the headline of the run: every criterion graded, and every one passed."""
-    # Every criterion but this one. A grader that raised left no score, so the run
-    # fails (evals.md section 6).
+    # The evaluations hold a score for every criterion but this one. A grader that
+    # raised left no score, so the run fails (evals.md section 6).
     graded_all = len(evaluations) == len(Criterion) - 1
     succeeded = graded_all and all(
         evaluation.value is True for evaluation in evaluations
@@ -828,8 +827,8 @@ def within_budget(
     """Return the share of succeeded runs that stayed inside their case's budget."""
     succeeded = _successful_runs(item_results)
     within = sum(run.within_budget for run in succeeded)
-    share = within / len(succeeded) if succeeded else 0.0
 
+    share = within / len(succeeded) if succeeded else 0.0
     return Evaluation(
         name=RunMeasure.WITHIN_BUDGET,
         value=share,
@@ -875,8 +874,8 @@ def status_way_out(
         (case.status_in_reply is not None, _states_a_status(run.reply))
         for case, run in _replied(item_results)
     )
-    took_way_out = table[True, False] + table[False, False]
 
+    took_way_out = table[True, False] + table[False, False]
     return Evaluation(
         name=RunMeasure.STATUS_WAY_OUT,
         value=took_way_out / table.total() if table else 0.0,

@@ -50,6 +50,8 @@ async def answer(
     # Every line of this run carries it, in nodes and tools too (logging.md section 8).
     thread_id.set(question.thread_id)
 
+    # Annotated, so the dict literal is checked as the TypedDict ainvoke takes
+    # (python.md section 3).
     config: RunnableConfig = {
         "configurable": {"thread_id": question.thread_id},
         # The prompt, the answer and the tool results go to Langfuse
@@ -184,13 +186,13 @@ section 4). It is a type, not a named value, so it is not in `consts.py`
 names would leave the setting a bare `str` ([python.md](../language/python.md) section 3).
 
 ```python
-# core/schemas.py, not consts.py: a type, not a named value
+# This goes in core/schemas.py, not consts.py: it is a type, not a named value
 # (file-structure.md section 3).
 from typing import Literal, TypeAlias
 
-# This application's deployments. Settings checks the value at startup and only passes
-# it on to Langfuse; no code names one, so a Literal (python.md section 2). Langfuse
-# keeps test traces out of production's views by it.
+# These are this application's deployments. Settings checks the value at startup and
+# only passes it on to Langfuse; no code names one, so the type is a Literal (python.md
+# section 2). Langfuse keeps test traces out of production's views by it.
 TracingEnvironment: TypeAlias = Literal["development", "staging", "production"]
 ```
 
@@ -233,7 +235,7 @@ def start_tracing(
 
 
 def stop_tracing() -> None:
-    # Sends the spans still in the buffer; Langfuse asks services to call it when
+    # This sends the spans still in the buffer; Langfuse asks services to call it when
     # they stop (logging.md section 8).
     get_client().shutdown()
 
@@ -517,7 +519,8 @@ from typing import Final
 
 from openai.types import ChatModel
 
-# A dated version, not a moving alias (python/evals/production.md section 6).
+# The id names a dated version, not a moving alias
+# (python/evals/production.md section 6).
 # gpt-4.1-mini has no reasoning effort to set (prompt-engineering.md section 15).
 SUPPORT_CHAT_LLM_MODEL: Final[ChatModel] = "gpt-4.1-mini-2025-04-14"
 # One LangGraph step per model call and one per round of tool calls, so 12 allows
@@ -529,7 +532,7 @@ SUPPORT_CHAT_TRACE_NAME: Final = "answer-chat"
 ```
 
 ```python
-# support/chat/schemas.py, next to Answer and Question.
+# This goes in support/chat/schemas.py, next to Answer and Question.
 from pydantic import BaseModel, ConfigDict
 
 
@@ -590,7 +593,6 @@ def build_agent(
     disable_prompt_cache: bool,
     new_request_uuid: Callable[[], uuid.UUID],
 ) -> ChatAgent:
-    # The run stops at the application's own step limit, never LangGraph's default.
     return create_agent(
         llm,
         tools=order_tools(orders),
@@ -600,8 +602,9 @@ def build_agent(
         # (prompt-engineering.md section 11).
         response_format=ProviderStrategy(ChatReply, strict=True),
         middleware=[
-            # Required when the model should recover: turns a ToolFailureError into a
-            # message it reads, logged once (logging.md section 8).
+            # This entry is needed when the model should recover: it turns a
+            # ToolFailureError into a message the model reads, logged once
+            # (logging.md section 8).
             ToolErrorMiddleware(on_error=report_tool_failure),
             CallLoggingMiddleware(),
             # Required, and last: innermost, so every other middleware sees this
@@ -612,6 +615,7 @@ def build_agent(
                 new_request_uuid=new_request_uuid,
             ),
         ],
+        # The run stops at the application's own step limit, never LangGraph's default.
     ).with_config(recursion_limit=SUPPORT_CHAT_MAX_STEPS)
 ```
 
@@ -688,11 +692,12 @@ def order_tools(orders: OrderStore) -> list[BaseTool]:
 ```
 
 ```python
-# support/chat/schemas.py, next to ChatReply.
+# This goes in support/chat/schemas.py, next to ChatReply.
 from enum import StrEnum, unique
 
 
-# Data the error carries, so here, not in errors.py (file-structure.md section 3).
+# The error carries this data, so it sits here, not in errors.py
+# (file-structure.md section 3).
 @unique
 class ToolFailureReason(StrEnum):
     """The fixed codes a tool failure can carry, so no free text reaches the log."""

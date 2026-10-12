@@ -25,10 +25,10 @@ from typing_extensions import override
 
 from acme.core.schemas import LogFormat, LogLevel
 
-# Set per request or per run: request_id by the request-id middleware, thread_id where
-# the agent is invoked (logging.md section 8).
-request_id: ContextVar[str] = ContextVar("request_id", default="-")
-thread_id: ContextVar[str] = ContextVar("thread_id", default="-")
+# Each is set per request or per run: request_id by the request-id middleware, thread_id
+# where the agent is invoked (logging.md section 8).
+request_id = ContextVar("request_id", default="-")
+thread_id = ContextVar("thread_id", default="-")
 
 # Every record has these attributes; anything else on a record came from extra= or
 # the Filter.
@@ -36,7 +36,7 @@ _STANDARD_ATTRIBUTES: Final = frozenset(
     vars(logging.LogRecord("", 0, "", 0, "", None, None))
 ) | {"message", "asctime"}
 _CONTEXT_IDS: Final = ("request_id", "thread_id", "trace_id")
-# uvicorn's coloured copy of its own message.
+# uvicorn adds a coloured copy of its own message.
 _DROPPED_ATTRIBUTES: Final = frozenset({"color_message"})
 
 
@@ -157,7 +157,7 @@ def build_logging_config(
             # them through ours so they pass the Filter (logging.md section 2). This
             # one writes start, stop and error lines.
             "uvicorn": {"handlers": [], "propagate": True},
-            # The same, for one line per request.
+            # The same holds here; this logger writes one line per request.
             "uvicorn.access": {"handlers": [], "propagate": True},
             # httpx logs every outgoing request at INFO.
             "httpx": {"level": "WARNING"},
@@ -180,20 +180,21 @@ in `core/schemas.py` ([file-structure.md](../../any-language/file-structure/file
 section 4).
 
 ```python
-# core/schemas.py: the types core/ files share (file-structure.md section 4).
+# core/schemas.py holds the types core/ files share (file-structure.md section 4).
 from enum import StrEnum, unique
 from typing import Literal, TypeAlias
 
 
-# This application's formats. Code names them, as the formatter keys and the default,
-# so a StrEnum (python.md section 2).
+# These are this application's formats. Code names them, as the formatter keys and the
+# default, so the type is a StrEnum (python.md section 2).
 @unique
 class LogFormat(StrEnum):
     CONSOLE = "console"
     JSON = "json"
 
 
-# The standard library's level names, so a Literal (python.md section 2).
+# These are the standard library's level names, so the type is a Literal
+# (python.md section 2).
 LogLevel: TypeAlias = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 ```
 
@@ -209,7 +210,7 @@ from acme.core.schemas import LogFormat, LogLevel
 
 class Settings(BaseSettings):
     log_level: LogLevel = "INFO"
-    # ACME_LOG_FORMAT=json in deployed environments.
+    # Deployed environments set ACME_LOG_FORMAT=json.
     log_format: LogFormat = LogFormat.CONSOLE
 ```
 
@@ -305,7 +306,7 @@ class RequestIdMiddleware:
             return
 
         incoming_id = Headers(scope=scope).get(REQUEST_ID_HEADER, "")
-        # A client's id only if it is safe to write into a log line
+        # A client's id is kept only if it is safe to write into a log line
         # (logging.md section 7).
         is_safe = _VALID_ID_PATTERN.fullmatch(incoming_id) is not None
         current_request_id = incoming_id if is_safe else uuid4().hex
@@ -368,7 +369,7 @@ still reach every log line, but the 500 response would leave without its header.
 Imports are left out of the two files below; only the log lines matter here.
 
 ```python
-# core/search_client.py: the one client of the search API; retrying is its job.
+# core/search_client.py is the one client of the search API; retrying is its job.
 logger = logging.getLogger(__name__)
 
 # The search API answers in well under a second, so three tries of five seconds
@@ -389,7 +390,6 @@ class SearchClient:
                 response = await self._http.post(
                     "/sections", json={"topic": topic}, timeout=TIMEOUT_SECONDS
                 )
-                return parse_sections(response.content)
             except httpx.TimeoutException:
                 if attempt == MAX_ATTEMPTS:
                     # Raised from None: the error text could repeat the request;
@@ -401,6 +401,9 @@ class SearchClient:
                 )
 
                 attempt += 1
+            else:
+                # Outside the try: only the post can time out (python.md section 6).
+                return parse_sections(response.content)
 ```
 
 `parse_sections`, not shown, validates the bytes once with a module-level `TypeAdapter`'s
