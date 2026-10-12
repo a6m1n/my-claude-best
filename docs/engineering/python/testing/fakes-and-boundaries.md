@@ -102,7 +102,8 @@ When the call itself is the behavior, as when the guarantee is that one email go
 what the fake recorded, as data:
 
 ```python
-# Bad: pins the spelling of the call. Adding a reply_to= argument to it breaks the test.
+# Bad: it pins the spelling of the call. Adding a reply_to= argument to the call
+# breaks the test.
 mailer.send.assert_called_once_with(
     "jane.doe@example.com", subject="Your invoice is overdue", body=ANY
 )

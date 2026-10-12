@@ -138,7 +138,7 @@ whole value is also one assertion ([assertions.md](assertions.md) section 2).
 The methods below sit in `TestNeedsReminder`; its class line is left out.
 
 ```python
-# Bad: two guarantees under one name. When the first assertion fails, nobody
+# Bad: two guarantees share one name. When the first assertion fails, nobody
 # learns whether the interval limit still holds.
 def test_a_first_reminder_goes_out_and_a_second_waits_for_the_interval(self) -> None:
     assert needs_reminder(DUE_ON, last_reminded_on=None, today=date(2026, 9, 2))

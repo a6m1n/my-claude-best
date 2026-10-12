@@ -328,7 +328,7 @@ act and return, put one blank line between two stages and none inside a stage.
   of the layout, and what the formatter leaves to the writer, is section 8.
 
 ```python
-# Bad: five stages with no blank line between them. The reader has to find
+# Bad: five stages run with no blank line between them. The reader has to find
 # where loading ends and the decision starts.
 def renew_subscription(
     subscription_id: SubscriptionId,
@@ -464,8 +464,8 @@ and one word for one thing across the codebase.
   understood as well as whole words (Lawrie et al., 2006).
 
 ```python
-# Bad: generic names. `compute_value`, `entry` and `days` say nothing about
-# the business: the reader has to read the body, and know the business, to
+# Bad: the names are generic. `compute_value`, `entry` and `days` say nothing
+# about the business: the reader has to read the body, and know the business, to
 # learn that this is a late fee.
 def compute_value(entry: Entry, days: int) -> Decimal:
     if days <= GRACE_DAYS:

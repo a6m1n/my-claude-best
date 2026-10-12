@@ -97,14 +97,19 @@ At every log call:
   too, so they are no way out.
 
 ```python
-# Good: the message is constant, the value is an argument, and a filterable field
-# carries its unit.
+# Good: the message is constant and the value is an argument, so the log store
+# groups every record under one message. A filterable field carries its unit, and
+# no `extra=` key repeats one the formatter writes.
 logger.info("Report %s generated", report_id, extra={"sections": 6, "duration_ms": 412})
 
 # Bad: every record is a new message to the log store.
-logger.info(f"Report {report_id} generated")
+logger.info(f"Report {report_id} generated", extra={"sections": 6, "duration_ms": 412})
 # Bad: "level" is the JSON formatter's own key.
-logger.info("Order %s escalated", order_id, extra={"level": escalation.tier})
+logger.info(
+    "Report %s generated",
+    report_id,
+    extra={"sections": 6, "duration_ms": 412, "level": "summary"},
+)
 ```
 
 ## 4. Levels
@@ -429,13 +434,13 @@ than the logging system". OpenTelemetry's GenAI conventions make the same choice
 "By default, no prompt content or tool arguments are captured".
 
 ```python
-# Good: the line holds what a reader needs to find and size the event.
+# Good: the line holds what a reader needs to find and size the event (an id, a
+# count, a short hash) and none of the content or secrets the lines below leak.
 logger.info("Document %s indexed", doc_id, extra={"pages": 12, "sha256_8": digest[:8]})
 
-# Bad, at any level.
-logger.debug("Prompt: %s", prompt)  # User content
-logger.info("Fetched %s", presigned_url)  # A URL that is a credential
-logger.warning("Tool failed: %s", exc)  # A tool's error text can repeat its input
+# Bad: each line logs what must stay out of a log, at any level.
+logger.debug("Document %s indexed: %s", doc_id, document_text)  # Content
+logger.info("Document %s indexed from %s", doc_id, presigned_url)  # A credential
 ```
 
 ## 11. Checks: reasonable, not strict

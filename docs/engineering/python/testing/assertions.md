@@ -54,8 +54,8 @@ promises more than it checks, and a field added later is never checked at all. A
 or a Pydantic model compares by value, and pytest prints both sides with the fields that differ.
 
 ```python
-# Bad: two fields of the stored invoice. A wrong amount, or an email changed by the run,
-# passes.
+# Bad: it checks two fields of the stored invoice. A wrong amount, or an email
+# changed by the run, passes.
 stored = get_invoice(database, invoice_id)
 assert stored.last_reminded_on == TODAY
 assert stored.due_on == DUE_ON
