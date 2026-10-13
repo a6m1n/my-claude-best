@@ -188,12 +188,10 @@ more than a weak executor (F41). If that model is not available to you, change `
 places: the agent file in your agents folder, and `model: opus` in `SKILL.md` Step 2, because the
 model passed on the spawn wins over the agent file. `effort:` is read from the agent file only.
 Edit the copy in your agents folder: the copy inside the skill folder is not loaded.
-The trigger phrases in the `SKILL.md` front matter include three in Russian. They are the skill's
-original triggers, kept because this port keeps the original's preferences, and they are the one
-exception to this repository's English-only rule. Replace them with phrases in your own language,
-or delete them. Keep a replacement no longer than the phrase it replaces: `description` and
-`when_to_use` together sit just under the 1,536-character limit Claude Code puts on a skill's
-listing text, and a longer text loses its end.
+The trigger phrases sit in `when_to_use` in the `SKILL.md` front matter, in English. To start the
+skill with phrases in your own language, add them there. Keep the addition short: `description`
+and `when_to_use` together run to about 1,440 characters, close to the 1,536-character limit
+Claude Code puts on a skill's listing text, and a longer text loses its end.
 
 `SKILL.md` names other skills it routes to and hands work to: `grill-me`, `web-research`,
 `plan-feature`, `decide-and-ship`, `full-cycle`, `decompose-and-delegate`. They are not in this

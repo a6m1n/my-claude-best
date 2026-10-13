@@ -11,9 +11,8 @@ description: >-
   (full-cycle), mapping code (decompose-and-delegate), a file-level plan (plan-feature), a
   requirements interview (grill-me), or one scoped change (decide-and-ship).
 when_to_use: >-
-  The user says "meta thinking", "/meta-thinking", «мета-мышление», «метамышление»,
-  «подумай над задачей перед стартом», "think this task through before we start". While a
-  large task's route is still open, this skill comes first; once a route is chosen and a
+  The user says "meta thinking", "/meta-thinking", "think this task through before we start".
+  While a large task's route is still open, this skill comes first; once a route is chosen and a
   file-level plan is wanted → plan-feature; when the question is how existing code works →
   decompose-and-delegate. Offer it and wait for one reply (do not run it) at the start of a
   large task, or one that cannot be said as one change in one sentence, where at least one
