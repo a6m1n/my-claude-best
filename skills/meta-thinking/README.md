@@ -80,7 +80,7 @@ your `CLAUDE.md`, Claude also offers it at the start of a large task and waits f
 | 5. Act on answers | main session | Runs research, a requirements interview or a second assessment with full alternatives, only when you ask, and at most once each. |
 | 6. Hand-off | main session | Writes an 8-line backbrief (goal, route, constraints, first steps, stop triggers, open questions, next skill), puts the route's steps in the task list, and hands the first step to its skill. The skill ends there. |
 
-The assessment has seven sections and fits in 80 non-blank lines:
+The assessment has seven sections and fits in 200 non-blank lines:
 
 | Section | What it holds |
 | --- | --- |

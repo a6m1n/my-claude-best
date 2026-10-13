@@ -169,7 +169,7 @@ against **The output contract** before the user sees it:
    it up, move it to *Known*, mark it `[answered: <source>]`.
 5. More than one full route appears only with its reason named: a one-way door, a test
    that decides, or the user asked for the routes (Step 0, or `Show alternatives`).
-6. The whole assessment stays within 80 non-blank lines, plus up to 25 non-blank lines per
+6. The whole assessment stays within 200 non-blank lines, plus up to 25 non-blank lines per
    full alternative route in section 6.
 7. No probability, time or token figure appears. Strike any and mark it
    `[removed: forecast]`.
@@ -342,7 +342,7 @@ Rules:
   several routes or alternatives, write 1–2 full alternative routes in section 6, in the
   section 5 format: 2–3 routes in total with the recommended one.
 
-Return the output contract below, in order, within 80 non-blank lines plus up to 25
+Return the output contract below, in order, within 200 non-blank lines plus up to 25
 non-blank lines per full alternative route in section 6. Before you write, read
 <absolute path of this skill's output_example.md> for the shape; its values are invented.
 <paste The output contract here>
@@ -350,7 +350,7 @@ non-blank lines per full alternative route in section 6. Before you write, read
 
 ## The output contract
 
-Seven sections, in this order, all mandatory; an empty section says `none`. At most 80
+Seven sections, in this order, all mandatory; an empty section says `none`. At most 200
 non-blank lines, plus up to 25 non-blank lines per full alternative route in section 6 (F7,
 F55). Task-specific only, never a
 repo overview (F48). Each cap of 3 below is a reading-cost choice, not a measured optimum.
