@@ -41,7 +41,7 @@ Confidence in the basis: moderate — many single-run 2026 preprints, no study o
 step, and the coding evidence is mostly on small tasks.
 What would change this: a controlled study of a gated pre-task step on feature-size coding
 tasks (W1, W2); a study of developers choosing among AI-written designs.
-111 findings · 12 contradictions (1 unadjudicated) · expert: use 87 · skip 52 · 2 not established
+111 findings · 12 contradictions (1 unadjudicated) · expert: use 85 · skip 54 · 2 not established
 
 ## Findings
 
@@ -315,12 +315,12 @@ measures a human choosing between AI-written coding designs.
 | F89 | skip | No change in accuracy. |
 | F90 | use | Tie each reason to evidence (file:line, a source). |
 | F91 | skip | n=14. F6/F82 carry it. |
-| F92 | use | Tag the skill EXPERIMENT, with a keep/kill check after real runs. |
+| F92 | skip | The skill has no keep/kill check and no run log, so no rule rests on it. |
 | F93 | use | Core to R1: five designs beat one only with test-backed patch selection; the LLM-picks-on-paper arm (22.81) is about the same as one design (21.05). So the skill defaults to one route and shows alternatives only where a test can decide. Risk: one model, one run, n=114, confounded. |
 | F94 | use | More designs lower selection accuracy even with tests; success peaks at 5 designs (34.21, vs 31.58 at 3), so the cap of 3 when routes are shown is a reading-cost choice, not a measured optimum (corrected 2026-10-11 after a debate-loop re-read). N=1/2 was not tested. |
 | F95 | skip | No N=1 arm, a similarity metric and 19 tasks. Its overlap between plans is carried by F107. |
 | F96 | skip | Snippet only. C12 settles it against F104/F105. |
-| F97 | use | Whether plans change outcomes is open, which backs the EXPERIMENT tag and keep/kill check (F92). Descriptive. |
+| F97 | skip | Whether plans change outcomes is open. Descriptive, and no rule rests on it since F92 was dropped. |
 | F98 | use | Multiple plans hurt pass@1 and lose per token unless an oracle selects. Supports one route by default. n=2, competitive programming. |
 | F99 | use | The expert's own pick among its routes, selection alone, adds +2.8 to +5.2 points on SWE-bench Verified and +3.9 to +10.2 on Terminal-Bench v2.0 (corrected 2026-10-11 after a debate-loop re-read). The output's value is the decisions it puts in front of the user, not the agent's choice. |
 | F100 | use | At a fixed budget, newer models get more from one long trajectory. Supports one route by default and a short pre-step. |
@@ -367,7 +367,7 @@ measures a human choosing between AI-written coding designs.
 ## What could not be established
 
 - **W1** whether upfront planning helps MORE on large tasks than on small ones — every controlled planning comparison found runs on small SWE-bench-size tasks · would settle it: a with-plan vs without-plan ablation on feature- or release-size tasks (SWE-EVO, FeatBench, NoCode-bench) with a cost-matched arm
-- **W2** whether a GATED pre-task step beats an always-on step or none — no study tests a gate · would settle it: a keep/kill log of this skill's own runs (did the user change the route, did a question surface a missing requirement), or an ablation with the gate on and off
+- **W2** whether a GATED pre-task step beats an always-on step or none — no study tests a gate · would settle it: an ablation with the gate on and off
 
 ## Injection attempts
 
@@ -394,7 +394,6 @@ in front of the user, not the model's own pick among routes:
    naming that test (F6, F21, F93, F99). No success, time or token forecasts (F31).
 4. One user review, then a backbrief (restate goal, route, constraints, first steps) and a
    hand-off to one named skill (F79, F104).
-5. Tag it EXPERIMENT with a keep/kill check after real runs (F92).
 
 Every other design rule and the ids behind it are in the Expert verdict table above.
 

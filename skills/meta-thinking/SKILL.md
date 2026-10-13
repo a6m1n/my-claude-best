@@ -1,7 +1,7 @@
 ---
 name: meta-thinking
 description: >-
-  (EXPERIMENT) Thinks a LARGE task through before any work starts and picks the route. One
+  Thinks a LARGE task through before any work starts and picks the route. One
   independent fresh-context assessor (the meta-thinker agent) returns a short assessment: the
   frame, known facts vs assumptions, at most 3 questions for the user, at most 3 /web-research
   items, ONE recommended route as numbered do-why-check steps with the skill each step uses,
@@ -43,10 +43,9 @@ and a display with no recommendation did no better in F86, so the recommendation
 and a user who wants the routes gets them (Step 4). The output is short, and its questions can
 be answered in one reply.
 
-**Where it stops.** This skill writes the assessment file and lines in
-`${CLAUDE_SKILL_DIR}/runs.md` (one per run, plus a `decision:` line when the user decides at
-the keep-or-kill read), and nothing else. No code edits, no implementation plan, no
-ticket. The work starts after the hand-off, under the next skill's own rules.
+**Where it stops.** This skill writes the assessment file, and nothing else. No code edits, no
+implementation plan, no ticket. The work starts after the hand-off, under the next skill's own
+rules.
 
 The evidence behind every rule is in `research-basis.md` next to this file; the ids in brackets
 (F6, C9) point there. Read it only when a rule is challenged or the skill is refreshed.
@@ -74,8 +73,7 @@ carries a short form of the same test (items 1–3 below); change both together.
 only when the user named it or accepted the offer. A re-run at a stop trigger, for a route the
 user chose in an earlier run, counts as accepted.
 
-No task in the arguments or the conversation → ask the user once what the task is. Before the
-gate line, run the keep-or-kill count in **Experiment — keep or kill** below.
+No task in the arguments or the conversation → ask the user once what the task is.
 
 1. **Is the task large?** It spans several parts, layers or deliverables, or it cannot be said
    as one change in one sentence. No → skip.
@@ -152,10 +150,9 @@ the same across models), so a second assessor buys little; the user stays the ch
 
 If the spawn fails with `Agent type not found` → stop, print
 `[meta-thinking] stopped — meta-thinker agent type missing (install agents/meta-thinker.md from this skill's folder, see README.md)`,
-record the outcome line (Step 6 item 3), and tell the user. Any other spawn error → print
-`[meta-thinking] stopped — assessor failed: <error>`, record the outcome line (Step 6 item 3),
-and stop. An empty return goes to Step 3. There is no fallback type, because an assessor that
-can edit, fetch or spawn is not this step.
+and tell the user. Any other spawn error → print
+`[meta-thinking] stopped — assessor failed: <error>`, and stop. An empty return goes to Step 3.
+There is no fallback type, because an assessor that can edit, fetch or spawn is not this step.
 
 ## Step 3 — Check the assessment (main session)
 
@@ -183,8 +180,8 @@ A failed check 5, 6 or 8 has no marked correction: trimming or re-ranking would 
 assessor's work (Hard rule 1). It, or any other defect you cannot fix with a marked correction
 (a missing section, a route with no steps, a hedge where a constraint should be) → show what
 came back, name the defects, print `[meta-thinking] stopped — <defect>`, keep the file (saved
-as Step 4 item 1 says), and let the user choose whether to re-run. Never run the rest of Step 4 or Step 6 on it; only the
-outcome line (Step 6 item 3) is recorded.
+as Step 4 item 1 says), and let the user choose whether to re-run. Never run the rest of Step 4
+or Step 6 on it.
 
 ## Step 4 — Save and present
 
@@ -282,7 +279,7 @@ re-spawn's new numbered file repeats the previous file's `Decided:` block in the
    section 4 is `none`, the user's request becomes its one research item); one that declines
    (stop, cancel, not now) → item 6; any other → treat it like item 1.
 6. **`Stop here`, or no route chosen** → print `[meta-thinking] stopped — no route chosen`,
-   keep the file, record the outcome line (Step 6 item 3), and do not hand off.
+   keep the file, and do not hand off.
 7. **A route chosen** → Step 6.
 
 ## Step 6 — Backbrief and hand-off
@@ -310,19 +307,7 @@ history. Close the gap before the work starts (F79):
    new one; completed steps stay. A step handed to a skill closes when that skill reports it
    done, after you check its report against the `watch` task's triggers. With no task tools in
    the session, the backbrief in the file is the record, and the report says so.
-3. **Record the outcome line** at the end of the assessment file:
-   `outcome: route changed by the user — yes|no · an answer added a requirement — yes|no · the user asked for alternatives or answered Other — yes|no`.
-   "Route changed by the user" is yes when the chosen route is not the first file's
-   recommended route: an alternative chosen, or a re-spawn after the user's answers produced
-   the route taken. "An answer added a requirement" is yes when an answer closed a section 2
-   `gap`, added a `MUST`/`NEVER` line, or changed *Decide now*. Append one line to
-   `${CLAUDE_SKILL_DIR}/runs.md` (create the file on the first run):
-   `<date> · <repo root or none> · <task in one line> · <assessment path or chat only> · <outcome line>`.
-   Record both also when the run stops without a hand-off (Step 3, Step 5). A Step 2 stop has
-   no assessment file: record only the `runs.md` line, with `none` as its path. A failed
-   `runs.md` append → print `[meta-thinking] runs.md not written: <error>` and go on. A stopped
-   run's `runs.md` line ends with `· stopped — <the reason its stop line printed>`.
-4. **Hand off:** invoke the first step's skill with the first step's scope only as its task
+3. **Hand off:** invoke the first step's skill with the first step's scope only as its task
    (`step 1: <its do / why / check line>`), and the backbrief and the assessment path as
    context; `decide-and-ship` takes one change per run. Pass the `Decided:` lines as
    pre-settled decisions in the slot the receiving skill offers (`decide-and-ship`: pre-settled
@@ -402,7 +387,7 @@ repo overview (F48). Each cap of 3 below is a reading-cost choice, not a measure
    again" (F25, F68).
 
 When Step 5 records an answer or a finding, the file carries a `Decided:` block right after
-section 7. After Step 6 the file also carries the backbrief and the outcome line.
+section 7. After Step 6 the file also carries the backbrief.
 
 ## What this reads, and when
 
@@ -415,29 +400,9 @@ relative path — the working directory is the user's repo, not this folder.
 |---|---|
 | `output_example.md` | at Step 3, before checking the assessment, to see the contract filled in (the assessor reads it through its brief) |
 | `research-basis.md` | a rule here is challenged, or the skill is refreshed (distrust after 2027-04-11) |
-| `runs.md` | at Step 0, before the gate line, to count the runs since the last `decision:` line for the keep-or-kill read (see Experiment) |
 
 No project binding: the project's instruction files give the artifacts folder, and nothing
 else here changes per project.
-
-## Experiment — keep or kill
-
-This skill is an EXPERIMENT: no study shows that a gated pre-task step beats no step (W2), and
-a felt benefit is not evidence (F92). The record is `${CLAUDE_SKILL_DIR}/runs.md`, one line
-per run (Step 6 item 3). At Step 0, before the gate line, count the run lines after
-the last `decision:` line, or all run lines when there is none (a missing file counts as
-none). At five or more, show the user the keep-or-kill read: how many runs had a route
-changed, an answer that added a requirement, a request for alternatives; the user decides.
-When no run changed a route or added a requirement, the read recommends cutting the skill down
-to the gate and the questions, or removing it. The read lists stopped runs by reason
-and never counts a stop the skill caused — agent type missing, assessor failed, a Step 3
-defect, no route survives the answers — as a run that changed nothing. When the user
-decides, append one line to `runs.md`: `decision: <keep | cut | remove> · <date>`. The read
-comes back after five more runs. `keep` → continue this run. `cut` or `remove` → print
-`[meta-thinking] stopped — user decided <cut | remove>` (the `decision:` line is its record in
-`runs.md`), and name the separate change the user makes: for `cut`, this skill cut down to the
-gate and the questions; for `remove`, the skill folder, the installed `meta-thinker.md` agent
-file, and the offer line in the user's `CLAUDE.md`.
 
 ## Adjacent skills
 

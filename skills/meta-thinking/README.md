@@ -11,7 +11,6 @@ what the code cannot answer.
 - [What a run does](#what-a-run-does)
 - [Why it is built this way](#why-it-is-built-this-way)
 - [Install](#install)
-- [It is an experiment](#it-is-an-experiment)
 - [Files](#files)
 
 ## The problem it solves
@@ -35,7 +34,7 @@ the work starts.
 
 ## What it was made for
 
-The skill was built to test one idea: before a large task, an independent agent with a fresh
+The skill is built on one idea: before a large task, an independent agent with a fresh
 context looks at everything known about it, decides what to ask you and what to look up on the
 web, and proposes a route whose every step says why it is there. The research run behind it
 ([research-basis.md](research-basis.md)) asked what current studies and practice say about such
@@ -117,7 +116,6 @@ holds all 111 findings with their links.
 | `wrong if:` lines and plain "I am not sure, but…" | A shown default tends to get followed (F82, F83). First-person hedges reduce overreliance on wrong answers (F88). |
 | No success, time or token figures | Agents are overconfident about success, and their time estimates are off by 3.6–6.1 times (F31, F33). |
 | A backbrief and the steps in the task list | Agents follow a given plan only in part (F104), and constraints get lost between agents (F36). A backbrief, where the doer restates the intent before starting, comes from military practice (F79). |
-| Tagged as an experiment | No study shows that a gated step before work beats no step (W2), and a felt benefit is not evidence (F92). |
 
 Most sources are 2025–2026 arXiv preprints, many run once and not repeated. Treat the numbers as
 direction, not as settled fact, and distrust the file after 2027-04-11.
@@ -131,8 +129,7 @@ type, `meta-thinker`, which the skill cannot run without.
    agents folder. Claude Code loads agent types from agents folders, not from a skill folder, so
    the copy inside the skill folder is not enough.
 
-   For all your projects, at the user level (the run log then covers every project and stays
-   out of your repositories):
+   For all your projects, at the user level:
 
    ```bash
    mkdir -p ~/.claude/skills ~/.claude/agents
@@ -146,13 +143,7 @@ type, `meta-thinker`, which the skill cannot run without.
    mkdir -p ../your-project/.claude/skills ../your-project/.claude/agents
    cp -R skills/meta-thinking ../your-project/.claude/skills/
    cp skills/meta-thinking/agents/meta-thinker.md ../your-project/.claude/agents/
-   [ -n "$(tail -c 1 ../your-project/.gitignore 2>/dev/null)" ] && echo >> ../your-project/.gitignore
-   echo '.claude/skills/meta-thinking/runs.md' >> ../your-project/.gitignore
    ```
-
-   The last two lines keep the run log out of commits: the log holds absolute paths of your
-   machine and one line per task. The first of them adds a line break when `.gitignore` does not
-   end with one, because otherwise the new pattern joins your last pattern and both stop working.
 
 2. Start a new Claude Code session, so it loads the new agent and skill.
 
@@ -190,7 +181,7 @@ model passed on the spawn wins over the agent file. `effort:` is read from the a
 Edit the copy in your agents folder: the copy inside the skill folder is not loaded.
 The trigger phrases sit in `when_to_use` in the `SKILL.md` front matter, in English. To start the
 skill with phrases in your own language, add them there. Keep the addition short: `description`
-and `when_to_use` together run to about 1,440 characters, close to the 1,536-character limit
+and `when_to_use` together run to about 1,430 characters, close to the 1,536-character limit
 Claude Code puts on a skill's listing text, and a longer text loses its end.
 
 `SKILL.md` names other skills it routes to and hands work to: `grill-me`, `web-research`,
@@ -198,21 +189,6 @@ Claude Code puts on a skill's listing text, and a longer text loses its end.
 repository. The skill works without them: the main session does that part itself (`SKILL.md`,
 § Adjacent skills). Your own skills for the same jobs show up in the session's skills listing,
 and the assessor picks from that listing.
-
-## It is an experiment
-
-The skill keeps a log, `runs.md`, next to `SKILL.md`: one line per run with the date, the
-repository path, the task in one line, where the assessment was saved, and three yes-or-no
-answers. Did you change the recommended route? Did an answer add a requirement? Did you ask for
-alternatives?
-
-After five runs it shows you a keep-or-kill read: how many runs changed something. You decide to
-keep it, cut it down to the gate and the questions, or remove it. When no run changed a route or
-added a requirement, the read recommends cutting or removing. The read comes back after every
-five more runs.
-
-The log holds absolute paths and task descriptions. Keep it out of commits and out of anything
-you share.
 
 ## Files
 
@@ -225,5 +201,3 @@ you share.
 - [output_example.md](output_example.md): one whole run on invented values. Read it first.
 - [research-basis.md](research-basis.md): the 111 findings, 12 contradictions and the expert
   verdict behind the rules. Read it when a rule looks wrong to you.
-
-`runs.md` is not shipped: the skill creates it on its first run.

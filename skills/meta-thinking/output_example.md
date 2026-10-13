@@ -113,8 +113,6 @@ Decided:
 - Open: none
 - Next skill: /decide-and-ship, one run per step 1–3.
 
-outcome: route changed by the user — no · an answer added a requirement — yes · the user asked for alternatives or answered Other — no
-
 ---
 
 **Aside — what changes in other cases.**
