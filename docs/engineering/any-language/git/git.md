@@ -148,6 +148,9 @@ Repository configuration:
 - Require a pull request for `main`, and block direct pushes. Use a ruleset in a new
   repository, or branch protection where that is already set up.
 
+A GitHub ruleset for `main` and the default branch, with the reason for each part, is in
+[ruleset-example.md](ruleset-example.md).
+
 Check: `git log --first-parent --no-merges main` lists only the commits made before the first
 pull request was merged, usually just the initial commit. Anything else landed on `main`
 outside a pull request.
@@ -166,7 +169,9 @@ You may hear that a force push loses the review comments. It does not: GitHub an
 them and mark them outdated, so it is not an argument either way.
 
 Enforcement: block force pushes on `main` and on every shared branch. On GitHub this is on by
-default in branch protection and in rulesets. Leave it on.
+default in branch protection and in rulesets. Leave it on. For `main` and the default branch,
+[ruleset-example.md](ruleset-example.md) blocks force pushes. Other shared branches need a rule of
+their own.
 
 There is one exception path, and it is a human path:
 
