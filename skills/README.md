@@ -32,14 +32,19 @@ The two work as a pair and share three files in `sync-best-practice/`:
 - [design.md](sync-best-practice/design.md): the options turned down, with their reasons. Read it
   before you change either skill.
 
-One more skill stands on its own:
+Two more skills stand on their own:
 
+- [meta-thinking/README.md](meta-thinking/README.md): before a large task starts, one
+  independent agent reads the task and the repository, asks you at most three questions and
+  proposes one route, step by step. Read the README for the problem it solves and when to use
+  it. It also needs its agent file copied into an agents folder; the README's Install says how.
 - [pr/SKILL.md](pr/SKILL.md): writes the pull request for the current branch from one fixed
   template, shows you the draft, and opens or updates the pull request after your yes. Read
   [pr/README.md](pr/README.md) first: it says how to install the skill, what to fill in, and
   where it departs from git.md.
 
-Each skill has an `output_example.md` with what it shows you, on invented values.
+Each skill has an `output_example.md` with the report, assessment or draft it ends with, on
+invented values.
 
 ## Keep a copied practice in step with its source
 
