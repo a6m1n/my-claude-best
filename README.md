@@ -53,6 +53,7 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 More parts are about Claude Code itself:
 
 - [The status line](claude-config/statusline/) — context, usage limits, the prompt cache and each agent's progress, under the Claude Code prompt.
+- [Local project settings](claude-config/settings-local/) — a `settings.local.json` with the commands that run without a prompt, a hook that stops Claude from reading `.env` files, and a higher web search cap, each field explained.
 - [The CLAUDE.md guide](docs/claude-code/claude-md.md) — what belongs in a `CLAUDE.md` and what does not.
 - [Two skills for a copied practice](skills/README.md) — copy a practice in, record why your copy differs, and merge new commits from this repository without losing your changes.
 - [The meta-thinking skill](skills/meta-thinking/) — before a large task starts, an independent agent asks you only what the code cannot answer and proposes one route, step by step.
@@ -161,7 +162,8 @@ my-claude-best/
 │   │   └── react/         # practices whose rules are written for a React application, one folder each
 │   └── claude-code/       # guides on instructing Claude Code
 ├── claude-config/
-│   └── statusline/        # the status line: the script, its install guide, its images
+│   ├── statusline/        # the status line: the script, its install guide, its images
+│   └── settings-local/    # a project settings.local.json and its .env hook, field by field
 ├── skills/                # skills to read and copy into a .claude/skills/ folder
 ├── CLAUDE.local.md        # an example practices section for a project CLAUDE.md
 ├── CONTRIBUTING.md
@@ -176,7 +178,7 @@ Every practice folder has the same shape. It holds a `README.md` that maps the f
 ## Where to get help
 
 - A question, or a mistake in a practice: open an issue in this repository. Name the file and the section, and quote the line. [CONTRIBUTING.md](CONTRIBUTING.md) says what a useful issue holds.
-- A security problem in the status line script or in a skill: never describe it in a public issue. [SECURITY.md](SECURITY.md) says how to report it privately.
+- A security problem in a script in `claude-config/` or in a skill: never describe it in a public issue. [SECURITY.md](SECURITY.md) says how to report it privately.
 
 I read issues when I can. There is no set response time.
 
