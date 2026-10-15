@@ -50,13 +50,14 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 - [react/security](docs/engineering/react/security/) — what the browser side of an application must and must not do.
 - [react/performance](docs/engineering/react/performance/) — what fast means, how to measure it, and what to fix first, with SEO in brief.
 
-Five more parts are about Claude Code itself:
+More parts are about Claude Code itself:
 
 - [The status line](claude-config/statusline/) — context, usage limits, the prompt cache and each agent's progress, under the Claude Code prompt.
 - [The CLAUDE.md guide](docs/claude-code/claude-md.md) — what belongs in a `CLAUDE.md` and what does not.
 - [Two skills for a copied practice](skills/README.md) — copy a practice in, record why your copy differs, and merge new commits from this repository without losing your changes.
 - [The meta-thinking skill](skills/meta-thinking/) — before a large task starts, an independent agent asks you only what the code cannot answer and proposes one route, step by step.
 - [The pr skill](skills/pr/README.md) — writes the pull request for the current branch from one fixed template, and opens or updates it after your yes.
+- [The create-jira-ticket skill](skills/create-jira-ticket/) — turns short notes into one Jira ticket, shows every field before it writes, and creates the issue after your yes.
 
 What it does not do:
 
