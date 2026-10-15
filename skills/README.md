@@ -31,7 +31,15 @@ The two work as a pair and share three files in `sync-best-practice/`:
 - [design.md](sync-best-practice/design.md): the options turned down, with their reasons. Read it
   before you change either skill.
 
-Each skill has an `output_example.md` with the report it ends with, on invented values.
+One skill stands alone:
+
+- [meta-thinking/README.md](meta-thinking/README.md): before a large task starts, one
+  independent agent reads the task and the repository, asks you at most three questions and
+  proposes one route, step by step. Read the README for the problem it solves and when to use
+  it. It also needs its agent file copied into an agents folder; the README's Install says how.
+
+Each skill has an `output_example.md` with the report or assessment it ends with, on invented
+values.
 
 ## Keep a copied practice in step with its source
 
