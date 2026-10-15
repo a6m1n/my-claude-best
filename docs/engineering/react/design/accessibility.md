@@ -246,14 +246,14 @@ keeps typing in it.
 ### Libraries
 
 Radix Primitives and React Aria both say their components follow the APG and are tested with
-screen readers. Those are the vendors' own statements, and two public records show their limits.
-An expert audit of Radix by Publicis Sapient (2023, with VoiceOver and Safari, NVDA and Firefox,
-TalkBack and Chrome) found 35 defects, and in February 2025 its authors wrote that "the issues are
-still there in 2025". shadcn/ui copies its components into your repository, so their defects
-become yours: an issue in which screen-reader users could not dismiss the mobile sidebar was
-closed as not planned (2025), and a 2026 audit by a firm that sells audits found 34 of 48
-components passing WCAG 2.2 AA, with gaps in Combobox, Data Table, Context Menu, Chart and Input
-OTP.
+screen readers. Those are the vendors' own statements, and two public records show their limits
+(read 2026-10-16). An expert audit of Radix by Publicis Sapient (2023, with VoiceOver and Safari,
+NVDA and Firefox, TalkBack and Chrome) found 35 defects, and in February 2025 its authors wrote
+that "the issues are still there in 2025". shadcn/ui copies its components into your repository,
+so their defects become yours: an issue in which screen-reader users could not dismiss the mobile
+sidebar was closed as not planned (2026-09-19), and a 2026 audit by a firm that sells audits found 34 of
+48 components passing WCAG 2.2 AA, with gaps in Combobox, Data Table, Context Menu, Chart and
+Input OTP.
 
 When you take a widget from a library, let the library manage its focus and its keys, and add no
 focus code of your own on top: two pieces of code moving focus work against each other. Then put
@@ -291,7 +291,11 @@ adds (read through a summary), so a popover still needs the role and the keys of
 It is Baseline newly available since 2025-01-27 and not yet widely available (read 2026-10-01).
 Convert every modal to the native `<dialog>` before you adopt `popover`. Adrian Roselli's reason
 (updated 2025-12-05): a popover can open over a `div role="dialog"`, and Escape then closes the
-dialog instead of the popover; a native `<dialog>` sits above popovers in the top layer.
+dialog instead of the popover; in his test a native `<dialog>` opened over a popover covers it (an
+auto popover closes, a manual one sits behind); his update of 2025-12-05 adds that the switch may
+not make `popover` safe, because a popover opened over or inside a modal dialog can be inert
+(WHATWG HTML issues #9936, #10811, open on 2026-10-16), so put each popover that can open while a
+modal is open through the manual pass of section 11.
 
 For an overlay you build without `<dialog>`, set the `inert` attribute on the rest of the page
 while the overlay is open, so neither the Tab key nor a screen reader reaches what lies behind it.
@@ -390,8 +394,9 @@ So the application does it, in this order:
    experience", no single technique worked for everyone, and the testers recommended a skip link, a
    live region that announces the page and a visible focus outline together. Five users in one
    test is little evidence for either way; pick one and check it in the manual pass.
-3. **Announce only a change of screen.** Skip the first load, which the screen reader already
-   reads, and a change of the search string or the hash alone.
+3. **Announce a change of screen, and the loading and failed states of the screen on its way**
+   (section 7); skip the first load, which the screen reader already reads, and a change of the
+   search string or the hash alone.
 
 The application shell, from `src/routes/__root.tsx`, with the imports and the route definition cut:
 
@@ -474,6 +479,10 @@ screen reader without taking focus (4.1.3, AA). The WCAG text also warns against
 application "chatty": announce what the user needs, not every change. A dialog takes focus, so it
 is not a status message.
 
+When a message carries an action, such as Undo, keep it until the user dismisses it, or let the
+user turn off or extend its time (2.2.1, A), so a user who is slower to reach it can still act; a
+message with no action may go when its information stays available elsewhere.
+
 Render the live region in the page before its text changes, and then change only its text. Most
 screen readers announce a change inside a region they already know about, and often miss a region
 that arrives with its text. WCAG technique ARIA19: "The error container must be present in the DOM
@@ -529,8 +538,9 @@ Pick the role by what the message is:
 | a sequence of updates, such as a chat or an activity log | `role="log"` | polite; only the new entries are read (ARIA23) |
 | something time-critical that is none of the above | `aria-live="assertive"` | interrupts; MDN keeps it for time-sensitive or critical notifications |
 
-`aria-atomic` is false by default, so a screen reader reads only the part that changed; set it to
-true when the region must be read whole.
+`aria-atomic` defaults to true on `role="alert"` and `role="status"` (so on `<output>`), which read
+the whole region on each change, and to false on `role="log"` and a plain `aria-live` region, which
+read only what changed; set it to true there when the region must be read whole (WAI-ARIA 1.2).
 
 Bad, the region arrives with its text:
 
@@ -673,15 +683,15 @@ Three checks run on every change. Each finds a different part, and none of them 
 | a component test that finds elements by role and name | in the unit suite | a control that lost its role or its name | layout, contrast, a real screen reader |
 | axe on the rendered screen, from a Playwright test | in the end-to-end suite | faults in the rendered page, such as low contrast and missing or invalid properties once the page has rendered | meaning: `alt="image"` passes, a wrong label passes; focus order; announcements |
 
-Turn the jsx-a11y plugin on by name in the Oxlint configuration: Oxlint enables only its default
-plugins, and jsx-a11y is not one of them (read 2026-10-01). Oxlint has every rule of
-`eslint-plugin-jsx-a11y`'s `recommended` set; the two plugin rules it lacks, `accessible-emoji`
-and `label-has-for`, are outside that set (read through a summary of the plugin's README and the
-Oxlint source, 2026-10-01). Having a rule is not the same as running it: which rules a
-configuration turns on is set by its categories and rule list, and the negative control below shows
-only the four rules it triggered. The plugin's README states the limit of all of them: "it only
-catches errors in static code". The setup, the rules to turn on and the versions are
-[libraries.md](../architecture/libraries.md) section 4.
+Run Oxlint with its jsx-a11y plugin, which is off by default (read 2026-10-16); how to turn it on
+without turning the default plugins off is [libraries.md](../architecture/libraries.md) section 4.
+Oxlint has every rule of `eslint-plugin-jsx-a11y`'s `recommended` set; the three plugin rules it
+lacks, `accessible-emoji`, `label-has-for` and `no-onchange`, are deprecated and outside that set
+(read through a summary of the plugin's README and the Oxlint source, 2026-10-16). Having a rule
+is not the same as running it: which rules a configuration turns on is set by its categories and
+rule list, and the negative control below shows only the four rules it triggered. The plugin's
+README states the limit of all of them: "it only catches errors in static code". The setup, the
+rules to turn on and the versions are [libraries.md](../architecture/libraries.md) section 4.
 
 What Oxlint 1.85 with the plugin on reported, in the application's negative control: a file with
 a click handler on a `div`, an `<img>` with no `alt` and a `javascript:` link, added and then
@@ -900,7 +910,8 @@ The standard and the law
    https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html ; Resize Text,
    https://www.w3.org/WAI/WCAG22/Understanding/resize-text.html ; Reflow,
    https://www.w3.org/WAI/WCAG22/Understanding/reflow.html ; Text Spacing,
-   https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html ; Page Titled,
+   https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html ; Timing Adjustable,
+   https://www.w3.org/WAI/WCAG22/Understanding/timing-adjustable.html ; Page Titled,
    https://www.w3.org/WAI/WCAG22/Understanding/page-titled.html ; Focus Order,
    https://www.w3.org/WAI/WCAG22/Understanding/focus-order.html ; Status Messages,
    https://www.w3.org/WAI/WCAG22/Understanding/status-messages.html ; Accessible Authentication
@@ -974,7 +985,10 @@ Libraries and dialogs
 21. Scott O'Hara, "Use the dialog element (reasonably)", 2023-01-26,
     https://www.scottohara.me/blog/2023/01/26/use-the-dialog-element.html .
 22. Adrian Roselli, "Brief Note on Popovers with Dialogs", updated 2025-12-05,
-    http://adrianroselli.com/2023/05/brief-note-on-popovers-with-dialogs.html .
+    http://adrianroselli.com/2023/05/brief-note-on-popovers-with-dialogs.html . WHATWG HTML issues
+    #9936, https://github.com/whatwg/html/issues/9936 , and #10811,
+    https://github.com/whatwg/html/issues/10811 : a popover over or after a modal dialog, and
+    inertness; both open on 2026-10-16.
 
 Focus, route changes and live regions
 
@@ -996,7 +1010,9 @@ Focus, route changes and live regions
     the built-in route announcer; no announcement on the first load.
 28. MDN, "ARIA live regions", 2026-09-11,
     https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Guides/Live_regions : the
-    region in the initial markup, politeness, `aria-atomic`.
+    region in the initial markup, politeness, `aria-atomic`. W3C, "Accessible Rich Internet
+    Applications (WAI-ARIA) 1.2", https://www.w3.org/TR/wai-aria-1.2/ : `aria-atomic` is false by
+    default, and true by default on the `alert` and `status` roles.
 29. MDN, "`<output>`", 2026-09-11,
     https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/output : the implicit
     `status` role; "many browsers" make it a live region.
@@ -1026,7 +1042,7 @@ Automated checks and the manual pass
     https://github.com/jsx-eslint/eslint-plugin-jsx-a11y : the presets and "only catches errors in
     static code". Oxlint's jsx-a11y rule sources,
     https://api.github.com/repos/oxc-project/oxc/contents/crates/oxc_linter/src/rules/jsx_a11y :
-    the two rules it lacks. Both read through a summary.
+    the three rules it lacks. Both read through a summary.
 36. Playwright, "Accessibility testing", https://playwright.dev/docs/accessibility-testing : axe
     from Playwright; manual testing still needed.
 37. Testing Library, "About Queries", https://testing-library.com/docs/queries/about/#priority :

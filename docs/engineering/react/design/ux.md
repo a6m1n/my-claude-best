@@ -66,9 +66,16 @@ what to show.
   ```
 
   The user cannot tell a slow payment from a click that did not register, and a second press can
-  start a second payment. The application's submit button, with that one problem fixed:
+  start a second payment. The application's form, cut to its status region for the wait and its
+  submit button, with that one problem fixed:
 
   ```tsx
+  {/* The wait is a status message too (WCAG 2.2 Understanding 4.1.3: "the waiting state of an
+      application"), and a screen reader may not read the button's new label. `<output>` is a
+      polite status region, in the page from the first render like the one above
+      (accessibility.md section 7). */}
+  <output className="sr-only">{payment.isPending ? "Paying the invoice" : null}</output>
+
   {/* Disabled while the payment runs, so a second click cannot send a second payment
       (ux.md section 2). */}
   <Button type="submit" disabled={payment.isPending}>
@@ -78,7 +85,8 @@ what to show.
 
   Why it is good: the label turns into "Paying…" as soon as the mutation is pending, so the user
   sees that the click was taken, and the disabled button cannot start a second payment while the
-  first one runs.
+  first one runs. The wait also reaches a screen reader through the polite status region (WCAG 2.2
+  Understanding 4.1.3; [accessibility.md](accessibility.md) section 7).
 - **When an action fails, say what happened, what it means for the user, and what to do next, in
   words next to the control that failed.** These are the three verbs of the ninth heuristic:
   recognize, diagnose, recover.
@@ -448,7 +456,8 @@ two or more is not ready.
    https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md and
    https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/AGENTS.md — focus
    the first error, 16 px inputs, never block paste or zoom, undo or confirm, state in the URL, hit
-   targets; one design team's rules.
+   targets; one design team's rules. The quotes in this file are word for word from
+   `AGENTS.md` (read 2026-10-16).
 9. web.dev, Learn Design, Interaction: https://web.dev/learn/design/interaction — `type` and
    `inputmode`, coarse pointers, nothing behind hover, hover paired with focus (read as a summary).
 
