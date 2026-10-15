@@ -2,7 +2,7 @@
 
 The code in this repository that runs on your machine is [claude-config/statusline/statusline.py](claude-config/statusline/statusline.py), with the install commands and the one-paste prompt in [install.md](claude-config/statusline/install.md) that put it there. The script runs with your user's rights every time Claude Code refreshes the status line.
 
-The skills in [skills/](skills/README.md) are text, but once you copy them into `.claude/skills/`, they make Claude Code act for you. The two sync skills run git and file commands in your repository, some with no permission prompt, on text cloned from a source repository. The create-jira-ticket skill reads your repository and your Jira site, and creates a Jira issue and its links after your yes. A way to make a skill write, run or approve something it should not is a security problem too.
+The skills in [skills/](skills/README.md) are text, but once you copy them into `.claude/skills/`, they make Claude Code act for you. The two sync skills run git and file commands in your repository, some with no permission prompt, on text cloned from a source repository. The meta-thinking skill writes files and starts an agent that reads your repository and the task text. The create-jira-ticket skill reads your repository and your Jira site, and creates a Jira issue and its links after your yes. A way to make a skill write, run or approve something it should not is a security problem too.
 
 ## Report a vulnerability
 
