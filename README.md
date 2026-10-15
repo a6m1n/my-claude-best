@@ -50,16 +50,17 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 - [react/security](docs/engineering/react/security/) — what the browser side of an application must and must not do.
 - [react/performance](docs/engineering/react/performance/) — what fast means, how to measure it, and what to fix first, with SEO in brief.
 
-Three more parts are about Claude Code itself:
+More parts are about Claude Code itself:
 
 - [The status line](claude-config/statusline/) — context, usage limits, the prompt cache and each agent's progress, under the Claude Code prompt.
 - [The CLAUDE.md guide](docs/claude-code/claude-md.md) — what belongs in a `CLAUDE.md` and what does not.
 - [Two skills for a copied practice](skills/README.md) — copy a practice in, record why your copy differs, and merge new commits from this repository without losing your changes.
+- [The create-jira-ticket skill](skills/create-jira-ticket/) — turns short notes into one Jira ticket, shows every field before it writes, and creates the issue after your yes.
 
 What it does not do:
 
 - It is not a standard. The practices are one author's choices: change or drop any rule in your copy.
-- It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself. The skills in `skills/` bring in new commits only when you run them.
+- It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself. The two sync skills in `skills/` bring in new commits only when you run them.
 - It has no examples in languages other than Python and TypeScript.
 - It is not an official Anthropic project, and Anthropic does not endorse it.
 
@@ -71,7 +72,7 @@ Two more skills, for commits and pull requests, are planned.
 - Each rule is one act at one moment, such as "before you stage" or "when you add a log call", and a new or changed rule gives its reason. An agent can follow it, a reviewer can check that it did, and a reader can tell when it does not apply.
 - Every rule comes from public practice, never from what one codebase happens to do. Most practices end with the sources behind their rules.
 - A good example follows every practice that governs what it shows, not only the one it illustrates. You, or your agent, will copy the example and not the rules around it, so each new practice reaches every example written after it. A line you might otherwise change or delete carries its reason in a comment, which comes along when you copy the code. A bad example names its problem and sits next to the fixed version.
-- You can change a copied practice for your project and still take later updates from this one. With Claude Code, the two skills in `skills/` record why your copy differs and keep those changes when they merge new commits.
+- You can change a copied practice for your project and still take later updates from this one. With Claude Code, two skills in `skills/` record why your copy differs and keep those changes when they merge new commits.
 - It works with any agent that reads `CLAUDE.md` or `AGENTS.md`, not only Claude Code.
 - The English is plain: short sentences and common words, for readers whose first language is not English.
 
@@ -160,7 +161,7 @@ my-claude-best/
 │   └── claude-code/       # guides on instructing Claude Code
 ├── claude-config/
 │   └── statusline/        # the status line: the script, its install guide, its images
-├── skills/                # skills to read and copy into .claude/skills/ of your project
+├── skills/                # skills to read and copy into a .claude/skills/ folder
 ├── CLAUDE.local.md        # an example practices section for a project CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md

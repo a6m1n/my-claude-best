@@ -1,6 +1,6 @@
 # Skills
 
-Claude Code skills to read, and to copy into your own repository.
+Claude Code skills to read and copy.
 
 **Navigation**
 
@@ -9,8 +9,8 @@ Claude Code skills to read, and to copy into your own repository.
 - [Planned](#planned)
 
 Nothing here runs in this repository, because Claude Code does not load skills from this
-folder. To use a skill, copy it into `.claude/skills/` of your own repository. Installing a
-skill is your decision, made in your repository.
+folder. To use a skill, copy it into `.claude/skills/` of your own repository, or into
+`~/.claude/skills/` when its README says so. Installing a skill is your decision.
 
 ## What is here
 
@@ -31,7 +31,13 @@ The two work as a pair and share three files in `sync-best-practice/`:
 - [design.md](sync-best-practice/design.md): the options turned down, with their reasons. Read it
   before you change either skill.
 
-Each skill has an `output_example.md` with the report it ends with, on invented values.
+These skills stand alone:
+
+- [create-jira-ticket/README.md](create-jira-ticket/README.md): turns short notes into one Jira
+  story, bug or task, shows every field before it writes, and creates the issue after your yes.
+  Read the README for how to connect Jira; the skill needs the Atlassian MCP server.
+
+Each skill has an `output_example.md` that shows what it prints, on invented values.
 
 ## Keep a copied practice in step with its source
 
