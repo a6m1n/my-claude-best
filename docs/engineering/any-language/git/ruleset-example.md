@@ -2,9 +2,18 @@
 
 This file gives one GitHub ruleset for the default branch and for the branch `main`. The ruleset
 applies the branch rules of [git.md](git.md) sections 5 and 6 to these two branches only. The
-repository settings in section 5 are a separate step. The first two rules are the minimum for
-every repository. The section "What to change for your repository" names the parts that a
-repository can change.
+repository settings in section 5 are a separate step. Section 5 uses a ruleset in a new
+repository. A repository that already has branch protection can keep it instead. The first two
+rules are the minimum for every repository. The section "What to change for your repository"
+names the changes that most repositories make.
+
+**Navigation**
+
+- [The ruleset](#the-ruleset)
+- [What each part means](#what-each-part-means)
+- [Apply it](#apply-it)
+- [What to change for your repository](#what-to-change-for-your-repository)
+- [Change it later](#change-it-later)
 
 The ruleset works in a public repository on all GitHub plans. It also works in a private
 repository on GitHub Pro, Team or Enterprise Cloud. A private repository on GitHub Free has no
@@ -41,9 +50,10 @@ rulesets and no branch protection
 }
 ```
 
-JSON has no comments. So the reason for each part is in the table below, not at the line, as
-[readability.md](../readability/readability.md) section 4 asks for code that others copy. Keep a
-link to this file next to a copy of the JSON. A copy of the JSON alone loses these reasons.
+[readability.md](../readability/readability.md) section 4 asks for the reason at the line in code
+that others copy. This JSON departs from that rule, because JSON has no comments. The reason for
+each part is in the table below. The cost: a copy of the JSON alone loses these reasons. Keep a
+link to this file next to each copy.
 
 ## What each part means
 
@@ -54,10 +64,10 @@ link to this file next to a copy of the JSON. A copy of the JSON alone loses the
 | `"enforcement": "active"` | GitHub applies the rules when you create the ruleset. | The value `disabled` keeps the ruleset but stops all of its rules. |
 | `"bypass_actors": []` | No person and no app can skip the rules. This includes the repository admins. | Nobody pushes to `main` directly ([git.md](git.md) section 5). An agent can use the token of a person, so a bypass for that person is also a bypass for the agent. An admin can still turn the ruleset off or delete it, and so can an agent with an admin token. A token that cannot edit rulesets keeps an agent inside the rules. |
 | `"include": ["~DEFAULT_BRANCH", "refs/heads/main"]` | The rules apply to the default branch, with any name, and to the branch `main`. | `~DEFAULT_BRANCH` follows the default branch. If an admin makes another branch the default, the rules move to it. `refs/heads/main` keeps the rules on `main` in that case too. In a repository with no `main` branch, the second pattern matches nothing. |
-| `deletion` | Nobody can delete the branch. | Keep this rule in every repository. All other branches start from the history on the default branch. |
+| `deletion` | Nobody can delete the branch. | Keep this rule in every repository. Deleting a branch and pushing it again replaces its history ([git.md](git.md) section 6). |
 | `non_fast_forward` | Nobody can force push to the branch. | Keep this rule in every repository. A force push replaces history that other people already use ([git.md](git.md) section 6). |
 | `pull_request` | Each change gets to the branch through a pull request. | [git.md](git.md) section 5 lets `main` change only through a merged pull request. |
-| `"required_approving_review_count": 0` | A pull request can merge without an approval. | The author of a pull request cannot approve it ([GitHub Docs](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/approving-a-pull-request-with-required-reviews)). With a value of 1, a repository with one person cannot merge. With 0, the ruleset does not stop an agent from merging its own pull request. [git.md](git.md) section 5 forbids that as a rule, not as a setting. |
+| `"required_approving_review_count": 0` | A pull request can merge without an approval. | The author of a pull request cannot approve it ([GitHub Docs](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/approving-a-pull-request-with-required-reviews)). With a value of 1, a repository with one person cannot merge. With 0, the ruleset does not stop an agent from merging its own pull request. [git.md](git.md) section 5 forbids this merge as a rule, not as a setting. |
 | `dismiss_stale_reviews_on_push`, `require_code_owner_review`, `require_last_push_approval` | Each of these settings asks for an approval or removes an approval. | With no required approvals, all three stay `false`. |
 | `"required_review_thread_resolution": false` | An open review comment does not stop a merge. | Set it to `true` when a team must resolve each comment before a merge. |
 | `"allowed_merge_methods": ["merge"]` | The merge button makes a merge commit. Squash and rebase are not available. | [git.md](git.md) section 5 lands each pull request with a merge commit. |
@@ -65,16 +75,16 @@ link to this file next to a copy of the JSON. A copy of the JSON alone loses the
 ## Apply it
 
 You need admin access to the repository, or a custom role with the "edit repository rules"
-permission. Run the commands in a clone of the repository. `gh` takes `{owner}` and `{repo}` from
-`GH_REPO`. Without `GH_REPO`, `gh` takes them from a remote of the clone, and it takes the remote
-`upstream` before `origin`.
+permission. Run the commands in a folder outside any clone of the repository. Then
+`ruleset.json` never becomes a file of the repository. `gh` takes `{owner}` and `{repo}` from
+`GH_REPO`, which step 1 sets.
 
 1. Run `export GH_REPO=OWNER/REPO`. Use the owner and the name of the repository to protect.
 2. Run `gh api repos/{owner}/{repo} --jq .allow_merge_commit`. If the output is `false`, turn on
    merge commits in the repository settings. The ruleset allows only merge commits.
 3. If a branch protection rule on the default branch or on `main` has "Require linear history",
-   turn that setting off. It allows no merge commits.
-4. Save the JSON above as `ruleset.json` in the root of the clone.
+   turn that setting off. That setting allows no merge commits.
+4. Save the JSON above as `ruleset.json` in that folder.
 5. Run `gh api --method POST repos/{owner}/{repo}/rulesets --input ruleset.json --jq .id`. Write
    down the number that it shows. This number is the ID of the ruleset. If `gh` shows an HTTP
    error, correct the cause that the message gives. Then do this step again.
@@ -100,7 +110,7 @@ permission. Run the commands in a clone of the repository. `gh` takes `{owner}` 
 Step 5 of "Apply it" makes a new ruleset. It does not change the ruleset that you have. To change
 that ruleset, use its ID.
 
-First do step 1 of "Apply it".
+First do step 1 of "Apply it", in the folder that holds `ruleset.json`.
 
 1. Run `gh api repos/{owner}/{repo}/rulesets --jq '.[] | "\(.id) \(.name)"'` to find the ID.
 2. Change `ruleset.json`.
@@ -114,7 +124,8 @@ the web interface, the ruleset is in the repository settings, under Rulesets.
 Turn the rules off for a short time in two cases only. For each case, set `enforcement` to
 `disabled` with steps 1 to 3 above. Set it back to `active` right after the work. Then do step 4
 above. While the ruleset is disabled, all three rules stop. Any person or app with write access
-can then push to these branches. They can also delete `main` when it is not the default branch.
+can then push to these branches. The same people and apps can also delete `main` when it is not
+the default branch.
 
 - A history rewrite in the exception path of [git.md](git.md) section 6. A person does the
   rewrite, never an agent.
@@ -125,8 +136,9 @@ can then push to these branches. They can also delete `main` when it is not the 
 
 ---
 
-This ruleset is good because each rule applies a rule of [git.md](git.md), and it adds no other
-rule. The two rules that every repository keeps come first. The empty bypass list makes the rules
-hold for every push, from admins and agents too. Only a token that can edit rulesets can turn the
-rules off. The section "What to change for your repository" names each part that a copy can
-change, so a team changes it on purpose.
+This ruleset is good because each of its three rules applies a [git.md](git.md) rule, and the
+ruleset adds no rule that git.md does not have. The two rules that every repository keeps come
+first. The empty bypass list makes the rules hold for every push, from admins and agents too.
+Only a person or a token that can edit rulesets can turn the rules off. The section "What to
+change for your repository" names the changes that most repositories make, so a team makes each
+change on purpose.

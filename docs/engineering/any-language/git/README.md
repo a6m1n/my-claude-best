@@ -40,7 +40,8 @@ flowchart TD
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before any git operation, read
    `docs/engineering/any-language/git/git.md`." Without it an agent never opens the file.
 3. Set the repository up the way `git.md` section 5 names under "Repository configuration". On
-   GitHub, apply the ruleset in `ruleset-example.md`.
+   GitHub, apply the ruleset in `ruleset-example.md`, or keep the branch protection that is already
+   set up.
 4. Each developer runs `git config --global merge.conflictStyle zdiff3` once. Nothing in a
    repository can turn this on for the people working in it, and section 7 says what it buys.
 5. Re-check what can go stale once the folder is copied. The git version in section 1 of
