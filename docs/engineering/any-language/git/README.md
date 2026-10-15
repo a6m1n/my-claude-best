@@ -30,21 +30,26 @@ flowchart TD
   filled in. Read it when you open a pull request.
 - [readme-example.md](readme-example.md) — an ideal project README, section by section. Read
   it when you start a project README or rewrite one.
+- [ruleset-example.md](ruleset-example.md) — one GitHub ruleset for `main` and the default
+  branch, with what each part does and why. Read it when you set up a repository or change how
+  it protects `main` and the default branch.
 
 ## How to adopt
 
 1. Copy this folder into your repository at `docs/engineering/any-language/git/`.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before any git operation, read
    `docs/engineering/any-language/git/git.md`." Without it an agent never opens the file.
-3. Set the repository up the way `git.md` section 5 names under "Repository configuration".
+3. Set the repository up the way `git.md` section 5 names under "Repository configuration". On
+   GitHub, apply the ruleset in `ruleset-example.md`, or keep the branch protection that is already
+   set up.
 4. Each developer runs `git config --global merge.conflictStyle zdiff3` once. Nothing in a
    repository can turn this on for the people working in it, and section 7 says what it buys.
 5. Re-check what can go stale once the folder is copied. The git version in section 1 of
-   `git.md` is a moving target. Three docs this folder links live outside it: the doc about
+   `git.md` is a moving target. Four docs this folder links live outside it: the doc about
    agent files (from `git.md` section 9), `file-structure.md` (from `git.md` section 9 and
-   `readme-example.md`) and `refactoring.md` (from `commit-example.md` and this file). Copy each
-   one too, or drop the sentences that link it. `grep -n '](\.\./' *.md`, run in this folder,
-   prints every such link.
+   `readme-example.md`), `refactoring.md` (from `commit-example.md` and this file) and
+   `readability.md` (from `ruleset-example.md`). Copy each one too, or drop the sentences that
+   link it. `grep -n '](\.\./' *.md`, run in this folder, prints every such link.
 
 A fuller step-by-step skill for commits is planned in the `skills` folder of
 this library. An adopting repository does not need it: the rules in `git.md` stand on their
@@ -55,7 +60,8 @@ own.
 Merge-only landing is the decision to make for yourself. The rest of `git.md` works the same
 under any landing method.
 
-To change it, edit `git.md` section 5 and the merge-method setting it names, not the examples.
+To change it, edit `git.md` section 5, the merge-method setting it names, and
+`allowed_merge_methods` in `ruleset-example.md`. The other examples stay as they are.
 If you switch to squash merging, delete the branch after every merge and never reuse it, or
 the same conflicts come back the next time it is merged. The "every commit keeps its SHA"
 argument in that section stops holding as well. Squash merging also folds a pull request's
