@@ -60,7 +60,7 @@ Versions are the registry's `latest`, read 2026-10-01, unless the cell says othe
 | UI library | React (`react`, `react-dom`) | 19.3.0, released 2026-09-09 | none | Server Components need a framework ([architecture.md](architecture.md) section 2). How a component and a hook are written: [components.md](../components/components.md) sections 3 and 6 |
 | Compiler | React Compiler (`babel-plugin-react-compiler`), run through `reactCompilerPreset()` from `@vitejs/plugin-react` and `@rolldown/plugin-babel` | 1.0.0, stable since 2025-10-07; `@vitejs/plugin-react` 6.1.1 | the plugin-react README also offers `oxc-transform-react`, a Rust port; react.dev's install page shows only the Babel route, so that route is the default | react.dev says to pin the exact compiler version when test coverage is weak. The compiler skips a component that uses an incompatible library, and the hooks lint names those libraries (see the table and list rows). The memoisation rule: [components.md](../components/components.md) section 7 |
 | Build tool | Vite | 8.3.2 | react.dev also names Parcel and Rsbuild; no source read says when either beats Vite | Vite 8 bundles with Rolldown and Oxc and needs Node 20.19+ or 22.12+. `resolve.tsconfigPaths: true` reads the `@/` alias from tsconfig; it is off by default |
-| Router, client-rendered app | TanStack Router (`@tanstack/react-router`), with `@tanstack/router-plugin` for file-based routes and code splitting | 1.170.41 | React Router 8 (`react-router` 8.4.0), the point to adapt ([architecture.md](architecture.md) section 10). Its docs say the data mode is for those who want "data features but also want control over bundling, data, and server abstractions", and that the question is "how much you want to do yourself" (the owner's words). No source read says when it beats TanStack Router for a client-rendered app. Its type safety differs between its declarative, data and framework modes | React Router 8 needs Node 22.22+, React 19.2.7+, and Vite 7+ in framework mode; it drops `react-router-dom` and ships as ESM only |
+| Router, client-rendered app | TanStack Router (`@tanstack/react-router`), with `@tanstack/router-plugin` for file-based routes and code splitting | 1.170.41 | React Router 8 (`react-router` 8.4.0), the point to adapt ([architecture.md](architecture.md) section 10). Its docs say the data mode is for those who "want data features but also want to have control over bundling, data, and server abstractions", and that the question is "how much you want to do yourself" (the owner's words). No source read says when it beats TanStack Router for a client-rendered app. Its type safety differs between its declarative, data and framework modes | React Router 8 needs Node 22.22+, React 19.2.7+, and Vite 7+ in framework mode; it drops `react-router-dom` and ships as ESM only |
 | Framework, for routes a crawler must read | chosen by the format decision in [architecture.md](architecture.md) section 2; react.dev names Next.js and React Router's framework mode | `next` 16.3.8 | TanStack Start (`@tanstack/react-start` 1.168.60); no source read says when it is the better choice. The registry has no `rc` tag, its docs still say "Release Candidate", and its blog has no 1.0 announcement | Next.js 16 made Turbopack its default bundler. A server runtime is one more thing to secure ([security.md](../security/security.md) section 8) |
 | Server data | TanStack Query (`@tanstack/react-query`) | 5.104.0 | under React Router, its loaders and actions first, and Query once its features are needed ([architecture.md](architecture.md) sections 8 and 9); RTK Query when the app already runs Redux Toolkit | `ensureQueryData`, `prefetchQuery` and `fetchQuery` are deprecated for `queryClient.query()`, and the reference says they go in the next major. No React v6 exists yet |
 | Client state | no library: local state, lifted state, a reducer with context inside a module ([architecture.md](architecture.md) section 7) | none | Zustand 5.0.15 when that ladder reaches a store; Redux Toolkit 2.13.0 when the app already runs it, or when shared state is large, changes often through complex logic, is worked on by many developers and needs its changes traced (the Redux maintainer's criteria) | Zustand under server rendering: never a module-level store, since one store would serve every request. In Zustand 5 a selector that returns a new object fails with "Maximum update depth exceeded" unless wrapped in `useShallow`. A TanStack Query maintainer's advice (2022): export hooks, not the store |
@@ -95,7 +95,7 @@ linting keeps working: typescript-eslint, which runs those rules, supports TypeS
 |---|---|---|
 | Registry `latest` | 7.0.2: the native compiler; 7.0 was released 2026-07-08 | `npm install -D typescript@latest` installs 7, which typescript-eslint does not support |
 | Last 6.0 patch | 6.0.3 | the version the example was checked with |
-| TypeScript 7's API | "TypeScript 7.0 does not ship with an API. We expect TypeScript 7.1 to ship with a new (and different) API." | tools that call the compiler stay on 6.0 until that API arrives and they adopt it |
+| TypeScript 7's API | "While TypeScript 7.0 is here, it does not ship with an API. We expect TypeScript 7.1 to ship with a new (and different) API" | tools that call the compiler stay on 6.0 until that API arrives and they adopt it |
 | typescript-eslint 8.71.0 | supports `>=4.8.4 <6.1.0`; since 8.65.0 it warns when it finds TypeScript 7 | the reason for the pin |
 | create-vite's `react-ts` template | pins `"typescript": "~6.0.2"` | the template makes the same choice |
 | Running 6 and 7 side by side | the TypeScript team publishes `@typescript/typescript6` for tools that still need the 6.0 API | allowed: 7 for `tsc` and the editor, 6.0 for typescript-eslint. The simple default is 6.0 for everything, as create-vite does |
@@ -150,9 +150,9 @@ that Oxlint already checks, so each problem is reported once. ESLint 9 reached e
 
 When you write `.oxlintrc.json`, name in `plugins` every plugin to run: the list replaces Oxlint's
 default set instead of adding to it (Oxlint's plugins page, source 39), so a default left out of
-the list stops running. Then turn on `import/no-cycle` and `oxc/no-barrel-file` by name: by
-default Oxlint loads only its `eslint`, `typescript`, `unicorn` and `oxc` plugins and the
-`correctness` category, so a rule that exists in Oxlint is not yet a rule that runs. Upgrade
+the list stops running. Then turn on `import/no-cycle`, `oxc/no-barrel-file` and
+`react/unsupported-syntax` by name: by default Oxlint loads only its `eslint`, `typescript`,
+`unicorn` and `oxc` plugins and the `correctness` category, so a rule that exists in Oxlint is not yet a rule that runs. Upgrade
 `oxlint` and `eslint-plugin-oxlint` together, because the plugin's version tracks Oxlint's and its
 peer range is `oxlint ~1.86.0`.
 
@@ -162,7 +162,7 @@ Which tool checks what (read 2026-10-01; the rows that rest on sources 43, 65, 6
 | Check | Tool and rule | Note |
 |---|---|---|
 | Rules of Hooks, effect dependencies | Oxlint `react/rules-of-hooks`, `react/exhaustive-deps` | the hooks rules sit under `react/`; there is no separate hooks plugin. Set `rules-of-hooks` to `error` by name, as create-vite's config does |
-| React Compiler diagnostics | Oxlint: 22 compiler rules in `correctness` (announced 2026-08-18) | Oxlint lacks only the compiler's `config` and `gating` checks. `config` checks the options passed to the compiler and `gating` checks its gating object; an application that passes neither, as the example does, gives them nothing to check, so no ESLint plugin is added for them |
+| React Compiler diagnostics | Oxlint: 22 compiler rules (announced 2026-08-18); 12 sit in `correctness`. `unsupported-syntax`, part of the upstream `recommended` preset, sits in `restriction` and is turned on by name (read 2026-10-16) | Oxlint has no rule for `config`, `gating` or `component-hook-factories`. `component-hook-factories` is a review question: does a function that is not a component make a component or a hook? Where a component is defined is [components.md](../components/components.md) section 4's rule. `config` checks the options passed to the compiler and `gating` checks its gating object; an application that passes neither, as the example does, gives them nothing to check, so no ESLint plugin is added for them |
 | Accessibility in JSX | Oxlint `jsx-a11y` | implements every rule of `eslint-plugin-jsx-a11y`'s `recommended` set. It checks static code only; a rendered page gets axe (section 6) |
 | Import cycles, barrel files | Oxlint `import/no-cycle`, `oxc/no-barrel-file` | `no-barrel-file` fires on a barrel of `export *` lines when the modules its imports load exceed its threshold, 100 by default |
 | Relative imports | `no-restricted-imports` with patterns; ESLint core has it, and so does Oxlint | the rule that asks for absolute imports belongs to [file-structure.md](../../any-language/file-structure/file-structure.md) section 7 |
@@ -585,7 +585,12 @@ summary" was read through a tool's summary of the page: it is the place to look,
     `ignoreArrowShorthand` and `allowNumber`.
 66. react.dev, the `gating` and `config` lints,
     https://react.dev/reference/eslint-plugin-react-hooks/lints/gating and
-    https://react.dev/reference/eslint-plugin-react-hooks/lints/config: what each checks.
+    https://react.dev/reference/eslint-plugin-react-hooks/lints/config: what each checks. The
+    plugin's overview, https://react.dev/reference/eslint-plugin-react-hooks, and the
+    `component-hook-factories` lint,
+    https://react.dev/reference/eslint-plugin-react-hooks/lints/component-hook-factories
+    (read 2026-10-16): the `recommended` preset holds `unsupported-syntax` and
+    `component-hook-factories`, and components and hooks belong at the module level.
 67. Oxlint, `unicorn/filename-case`,
     https://oxc.rs/docs/guide/usage/linter/rules/unicorn/filename-case.html: file names only, no
     folder-name rule.

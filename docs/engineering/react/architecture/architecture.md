@@ -24,8 +24,9 @@
 ## 1. Purpose and the one rule
 
 This file is for everyone who starts or grows a React application: people and AI agents alike.
-Read it before you choose the format of an application, add a folder, a module or a route, or
-write a query, a mutation, a form or an error screen. Every line that carries a read date is to be distrusted after 2027-04-01 until it is read again; [README.md](README.md), under how to adopt, says how to list those lines.
+Read it before you choose the format of an application, add a folder, a module or a route, write a
+query, a mutation, a form or an error screen, or change the project's TypeScript or lint
+configuration. Every line that carries a read date is to be distrusted after 2027-04-01 until it is read again; [README.md](README.md), under how to adopt, says how to list those lines.
 
 Its tree has the shape of [file-structure.md](../../any-language/file-structure/file-structure.md):
 three kinds of folder, one import direction, one role per file and absolute imports. This file
@@ -422,7 +423,7 @@ that reads it.
   co-located". Export the options, not a hook that wraps them: TkDodo wrote in February 2026 that
   "The best abstractions are not configurable", and options work in a loader and an event handler,
   where a hook cannot run. A call site that needs more spreads its own options over them.
-- **Every value the fetch depends on is part of the key**: `invoiceKeys.detail(invoiceId)`. Each
+- **Every value the fetch depends on is part of the key**: `[...invoiceKeys.all, invoiceId]`. Each
   value then has its own cache entry. TkDodo advises this over calling `refetch()` with new
   parameters.
 - **Set one `staleTime` for the whole cache**, on the query client in `core/query-client.ts`. The
@@ -437,9 +438,14 @@ that reads it.
   loader stays in the main bundle. A fetch started in a component waits until that component
   renders, the network waterfall react.dev warns about. The older loader methods `ensureQueryData`
   and `prefetchQuery` are deprecated, and TanStack Query says each "will be removed in the next
-  major version"; TanStack Router's own guide still shows `ensureQueryData` (both read 2026-10-01).
-  `query()` does not retry by default, so a failed loader shows the error screen at once, and that
-  screen's button is the retry (section 12).
+  major version" (read 2026-10-01). TanStack Router's guide now awaits
+  `queryClient.query({ ...options, staleTime: 'static' })` (read 2026-10-16), and so does TanStack
+  Query's prefetching guide. That form is the replacement for `ensureQueryData`: the loader returns
+  cached data at once and the component's query refetches in the background. This practice awaits
+  `query(options)`, so a screen opened after a write's invalidation shows fresh data; the cost is a
+  wait for the network once data is older than the `staleTime`, and the error screen, not the
+  cached data, when that refetch fails. `query()` does not retry by default, so a failed loader
+  shows the error screen at once, and that screen's button is the retry (section 12).
 - **The component reads with `useSuspenseQuery(options)`.** Its `data` is always defined: the
   router's pending screen shows while the loader runs, and an error goes to the error screen. It
   cannot be turned on and off by a condition (TanStack Query's suspense guide).
@@ -569,7 +575,7 @@ example.
 - **Give the router a default pending screen and a default error screen at startup**
   (`defaultPendingComponent`, `defaultErrorComponent`), so a route that defines neither still shows a
   state, never a blank page. React Router's docs set the floor in one line: "All applications should
-  export a root error boundary as a minimum."
+  at a minimum export a root error boundary."
 - **A retry resets the failed query and runs the loader again.** The error screen calls
   `useQueryErrorResetBoundary().reset()`, and its button calls `router.invalidate()`. A failed query
   stays failed until it is reset, so a retry that only renders again shows the same cached error
@@ -620,8 +626,6 @@ typing is [components.md](../components/components.md) section 3, and the versio
   drift from the schema the API client parses with (section 8). The API client's `request` returns
   `z.infer<TSchema>`, so `queryOptions`, `mutationOptions` and `useSuspenseQuery` infer their types:
   give them no type arguments, because one type argument forces all of them (TkDodo).
-- **Leave `exactOptionalPropertyTypes` off.** It breaks the types of libraries not written for it:
-  Radix's issue to support it was open with no maintainer reply (read 2026-10-01).
 - **Declare `paths` with no `baseUrl`**, as section 5 says.
 - The TypeScript version is pinned until typescript-eslint supports TypeScript 7:
   [libraries.md](libraries.md) section 3.
@@ -773,12 +777,13 @@ module can be deleted on its own
 the captured folders of both modules.
 
 **Good**: both modules build their keys on a root in `core/` (section 6), so the payment module
-imports no other module. The key root moves to `core/invoice.keys.ts`, and the mutation key changes
-with it. `src/billing/pay-invoice/pay-invoice.mutations.ts`:
+imports no other module. The key root moves to `core/invoice.keys.ts`, and the invalidation uses it
+in place of the list module's options. `src/billing/pay-invoice/pay-invoice.mutations.ts`:
 
 ```ts
 import { mutationOptions } from "@tanstack/react-query";
 
+import { invoiceQueryOptions } from "@/billing/pay-invoice/invoice.queries.ts";
 import type { PaymentMethod } from "@/billing/pay-invoice/payment.schema.ts";
 import { paymentReceiptSchema } from "@/billing/pay-invoice/payment.schema.ts";
 import type { ApiClient } from "@/core/api-client.ts";
@@ -786,7 +791,7 @@ import { invoiceKeys } from "@/core/invoice.keys.ts";
 
 export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: string) {
   return mutationOptions({
-    mutationKey: [...invoiceKeys.detail(invoiceId), "pay"],
+    mutationKey: [...invoiceQueryOptions(apiClient, invoiceId).queryKey, "pay"],
     mutationFn: (method: PaymentMethod) =>
       // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
       apiClient.request(`/invoices/${encodeURIComponent(invoiceId)}/payments`, {
@@ -905,7 +910,7 @@ template.
 | 10. Routing | Does a route file only load and compose? | A business rule in a route file; search params read without a schema |
 | 11. Forms | Does the form's tool fit its size? | A complex form built by hand with a `useState` per field; an Actions form that must keep its values after a submit |
 | 12. Errors | Can every route fail and load without a blank screen? | No default error screen; a retry that does not reset the failed query |
-| 13. TypeScript | Are the three flags on, and is TypeScript at the version libraries.md section 3 names? | `exactOptionalPropertyTypes` on; `baseUrl` set; a type argument on a query hook; a hand-written type beside its schema; a `switch` over a union with no `default` and `switch-exhaustiveness-check` off |
+| 13. TypeScript | Are the three flags on, and is TypeScript at the version libraries.md section 3 names? | `baseUrl` set; a type argument on a query hook; a hand-written type beside its schema; a `switch` over a union with no `default` and `switch-exhaustiveness-check` off |
 
 ## 18. Sources
 
@@ -1101,8 +1106,6 @@ of the React rules.
 59. TypeScript, TSConfig reference: https://www.typescriptlang.org/tsconfig/ ; create-vite's
     `template-react-ts`:
     https://raw.githubusercontent.com/vitejs/vite/main/packages/create-vite/template-react-ts/tsconfig.app.json .
-60. Radix Primitives issue 3535: https://github.com/radix-ui/primitives/issues/3535
-    (`exactOptionalPropertyTypes`).
 61. Microsoft, "Announcing TypeScript 7.0", 2026-07-08:
     https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/ (no programmatic API yet).
 62. react.dev, Server Components, `'use client'`, `'use server'`:
