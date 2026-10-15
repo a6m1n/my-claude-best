@@ -882,6 +882,8 @@ import { invoiceKeys } from "@/core/invoice.keys.ts";
 
 export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: string) {
   return mutationOptions({
+    // This key lets `useMutationState` and `useIsMutating` find this payment. Built from the
+    // invoice query's own key, so both keys name the same invoice (architecture.md section 6).
     mutationKey: [...invoiceQueryOptions(apiClient, invoiceId).queryKey, "pay"],
     mutationFn: (method: PaymentMethod) =>
       // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
@@ -905,7 +907,9 @@ Why it is good:
   reasons, so the next editor does not move it into the form ([architecture.md](architecture.md)
   section 9).
 - **It invalidates the invoice root**, so the list and the invoice both refresh, and it imports no
-  other module ([architecture.md](architecture.md) sections 6 and 9).
+  other module ([architecture.md](architecture.md) sections 6 and 9). Its mutation key lets
+  `useMutationState` and `useIsMutating` find the payment, and it is built from the invoice query's
+  own key, so both keys name the same invoice ([architecture.md](architecture.md) section 6).
 - **The receipt is parsed with its schema, and the cache is not written from it**: a receipt is not
   the full invoice ([architecture.md](architecture.md) section 9). There is no `retry`: a payment
   whose answer was lost would be sent a second time. There is no optimistic update: a payment can

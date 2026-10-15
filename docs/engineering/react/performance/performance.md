@@ -769,8 +769,9 @@ tell whether the change fixed a failing metric or one that already passed.
 *Checked in this session*
 
 - Field, before: INP on `/invoices` at the 75th percentile on mobile was 380 ms over the 28 days
-  to 2026-09-28 (web-vitals, our own backend, 41,200 interactions). The attribution put most of
-  it in processing, on the status filter.
+  to 2026-09-28 (web-vitals, our own backend, Chromium 151+ visits only, the last value per
+  `metric.id`, 41,200 visits). The attribution put most of it in processing, on the status
+  filter.
 - Lab: a trace of one filter change at the calibrated low-tier CPU showed a 240 ms task, most of
   it the render of `InvoiceList`. With the status filter's update moved into `startTransition`,
   the longest task in the same trace is 70 ms.
@@ -778,7 +779,7 @@ tell whether the change fixed a failing metric or one that already passed.
 *For the reviewer*
 
 - On 2026-10-29, read INP on `/invoices` at the 75th percentile on mobile over the 28 days after
-  the release. Expected: 200 ms or less.
+  the release with the same filter. Expected: 200 ms or less.
 ```
 
 The fix is the measurement: the same change, now tied to the field metric that failed, its

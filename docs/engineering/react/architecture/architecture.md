@@ -753,6 +753,8 @@ import type { ApiClient } from "@/core/api-client.ts";
 
 export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: string) {
   return mutationOptions({
+    // This key lets `useMutationState` and `useIsMutating` find this payment. Built from the
+    // invoice query's own key, so both keys name the same invoice (architecture.md section 6).
     mutationKey: [...invoiceQueryOptions(apiClient, invoiceId).queryKey, "pay"],
     mutationFn: (method: PaymentMethod) =>
       // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
@@ -791,6 +793,8 @@ import { invoiceKeys } from "@/core/invoice.keys.ts";
 
 export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: string) {
   return mutationOptions({
+    // This key lets `useMutationState` and `useIsMutating` find this payment. Built from the
+    // invoice query's own key, so both keys name the same invoice (architecture.md section 6).
     mutationKey: [...invoiceQueryOptions(apiClient, invoiceId).queryKey, "pay"],
     mutationFn: (method: PaymentMethod) =>
       // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
@@ -810,7 +814,9 @@ export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: strin
 
 Why it is good: the payment refreshes every invoice read, the list included, without knowing that
 the list exists. The invalidation sits in the options and returns its promise (section 9), and the
-comment keeps the next editor from moving it into the form.
+comment keeps the next editor from moving it into the form. The mutation key, the same line as in
+the Bad, lets `useMutationState` and `useIsMutating` find the payment, and it is built from the
+invoice query's own key, so both keys name the same invoice (section 6).
 
 ### Mistake 4. A relative import (section 5)
 

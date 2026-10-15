@@ -418,7 +418,7 @@ function AppShell() {
           the native element with the `status` role. It stays in the page from the first render
           and only its text changes: a region that arrives together with its text is often not
           announced, so the loading and error screens say their message here
-          (accessibility.md section 6). */}
+          (accessibility.md sections 6 and 7). */}
       <output className="sr-only">{screenAnnouncement(screenStatus, screenTitle)}</output>
       <header>
         <p className="text-lg font-semibold">{APPLICATION_NAME}</p>
