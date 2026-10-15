@@ -99,7 +99,11 @@ from langchain_core.messages import AnyMessage, HumanMessage, ToolMessage
 from langgraph.errors import GraphRecursionError
 
 from acme.core.config import Settings
-from acme.core.errors import ModelAnswerInvalid, ModelOutputCutOff, ModelRefused
+from acme.core.errors import (
+    ModelAnswerInvalidError,
+    ModelOutputCutOffError,
+    ModelRefusedError,
+)
 from acme.support.chat.graph import ChatAgent
 
 QUESTION: Final = "Where is order A-1042?"
@@ -112,7 +116,10 @@ RUNS_PER_CASE: Final = 3
 # (fixtures.md section 3).
 @pytest.fixture(scope="function")
 def keeps_to_order_status() -> GEval:
-    """The reply's judge; only live_model tests ask for it, so no default run reads a key."""
+    """The reply's judge.
+
+    Only live_model tests ask for it, so no default run reads a key.
+    """
     settings = Settings()
     return GEval(
         name="Keeps to the order status",
@@ -123,20 +130,20 @@ def keeps_to_order_status() -> GEval:
             "Fail the reply if it promises anything the status does not support.",
         ],
         evaluation_params=[SingleTurnParams.ACTUAL_OUTPUT, SingleTurnParams.CONTEXT],
-        # The judge's model from its constant, never DeepEval's default
+        # The judge's model comes from its constant, never from DeepEval's default
         # (prompt-engineering.md section 15).
         model=OpenAIModel(
             model=REPLY_JUDGE_LLM_MODEL,
             api_key=settings.openai_api_key.get_secret_value(),
         ),
-        # Pass or fail; without it the metric passes at a score of 0.5
-        # (judges.md section 7).
+        # Strict mode makes the verdict pass or fail; without it the metric passes at a
+        # score of 0.5 (judges.md section 7).
         strict_mode=True,
     )
 
 
 def tool_results(messages: Iterable[AnyMessage]) -> list[str]:
-    """What the run's tools returned: the facts the reply must keep to."""
+    """Return what the run's tools returned: the facts the reply must keep to."""
     return [message.text for message in messages if isinstance(message, ToolMessage)]
 
 
@@ -155,9 +162,9 @@ class JudgedRun:
 
 
 async def judged_run(agent: ChatAgent, judge: GEval) -> JudgedRun:
-    """One run of the agent, judged; a run the agent ended without its reply fails.
+    """Run the agent once and judge the reply; a run ended without its reply fails.
 
-    ModelUnavailable and an error of the judge raise: errors of the run
+    ModelUnavailableError and an error of the judge raise: errors of the run
     (evals.md section 6).
     """
     try:
@@ -166,9 +173,9 @@ async def judged_run(agent: ChatAgent, judge: GEval) -> JudgedRun:
         )
     except (
         GraphRecursionError,
-        ModelRefused,
-        ModelOutputCutOff,
-        ModelAnswerInvalid,
+        ModelRefusedError,
+        ModelOutputCutOffError,
+        ModelAnswerInvalidError,
     ) as exc:
         return JudgedRun(passed=False, failure=exc)
 
@@ -242,7 +249,7 @@ follow the method:
   `isinstance` check for each run, and `failure` holds `None`, the documented form for no result,
   when the judge read a reply ([python.md](../language/python.md) section 3). The assert's message
   is the list of runs, so a red run shows how each one ended.
-  `ModelUnavailable` and an error of the judge raise, and the test fails on them as errors of the
+  `ModelUnavailableError` and an error of the judge raise, and the test fails on them as errors of the
   run.
 - **Should. Run it with `deepeval test run <file>`**, the documented entry point, and pin a release
   after April 2026, when a fix made it pass pytest's failing exit codes through to CI.

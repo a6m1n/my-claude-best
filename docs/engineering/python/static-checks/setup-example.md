@@ -34,17 +34,36 @@ required-version = ">=0.11"
 
 [tool.ruff.lint]
 extend-select = [
+    "E4", "F403", "I001",                              # readability section 8
+    "E7", "SIM115",                                    # python section 6; readability 3, 7 and 8
+    "RET502", "RET503",                                # python section 6
+    "N", "PYI042",                                     # readability section 7
+    "D", "W505",                                       # readability sections 4 and 8
     "TID252",                                          # file-structure section 7
     "G", "LOG", "TRY400", "TRY401", "BLE001", "T201",  # logging section 11
     "RET505", "RET506", "ERA001",                      # readability sections 3 and 4
     "PGH003", "PGH004", "RUF100",                      # static-checks section 6
     "PT",                                              # testing: running-tests section 11
 ]
-# testing: fixtures section 1 asks for scope="function" in writing, which PT003 reports
-ignore = ["PT003"]
+ignore = [
+    "D1",            # readability section 4: a docstring only where the name leaves a gap
+    "D206", "D300",  # the formatter already writes what these check (readability section 8)
+    "PT003",  # testing: fixtures section 1 asks for scope="function", which PT003 reports
+]
+
+[tool.ruff.lint.per-file-ignores]
+# readability section 4: a test's first sentence may run over two lines
+"tests/**" = ["D205"]
+
+[tool.ruff.lint.pycodestyle]
+max-doc-length = 88  # readability section 8: comments and docstrings at the code's width
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"  # readability section 4
+property-decorators = ["pytest.fixture", "pytest_asyncio.fixture"]  # readability section 4: a fixture's summary names what it gives
 
 [tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
+ban-relative-imports = "all"  # file-structure section 7
 
 [tool.mypy]
 python_version = "3.11"
@@ -68,8 +87,12 @@ init_typed = true
 |---|---|
 | `[dependency-groups] dev` | every checking tool is a dev dependency; `uv lock` pins the exact versions in `uv.lock`, the one pin (section 3) |
 | `[tool.uv] required-version` | the lowest uv the project accepts: an older local uv stops with a clear error, and `setup-uv` reads it and installs the newest uv that matches. It is a floor, not a pin, so CI's uv moves with each uv release |
-| `extend-select` | turns on each rule a practice relies on, with the section it serves; ruff's default set covers few of them |
-| `ignore` | the one rule of a selected group that a practice contradicts, with the section that says why |
+| `extend-select` | turns on each rule a practice relies on, with the section it serves. ruff's default set leaves out most PEP 8 checks; `extend-select` adds to that set and keeps it. A rule the default set holds is listed too, `I001` and `SIM115` included, for the reason [static-checks.md](static-checks.md) section 2 gives |
+| `ignore` | the rules of a selected group that a practice contradicts, or that the formatter makes redundant, each with the section that says why |
+| `per-file-ignores` | the one docstring rule that gives way under `tests/`: `D205` ([readability.md](../../any-language/readability/readability.md) section 4 says why) |
+| `max-doc-length = 88` | the width `W505` checks for comments and docstrings, the formatter's line length; without the setting `W505` checks nothing |
+| `convention = "pep257"` | the `D` rules PEP 257 asks for, and none of the rules of the other conventions that contradict it |
+| `property-decorators = ["pytest.fixture", "pytest_asyncio.fixture"]` | `D401` skips the summary of a function under either decorator, as it does for a `@property`, so a fixture's summary may name what it gives; every other `D` rule still checks its docstring. [readability.md](../../any-language/readability/readability.md) section 4 says why |
 | `ban-relative-imports` | the setting `TID252` needs to fail on every relative import |
 | `python_version = "3.11"` | checks against the oldest Python the project supports ([python.md](../language/python.md) section 1), whatever interpreter runs mypy |
 | `strict = true` | the strict mode [static-checks.md](static-checks.md) section 2 asks for; it includes `warn_unused_ignores` |

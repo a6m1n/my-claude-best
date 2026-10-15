@@ -21,13 +21,14 @@ from datetime import UTC, datetime
 from typing import Final, Literal
 
 from opentelemetry import trace
+from typing_extensions import override
 
 from acme.core.schemas import LogFormat, LogLevel
 
-# Set per request or per run: request_id by the request-id middleware, thread_id where
-# the agent is invoked (logging.md section 8).
-request_id: ContextVar[str] = ContextVar("request_id", default="-")
-thread_id: ContextVar[str] = ContextVar("thread_id", default="-")
+# Each is set per request or per run: request_id by the request-id middleware, thread_id
+# where the agent is invoked (logging.md section 8).
+request_id = ContextVar("request_id", default="-")
+thread_id = ContextVar("thread_id", default="-")
 
 # Every record has these attributes; anything else on a record came from extra= or
 # the Filter.
@@ -35,7 +36,7 @@ _STANDARD_ATTRIBUTES: Final = frozenset(
     vars(logging.LogRecord("", 0, "", 0, "", None, None))
 ) | {"message", "asctime"}
 _CONTEXT_IDS: Final = ("request_id", "thread_id", "trace_id")
-# uvicorn's coloured copy of its own message
+# uvicorn adds a coloured copy of its own message.
 _DROPPED_ATTRIBUTES: Final = frozenset({"color_message"})
 
 
@@ -70,13 +71,19 @@ def _extra_fields(record: logging.LogRecord) -> dict[str, object]:
 
 
 class ConsoleFormatter(logging.Formatter):
-    """For a person at a terminal: the usual line, then the extra= fields as key=value."""
+    """For a person at a terminal.
+
+    The usual line, then the extra= fields as key=value.
+    """
 
     def __init__(self) -> None:
         super().__init__(
             "%(asctime)s %(levelname)-8s %(name)s [%(request_id)s] %(message)s"
         )
 
+    # logging names this hook in mixedCase; @override keeps the name past ruff's
+    # N802 and lets the checker confirm the parent has it (python.md section 3).
+    @override
     def formatMessage(self, record: logging.LogRecord) -> str:
         # formatMessage, not format: a traceback still comes after the fields.
         line = super().formatMessage(record)
@@ -88,7 +95,7 @@ class ConsoleFormatter(logging.Formatter):
         return f"{line} {rendered_fields}" if rendered_fields else line
 
 
-class JsonFormatter(logging.Formatter):
+class JSONFormatter(logging.Formatter):
     """One JSON object per line, for a log store searched by field."""
 
     def format(self, record: logging.LogRecord) -> str:
@@ -121,7 +128,10 @@ def build_logging_config(
     log_format: LogFormat,
     stream: Literal["stdout", "stderr"] = "stdout",
 ) -> dict[str, object]:
-    """The one logging config of a process; main() applies it, directly or through uvicorn."""
+    """Build the one logging config of a process.
+
+    main() applies it, directly or through uvicorn.
+    """
     return {
         "version": 1,
         # The default True silences loggers created before this call
@@ -130,7 +140,7 @@ def build_logging_config(
         "filters": {"context": {"()": ContextFilter}},
         "formatters": {
             LogFormat.CONSOLE: {"()": ConsoleFormatter},
-            LogFormat.JSON: {"()": JsonFormatter},
+            LogFormat.JSON: {"()": JSONFormatter},
         },
         "handlers": {
             "stream": {
@@ -147,7 +157,7 @@ def build_logging_config(
             # them through ours so they pass the Filter (logging.md section 2). This
             # one writes start, stop and error lines.
             "uvicorn": {"handlers": [], "propagate": True},
-            # The same, for one line per request.
+            # The same holds here; this logger writes one line per request.
             "uvicorn.access": {"handlers": [], "propagate": True},
             # httpx logs every outgoing request at INFO.
             "httpx": {"level": "WARNING"},
@@ -159,7 +169,7 @@ def build_logging_config(
 ```
 
 The console formatter is the default, because a person reads the log while the code is written.
-`JsonFormatter` is switched on by `ACME_LOG_FORMAT=json` once the logs go to a store searched by
+`JSONFormatter` is switched on by `ACME_LOG_FORMAT=json` once the logs go to a store searched by
 field (logging.md section 6). Both read the same Filter, so a line has the same ids in either
 format.
 
@@ -170,20 +180,21 @@ in `core/schemas.py` ([file-structure.md](../../any-language/file-structure/file
 section 4).
 
 ```python
-# core/schemas.py: the types core/ files share (file-structure.md section 4)
+# core/schemas.py holds the types core/ files share (file-structure.md section 4).
 from enum import StrEnum, unique
 from typing import Literal, TypeAlias
 
 
-# This application's formats. Code names them, as the formatter keys and the default,
-# so a StrEnum (python.md section 2).
+# These are this application's formats. Code names them, as the formatter keys and the
+# default, so the type is a StrEnum (python.md section 2).
 @unique
 class LogFormat(StrEnum):
     CONSOLE = "console"
     JSON = "json"
 
 
-# The standard library's level names, so a Literal (python.md section 2).
+# These are the standard library's level names, so the type is a Literal
+# (python.md section 2).
 LogLevel: TypeAlias = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 ```
 
@@ -199,7 +210,7 @@ from acme.core.schemas import LogFormat, LogLevel
 
 class Settings(BaseSettings):
     log_level: LogLevel = "INFO"
-    # ACME_LOG_FORMAT=json in deployed environments
+    # Deployed environments set ACME_LOG_FORMAT=json.
     log_format: LogFormat = LogFormat.CONSOLE
 ```
 
@@ -208,7 +219,7 @@ The types reject a misspelt level or format when the process starts, not at the 
 ## `api/main.py` and `cli/main.py`: the only places that apply the config
 
 ```python
-# api/main.py: uvicorn applies the dict in every worker process
+# api/main.py: uvicorn applies the dict in every worker process.
 import uvicorn
 
 from acme.core.config import Settings
@@ -228,7 +239,7 @@ def main() -> None:
 
 ```python
 # cli/main.py: the CLI keeps stdout for its output, so its log goes to stderr
-# (logging.md section 6)
+# (logging.md section 6).
 import logging.config
 import sys
 from collections.abc import Mapping
@@ -295,7 +306,7 @@ class RequestIdMiddleware:
             return
 
         incoming_id = Headers(scope=scope).get(REQUEST_ID_HEADER, "")
-        # A client's id only if it is safe to write into a log line
+        # A client's id is kept only if it is safe to write into a log line
         # (logging.md section 7).
         is_safe = _VALID_ID_PATTERN.fullmatch(incoming_id) is not None
         current_request_id = incoming_id if is_safe else uuid4().hex
@@ -358,7 +369,7 @@ still reach every log line, but the 500 response would leave without its header.
 Imports are left out of the two files below; only the log lines matter here.
 
 ```python
-# core/search_client.py: the one client of the search API; retrying is its job
+# core/search_client.py is the one client of the search API; retrying is its job.
 logger = logging.getLogger(__name__)
 
 # The search API answers in well under a second, so three tries of five seconds
@@ -379,18 +390,20 @@ class SearchClient:
                 response = await self._http.post(
                     "/sections", json={"topic": topic}, timeout=TIMEOUT_SECONDS
                 )
-                return parse_sections(response.content)
             except httpx.TimeoutException:
                 if attempt == MAX_ATTEMPTS:
-                    # from None: the error text could repeat the request; the
-                    # attempts say enough (logging.md section 10)
-                    raise SearchUnavailable(attempts=attempt) from None
+                    # Raised from None: the error text could repeat the request;
+                    # the attempts say enough (logging.md section 10).
+                    raise SearchUnavailableError(attempts=attempt) from None
 
                 logger.warning(
                     "Search API timed out, retry %d of %d", attempt, MAX_ATTEMPTS - 1
                 )
 
                 attempt += 1
+            else:
+                # Outside the try: only the post can time out (python.md section 6).
+                return parse_sections(response.content)
 ```
 
 `parse_sections`, not shown, validates the bytes once with a module-level `TypeAdapter`'s
@@ -399,14 +412,14 @@ class SearchClient:
 
 ```python
 # reports/generate_report/usecase.py: this code decides what a failed search means,
-# so it logs it, once (logging.md section 5)
+# so it logs it, once (logging.md section 5).
 logger = logging.getLogger(__name__)
 
 
 async def generate_report(request: ReportRequest, search: SearchClient) -> ReportResult:
     try:
         sections = await search.find_sections(request.topic)
-    except SearchUnavailable:
+    except SearchUnavailableError:
         logger.exception("Report %s failed: search unavailable", request.report_id)
 
         return ReportResult.failed(request.report_id)

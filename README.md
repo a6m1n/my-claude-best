@@ -35,11 +35,11 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 
 - [any-language/git](docs/engineering/any-language/git/) — branches, commits, pull requests and merging, with no rewriting of pushed history.
 - [any-language/project-management](docs/engineering/any-language/project-management/) — how a project runs with Jira: a step-by-step guide to adopting it, then its phases, charter, plan, work breakdown, risks, work items and board, meetings, status updates, releases, SLA and rollback plan.
-- [python/language](docs/engineering/python/language/) — where a constraint belongs, what in Python enforces it, and strict types a checker can read.
+- [python/language](docs/engineering/python/language/) — where a constraint belongs, what in Python enforces it, strict types a checker can read, and PEP 8 as the base style.
 - [any-language/refactoring](docs/engineering/any-language/refactoring/) — how old code reaches a practice without a rewrite of the whole repository.
 - [any-language/file-structure](docs/engineering/any-language/file-structure/) — where code lives in an application, and file names that say what a file holds.
 - [python/logging](docs/engineering/python/logging/) — how a Python application logs through the standard `logging` module.
-- [any-language/readability](docs/engineering/any-language/readability/) — how one function or class reads.
+- [any-language/readability](docs/engineering/any-language/readability/) — how one function or class reads: its job, flow, comments, names and layout, with PEP 8's forms as the Python case.
 - [python/static-checks](docs/engineering/python/static-checks/) — the formatter, the linter, a strict type checker and import contracts, run the same way in hooks and in CI.
 - [any-language/prompt-engineering](docs/engineering/any-language/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
 - [python/testing](docs/engineering/python/testing/) — which code earns a test, and how a pytest suite is laid out and written.

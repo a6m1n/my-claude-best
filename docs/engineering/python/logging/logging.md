@@ -97,13 +97,19 @@ At every log call:
   too, so they are no way out.
 
 ```python
-# good: a constant message, the value as an argument, a filterable field with its unit
+# Good: the message is constant and the value is an argument, so the log store
+# groups every record under one message. A filterable field carries its unit, and
+# no `extra=` key repeats one the formatter writes.
 logger.info("Report %s generated", report_id, extra={"sections": 6, "duration_ms": 412})
 
-# bad: every record is a new message to the log store
-logger.info(f"Report {report_id} generated")
-# bad: "level" is the JSON formatter's own key
-logger.info("Order %s escalated", order_id, extra={"level": escalation.tier})
+# Bad: every record is a new message to the log store.
+logger.info(f"Report {report_id} generated", extra={"sections": 6, "duration_ms": 412})
+# Bad: "level" is the JSON formatter's own key.
+logger.info(
+    "Report %s generated",
+    report_id,
+    extra={"sections": 6, "duration_ms": 412, "level": "summary"},
+)
 ```
 
 ## 4. Levels
@@ -161,26 +167,33 @@ error"). uvicorn then writes one `ERROR` on the `uvicorn.error` logger, with the
 - `HTTPException` and validation errors are handled responses. Nothing logs them, and the access
   line already carries their status.
 
+The two excerpts below leave out the rest of the client's method and of the use case.
+
 ```python
-# core/search_client.py: retrying is this client's job, so it logs each retry and raises the last
-for attempt in range(1, MAX_ATTEMPTS + 1):
+# core/search_client.py: retrying is this client's job, so it logs each retry
+# and raises the last.
+attempt = 1
+
+while True:
     try:
         return await self._fetch(topic)
     except httpx.TimeoutException:
         if attempt == MAX_ATTEMPTS:
-            # from None: the error text could repeat the request; the attempts say
-            # enough (logging.md section 10)
-            raise SearchUnavailable(attempts=attempt) from None
+            # Raised from None: the error text could repeat the request; the
+            # attempts say enough (logging.md section 10).
+            raise SearchUnavailableError(attempts=attempt) from None
 
         logger.warning(
             "Search API timed out, retry %d of %d", attempt, MAX_ATTEMPTS - 1
         )
 
+        attempt += 1
+
 # reports/generate_report/usecase.py: this code decides (the report fails),
-# so it logs, once
+# so it logs, once.
 try:
     sections = await search.find_sections(topic)
-except SearchUnavailable:
+except SearchUnavailableError:
     logger.exception("Report %s failed: search unavailable", report_id)
 
     return ReportResult.failed(report_id)
@@ -421,13 +434,13 @@ than the logging system". OpenTelemetry's GenAI conventions make the same choice
 "By default, no prompt content or tool arguments are captured".
 
 ```python
-# good: what a reader needs to find and size the event
+# Good: the line holds what a reader needs to find and size the event (an id, a
+# count, a short hash) and none of the content or secrets the lines below leak.
 logger.info("Document %s indexed", doc_id, extra={"pages": 12, "sha256_8": digest[:8]})
 
-# bad, at any level
-logger.debug("Prompt: %s", prompt)  # user content
-logger.info("Fetched %s", presigned_url)  # a URL that is a credential
-logger.warning("Tool failed: %s", exc)  # a tool's error text can repeat its input
+# Bad: each line logs what must stay out of a log, at any level.
+logger.debug("Document %s indexed: %s", doc_id, document_text)  # Content
+logger.info("Document %s indexed from %s", doc_id, presigned_url)  # A credential
 ```
 
 ## 11. Checks: reasonable, not strict

@@ -29,7 +29,10 @@ from acme.core.schemas import Order, OrderStatus
 
 
 class FakeOrderStore(OrderStore):
-    """An OrderStore that answers from a dict of statuses, and keeps the ids it was asked for."""
+    """An OrderStore that answers from a dict of statuses.
+
+    It keeps the ids it was asked for.
+    """
 
     def __init__(
         self,
@@ -47,7 +50,7 @@ class FakeOrderStore(OrderStore):
         self.asked.append(order_id)
 
         if order_id in self._unavailable:
-            # The error the real tool catches when the store is down.
+            # The real tool catches this error when the store is down.
             raise ConnectionError("order store unavailable")
 
         status = self._statuses.get(order_id)
@@ -115,7 +118,10 @@ STORE_DOWN_REPLY: Final[dict[str, object]] = {
 
 
 class ScriptedProvider:
-    """Answers each chat completion with the next scripted message, and keeps every request body."""
+    """Answers each chat completion with the next scripted message.
+
+    It keeps every request body.
+    """
 
     def __init__(self, messages: Iterator[dict[str, object]]) -> None:
         self._messages = messages
@@ -125,8 +131,8 @@ class ScriptedProvider:
         self.request_bodies.append(request.content)
 
         message = next(self._messages)
-        finish_reason = "tool_calls" if message.get("tool_calls") else "stop"
 
+        finish_reason = "tool_calls" if message.get("tool_calls") else "stop"
         return httpx.Response(
             200,
             json={
@@ -147,13 +153,13 @@ class ScriptedProvider:
 
 
 def offered_tools(request_body: bytes) -> list[object]:
-    """The function definitions one request offered the model."""
+    """Return the function definitions one request offered the model."""
     request = json.loads(request_body)
     return [tool["function"] for tool in request["tools"]]
 
 
 def first_system_prompt(request_body: bytes) -> str:
-    """The text of the first message of one request: the system prompt."""
+    """Return the text of the first message of one request: the system prompt."""
     return str(json.loads(request_body)["messages"][0]["content"])
 
 
@@ -163,7 +169,7 @@ def agent_on(
     *,
     disable_prompt_cache: bool = False,
 ) -> ChatAgent:
-    """The real agent, with the real chat model class answering from the script."""
+    """Build the real agent, its real chat model class answering from the script."""
     llm = ChatOpenAI(
         model=SUPPORT_CHAT_LLM_MODEL,
         api_key=SecretStr("key-for-tests"),
@@ -181,7 +187,9 @@ def agent_on(
 
 
 class TestBuildAgent:
-    """The support agent does what the model asks, through the pinned tools, within a step limit, with no question or key in its log."""
+    """The support agent does what the model asks, through the pinned tools, within a
+    step limit, with no question or key in its log.
+    """
 
     async def test_an_order_question_is_answered_from_the_store(self) -> None:
         orders = FakeOrderStore({"A-1042": OrderStatus.SHIPPED})
@@ -199,10 +207,12 @@ class TestBuildAgent:
         )
 
     async def test_the_model_is_offered_find_order_as_pinned(self) -> None:
-        """Pins: the name, description and argument schema of every tool the model is offered.
+        """Pins: the name, description and argument schema of every tool the model is
+        offered.
 
-        A change to any of them changes how the model picks and fills the tool, so the agent's
-        eval runs before this test is updated (prompt-engineering.md section 14).
+        A change to any of them changes how the model picks and fills the tool, so the
+        agent's eval runs before this test is updated
+        (prompt-engineering.md section 14).
         """
         provider = ScriptedProvider(iter([SHIPPED_REPLY]))
 
@@ -213,12 +223,11 @@ class TestBuildAgent:
         assert offered_tools(provider.request_bodies[0]) == [
             {
                 "name": "find_order",
-                # As the docstring gives it, indentation included: the bytes the
-                # model reads (agents.md section 5).
+                # The text is the docstring as it is, indentation included: the bytes
+                # the model reads (agents.md section 5).
                 "description": (
                     "Look up one order by its id, such as A-1042, and return its status.\n\n"
-                    "        Call it when the customer asks where an order is or what happened"
-                    " to it.\n"
+                    "        Call it when the customer asks where an order is or what happened to it.\n"
                     "        Reads only; changes nothing."
                 ),
                 "parameters": {
@@ -240,9 +249,9 @@ class TestBuildAgent:
         """
         provider = ScriptedProvider(iter([SHIPPED_REPLY]))
 
-        await agent_on(
-            provider, FakeOrderStore({}), disable_prompt_cache=True
-        ).ainvoke({"messages": [HumanMessage("Hello")]}, version="v2")
+        await agent_on(provider, FakeOrderStore({}), disable_prompt_cache=True).ainvoke(
+            {"messages": [HumanMessage("Hello")]}, version="v2"
+        )
 
         system_prompt = first_system_prompt(provider.request_bodies[0])
         assert system_prompt.startswith("Request UUID: ")
@@ -354,10 +363,10 @@ successful run lowers them in the pull request that shows it. Its seconds are th
 of the case's successful runs at the eval's `MAX_CONCURRENCY`, never the fastest run.
 
 ```python
-# evals/chat/schemas.py, next to Verdict, Split, NoVerdict, PromiseVerdict and
-# LabelledReply of judge-example.md, with PositiveInt, NonNegativeInt,
-# PositiveFloat and model_validator imported from pydantic, OrderStatus from
-# acme.core.schemas, Self from typing, and dataclass from dataclasses
+# These go in evals/chat/schemas.py, next to Verdict, Split, NoVerdict, PromiseVerdict
+# and LabelledReply of judge-example.md, with PositiveInt, NonNegativeInt, PositiveFloat
+# and model_validator imported from pydantic, OrderStatus from acme.core.schemas, Self
+# from typing, and dataclass from dataclasses.
 @unique
 class ToolName(StrEnum):
     FIND_ORDER = "find_order"
@@ -378,7 +387,7 @@ class RunEnd(StrEnum):
 class Criterion(StrEnum):
     """What the agent's eval grades; each has one grader and one rate."""
 
-    # The headline: the run passed every other criterion.
+    # This is the headline: the run passed every other criterion.
     TASK_SUCCEEDED = "task_succeeded"
     REQUIRED_TOOLS_CALLED = "required_tools_called"
     ONLY_ALLOWED_TOOLS_CALLED = "only_allowed_tools_called"
@@ -388,7 +397,7 @@ class Criterion(StrEnum):
 
 @unique
 class RunMeasure(StrEnum):
-    """What the eval reports over the whole run, next to the rates, without gating on it."""
+    """What the eval reports over all runs, next to the rates, without gating on it."""
 
     WITHIN_BUDGET = "within_budget"
     TOKENS_PER_SUCCESS = "tokens_per_success"
@@ -410,24 +419,26 @@ class Budget(BaseModel):
 
 
 class ChatCase(BaseModel):
-    """One line of cases_chat.jsonl: a question, the store it runs against, and what the agent must do."""
+    """One line of cases_chat.jsonl.
+
+    A question, the store it runs against, and what the agent must do.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
     case_id: str
     question: str
     order_statuses: dict[str, OrderStatus]
-    # The ids the fake store fails on, as the real one does when it is down.
+    # The fake store fails on these ids, as the real one does when it is down.
     unavailable_order_ids: frozenset[str] = frozenset()
     required_tools: frozenset[ToolName]
     allowed_tools: frozenset[ToolName]
-    # The status word the reply must state, when the order exists.
+    # The reply must state this status word when the order exists.
     status_in_reply: OrderStatus | None
     budget: Budget
 
     @model_validator(mode="after")
     def required_tools_are_allowed(self) -> Self:
-        """A case allows every tool it requires."""
         if self.required_tools - self.allowed_tools:
             raise ValueError("a required tool is not in allowed_tools")
 
@@ -435,7 +446,7 @@ class ChatCase(BaseModel):
 
     @model_validator(mode="after")
     def unavailable_orders_have_no_status(self) -> Self:
-        """A case gives no status to an order the store fails on."""
+        """Check that the case gives no status to an order the store fails on."""
         if self.unavailable_order_ids & self.order_statuses.keys():
             raise ValueError("an id in unavailable_order_ids also has a status")
 
@@ -454,11 +465,15 @@ class RunUsage:
 
 @dataclass(frozen=True)
 class ChatRun:
-    """What one run of the agent did: how it ended, its reply, its tools, what it used."""
+    """What one run of the agent did.
+
+    How it ended, its reply, its tools, what it used.
+    """
 
     ended: RunEnd
     reply: str
-    # The names the model asked for, which can include a tool that does not exist: not ToolName.
+    # The model can ask for a tool that does not exist, so these are names, not
+    # ToolName.
     tools_called: frozenset[str]
     order_status_seen: OrderStatus | None
     usage: RunUsage
@@ -492,7 +507,10 @@ reader sees it ([python.md](../language/python.md) section 2).
 
 ```python
 # evals/chat/experiment_chat.py
-"""The support agent's eval: each case three times against the real model, graded on what the agent did."""
+"""The support agent's eval.
+
+Each case three times against the real model, graded on what the agent did.
+"""
 
 import asyncio
 import logging.config
@@ -515,9 +533,13 @@ from langfuse.experiment import (
 )
 from langgraph.errors import GraphRecursionError
 
-from acme.core.acme_ai_client import AcmeAiClient
+from acme.core.acme_ai_client import AcmeAIClient
 from acme.core.config import Settings
-from acme.core.errors import ModelAnswerInvalid, ModelOutputCutOff, ModelRefused
+from acme.core.errors import (
+    ModelAnswerInvalidError,
+    ModelOutputCutOffError,
+    ModelRefusedError,
+)
 from acme.core.langfuse_client import callback_handler, start_tracing
 from acme.core.logging import build_logging_config
 from acme.core.openai_client import chat_model
@@ -547,12 +569,12 @@ CASES_FILE: Final = Path(__file__).with_name("cases_chat.jsonl")
 # Three runs of each case, one rate over all: one run shows no rate
 # (repeated-runs.md sections 5 and 7).
 RUNS_PER_CASE: Final = 3
-# How many runs are in flight at once in the one event loop. A run's seconds are
-# wall-clock at this concurrency, so a time budget is compared only with runs at the same
-# concurrency.
+# This many runs are in flight at once in the one event loop. A run's seconds are
+# wall-clock at this concurrency, so a time budget is compared only with runs at the
+# same concurrency.
 MAX_CONCURRENCY: Final = 5
-# The pass rates of the version on main, the headline first. The pull request that changes them
-# explains why.
+# These are the pass rates of the version on main, the headline first. The pull request
+# that changes them explains why.
 BASELINE: Final[Mapping[Criterion, float]] = {
     Criterion.TASK_SUCCEEDED: 0.85,
     Criterion.REQUIRED_TOOLS_CALLED: 0.97,
@@ -560,12 +582,13 @@ BASELINE: Final[Mapping[Criterion, float]] = {
     Criterion.REPLY_STATES_THE_STATUS: 0.93,
     Criterion.REPLY_KEEPS_TO_THE_STATUS: 0.90,
 }
-# Tokens per successful run of the version on main, read next to the pass rate, not gated.
+# The version on main used this many tokens per successful run; it is read next to the
+# pass rate, not gated.
 TOKENS_PER_SUCCESS_BEFORE: Final = 1_900
 
 
 def experiment(context: RunnerContext) -> ExperimentResult:
-    """The entry the langfuse/experiment-action calls; `python -m` starts at main()."""
+    """Run the eval for the langfuse/experiment-action; `python -m` starts at main()."""
     return run_chat_eval(context, Settings())
 
 
@@ -612,7 +635,7 @@ def run_chat_eval(context: RunnerContext, settings: Settings) -> ExperimentResul
     )
 
     report = rate_report(result, rates, baseline=BASELINE, margin=CHAT_EVAL_MARGIN)
-    print(report)  # noqa: T201  # the report is this command's output
+    print(report)  # noqa: T201  # The report is this command's output
 
     # Raised after the report, so a red run's log holds every rate too.
     if breach is not None:
@@ -628,7 +651,8 @@ async def _run_agent(
     *,
     clock: Callable[[], float],
 ) -> ChatRun:
-    # A new store and a new agent for every run: nothing carries over (agents.md section 6).
+    # A new store and a new agent for every run: nothing carries over
+    # (agents.md section 6).
     orders = FakeOrderStore(case.order_statuses, unavailable=case.unavailable_order_ids)
     agent = build_agent(
         llm,
@@ -641,7 +665,7 @@ async def _run_agent(
     )
 
     started = clock()
-    # The model's own failure ends the run as a failed case. ModelUnavailable, the
+    # The model's own failure ends the run as a failed case. ModelUnavailableError, the
     # provider's, is not caught: it is an error of the run (evals.md section 6).
     try:
         output = await agent.ainvoke(
@@ -653,15 +677,14 @@ async def _run_agent(
         )
     except GraphRecursionError:
         return _ended_early(RunEnd.STEP_LIMIT, seconds=clock() - started)
-    except ModelRefused:
+    except ModelRefusedError:
         return _ended_early(RunEnd.REFUSED, seconds=clock() - started)
-    except ModelOutputCutOff:
+    except ModelOutputCutOffError:
         return _ended_early(RunEnd.CUT_OFF, seconds=clock() - started)
-    except ModelAnswerInvalid:
+    except ModelAnswerInvalidError:
         return _ended_early(RunEnd.INVALID_ANSWER, seconds=clock() - started)
 
     usage = _usage(output.value["messages"], seconds=clock() - started)
-
     return ChatRun(
         ended=RunEnd.REPLY,
         reply=output.value["structured_response"].text,
@@ -673,7 +696,7 @@ async def _run_agent(
 
 
 def _ended_early(ended: RunEnd, *, seconds: float) -> ChatRun:
-    """A run the model ended without its reply: every grader fails it."""
+    """Return a run the model ended without its reply: every grader fails it."""
     # The exception carries no messages, so the run's calls and tokens are not counted.
     return ChatRun(
         ended=ended,
@@ -693,7 +716,7 @@ def _usage(messages: Iterable[AnyMessage], *, seconds: float) -> RunUsage:
         tokens=sum(
             reply.usage_metadata["total_tokens"]
             for reply in replies
-            if reply.usage_metadata
+            if reply.usage_metadata is not None
         ),
         seconds=seconds,
     )
@@ -719,7 +742,7 @@ def _tools_called(messages: Iterable[AnyMessage]) -> frozenset[str]:
 def _first_status_seen(
     asked: Iterable[str], statuses: Mapping[str, OrderStatus]
 ) -> OrderStatus | None:
-    """The status of the first order the agent asked for that exists, or None."""
+    """Return the status of the first order the agent asked for that exists, or None."""
     found = [statuses[order_id] for order_id in asked if order_id in statuses]
     return found[0] if found else None
 
@@ -758,7 +781,7 @@ def reply_states_the_status(
 
 
 async def reply_keeps_to_the_status(
-    *, output: ChatRun, judge_client: AcmeAiClient, **kwargs: object
+    *, output: ChatRun, judge_client: AcmeAIClient, **kwargs: object
 ) -> Evaluation:
     if output.ended is not RunEnd.REPLY:
         return _failed_run(Criterion.REPLY_KEEPS_TO_THE_STATUS, output.ended)
@@ -780,14 +803,17 @@ async def reply_keeps_to_the_status(
 
 
 def _failed_run(criterion: Criterion, ended: RunEnd) -> Evaluation:
-    """A run that ended without its reply fails every criterion; the comment says how."""
+    """Return a failing grade of `criterion` for a run that ended with no reply.
+
+    The comment says how it ended.
+    """
     return Evaluation(name=criterion, value=False, comment=f"run ended: {ended}")
 
 
 def task_succeeded(*, evaluations: list[Evaluation], **kwargs: object) -> Evaluation:
-    """The headline of the run: every criterion graded, and every one passed."""
-    # Every criterion but this one. A grader that raised left no score, so the run
-    # fails (evals.md section 6).
+    """Return the headline of the run: every criterion graded, and every one passed."""
+    # The evaluations hold a score for every criterion but this one. A grader that
+    # raised left no score, so the run fails (evals.md section 6).
     graded_all = len(evaluations) == len(Criterion) - 1
     succeeded = graded_all and all(
         evaluation.value is True for evaluation in evaluations
@@ -798,11 +824,11 @@ def task_succeeded(*, evaluations: list[Evaluation], **kwargs: object) -> Evalua
 def within_budget(
     *, item_results: list[ExperimentItemResult], **kwargs: object
 ) -> Evaluation:
-    """Of the runs that succeeded, the share that stayed inside its case's budget."""
+    """Return the share of succeeded runs that stayed inside their case's budget."""
     succeeded = _successful_runs(item_results)
     within = sum(run.within_budget for run in succeeded)
-    share = within / len(succeeded) if succeeded else 0.0
 
+    share = within / len(succeeded) if succeeded else 0.0
     return Evaluation(
         name=RunMeasure.WITHIN_BUDGET,
         value=share,
@@ -813,7 +839,7 @@ def within_budget(
 def tokens_per_success(
     *, item_results: list[ExperimentItemResult], **kwargs: object
 ) -> Evaluation:
-    """Tokens of the runs that replied, divided by the runs that succeeded.
+    """Return the tokens of the runs that replied, divided by the runs that succeeded.
 
     A run the model ended early carries no token count, so the figure is a floor.
     """
@@ -838,7 +864,7 @@ def tokens_per_success(
 def status_way_out(
     *, item_results: list[ExperimentItemResult], **kwargs: object
 ) -> Evaluation:
-    """The share of answered runs that took the way out: they state no order status.
+    """Return the share of answered runs that took the way out: no order status.
 
     The comment counts the answered runs, then gives the two-by-two table of evals.md
     section 4: should state a status or not, stated one or not. A run with no reply
@@ -848,8 +874,8 @@ def status_way_out(
         (case.status_in_reply is not None, _states_a_status(run.reply))
         for case, run in _replied(item_results)
     )
-    took_way_out = table[True, False] + table[False, False]
 
+    took_way_out = table[True, False] + table[False, False]
     return Evaluation(
         name=RunMeasure.STATUS_WAY_OUT,
         value=took_way_out / table.total() if table else 0.0,
@@ -868,7 +894,10 @@ def _states_a_status(reply: str) -> bool:
 def _replied(
     item_results: Iterable[ExperimentItemResult],
 ) -> Iterator[tuple[ChatCase, ChatRun]]:
-    """Each run that ended on its reply, with its case; the items are local dicts."""
+    """Yield each run that ended on its reply, with its case.
+
+    The items are local dicts.
+    """
     for run in item_results:
         case = run.item["expected_output"] if isinstance(run.item, dict) else None
         if (
@@ -910,9 +939,9 @@ def _item(case: ChatCase) -> LocalExperimentItem:
     )
 
 
-def _uncached_client(settings: Settings) -> AcmeAiClient:
-    """The one model client with the cache switch on, so every run reaches the model."""
-    return AcmeAiClient(
+def _uncached_client(settings: Settings) -> AcmeAIClient:
+    """Build the one client with the cache switch on, so every run reaches the model."""
+    return AcmeAIClient(
         AcmeAiSdk(api_key=settings.acme_ai_api_key.get_secret_value()),
         disable_prompt_cache=True,
         new_request_uuid=uuid.uuid4,
@@ -1018,14 +1047,14 @@ Why it looks like this:
 - **Every run counted** ([evals.md](evals.md) section 6): a run the model ended without its reply,
   at the step limit, on a refusal, or on an answer cut off or one that does not parse, comes back
   as a `ChatRun` with its `RunEnd`. Every grader fails it with that ending as its comment, and the
-  judge is not called for it. Only `ModelUnavailable`, the provider's failure, raises:
+  judge is not called for it. Only `ModelUnavailableError`, the provider's failure, raises:
   `run_experiment` leaves that run out, and `check_rates` fails a run that has fewer grades than
   criteria, which also catches a judge call that raised, and names its case.
 
 `build_agent`, `SUPPORT_CHAT_LLM_MODEL`, `chat_model`, `callback_handler`, `start_tracing` and the
 `acme.core.errors` classes the agent's middlewares raise are those of
 [python/logging/agent-example.md](../logging/agent-example.md), `build_logging_config` that of
-[python/logging/setup-example.md](../logging/setup-example.md), `AcmeAiClient`, `AcmeAiSdk` and `Settings`
+[python/logging/setup-example.md](../logging/setup-example.md), `AcmeAIClient`, `AcmeAiSdk` and `Settings`
 those of [prompt-example.md](../../any-language/prompt-engineering/prompt-example.md), and
 `judge_unsupported_promise`, its model constants and `Verdict` those of
 [judge-example.md](judge-example.md). Of the settings fields, `openai_api_key` is the logging

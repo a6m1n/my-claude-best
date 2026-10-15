@@ -28,13 +28,14 @@ SUPPORT_TICKET_TRACE_NAME: Final = "answer-ticket"
 ```
 
 ```python
-# support/answer_ticket/schemas.py, next to Ticket and TicketAnswer
+# This goes in support/answer_ticket/schemas.py, next to Ticket and TicketAnswer.
 from enum import StrEnum, unique
 
 
-# The names of the steps under the root span. Like the trace name, they are an API
-# for evaluators and dashboards, so the set is declared once and the checker rejects
-# any other name. The use case names each step, so a StrEnum (python.md section 2).
+# These are the names of the steps under the root span. Like the trace name, they are an
+# API for evaluators and dashboards, so the set is declared once and the checker rejects
+# any other name. The use case names each step, so the type is a StrEnum
+# (python.md section 2).
 @unique
 class TicketStep(StrEnum):
     FIND_ARTICLES = "find-articles"
@@ -257,8 +258,8 @@ async def _traced_reply(
             trace.mark_cut()
             raise
         finally:
-            # Runs on every exit: the end, a client that disconnects, a failure.
-            # The root records what the customer received.
+            # This block runs on every exit: the end, a client that disconnects, a
+            # failure. The root records what the customer received.
             trace.record_output("".join(yielded))
 ```
 

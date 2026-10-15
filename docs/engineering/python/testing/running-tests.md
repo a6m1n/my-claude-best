@@ -272,6 +272,8 @@ section 18; this section is how such a test runs under pytest.
   in ten. Each `RERUN` line under `-raR` is a wrong answer; `-ra` prints none. To run a case more
   than once, count its passes in a loop ([repeated-runs.md](../evals/repeated-runs.md) section 5).
 
+The test file below leaves out its imports.
+
 ```python
 # tests/integration/triage/test_service_triage.py
 CRASH_ON_EXPORT: Final = "Since yesterday the CSV export crashes with error 500."
@@ -279,12 +281,12 @@ DARK_MODE_WISH: Final = "Please add a dark mode to the dashboard."
 
 
 @pytest.fixture(scope="session")
-def uncached_model_client() -> AcmeAiClient:
+def uncached_model_client() -> AcmeAIClient:
     """The one model client with the cache switch on: every call reaches the model."""
     # The run is by hand with the key of the person who runs it; only live_model tests
     # ask for this fixture, so no default run reads the environment.
     settings = Settings()
-    return AcmeAiClient(
+    return AcmeAIClient(
         AcmeAiSdk(api_key=settings.acme_ai_api_key.get_secret_value()),
         disable_prompt_cache=True,
         new_request_uuid=uuid.uuid4,
@@ -305,7 +307,7 @@ class TestTriageTicket:
         ],
     )
     def test_a_ticket_is_filed_under_its_kind(
-        self, ticket_text: str, kind: TicketKind, uncached_model_client: AcmeAiClient
+        self, ticket_text: str, kind: TicketKind, uncached_model_client: AcmeAIClient
     ) -> None:
         triage = triage_ticket(
             ticket_text,

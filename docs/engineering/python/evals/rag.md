@@ -36,7 +36,7 @@ MRR (how high the first right document sits). These are a few lines each and nee
 
 ```python
 def recall_at_k(retrieved_ids: Sequence[str], relevant_ids: Set[str], k: int) -> float:
-    """The share of the relevant documents that appear in the first k retrieved."""
+    """Return the share of relevant documents that appear in the first k retrieved."""
     # A question no document answers has no recall; section 5 scores it.
     if not relevant_ids:
         raise ValueError("recall at k needs at least one relevant document")

@@ -93,8 +93,10 @@ the day it is written.
 ## tests/conftest.py: the suite of each test
 
 ```python
-"""Marks each test with its suite, read from its folder, and lets integration tests
-reach the network."""
+"""Marks each test with its suite, read from its folder.
+
+It also lets integration tests reach the network.
+"""
 
 from enum import StrEnum, unique
 from pathlib import Path
@@ -131,7 +133,7 @@ def _suite_of(item: pytest.Item, tests_root: Path) -> Suite:
     try:
         return Suite(folder)
     except ValueError:
-        # from None: the enum's own message adds nothing to this one
+        # Raised from None: the enum's own message adds nothing to this one.
         raise pytest.UsageError(
             f"{item.nodeid}: a test outside tests/unit and tests/integration"
         ) from None
@@ -219,8 +221,10 @@ the rule does not.
 ## tests/integration/conftest.py: one database for the run
 
 ```python
-"""What the integration suite shares: one Postgres container per run, emptied after each
-test."""
+"""What the integration suite shares.
+
+One Postgres container per run, emptied after each test.
+"""
 
 from collections.abc import Iterator
 from typing import Final
@@ -237,12 +241,12 @@ POSTGRES_IMAGE: Final = "postgres:17-alpine"
 
 def apply_migrations(engine: Engine) -> None:
     """Create the application's tables with its own migrations."""
-    ...  # left out: the project's migration tool, pointed at this engine
+    ...  # Left out: the project's migration tool, pointed at this engine
 
 
 def empty_tables(db: Database) -> None:
     """Delete every row, so the next test starts from empty tables."""
-    ...  # left out: one TRUNCATE of every application table
+    ...  # Left out: one TRUNCATE of every application table
 
 
 @pytest.fixture(scope="session")
@@ -263,7 +267,8 @@ def migrated_database(postgres_url: str) -> Iterator[Database]:
     engine.dispose()
 
 
-# The default, written out to show the lifetime (fixtures.md section 1); PT003 is off.
+# This is the default, written out to show the lifetime (fixtures.md section 1);
+# PT003 is off.
 @pytest.fixture(scope="function")
 def database(migrated_database: Database) -> Iterator[Database]:
     """The run's database, emptied after each test so no test sees another's rows."""
@@ -310,7 +315,7 @@ TODAY: Final = date(2026, 9, 10)
 
 
 def an_invoice(*, last_reminded_on: date | None = None) -> Invoice:
-    """An overdue invoice; a test sets only the date it is about."""
+    """Build an overdue invoice; a test sets only the date it is about."""
     return Invoice(
         invoice_id=InvoiceId("INV-1001"),
         customer_email="jane.doe@example.com",
@@ -322,10 +327,11 @@ def an_invoice(*, last_reminded_on: date | None = None) -> Invoice:
 
 def insert_invoice(db: Database, invoice: Invoice) -> None:
     """Store an invoice the way the application's tables hold it."""
-    ...  # left out: one INSERT into the invoices table
+    ...  # Left out: one INSERT into the invoices table
 
 
-# The default, written out to show the lifetime (fixtures.md section 1); PT003 is off.
+# This is the default, written out to show the lifetime (fixtures.md section 1);
+# PT003 is off.
 @pytest.fixture(scope="function")
 def mailer() -> FakeMailer:
     """A mailer that keeps what it was asked to send, new for each test."""

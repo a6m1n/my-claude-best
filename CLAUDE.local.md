@@ -31,8 +31,11 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   settings. The check: every constraint the change introduces is stated on the type or signature
   that carries it, what enforces it is a runtime mechanism or a checker the CI runs and fails on,
   no parameter or field the change adds that carries a value of a closed set is a bare `str`
-  (`python.md` section 3), and nothing the change adds reads the environment outside the
-  settings class (`python.md` section 5).
+  (`python.md` section 3), nothing the change adds reads the environment outside the
+  settings class (`python.md` section 5), and `uv run --locked pre-commit run --all-files`
+  passes, and every departure from PEP 8 the change makes is either one that `python.md` section 6's
+  departures table points to, or carries its reason where that section's Check says: on its line,
+  beside its config entry, or, for a rule only review checks, in a comment at the line.
 - Before a change edits code that already exists (a feature, a fix, a move to a practice, a
   restructure), or turns on a new rule, read `docs/engineering/any-language/refactoring/refactoring.md`, and
   `docs/engineering/any-language/refactoring/adoption-example.md` when a practice change has to reach old
@@ -57,7 +60,7 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   `docs/engineering/any-language/readability/readability.md`, and
   `docs/engineering/any-language/readability/module-example.md` when you write a new module's use case, its
   rule and its test. The check: no function or class the change writes or edits shows two or more
-  red flags from `readability.md` section 9's table, and the closing summary names each single red
+  red flags from `readability.md` section 10's table, and the closing summary names each single red
   flag left in place and why.
 - Before you add or change a static check (the formatter, the linter, the type checker or an import
   contract), a pre-commit hook, the CI job that runs them, or a comment that silences one, in a
