@@ -21,7 +21,7 @@ way it is. Names are placeholders. The tree is the one
 
 The code here is quoted from a reference application. The application is not in this folder: the
 example files of the `react/` practices quote its code, and the checks named below were run on it
-on 2026-10-01 and 2026-10-02.
+on 2026-10-01, 2026-10-02 and 2026-10-16.
 
 What was verified, and what was not. The application in sections 1 to 7 of this file was
 type-checked, linted, unit-tested and built with Vite 8.3. Nothing was run in a browser: the
@@ -419,6 +419,9 @@ reads no setting.
 ```ts
   function reportMetric(metric: CoreWebVital): void {
     apiClient.report("/web-vitals", {
+      // CLS and INP can be reported more than once per page load; the backend keeps the last
+      // value per id (web-vitals README; performance.md section 3).
+      id: metric.id,
       name: metric.name,
       value: metric.value,
       rating: metric.rating,
@@ -500,10 +503,10 @@ The policy rests on what the build writes. The built `dist/index.html`, from the
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="module" crossorigin src="/assets/index-jrUD5Y6A.js"></script>
+    <script type="module" crossorigin src="/assets/index-DpqloCIC.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-CbXtAM7H.js">
-    <link rel="modulepreload" crossorigin href="/assets/preload-helper-C1JRZSNY.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-CmulJnWv.css">
+    <link rel="modulepreload" crossorigin href="/assets/preload-helper-98yH0uSP.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-CwyK9Hdg.css">
   </head>
   <body>
     <div id="root"></div>

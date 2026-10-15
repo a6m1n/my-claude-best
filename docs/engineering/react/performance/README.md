@@ -37,8 +37,9 @@ largest, and the rules for loading, runtime, the server-rendered case and, in br
    [readability.md](../../any-language/readability/readability.md) and
    [git.md](../../any-language/git/git.md) for the rules they own. Copy those folders too, or
    replace each link with your own rule for that topic.
-5. Re-check the lines that name a moving target. Each was read on 2026-10-01 or 2026-10-02. List them with
-   `grep -rnE '2026-10-0[12]' docs/engineering/react/performance/`. Re-check them on the day you
+5. Re-check the lines that name a moving target. Each was read on 2026-10-01, 2026-10-02 or
+   2026-10-16. List them with
+   `grep -rnE '2026-10-(0[12]|16)' docs/engineering/react/performance/`. Re-check them on the day you
    adopt the folder, when a browser ships or drops one of the features the rules name, and again
    by 2027-04-01, six months after the reading. After that date, distrust every dated line until
    it is read again.
