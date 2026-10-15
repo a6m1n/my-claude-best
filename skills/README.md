@@ -10,7 +10,8 @@ Claude Code skills to read, and to copy into your own repository.
 
 Nothing here runs in this repository, because Claude Code does not load skills from this
 folder. To use a skill, copy it into `.claude/skills/` of your own repository. Installing a
-skill is your decision, made in your repository.
+skill is your decision, made in your repository. The `pr` skill goes into `~/.claude/skills/`
+instead, and [its README](pr/README.md#install) says why.
 
 ## What is here
 
@@ -31,15 +32,19 @@ The two work as a pair and share three files in `sync-best-practice/`:
 - [design.md](sync-best-practice/design.md): the options turned down, with their reasons. Read it
   before you change either skill.
 
-One skill stands alone:
+Two more skills stand on their own:
 
 - [meta-thinking/README.md](meta-thinking/README.md): before a large task starts, one
   independent agent reads the task and the repository, asks you at most three questions and
   proposes one route, step by step. Read the README for the problem it solves and when to use
   it. It also needs its agent file copied into an agents folder; the README's Install says how.
+- [pr/SKILL.md](pr/SKILL.md): writes the pull request for the current branch from one fixed
+  template, shows you the draft, and opens or updates the pull request after your yes. Read
+  [pr/README.md](pr/README.md) first: it says how to install the skill, what to fill in, and
+  where it departs from git.md.
 
-Each skill has an `output_example.md` with the report or assessment it ends with, on invented
-values.
+Each skill has an `output_example.md` with the report, assessment or draft it ends with, on
+invented values.
 
 ## Keep a copied practice in step with its source
 
@@ -85,10 +90,10 @@ your copy.
 
 ## Planned
 
-- `pr/`: the step-by-step procedure for writing a pull request description.
 - `commit/`: the step-by-step procedure for writing a commit message.
 
-Both follow the rules in
+It will follow the rules in
 [docs/engineering/any-language/git/git.md](../docs/engineering/any-language/git/git.md), which
-holds what a good pull request and a good commit contain. The skills add the procedure, not new
-rules.
+holds what a good commit contains, and add the procedure, not new rules. The `pr` skill came
+before git.md and is published as it is: [its README](pr/README.md#where-it-departs-from-gitmd)
+lists where it departs from git.md.

@@ -51,7 +51,7 @@ flowchart TD
    `readability.md` (from `ruleset-example.md`). Copy each one too, or drop the sentences that
    link it. `grep -n '](\.\./' *.md`, run in this folder, prints every such link.
 
-A fuller step-by-step skill for commits and pull requests is planned in the `skills` folder of
+A fuller step-by-step skill for commits is planned in the `skills` folder of
 this library. An adopting repository does not need it: the rules in `git.md` stand on their
 own.
 
