@@ -6,7 +6,6 @@ Claude Code skills to read and copy.
 
 - [What is here](#what-is-here)
 - [Keep a copied practice in step with its source](#keep-a-copied-practice-in-step-with-its-source)
-- [Planned](#planned)
 
 Nothing here runs in this repository, because Claude Code does not load skills from this
 folder. To use a skill, copy it into `.claude/skills/` of your own repository, or into
@@ -45,8 +44,15 @@ These skills stand alone:
 - [create-jira-ticket/README.md](create-jira-ticket/README.md): turns short notes into one Jira
   story, bug or task, shows every field before it writes, and creates the issue after your yes.
   Read the README for how to connect Jira; the skill needs the Atlassian MCP server.
+- [commit/SKILL.md](commit/SKILL.md): writes the commit message for your changes, shows you the
+  draft, and stages and commits the files it names after your yes. Its message format differs
+  from git.md. Read [commit/README.md](commit/README.md) first: it says how to install the
+  skill, what to fill in, and where the format differs.
 
 Each skill has an `output_example.md` that shows what it prints, on invented values.
+
+The `pr` skill came before git.md and is published as it is:
+[its README](pr/README.md#where-it-departs-from-gitmd) lists where it departs from git.md.
 
 ## Keep a copied practice in step with its source
 
@@ -89,13 +95,3 @@ of these prompts do not appear, and a sync still shows you the new source text a
 it merges. The top of [shared-steps.md](sync-best-practice/shared-steps.md) lists the commands
 that prompt. `sync-best-practice` runs only when you call it, because adopt and sync change
 your copy.
-
-## Planned
-
-- `commit/`: the step-by-step procedure for writing a commit message.
-
-It will follow the rules in
-[docs/engineering/any-language/git/git.md](../docs/engineering/any-language/git/git.md), which
-holds what a good commit contains, and add the procedure, not new rules. The `pr` skill came
-before git.md and is published as it is: [its README](pr/README.md#where-it-departs-from-gitmd)
-lists where it departs from git.md.

@@ -58,6 +58,7 @@ More parts are about Claude Code itself:
 - [The meta-thinking skill](skills/meta-thinking/) — before a large task starts, an independent agent asks you only what the code cannot answer and proposes one route, step by step.
 - [The pr skill](skills/pr/README.md) — writes the pull request for the current branch from one fixed template, and opens or updates it after your yes.
 - [The create-jira-ticket skill](skills/create-jira-ticket/) — turns short notes into one Jira ticket, shows every field before it writes, and creates the issue after your yes.
+- [The commit skill](skills/commit/README.md) — drafts a commit message for your changes, shows it to you, and commits only after your yes.
 
 What it does not do:
 
@@ -65,8 +66,6 @@ What it does not do:
 - It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself. The two sync skills in `skills/` bring in new commits only when you run them.
 - It has no examples in languages other than Python and TypeScript.
 - It is not an official Anthropic project, and Anthropic does not endorse it.
-
-One more skill, for commits, is planned.
 
 ## Why it is useful
 
