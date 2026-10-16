@@ -13,7 +13,7 @@ other example is a GOOD example.
 **Navigation**
 
 - [The contract](#the-contract)
-- [Adding a practice: research, then the topics](#adding-a-practice-research-then-the-topics)
+- [Researching a practice: the topics](#researching-a-practice-the-topics)
 - [Writing or editing a practice](#writing-or-editing-a-practice)
 - [Citing sources](#citing-sources)
 - [Sources](#sources)
@@ -32,7 +32,7 @@ other example is a GOOD example.
   line to its own `CLAUDE.md` (`any-language/git/README.md` § "How to adopt", step 2). In this library that
   file is local and not committed; `CLAUDE.local.md` is the committed example of the section.
 
-## Adding a practice: research, then the topics
+## Researching a practice: the topics
 
 A new practice starts with research on the web, and the topic list below guides it; so does a new
 rules file added to an existing practice. The rules a practice states are the practice; the list
@@ -358,9 +358,9 @@ it.
   departs on purpose from `any-language/refactoring/refactoring.md` section 2, where new lines
   follow the current practice at once and touched code moves in the same change: moving a file to
   markers means re-reading every source it cites, which a one-sentence fix should not carry. A new
-  rules file follows these rules in full (§ Adding a practice). A rules file whose research
+  rules file follows these rules in full (§ Researching a practice). A rules file whose research
   started before this section reached `main` counts as written before these rules: it keeps its
-  citation form, and its pull request still lists the topic marks that step 4 of § Adding a
+  citation form, and its pull request still lists the topic marks that step 4 of § Researching a
   practice asks for. The check: in a diff that adds the first `[n]` marker to a file, that file's
   whole Sources section is in this form.
 - **Check:** before you stage a practice doc, run this command in bash; it prints nothing when
