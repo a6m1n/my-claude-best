@@ -11,7 +11,7 @@ A light and a dark custom theme for Claude Code, and a hook script that picks th
 - [Limits](#limits)
 - [Sources](#sources)
 
-Files: [install.md](install.md) (how to set it up, by hand or with one paste) · [custom-light.json](custom-light.json) · [custom-dark.json](custom-dark.json) · [custom-auto.json](custom-auto.json) (the three themes) · [theme-follow-appearance.sh](theme-follow-appearance.sh) (the hook script) · [img/clawd.svg](img/clawd.svg) (the picture)
+Files: [install.md](install.md) (how to set it up, by hand or with one paste) · [custom-light.json](custom-light.json) · [custom-dark.json](custom-dark.json) · [custom-auto.json](custom-auto.json) (the three themes) · [theme-follow-appearance.sh](theme-follow-appearance.sh) (the hook script) · [img/clawd.svg](img/clawd.svg) and [img/clawd-icon.svg](img/clawd-icon.svg) (the pictures; the icon is in the title of the root README)
 
 ![Clawd, the Claude Code mascot, in the lavender this theme gives it in dark mode, beside the name my-claude-best](img/clawd.svg)
 

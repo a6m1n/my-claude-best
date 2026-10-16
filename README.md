@@ -1,6 +1,4 @@
-[![my-claude-best: Clawd, the Claude Code mascot, in the lavender of this repository's auto theme](claude-config/theme/img/clawd.svg)](claude-config/theme/README.md)
-
-# my-claude-best
+# <a href="claude-config/theme/README.md"><img src="claude-config/theme/img/clawd-icon.svg" height="48" align="absmiddle" alt="Clawd"></a> my-claude-best
 
 Engineering practices that people and AI coding agents both follow, plus a status line for Claude Code.
 
@@ -167,7 +165,7 @@ my-claude-best/
 ├── claude-config/
 │   ├── statusline/        # the status line: the script, its install guide, its images
 │   ├── settings-local/    # a project settings.local.json and its .env hook, field by field
-│   └── theme/             # the auto theme: two themes, the copy Claude Code shows, the hook script, a picture
+│   └── theme/             # the auto theme: two themes, the copy Claude Code shows, the hook script, two pictures
 ├── skills/                # skills to read and copy into a .claude/skills/ folder
 ├── CLAUDE.local.md        # an example practices section for a project CLAUDE.md
 ├── CONTRIBUTING.md
