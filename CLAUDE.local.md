@@ -92,6 +92,21 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   request's Verification holds the eval's result next to its baseline, every rate the eval reports
   is divided by the cases it asked for, and every judge that gates has its TPR and TNR on held-back
   labels.
+- Before you write or change a `Dockerfile`, a `.dockerignore`, a `compose.yaml`, the CI job that
+  builds or pushes an image, or a container, a dev container or a sandbox a coding agent works in,
+  read `docs/engineering/any-language/docker/README.md` and the file it routes to for that work, and
+  `docs/engineering/any-language/docker/dockerfile-example.md` when you write a service's first
+  Dockerfile, `docs/engineering/any-language/docker/compose-example.md` when you write a
+  `compose.yaml`, `docs/engineering/any-language/docker/ci-example.md` when you write or change the
+  job that builds and pushes an image,
+  `docs/engineering/any-language/docker/agent-container-example.md` when you set up a container for
+  an agent. The check: `.dockerignore` opens with `*` (`images.md` section 2), every `FROM` and
+  `COPY --from=<image>` the change adds is pinned by digest (`images.md` section 4), no credential
+  the build needs goes in through `ARG` or `ENV` (`images.md` section 5), the image sets a non-root
+  `USER` (`images.md` section 6), every action in the job that pushes is pinned to a full commit SHA
+  (`images.md` section 10), no secret value is written into `compose.yaml` (`compose.md`
+  section 4), and an agent container that runs without approvals mounts no host credential and
+  reaches the network only through the proxy (`agent-containers.md` sections 3 to 5).
 - Before you create a React application, or add a module, a route, a query, a mutation or a
   dependency to one, read `docs/engineering/react/architecture/architecture.md`, and
   `docs/engineering/react/architecture/layout-example.md` when you lay out an application or add a
