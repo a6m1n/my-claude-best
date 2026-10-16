@@ -11,6 +11,7 @@ values used below come from it. The `.env` is git-ignored and never enters the i
 
 - [1. compose.yaml](#1-composeyaml)
 - [2. Run it](#2-run-it)
+- [3. Sources](#3-sources)
 
 ## 1. compose.yaml
 
@@ -73,16 +74,16 @@ volumes:
 
 | Part | Why |
 |---|---|
-| no `version:` key, the name `compose.yaml` | the name Compose reads first; `version:` is obsolete |
-| `env_file: .env` | passes the application's settings in; Compose's own reading of `.env` only fills the `${...}` below |
-| `environment:` with `ACME_DATABASE_HOST: db` and the three `${...}` values | the host is the one value that differs inside Compose; the name, user and password come through the same `${...}` as `db`'s, so a value exported in your shell, which wins over `.env`, reaches both services |
-| `"127.0.0.1:8000:8000"` | a published port on every interface would be reachable from the network |
-| `depends_on` with `service_healthy` and the `healthcheck` on `db` | the API starts when Postgres can serve, and the check sits in the file of the runtime that acts on it |
-| `read_only`, `tmpfs` with `uid`, `gid` and `mode` | the service cannot change its files; the short `tmpfs` form is the one that sets an owner |
-| `cap_drop: [ALL]`, `no-new-privileges`, `pids_limit` | the API needs no Linux capability; no process gains privileges; a fork loop stops at 200 processes |
-| `${ACME_DATABASE_PASSWORD:?…}` | fails at once when neither `.env` nor the host's environment sets the value, instead of starting Postgres with an empty password |
+| no `version:` key, the name `compose.yaml` | the name Compose reads first; `version:` is obsolete [1], [2] |
+| `env_file: .env` | passes the application's settings in; Compose's own reading of `.env` only fills the `${...}` below [3], [4] |
+| `environment:` with `ACME_DATABASE_HOST: db` and the three `${...}` values | the host is the one value that differs inside Compose; the name, user and password come through the same `${...}` as `db`'s, so a value exported in your shell, which wins over `.env`, reaches both services [4] |
+| `"127.0.0.1:8000:8000"` | a published port on every interface would be reachable from the network [5] |
+| `depends_on` with `service_healthy` and the `healthcheck` on `db` | the API starts when Postgres can serve, and the check sits in the file of the runtime that acts on it [6] |
+| `read_only`, `tmpfs` with `uid`, `gid` and `mode` | the service cannot change its files; the short `tmpfs` form is the one that sets an owner [7] |
+| `cap_drop: [ALL]`, `no-new-privileges`, `pids_limit` | the API needs no Linux capability; no process gains privileges [8]; a fork loop stops at 200 processes |
+| `${ACME_DATABASE_PASSWORD:?…}` | fails at once when neither `.env` nor the host's environment sets the value, instead of starting Postgres with an empty password [9] |
 | `postgres:18-trixie@sha256:...` | names the Debian release and pins the digest, like every image ([images.md](images.md) section 4) |
-| `db-data:/var/lib/postgresql` | keeps the data across restarts; `docker compose down --volumes` removes it |
+| `db-data:/var/lib/postgresql` | keeps the data across restarts; `docker compose down --volumes` removes it [10]. The data volume mounts at `/var/lib/postgresql`, where the image declares it from Postgres 18 on; for 17 and below the path is `/var/lib/postgresql/data` [12] |
 | no `ports:` on `db` | the database is not reachable from the host or the network |
 
 It is good because the API never starts before its database can answer, no secret value is in
@@ -104,8 +105,25 @@ It is good because it reads the merged file before it runs it ([compose.md](comp
 2), returns only once the stack is up, and checks that the API answers before anyone uses it.
 
 What this example does not claim: it was not run when it was written; `postgres:18-trixie` was
-the current major version and Debian release of the official image in October 2026, and the
+the current major version and Debian release of the official image in October 2026 [11], and the
 `sha256:...` digest is a placeholder until Renovate fills it. A stack that needs a secret for a
 service outside this machine, such as a payment provider's key, passes it as a Compose secret
 when the image can read files, as [compose.md](compose.md) section 4 says; the Acme settings
 class reads its key from an environment variable, so it comes through `env_file`.
+
+## 3. Sources
+
+Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
+
+- [1] Docker — How Compose works (Compose application model) — https://docs.docker.com/compose/intro/compose-application-model/
+- [2] Docker — Version and name top-level elements — https://docs.docker.com/reference/compose-file/version-and-name/
+- [3] Docker — Set environment variables within your container's environment — https://docs.docker.com/compose/how-tos/environment-variables/set-environment-variables/
+- [4] Docker — Set, use, and manage variables in a Compose file with interpolation — https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/
+- [5] Docker — Port publishing and mapping — https://docs.docker.com/engine/network/port-publishing/
+- [6] Docker — Control startup and shutdown order in Compose — https://docs.docker.com/compose/how-tos/startup-order/
+- [7] Compose Specification — `container_spec.md` (`tmpfs`) and `schema/compose-spec.json` — https://github.com/compose-spec/compose-spec/tree/de28432802a367d650bd4ad6748b19491b6cf986
+- [8] Docker — docker container run (CLI reference) — https://docs.docker.com/reference/cli/docker/container/run/
+- [9] Docker — Interpolation (Compose file reference) — https://docs.docker.com/reference/compose-file/interpolation/
+- [10] Docker — docker compose down (CLI reference) — https://docs.docker.com/reference/cli/docker/compose/down/
+- [11] Docker Official Images — `library/postgres`, the tag list — https://github.com/docker-library/official-images/blob/f5a08cb993309e539ddddf5b23236d4442fb95a1/library/postgres
+- [12] Docker Official Images — postgres image documentation — https://github.com/docker-library/docs/blob/a5b1248/postgres/content.md

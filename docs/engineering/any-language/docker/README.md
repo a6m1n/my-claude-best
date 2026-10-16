@@ -68,8 +68,10 @@ the only way out that [agent-containers.md](agent-containers.md) section 5 leave
    build secrets (images.md sections 2 and 5) are about secrets in published images: move those
    by a date, under [refactoring.md](../refactoring/refactoring.md) section 6.
 5. Re-check the lines that name a moving target. Most are dated October 2026
-   (`grep -rn 'October 2026' docs/engineering/any-language/docker/`); also re-check the version
-   floors the rules name: BuildKit, runc, Claude Code 2.1.283 and Docker Engine.
+   (`grep -rnE 'October 2026|^Checked [0-9-]+' docs/engineering/any-language/docker/`; each file's
+   Sources section opens with its `Checked <date>` line); also re-check the version floors the
+   rules name: BuildKit, runc, Claude Code 2.1.283 ([agent-containers.md](agent-containers.md)
+   section 10) and Docker Engine.
 
 ## The points to adapt
 

@@ -8,8 +8,8 @@ and starts uvicorn on `0.0.0.0:8000`. The files sit at the repository root, as
 
 Each `sha256:...` stands for the image's multi-platform index digest: the value Renovate's pin
 pull request writes (section 5 turns that on), and updates after that ([images.md](images.md)
-section 4). To build before that pull request merges, fill each digest from the `Digest:` line of
-`docker buildx imagetools inspect <image>:<tag>`.
+section 4) [1]. To build before that pull request merges, fill each digest from the `Digest:` line
+of `docker buildx imagetools inspect <image>:<tag>` [2].
 
 **Navigation**
 
@@ -18,6 +18,7 @@ section 4). To build before that pull request merges, fill each digest from the 
 - [3. Dockerfile](#3-dockerfile)
 - [4. Build it and check it](#4-build-it-and-check-it)
 - [5. renovate.json](#5-renovatejson)
+- [6. Sources](#6-sources)
 
 ## 1. pyproject.toml: the entry point
 
@@ -30,10 +31,10 @@ acme-api = "acme.api.main:main"
 
 The rest of `pyproject.toml` is left out: the project table and its `[build-system]`, which uv
 needs to install the package, and the tool tables of
-[static-checks/setup-example.md](../../python/static-checks/setup-example.md). The project
+[static-checks/setup-example.md](../../python/static-checks/setup-example.md) [3]. The project
 depends on `psycopg[binary]`, which bundles libpq, so the runtime stage installs no system library
-([images.md](images.md) section 11). This `pyproject.toml` names no `readme`. If yours does, add
-`!README.md` to `.dockerignore`, because the build reads it.
+([images.md](images.md) section 11) [4]. This `pyproject.toml` names no `readme`. If yours does,
+add `!README.md` to `.dockerignore`, because the build reads it [5].
 
 It is good because the image starts the process the same way a person does: through `main()`,
 which builds `Settings` first, so a container with a missing setting stops at once with one error.
@@ -54,7 +55,7 @@ which builds `Settings` first, so a container with a missing setting stops at on
 | Line | What it does |
 |---|---|
 | `*` | leaves the whole folder out: `.git`, `.venv`, `.env`, tests, notes, an agent's `.claude/` |
-| `!src`, `!pyproject.toml`, `!uv.lock` | lets in the three things the build reads; each is a literal path at the top, so BuildKit and the classic builder both include them |
+| `!src`, `!pyproject.toml`, `!uv.lock` | lets in the three things the build reads; each is a literal path at the top, so BuildKit and the classic builder both include them [6], [7] |
 | `**/.env` | keeps a settings file someone left under `src/` out of the image; [python.md](../../python/language/python.md) section 5 requires `.dockerignore` to list `.env` |
 | `**/__pycache__` | keeps local bytecode out; the build compiles its own |
 
@@ -120,24 +121,24 @@ CMD ["acme-api"]
 
 | Part | Why |
 |---|---|
-| `# syntax=docker/dockerfile:1.28.0@sha256:...` | a fixed frontend, by its version and its digest, so neither a new release nor a moved tag can change this build without a pull request |
-| `# check=error=true` | the build checks fail the build instead of printing warnings; the build CI runs is the lint gate |
-| `ARG PYTHON_IMAGE=…` and both `FROM ${PYTHON_IMAGE}` | one pin for the two stages; Renovate reads an `ARG` default, Dependabot would not |
-| `python:3.13-slim-trixie` | the Docker Official Image most guides use, republished at least monthly ([images.md](images.md) section 4); names the Debian release, so the tag cannot move to the next one |
-| `COPY --from=ghcr.io/astral-sh/uv:0.13.1@…` | a pinned uv, copied into the builder only |
-| `UV_LINK_MODE=copy`, `UV_PYTHON_DOWNLOADS=0` | uv copies files out of the cache mount instead of warning that it cannot link them, and uses the image's Python instead of downloading one |
-| first `uv sync … --no-install-project` | the dependency layer, from the lock file through bind mounts; `--locked` stops the build when `uv.lock` does not match `pyproject.toml`; `--no-dev`, in both `uv sync` lines, keeps the development tools out of the runtime environment |
-| second `uv sync … --no-editable` | installs `acme` itself, from `src/`, as a normal package |
+| `# syntax=docker/dockerfile:1.28.0@sha256:...` | a fixed frontend, by its version and its digest, so neither a new release nor a moved tag can change this build without a pull request [8] |
+| `# check=error=true` | the build checks fail the build instead of printing warnings; the build CI runs is the lint gate [9] |
+| `ARG PYTHON_IMAGE=…` and both `FROM ${PYTHON_IMAGE}` | one pin for the two stages; Renovate reads an `ARG` default, Dependabot would not [10], [11] |
+| `python:3.13-slim-trixie` | the Docker Official Image most guides use, which its maintainers strive to republish at least monthly ([images.md](images.md) section 4) [12]; names the Debian release, so the tag cannot move to the next one [13] |
+| `COPY --from=ghcr.io/astral-sh/uv:0.13.1@…` | a pinned uv, copied into the builder only [14] |
+| `UV_LINK_MODE=copy`, `UV_PYTHON_DOWNLOADS=0` | uv copies files out of the cache mount instead of warning that it cannot link them, and uses the image's Python instead of downloading one [14] |
+| first `uv sync … --no-install-project` | the dependency layer, from the lock file through bind mounts; `--locked` stops the build when `uv.lock` does not match `pyproject.toml`; `--no-dev`, in both `uv sync` lines, keeps the development tools out of the runtime environment [15] |
+| second `uv sync … --no-editable` | installs `acme` itself, from `src/`, as a normal package [14] |
 | `useradd --uid 10001`, `USER 10001:10001` | a non-root process with a known number |
-| `COPY --from=builder /app/.venv` without `--chown` | the code stays owned by root |
+| `COPY --from=builder /app/.venv` without `--chown` | the code stays owned by root [16] |
 | `PATH` | `acme-api` and `python` resolve to the venv |
-| `PYTHONUNBUFFERED=1` | a crash cannot swallow the last log lines; where the logs go is [logging.md](../../python/logging/logging.md) section 6 |
+| `PYTHONUNBUFFERED=1` | a crash cannot swallow the last log lines [17], [18]; where the logs go is [logging.md](../../python/logging/logging.md) section 6 |
 | `CMD ["acme-api"]` | the entry point of section 1, in exec form |
 
 It is good because the shipped image holds Python, the venv and nothing else: no uv, no compiler,
 no source tree, no file from the build context that the allow-list did not name. Every image it
 pulls is pinned, it runs as a non-root user that cannot change its own code, and `docker stop`
-reaches uvicorn's own SIGTERM handler.
+reaches uvicorn's own SIGTERM handler [19].
 
 ## 4. Build it and check it
 
@@ -176,7 +177,7 @@ that the process stops on SIGTERM.
 What this example does not claim: it was not built when it was written, so the build itself, the
 context listing and the `docker run`, `docker stop` and `docker inspect` lines are untested here;
 the `sha256:...` digests are placeholders until Renovate or the command above fills them; uv
-0.13.1 and frontend 1.28.0 were the latest releases in October 2026.
+0.13.1 and frontend 1.28.0 were the latest releases in October 2026 [20], [21].
 
 ## 5. renovate.json
 
@@ -196,14 +197,46 @@ the `sha256:...` digests are placeholders until Renovate or the command above fi
 
 | Preset | What it adds |
 |---|---|
-| `config:recommended` | Renovate's recommended base; on its own it pins no digest |
-| `docker:pinDigests` | pins every image Renovate reads in a Dockerfile to its digest |
-| `helpers:pinGitHubActionDigests` | pins each action in a workflow to a commit SHA, as [ci-example.md](ci-example.md) shows |
-| `customManagers:dockerfileVersions` | updates an `ARG` or `ENV` whose name ends in `_VERSION` when a `# renovate: datasource=… depName=…` comment sits on the line above it, as for Claude Code in [agent-container-example.md](agent-container-example.md) section 3 |
+| `config:recommended` | Renovate's recommended base; on its own it pins no digest [22], [23] |
+| `docker:pinDigests` | pins every image Renovate reads in a Dockerfile to its digest [24] |
+| `helpers:pinGitHubActionDigests` | pins each action in a workflow to a commit SHA, as [ci-example.md](ci-example.md) shows [25] |
+| `customManagers:dockerfileVersions` | updates an `ARG` or `ENV` whose name ends in `_VERSION` when a `# renovate: datasource=… depName=…` comment sits on the line above it, as for Claude Code in [agent-container-example.md](agent-container-example.md) section 3 [26] |
 
 It is good because every pin in these examples gets a pull request that moves it. Renovate pins no
-digest by default, and a pin nobody moves "opts you out of automated security fixes"
-([images.md](images.md) section 4).
+digest by default [23], and Docker warns that a digest pin means you update by hand, and that
+"you're opting out of automated security fixes" ([images.md](images.md) section 4) [27].
 
 The file does nothing until the Renovate app or a Renovate runner is enabled for the repository;
-the Dependency Dashboard issue, which `config:recommended` turns on, shows that it runs.
+the Dependency Dashboard issue, which `config:recommended` turns on, shows that it runs [22].
+
+## 6. Sources
+
+Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
+
+- [1] Renovate — Docker datasource, `lib/modules/datasource/docker/index.ts` (`getDigest`), 44.164.10 — https://github.com/renovatebot/renovate/blob/44.164.10/lib/modules/datasource/docker/index.ts
+- [2] Docker — docker buildx imagetools inspect (CLI reference) — https://docs.docker.com/reference/cli/docker/buildx/imagetools/inspect/
+- [3] Astral — Configuring projects, Build systems, uv 0.13.1 — https://github.com/astral-sh/uv/blob/0.13.1/docs/concepts/projects/config.md
+- [4] Psycopg — Installation — https://www.psycopg.org/psycopg3/docs/basic/install.html
+- [5] Python Packaging Authority — pyproject.toml specification, `readme` — https://packaging.python.org/en/latest/specifications/pyproject-toml/#readme
+- [6] Tõnis Tiigi — fsutil `filter.go`, the build-context filter BuildKit uses — https://github.com/tonistiigi/fsutil/blob/468ba298314d055d18a6887781b2517dfc6ec9e0/filter.go
+- [7] Moby project — go-archive `archive.go`, which the Docker CLI's classic build path uses to pack the context — https://github.com/moby/go-archive/blob/66cf06fd9d1f416faec05a3ed241b702e8941a85/archive.go
+- [8] Docker — Custom Dockerfile syntax (BuildKit frontend) — https://docs.docker.com/build/buildkit/frontend/
+- [9] Docker — Checking your build configuration (build checks) — https://docs.docker.com/build/checks/
+- [10] Renovate — Dockerfile manager, 44.164.10 — https://github.com/renovatebot/renovate/blob/44.164.10/lib/modules/manager/dockerfile/readme.md
+- [11] GitHub — Guidance for the configuration of private registries for Dependabot — https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/manage-your-dependency-security/configure-private-registries
+- [12] Docker Official Images — FAQ — https://github.com/docker-library/faq
+- [13] Docker Official Images — python (Docker Hub page) — https://hub.docker.com/_/python
+- [14] Astral — Using uv in Docker, uv 0.13.1 — https://github.com/astral-sh/uv/blob/0.13.1/docs/guides/integration/docker.md
+- [15] Astral — uv CLI reference, `uv sync` — https://docs.astral.sh/uv/reference/cli/#uv-sync
+- [16] Docker — Dockerfile reference (BuildKit `frontend/dockerfile/docs/reference.md`) — https://github.com/moby/buildkit/blob/f74a37c4c978e3d01a04540b39039442456d9c4c/frontend/dockerfile/docs/reference.md
+- [17] Astral — uv-docker-example (`multistage.Dockerfile`, `Dockerfile`) — https://github.com/astral-sh/uv-docker-example/tree/3c23b2cd3a2baf090d52ba2a5699249ab9499808
+- [18] Python Software Foundation — Command line and environment, Python 3.14 — https://docs.python.org/3.14/using/cmdline.html#envvar-PYTHONUNBUFFERED
+- [19] Uvicorn — `uvicorn/server.py`, the signal handlers — https://github.com/Kludex/uvicorn/blob/528a3ac5031bf777ccd966d74db3034fe99fd69c/uvicorn/server.py
+- [20] Astral — uv releases — https://github.com/astral-sh/uv/releases
+- [21] Moby BuildKit — releases (`dockerfile/1.28.0`) — https://github.com/moby/buildkit/releases/tag/dockerfile%2F1.28.0
+- [22] Renovate — Full config presets: `config:recommended` — https://docs.renovatebot.com/presets-config/#configrecommended
+- [23] Renovate — Configuration options: `pinDigests` — https://docs.renovatebot.com/configuration-options/#pindigests
+- [24] Renovate — Docker presets: `docker:pinDigests` — https://docs.renovatebot.com/presets-docker/#dockerpindigests
+- [25] Renovate — Helper presets: `helpers:pinGitHubActionDigests` — https://docs.renovatebot.com/presets-helpers/#helperspingithubactiondigests
+- [26] Renovate — Custom managers presets: `customManagers:dockerfileVersions` — https://docs.renovatebot.com/presets-customManagers/#custommanagersdockerfileversions
+- [27] Docker — Building best practices — https://docs.docker.com/build/building/best-practices/
