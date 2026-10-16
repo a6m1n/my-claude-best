@@ -95,6 +95,7 @@ services:
       - claude-config:/home/agent/.claude
     cap_drop: [ALL]  # the agent cannot change its own network rules (agent-containers.md section 6)
     security_opt: [no-new-privileges:true]  # no process gains privileges (agent-containers.md section 6)
+    # A runaway process fails here instead of stalling the host (agent-containers.md section 6).
     pids_limit: 1024
     mem_limit: 4g
     cpus: 2
@@ -109,7 +110,7 @@ services:
     # including ones it never uses, such as NET_RAW; a build that lists what Squid uses can keep
     # only those with cap_drop: [ALL] and cap_add.
     security_opt: [no-new-privileges:true]
-    pids_limit: 100
+    pids_limit: 100  # a fork loop stops here, not on the host (compose.md section 7)
     healthcheck:
       test: ["CMD", "squid", "-k", "check"]  # asks the running Squid whether it is up
       interval: 5s
@@ -152,6 +153,8 @@ wrote.
 # syntax=docker/dockerfile:1.28.0@sha256:...
 # check=error=true
 
+# The check line above makes a build check fail the build instead of warning (images.md
+# section 7).
 # An image the agent works in: one stage, its tools included (images.md section 12).
 # The project's own Python image, so the agent runs the code the way the service does.
 ARG PYTHON_IMAGE=python:3.13-slim-trixie@sha256:...
@@ -201,6 +204,8 @@ the proxy.
 # syntax=docker/dockerfile:1.28.0@sha256:...
 # check=error=true
 
+# The check line above makes a build check fail the build instead of warning (images.md
+# section 7).
 # A departure from images.md section 3: Squid comes as a Debian package, so there is no build
 # output to move into a second stage, and apt's lists stay in the cache mount, out of the layer.
 # The cost: apt and dpkg stay in the image.
@@ -218,6 +223,8 @@ COPY squid.conf /etc/squid/squid.conf
 # configuration before it switches; a docker exec into this container runs as root unless it
 # names a user. Squid keeps root as its saved user ID so it can switch back, so a flaw in its
 # request handling can act as root in this container.
+# -N keeps Squid in the foreground as the container's process; without it Squid moves to the
+# background and the container exits.
 CMD ["squid", "-N", "-f", "/etc/squid/squid.conf"]
 ```
 
@@ -247,6 +254,7 @@ acl allowed_hosts dstdomain -n api.anthropic.com
 # The package index the project installs from:
 acl allowed_hosts dstdomain -n pypi.org files.pythonhosted.org
 
+# CONNECT only to port 443, even to an allowed host: no tunnel to another port.
 acl SSL_ports port 443
 acl CONNECT method CONNECT
 
@@ -256,8 +264,10 @@ http_access deny all
 
 http_port 3128
 cache deny all
-# allowed and denied requests show in docker compose logs proxy
-access_log stdio:/dev/stdout
+# Allowed and denied requests go to a file the proxy user owns; Squid drops root before it
+# opens the log, so it cannot write to stdout. Read it with:
+# docker compose -p "$COMPOSE_PROJECT_NAME" exec proxy tail /var/log/squid/access.log
+access_log stdio:/var/log/squid/access.log
 ```
 
 It is good because the list is short and each host carries its reason: the agent's own API and
@@ -271,15 +281,18 @@ that leak.
 
 ```sh
 session=acme-agent-$(date +%Y%m%d-%H%M%S)   # one name for everything this session makes
+branch=feat/agent-task                      # git.md section 2's form; name it after the task
 
 # One session, one fresh clone that shares no file with your repository (agent-containers.md
 # section 7). For newer commits, end the session and clone again.
 # The clone sits outside every folder an editor has open (agent-containers.md section 7).
-git clone --no-local ~/work/acme ~/agent-sessions/$session
+# --branch main: the agent's branch is cut from main, whatever your checkout is on (git.md
+# section 2).
+git clone --no-local --branch main ~/work/acme ~/agent-sessions/$session
 # Its identity and branch, set by you before the agent first runs (git.md section 8).
 git -C ~/agent-sessions/$session config user.name "Acme Agent"
 git -C ~/agent-sessions/$session config user.email agent@example.com
-git -C ~/agent-sessions/$session switch --create agent-work
+git -C ~/agent-sessions/$session switch --create "$branch"
 
 export AGENT_WORKSPACE="$HOME/agent-sessions/$session"
 export COMPOSE_PROJECT_NAME="$session"   # one name per session: its own containers and volume
@@ -312,29 +325,31 @@ docker compose -p "$COMPOSE_PROJECT_NAME" exec agent python3 -c \
   "import socket; socket.create_connection(('1.1.1.1', 443), timeout=5)"  # fails: no route out
 
 # This container is the boundary, so the agent may run without approvals here.
-# Ask it to commit its work on the branch agent-work.
+# Ask it to commit its work on the branch $branch.
 docker compose -p "$COMPOSE_PROJECT_NAME" exec agent \
   claude --dangerously-skip-permissions
 
-# Nothing left behind: the bundle carries only commits on agent-work.
+# Nothing left behind: the bundle carries only commits on $branch.
 docker compose -p "$COMPOSE_PROJECT_NAME" exec agent \
-  git status --porcelain --branch   # one line: ## agent-work
+  git status --porcelain --branch   # one line: ## $branch
 docker compose -p "$COMPOSE_PROJECT_NAME" exec agent \
-  git branch --list                 # main and agent-work only
-# Anything more: ask the agent to commit it on agent-work, then check again.
+  git branch --list                 # main and $branch only
+# Anything more: ask the agent to commit it on $branch, then check again.
 
 # Take the work back as a bundle written outside the clone, so your git reads that one file.
 docker compose -p "$COMPOSE_PROJECT_NAME" exec -T agent \
-  git bundle create - main..agent-work > ~/agent-sessions/$session.bundle
+  git bundle create - main.."$branch" > ~/agent-sessions/$session.bundle
 git -C ~/work/acme bundle verify ~/agent-sessions/$session.bundle
-git -C ~/work/acme -c transfer.fsckObjects=true fetch ~/agent-sessions/$session.bundle agent-work
+# transfer.fsckObjects makes git check every object in the bundle before it stores it.
+git -C ~/work/acme -c transfer.fsckObjects=true fetch ~/agent-sessions/$session.bundle "$branch:$branch"
+# The work is now the branch $branch in your repository; the bundle and the clone can go.
 # These paths run on your host, or in CI as soon as you push: read every line of them first.
-git -C ~/work/acme diff --stat main...FETCH_HEAD -- \
+git -C ~/work/acme diff --stat main..."$branch" -- \
   .devcontainer .github .pre-commit-config.yaml Makefile .envrc .vscode .claude .mcp.json \
   .gemini .cursor .gitmodules \
   .githooks ':(glob)**/*compose*.y*ml' ':(glob)**/*Dockerfile*' ':(glob)**/conftest.py' \
   pyproject.toml uv.lock .python-version
-git -C ~/work/acme diff main...FETCH_HEAD
+git -C ~/work/acme diff main..."$branch"
 
 # End the session: the clone and the agent's volume hold what the agent wrote.
 # ${…:?} stops the command if the variable is empty, as in a new shell;

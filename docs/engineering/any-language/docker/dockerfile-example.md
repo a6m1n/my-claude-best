@@ -68,6 +68,8 @@ or a test fixture, stays out of every image until someone adds a line for it. In
 # syntax=docker/dockerfile:1.28.0@sha256:...
 # check=error=true
 
+# The check line above makes a build check fail the build instead of warning, so the build CI
+# runs is the lint gate (images.md section 7).
 # One Python image for both stages: a venv only works where its interpreter sits at the same
 # path (images.md section 11). Renovate updates the tag and the digest together.
 # The Docker Official Image, slim: most guides use it, and it is republished at least monthly;
@@ -78,12 +80,15 @@ FROM ${PYTHON_IMAGE} AS builder
 # uv runs in this stage only; the runtime stage never needs it.
 COPY --from=ghcr.io/astral-sh/uv:0.13.1@sha256:... /uv /bin/uv
 # Bytecode at build time: a faster start for a larger image (images.md section 11).
+# UV_LINK_MODE=copy copies files out of the cache mount instead of warning that it cannot link
+# them; UV_PYTHON_DOWNLOADS=0 makes uv use the image's Python, never a downloaded one.
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=0
 WORKDIR /app
 
-# Dependencies before the source, so an edit under src/ reuses this layer.
+# Dependencies before the source, so an edit under src/ reuses this layer. --locked stops the
+# build when uv.lock does not match pyproject.toml (images.md section 11).
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
@@ -102,6 +107,8 @@ RUN groupadd --gid 10001 app \
  && useradd --uid 10001 --gid app --create-home app
 # Owned by root: the process can read its code but cannot change it.
 COPY --from=builder /app/.venv /app/.venv
+# The venv's Python comes first on PATH; PYTHONUNBUFFERED=1 means a crash cannot swallow the last
+# log lines (images.md section 11).
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 USER 10001:10001

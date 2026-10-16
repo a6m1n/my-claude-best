@@ -39,7 +39,7 @@ services:
       - /tmp:mode=1770,uid=10001,gid=10001
     cap_drop: [ALL]  # the API needs no Linux capability (compose.md section 7)
     security_opt: [no-new-privileges:true]  # no process gains privileges (compose.md section 7)
-    pids_limit: 200
+    pids_limit: 200  # a fork loop stops here, not on the host (compose.md section 7)
 
   db:
     image: postgres:18-trixie@sha256:...
@@ -64,7 +64,7 @@ services:
     # capabilities stay, including ones it never uses, such as NET_RAW; a build that lists what
     # the entrypoint uses can keep only those with cap_drop: [ALL] and cap_add.
     security_opt: [no-new-privileges:true]
-    pids_limit: 200
+    pids_limit: 200  # a fork loop stops here, not on the host (compose.md section 7)
     # No published port: only the api service reaches the database.
 
 volumes:
