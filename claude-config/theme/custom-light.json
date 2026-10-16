@@ -1,0 +1,22 @@
+{
+  "name": "custom_light",
+  "base": "light",
+  "overrides": {
+    "background": "rgb(0,153,153)",
+    "selectionBg": "#EAD9FB",
+    "briefLabelClaude": "#C2185B",
+    "clawd_body": "#A974E6",
+    "claudeShimmer": "#E8559A",
+    "claude": "#C2185B",
+    "userMessageBackground": "#F5EEFC",
+    "inactive": "#5E5873",
+    "inactiveShimmer": "#A49EB8",
+    "subtle": "#7E7894",
+    "diffAdded": "#E6F6EA",
+    "diffRemoved": "#FBE7EC",
+    "diffAddedWord": "#C6EBD0",
+    "diffRemovedWord": "#F5C9D5",
+    "diffAddedDimmed": "#F1FAF3",
+    "diffRemovedDimmed": "#FDF1F4"
+  }
+}
