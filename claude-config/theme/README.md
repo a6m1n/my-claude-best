@@ -13,7 +13,7 @@ A light and a dark custom theme for Claude Code, and a hook script that picks th
 
 Files: [install.md](install.md) (how to set it up, by hand or with one paste) · [custom-light.json](custom-light.json) · [custom-dark.json](custom-dark.json) · [custom-auto.json](custom-auto.json) (the three themes) · [theme-follow-appearance.sh](theme-follow-appearance.sh) (the hook script) · [img/clawd.svg](img/clawd.svg) and [img/clawd-icon.svg](img/clawd-icon.svg) (the pictures; the icon is in the title of the root README)
 
-![Clawd, the Claude Code mascot, in the lavender this theme gives it in dark mode, beside the name my-claude-best](img/clawd.svg)
+![Clawd, the Claude Code mascot, as a samurai general in a hannya mask, beside the name my-claude-best](img/clawd.svg)
 
 It is three JSON files, one shell script and two keys in `settings.json`, for macOS. Set it up [by hand](install.md#set-it-up-by-hand) or [with one paste](install.md#install-with-one-paste); to remove it, see [Undo](install.md#undo).
 
