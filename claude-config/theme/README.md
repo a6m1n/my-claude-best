@@ -55,7 +55,7 @@ A theme file has three fields:
 | `briefLabelClaude` | The `Claude` label on Claude's messages | `#C2185B` | `#F4C2C2` |
 | `clawd_body` | The body of Clawd, the mascot on the start screen | `#A974E6` | `#D09AF9` |
 | `background` | A teal accent on some markers and dialogs | `rgb(0,153,153)` | `rgb(0,204,200)` |
-| `userMessageBackground` | The background behind your messages | `#F5EEFC` | `#2a2a2a` |
+| `userMessageBackground` | The background behind your messages | `#EEEEEE` | `#2a2a2a` |
 | `selectionBg` | Text you select with the mouse, in fullscreen mode | `#EAD9FB` | `#3a3a3a` |
 | `inactive` | Hints, timestamps and disabled items | `#5E5873` | preset |
 | `inactiveShimmer` | The moving gradient on `inactive` text | `#A49EB8` | preset |
