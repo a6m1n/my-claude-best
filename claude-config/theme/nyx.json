@@ -1,5 +1,5 @@
 {
-  "name": "custom_dark",
+  "name": "Nyx",
   "base": "dark-ansi",
   "overrides": {
     "background": "rgb(0,204,200)",

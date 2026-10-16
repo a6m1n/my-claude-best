@@ -1,5 +1,5 @@
 {
-  "name": "custom_light",
+  "name": "Eos",
   "base": "light",
   "overrides": {
     "background": "rgb(0,153,153)",
@@ -8,7 +8,7 @@
     "clawd_body": "#A974E6",
     "claudeShimmer": "#E8559A",
     "claude": "#C2185B",
-    "userMessageBackground": "#F5EEFC",
+    "userMessageBackground": "#EEEEEE",
     "inactive": "#5E5873",
     "inactiveShimmer": "#A49EB8",
     "subtle": "#7E7894",
