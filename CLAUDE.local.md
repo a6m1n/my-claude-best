@@ -152,8 +152,9 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   meeting it plans names the decision it makes (`meetings.md` section 1), and every release it
   plans has one go or no-go decider (`release.md` section 3) and a rollback plan with a trigger,
   one decider and a time that fits the SLA (`rollback-plan.md` section 2).
-- Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
-  first. The check: the closing summary names it.
+- Before you start the research for a new practice or for a new rules file in one, or create or
+  edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md` first. The check:
+  the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`
   defines one), read the rules on examples in `docs/engineering/CLAUDE.md` and work by them. When
   you brief a subagent to write or change one, quote that file's two bullets on GOOD examples and

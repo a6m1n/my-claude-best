@@ -73,7 +73,7 @@ What it does not do:
 
 - The agent reads a practice only when the work needs it. Your `CLAUDE.md` holds one trigger line per practice, not the rules themselves, so it stays short.
 - Each rule is one act at one moment, such as "before you stage" or "when you add a log call", and a new or changed rule gives its reason. An agent can follow it, a reviewer can check that it did, and a reader can tell when it does not apply.
-- Every rule comes from public practice, never from what one codebase happens to do. Most practices end with the sources behind their rules.
+- Every rule comes from public practice, never from what one codebase happens to do. Most practices end with the sources behind their rules. A new practice starts from web research, marks each sentence that rests on a source with a numbered note, and says on the source's line whether it is research, a case or an opinion.
 - A good example follows every practice that governs what it shows, not only the one it illustrates. You, or your agent, will copy the example and not the rules around it, so each new practice reaches every example written after it. A line you might otherwise change or delete carries its reason in a comment, which comes along when you copy the code. A bad example names its problem and sits next to the fixed version.
 - You can change a copied practice for your project and still take later updates from this one. With Claude Code, two skills in `skills/` record why your copy differs and keep those changes when they merge new commits.
 - It works with any agent that reads `CLAUDE.md` or `AGENTS.md`, not only Claude Code.
