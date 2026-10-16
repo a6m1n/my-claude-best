@@ -1,5 +1,5 @@
 {
-  "name": "custom_light",
+  "name": "Eos",
   "base": "light",
   "overrides": {
     "background": "rgb(0,153,153)",

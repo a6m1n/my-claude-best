@@ -1,6 +1,6 @@
-# Auto theme
+# Eos and Nyx
 
-A light and a dark custom theme for Claude Code, and a hook script that picks the one matching the macOS light or dark mode at each session start.
+Two custom themes for Claude Code, the light Eos and the dark Nyx, and a hook script that picks the one matching the macOS light or dark mode at each session start. Eos is the Greek goddess of dawn, and Nyx the goddess of night.
 
 **Navigation**
 
@@ -11,7 +11,7 @@ A light and a dark custom theme for Claude Code, and a hook script that picks th
 - [Limits](#limits)
 - [Sources](#sources)
 
-Files: [install.md](install.md) (how to set it up, by hand or with one paste) · [custom-light.json](custom-light.json) · [custom-dark.json](custom-dark.json) · [custom-auto.json](custom-auto.json) (the three themes) · [theme-follow-appearance.sh](theme-follow-appearance.sh) (the hook script) · [img/clawd.svg](img/clawd.svg) and [img/clawd-icon.svg](img/clawd-icon.svg) (the pictures; the icon is in the title of the root README)
+Files: [install.md](install.md) (how to set it up, by hand or with one paste) · [eos.json](eos.json) · [nyx.json](nyx.json) · [eos-nyx.json](eos-nyx.json) (the three themes) · [theme-follow-appearance.sh](theme-follow-appearance.sh) (the hook script) · [img/clawd.svg](img/clawd.svg) and [img/clawd-icon.svg](img/clawd-icon.svg) (the pictures; the icon is in the title of the root README)
 
 ![Clawd, the Claude Code mascot, as a samurai general in a hannya mask, beside the name my-claude-best](img/clawd.svg)
 
@@ -21,20 +21,20 @@ It is three JSON files, one shell script and two keys in `settings.json`, for ma
 
 Claude Code's own `auto` theme follows the light or dark background of your terminal, but it switches only between the built-in themes. A custom theme cannot point at two other custom themes either: its `base` names a built-in preset only. So the switch happens in a file:
 
-1. `settings.json` selects one custom theme, `custom:custom-auto`.
-2. At each session start, the hook script asks macOS whether it is in dark mode, and copies `custom-dark.json` or `custom-light.json` over `custom-auto.json`.
+1. `settings.json` selects one custom theme, `custom:eos-nyx`.
+2. At each session start, the hook script asks macOS whether it is in dark mode, and copies `nyx.json` or `eos.json` over `eos-nyx.json`.
 3. Claude Code watches its themes folder and reloads a changed theme file in every open session, so all your sessions change colour together.
 
 ## What each file is
 
 | File | What it is | Where it goes |
 |---|---|---|
-| `custom-light.json` | The light theme, built on the `light` preset. | `~/.claude/themes/` |
-| `custom-dark.json` | The dark theme, built on the `dark-ansi` preset. | `~/.claude/themes/` |
-| `custom-auto.json` | The theme Claude Code shows: a copy of one of the two above. The script rewrites it, and its name says which one it is: `custom_auto (dark)` or `custom_auto (light)`. | `~/.claude/themes/` |
-| `theme-follow-appearance.sh` | The `SessionStart` hook that rewrites `custom-auto.json`. | `~/.claude/hooks/` |
+| `eos.json` | Eos, the light theme, built on the `light` preset. | `~/.claude/themes/` |
+| `nyx.json` | Nyx, the dark theme, built on the `dark-ansi` preset. | `~/.claude/themes/` |
+| `eos-nyx.json` | The theme Claude Code shows: a copy of one of the two above. The script rewrites it, and its name says which one it is: `Nyx (auto)` or `Eos (auto)`. | `~/.claude/themes/` |
+| `theme-follow-appearance.sh` | The `SessionStart` hook that rewrites `eos-nyx.json`. | `~/.claude/hooks/` |
 
-Change your colours in `custom-light.json` and `custom-dark.json`, never in `custom-auto.json`: the script overwrites it. The file name without `.json` is the theme's name in settings, so `custom-auto.json` is `custom:custom-auto`. When `CLAUDE_CONFIG_DIR` is set, the files go to that folder instead of `~/.claude`.
+Change your colours in `eos.json` and `nyx.json`, never in `eos-nyx.json`: the script overwrites it. The file name without `.json` is the theme's name in settings, so `eos-nyx.json` is `custom:eos-nyx`. When `CLAUDE_CONFIG_DIR` is set, the files go to that folder instead of `~/.claude`.
 
 ## What the themes change
 
@@ -73,9 +73,9 @@ A theme file has three fields:
 
 | Moment | What happens |
 |---|---|
-| You start a session, resume one, run `/clear`, compact or fork | The hook runs and `custom-auto.json` follows macOS. |
-| macOS switches while a session is open | Nothing yet. Start a new session in any window, or run `/clear`: every open session that uses `custom:custom-auto` then changes too. |
-| You edit `custom-light.json` or `custom-dark.json` | `custom-auto.json` gets the change at the next session start, or at once if you run the script by hand. |
+| You start a session, resume one, run `/clear`, compact or fork | The hook runs and `eos-nyx.json` follows macOS. |
+| macOS switches while a session is open | Nothing yet. Start a new session in any window, or run `/clear`: every open session that uses `custom:eos-nyx` then changes too. |
+| You edit `eos.json` or `nyx.json` | `eos-nyx.json` gets the change at the next session start, or at once if you run the script by hand. |
 
 Claude Code's built-in `auto` theme follows the terminal at once, but only with the built-in themes. This module trades that for your own colours.
 
@@ -83,9 +83,9 @@ Claude Code's built-in `auto` theme follows the terminal at once, but only with 
 
 - macOS only. The script reads `defaults read -g AppleInterfaceStyle`; without macOS it always picks the light theme.
 - It reads the macOS setting, not your terminal's background. Use a terminal profile that follows the system appearance (in Terminal, the Basic profile does); with a fixed white or black profile the theme can disagree with the screen.
-- It finds the label to rewrite by a line that starts with `"name":`. Keep `name` on its own line in your two files; without such a line, `custom-auto.json` keeps the source's label.
+- It finds the label to rewrite by a line that starts with `"name":`. Keep `name` on its own line in your two files; without such a line, `eos-nyx.json` keeps the source's label.
 - When it fails, for example when a theme file is missing, Claude Code shows a "SessionStart:startup hook error" notice with the script's one-line reason, and the session keeps the theme it had.
-- The script does not check the JSON: a broken light or dark file is copied as it is. If the theme does not load (Claude Code shows its default dark colours, or `/theme` does not list `custom_auto`), check that each theme file is valid JSON: `python3 -m json.tool ~/.claude/themes/custom-light.json`, then the same for `custom-dark.json` and `custom-auto.json`.
+- The script does not check the JSON: a broken light or dark file is copied as it is. If the theme does not load (Claude Code shows its default dark colours, or `/theme` does not list `Eos (auto)` or `Nyx (auto)`), check that each theme file is valid JSON: `python3 -m json.tool ~/.claude/themes/eos.json`, then the same for `nyx.json` and `eos-nyx.json`.
 - `background` and `clawd_body` are not in the token list of the Claude Code docs; Claude Code 2.1.301 uses both. If a later version renames one, that colour falls back to the preset and nothing else breaks.
 
 ## Sources

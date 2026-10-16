@@ -54,7 +54,7 @@ More parts are about Claude Code itself:
 
 - [The status line](claude-config/statusline/) — context, usage limits, the prompt cache and each agent's progress, under the Claude Code prompt.
 - [Local project settings](claude-config/settings-local/) — a `settings.local.json` with the commands that run without a prompt, a hook that stops Claude from reading `.env` files, and a higher web search cap, each field explained.
-- [The auto theme](claude-config/theme/README.md) — a light and a dark custom theme for Claude Code, and a hook that picks the one matching the macOS light or dark mode at each session start.
+- [Eos and Nyx](claude-config/theme/README.md) — a light and a dark custom theme for Claude Code, and a hook that picks the one matching the macOS light or dark mode at each session start.
 - [The CLAUDE.md guide](docs/claude-code/claude-md.md) — what belongs in a `CLAUDE.md` and what does not.
 - [Two skills for a copied practice](skills/README.md) — copy a practice in, record why your copy differs, and merge new commits from this repository without losing your changes.
 - [The meta-thinking skill](skills/meta-thinking/) — before a large task starts, an independent agent asks you only what the code cannot answer and proposes one route, step by step.
@@ -165,7 +165,7 @@ my-claude-best/
 ├── claude-config/
 │   ├── statusline/        # the status line: the script, its install guide, its images
 │   ├── settings-local/    # a project settings.local.json and its .env hook, field by field
-│   └── theme/             # the auto theme: two themes, the copy Claude Code shows, the hook script, two pictures
+│   └── theme/             # Eos and Nyx: two themes, the copy Claude Code shows, the hook script, two pictures
 ├── skills/                # skills to read and copy into a .claude/skills/ folder
 ├── CLAUDE.local.md        # an example practices section for a project CLAUDE.md
 ├── CONTRIBUTING.md

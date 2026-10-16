@@ -1,17 +1,17 @@
 #!/bin/sh
-# Claude Code SessionStart hook: keeps themes/custom-auto.json a copy of custom-light.json or
-# custom-dark.json, picked by the macOS appearance. Claude Code reloads a changed theme file live,
-# so every open session that uses custom:custom-auto follows. Edit the light/dark files, never the copy.
+# Claude Code SessionStart hook: keeps themes/eos-nyx.json a copy of eos.json (light) or nyx.json
+# (dark), picked by the macOS appearance. Claude Code reloads a changed theme file live, so every
+# open session that uses custom:eos-nyx follows. Edit eos.json and nyx.json, never the copy.
 #
 # Why it exists: Claude Code's own "theme": "auto" switches only between the built-in light and
 # dark themes, and a custom theme's "base" can name only a built-in preset, not another custom
-# theme. So settings.json selects custom:custom-auto, and this script swaps that file's content.
+# theme. So settings.json selects custom:eos-nyx, and this script swaps that file's content.
 #
 # Wired in: settings.json -> hooks.SessionStart with no matcher, so it runs on every session
 # source: startup, resume, /clear, compact and fork.
 # Run by hand to switch now: ~/.claude/hooks/theme-follow-appearance.sh
-# Undo: delete the SessionStart entry, set "theme" back to e.g. custom:custom-light, delete
-# themes/custom-auto.json and this script.
+# Undo: delete the SessionStart entry, set "theme" back to e.g. custom:eos, delete
+# themes/eos-nyx.json and this script.
 #
 # Prints nothing on stdout, because SessionStart adds stdout to Claude's context. On success it
 # exits 0. On a failure it writes one line to stderr and exits 1: Claude Code then shows a
@@ -27,12 +27,14 @@
 # that is set, ~/.claude otherwise.
 dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/themes"
 if [ "$(defaults read -g AppleInterfaceStyle 2>/dev/null)" = "Dark" ]; then
-  mode=dark
+  theme=nyx
+  label=Nyx
 else
-  mode=light
+  theme=eos
+  label=Eos
 fi
-src="$dir/custom-$mode.json"
-dst="$dir/custom-auto.json"
+src="$dir/$theme.json"
+dst="$dir/eos-nyx.json"
 
 if [ ! -r "$src" ]; then
   echo "theme-follow-appearance: cannot read $src" >&2
@@ -40,8 +42,8 @@ if [ ! -r "$src" ]; then
 fi
 
 # Build outside the watched folder, then rename into place, so Claude Code never sees a half-written file.
-tmp=$(mktemp "${TMPDIR:-/tmp}/custom-auto.XXXXXX" 2>/dev/null) || { echo "theme-follow-appearance: cannot create a temp file in ${TMPDIR:-/tmp}" >&2; exit 1; }
-if ! sed -E "s/^([[:space:]]*\"name\"[[:space:]]*:[[:space:]]*)\"[^\"]*\"/\1\"custom_auto ($mode)\"/" "$src" > "$tmp" 2>/dev/null; then
+tmp=$(mktemp "${TMPDIR:-/tmp}/eos-nyx.XXXXXX" 2>/dev/null) || { echo "theme-follow-appearance: cannot create a temp file in ${TMPDIR:-/tmp}" >&2; exit 1; }
+if ! sed -E "s/^([[:space:]]*\"name\"[[:space:]]*:[[:space:]]*)\"[^\"]*\"/\1\"$label (auto)\"/" "$src" > "$tmp" 2>/dev/null; then
   echo "theme-follow-appearance: failed to build $dst from $src" >&2
   rm -f "$tmp"
   exit 1
