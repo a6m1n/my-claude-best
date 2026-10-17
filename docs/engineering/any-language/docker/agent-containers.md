@@ -38,9 +38,8 @@ Why it matters:
   container, including the Claude Code credentials" [2]. GitHub calls its agent firewall not "a
   comprehensive security solution" [3]. Microsoft: a dev container's "boundary depends on the
   container configuration" [4].
-- Researchers have sent data out through every kind of allowed address: the model provider's own
-  API [5], a package registry, a model hub's download counter [6], GitHub [7], a cloud subdomain
-  anyone can rent.
+- Researchers have sent data out through addresses an allowlist lets through: the model
+  provider's own API [5], a model hub's download counter [6] and GitHub [7].
 
 ## 2. What a container protects, and what it does not
 
@@ -251,7 +250,9 @@ list fails with 403.
 ## 9. Dev containers
 
 A dev container is a container described by `.devcontainer/devcontainer.json`, which VS Code and
-the `devcontainer` command-line tool build and start.
+the `devcontainer` command-line tool build and start. This section covers the agent's; a dev
+container a person works in, and whether a team needs one at all, is
+[dev-containers.md](dev-containers.md).
 
 - **Never open a repository you do not trust in a dev container.** Its `devcontainer.json` can set
   `initializeCommand`, which runs on your host, with your rights, before any container exists [59].
@@ -372,14 +373,14 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [28] PromptArmor Threat Intelligence — What domains should I add to my allowlist? (PromptArmor, 2026; opinion) — https://www.promptarmor.com/resources/what-domains-should-i-add-to-my-allowlist
 - [29] Simon Willison — Google Antigravity Exfiltrates Data (simonwillison.net, 2025; opinion) — https://simonwillison.net/2025/Nov/25/google-antigravity-exfiltrates-data/
 - [30] Anthropic — `.devcontainer/init-firewall.sh` (anthropics/claude-code) — https://github.com/anthropics/claude-code/blob/d945a61bc6346abce607252d5667df8a3bf0461a/.devcontainer/init-firewall.sh
-- [31] Ilan Goldfeld — Devcontainer firewall allows DNS to arbitrary servers — enables data exfiltration via DNS tunneling (anthropics/claude-code issue #36907, 2026; case) — https://github.com/anthropics/claude-code/issues/36907
+- [31] Ilan Goldfeld — Devcontainer firewall allows DNS to arbitrary servers — enables data exfiltration via DNS tunneling (GitHub, anthropics/claude-code issue #36907, 2026; case) — https://github.com/anthropics/claude-code/issues/36907
 - [32] Moby project — GHSA-mq39-4gv4-mvpx, External DNS requests from 'internal' networks could lead to data exfiltration (CVE-2024-29018) — https://github.com/moby/moby/security/advisories/GHSA-mq39-4gv4-mvpx
 - [33] Anthropic — Sandboxing (Claude Code docs) — https://code.claude.com/docs/en/sandboxing
 - [34] Wikipedia — Domain fronting — https://en.wikipedia.org/wiki/Domain_fronting
 - [35] Trail of Bits — claude-code-devcontainer (`README.md`, `devcontainer.json`) — https://github.com/trailofbits/claude-code-devcontainer/tree/feea113719e50c8820ce5d0f11f2b0abb01d32a4
-- [36] dpolakovics — Container runs exhaust the pids cap with zombies: the provider CLI is PID 1 and never reaps orphans (Cloonar/coding-lab issue #64, 2026; case) — https://github.com/Cloonar/coding-lab/issues/64
-- [37] Łukasz Bacik — Agent containers run without an init process; orphaned zombies exhaust pids.max and fail every attempt (lbacik/agent-forge issue #9, 2026; case) — https://github.com/lbacik/agent-forge/issues/9
-- [38] Daniel Rapp — Agent container has no init: orphaned processes become permanent zombies and exhaust --pids-limit 512, killing long-lived sessions (rappdw/sandy issue #392, 2026; case) — https://github.com/rappdw/sandy/issues/392
+- [36] dpolakovics — Container runs exhaust the pids cap with zombies: the provider CLI is PID 1 and never reaps orphans (GitHub, Cloonar/coding-lab issue #64, 2026; case) — https://github.com/Cloonar/coding-lab/issues/64
+- [37] Łukasz Bacik — Agent containers run without an init process; orphaned zombies exhaust pids.max and fail every attempt (GitHub, lbacik/agent-forge issue #9, 2026; case) — https://github.com/lbacik/agent-forge/issues/9
+- [38] Daniel Rapp — Agent container has no init: orphaned processes become permanent zombies and exhaust --pids-limit 512, killing long-lived sessions (GitHub, rappdw/sandy issue #392, 2026; case) — https://github.com/rappdw/sandy/issues/392
 - [39] Git — gitrepository-layout, v2.56.0 — https://github.com/git/git/blob/v2.56.0/Documentation/gitrepository-layout.adoc
 - [40] Git — git-worktree, v2.56.0 — https://github.com/git/git/blob/v2.56.0/Documentation/git-worktree.adoc
 - [41] Git — git-config (`core.fsmonitor`, `safe.directory`, `uploadpack.packObjectsHook`, `worktree.useRelativePaths`), v2.56.0 — https://github.com/git/git/tree/v2.56.0/Documentation/config
@@ -407,8 +408,8 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [63] Microsoft — Visual Studio Code 1.118 release notes — https://code.visualstudio.com/updates/v1_118
 - [64] Microsoft — Sharing Git credentials with your container (VS Code docs) — https://code.visualstudio.com/remote/advancedcontainers/sharing-git-credentials
 - [65] matta — Leveraging VSCode internals to escape containers (The Red Guild blog, 2025; case) — https://blog.theredguild.org/leveraging-vscode-internals-to-escape-containers/
-- [66] Christof Marti — replies in "SSH still available in container even I disable `forwardWSLServices`" (microsoft/vscode-remote-release issue #9897, 2024; opinion) — https://github.com/microsoft/vscode-remote-release/issues/9897
-- [67] Christof Marti — reply in "How to use ssh-agent from devcontainer CLI ?" (devcontainers/cli issue #441, 2023; opinion) — https://github.com/devcontainers/cli/issues/441
+- [66] Christof Marti — replies in "SSH still available in container even I disable `forwardWSLServices`" (GitHub, microsoft/vscode-remote-release issue #9897, 2024; opinion) — https://github.com/microsoft/vscode-remote-release/issues/9897
+- [67] Christof Marti — reply in "How to use ssh-agent from devcontainer CLI ?" (GitHub, devcontainers/cli issue #441, 2023; opinion) — https://github.com/devcontainers/cli/issues/441
 - [68] Anthropic — Advanced setup, install with npm (Claude Code docs) — https://code.claude.com/docs/en/setup
 - [69] Anthropic — Settings reference (Claude Code docs) — https://code.claude.com/docs/en/settings-reference
 - [70] Anthropic — Managed settings (Claude Code docs) — https://code.claude.com/docs/en/managed-settings
@@ -418,4 +419,4 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [74] Git — Git 2.48 release notes, v2.56.0 tree — https://github.com/git/git/blob/v2.56.0/Documentation/RelNotes/2.48.0.adoc
 - [75] OpenAI — Cloud environment (Codex docs) — https://learn.chatgpt.com/docs/environments/cloud-environment
 - [76] Docker — Docker Sandboxes release notes — https://docs.docker.com/ai/sandboxes/release-notes/
-- [77] cristian-popa — comment in "postStartCommand silently skipped when git-credential-sharing copy fails, and dev.containers.copyGitConfig=false doesn't suppress the attempt" (microsoft/vscode-remote-release issue #11869, 2026; case) — https://github.com/microsoft/vscode-remote-release/issues/11869#issuecomment-5803453093
+- [77] cristian-popa — comment in "postStartCommand silently skipped when git-credential-sharing copy fails, and dev.containers.copyGitConfig=false doesn't suppress the attempt" (GitHub, microsoft/vscode-remote-release issue #11869, 2026; case) — https://github.com/microsoft/vscode-remote-release/issues/11869#issuecomment-5803453093

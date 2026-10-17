@@ -38,7 +38,6 @@ are placeholders for your own folders.
   "dockerComposeFile": "compose.yaml",
   "service": "agent",
   "workspaceFolder": "/workspace",
-  "shutdownAction": "stopCompose",
   // Clears the variables an attached IDE would set; its forwarded sockets stay
   // (agent-containers.md section 9), so attach none.
   "remoteEnv": { "SSH_AUTH_SOCK": "", "GPG_AGENT_INFO": "" }
@@ -57,9 +56,7 @@ either, because its folder is never mounted into the agent's container.
 ```yaml
 services:
   agent:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     # Keeps the container up for docker compose exec: with a Compose file the image's own
     # command runs, and python3 exits at once.
     command: ["sleep", "infinity"]
@@ -91,7 +88,11 @@ services:
     volumes:
       # The agent's own clone, never your repository and never this folder, which the host reads
       # at every start (agent-containers.md section 9).
-      - ${AGENT_WORKSPACE:?set it to the agent's clone}:/workspace
+      - type: bind
+        source: ${AGENT_WORKSPACE:?set it to the agent's clone}
+        target: /workspace
+        bind:
+          create_host_path: false  # a wrong path fails instead of creating an empty folder (compose-keys.md section 4)
       # The agent's settings and session data; count the volume as a secret.
       - claude-config:/home/agent/.claude
     cap_drop: [ALL]  # the agent cannot change its own network rules (agent-containers.md section 6)
@@ -103,10 +104,9 @@ services:
 
   proxy:
     build:
-      context: .
       dockerfile: proxy.Dockerfile
     networks: [sandbox, egress]  # the only service on both networks
-    # A departure from compose.md section 7 (cap_drop: [ALL]): Squid starts as root and switches
+    # Not every key of compose.md section 7 (section 10): Squid starts as root and switches
     # to its own user, which needs root powers. The cost: Docker's default capabilities stay,
     # including ones it never uses, such as NET_RAW; a build that lists what Squid uses can keep
     # only those with cap_drop: [ALL] and cap_add.
@@ -132,13 +132,13 @@ volumes:
 |---|---|
 | `networks: [sandbox]` with `internal: true` | the agent's container has no route out [2]; a tool that ignores `HTTPS_PROXY` fails instead of going around the proxy. The host's gateway stays reachable, so host services the agent must not reach listen on `127.0.0.1` only ([agent-containers.md](agent-containers.md) section 5) [3] |
 | `proxy` on `sandbox` and `egress` | one way out, which reads the allowlist of section 4 |
-| `command: ["sleep", "infinity"]` | keeps the container up for `docker compose exec`: with a Compose file the image's own command runs, and here that is `python3` [4], [5]. With no input, `python3` exits at once |
+| `command: ["sleep", "infinity"]` | keeps the container up for `docker compose exec`: with a Compose file the image's own command runs, and here that is `python3` [4], [5]. With no input, `python3` exits at once [25] |
 | `depends_on` the `proxy` with `service_healthy`, and the proxy's `healthcheck` | the agent starts once Squid answers, so its first request does not fail ([compose.md](compose.md) section 3) [6] |
 | no mount of `~/.ssh`, `~/.gitconfig`, `~/.aws` or the Docker socket | the container holds no host credential and cannot drive the host's Docker |
 | `ANTHROPIC_API_KEY` from `AGENT_ANTHROPIC_API_KEY` | a declared departure: a key you can revoke alone, in the environment because this example leaves out the gateway Anthropic's guide recommends (`ANTHROPIC_BASE_URL`) [7], a third service that holds the key and needs its own pinned image, and Squid cannot add the key, since it does not terminate TLS; there `docker inspect` and every process the agent starts can see it |
 | `init: true`, `pids_limit`, `mem_limit`, `cpus` | zombie processes are reaped, and a runaway process fails instead of stalling the host [8] |
 | `cap_drop: [ALL]`, `no-new-privileges` | the agent cannot change its own network rules or gain privileges |
-| `DISABLE_AUTOUPDATER`, `DISABLE_TELEMETRY`, `DISABLE_ERROR_REPORTING` | the agent stays at the version in the image [10], and the two Datadog hosts are switched off [9]. It then needs no host beyond the API |
+| `DISABLE_AUTOUPDATER`, `DISABLE_TELEMETRY`, `DISABLE_ERROR_REPORTING` | the agent stays at the version in the image [10], and the two Datadog hosts are switched off [9] |
 | the project name, from `COMPOSE_PROJECT_NAME` set once per session (section 5) | the `devcontainer` tool and Compose both read it, so each session gets its own containers and networks; section 5 reaches them with `docker compose -p`, never `devcontainer exec`, which picks a container by labels two sessions share [11], [12] |
 | the `claude-config` volume | Compose names a volume after its project (`<session>_claude-config`), so each session gets its own, and `docker compose down --volumes` removes it with the session [13], [14] |
 
@@ -165,7 +165,8 @@ FROM ${PYTHON_IMAGE}
 RUN rm -f /etc/apt/apt.conf.d/docker-clean; \
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 # Cache mounts speed up the local builds devcontainer up runs (images.md section 3).
-# Debian's Node.js 20 is below the npm package's floor of 22: npm warns (EBADENGINE) and installs.
+# Debian's Node.js 20 is below the npm package's floor of 22: npm warns (EBADENGINE) and installs
+# (agent-containers.md section 9).
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update \
@@ -190,6 +191,8 @@ RUN groupadd --gid 1000 agent \
  && install --directory --owner agent --group agent /home/agent/.claude
 # No sudo, no NET_ADMIN: the agent cannot change the rules that confine it.
 USER agent
+# docker compose exec and claude start in the clone, so git and the agent find it
+# (dockerfile-instructions.md section 3).
 WORKDIR /workspace
 ```
 
@@ -197,9 +200,8 @@ It is good because the agent's version is fixed in the image, the agent runs as 
 nothing outside its home and the clone, and the image installs no tool that could open a way past
 the proxy. Debian's Docker Official Image is built from debuerreotype's artifacts [20], and
 debuerreotype writes an APT configuration, `docker-clean`, that deletes downloaded packages after
-every `dpkg` run [21]. Debian trixie packages Node.js 20 [22], and the Claude Code npm package
-requires Node.js 22 or later; on an older version npm prints an `EBADENGINE` warning and the
-install completes [23].
+every `dpkg` run [21]. Debian trixie packages Node.js 20 [22], below the Node.js floor of the npm
+package that [agent-containers.md](agent-containers.md) section 9 gives.
 
 ## 4. The proxy
 
@@ -223,6 +225,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update \
  && apt-get install --yes --no-install-recommends squid
 COPY squid.conf /etc/squid/squid.conf
+# The port the agent's HTTPS_PROXY and HTTP_PROXY point at (dockerfile-instructions.md section 3).
+EXPOSE 3128
 # No USER line, a departure from images.md section 6: Squid starts as root and switches to its
 # own "proxy" user itself. The cost: the container starts as root, and Squid reads its
 # configuration before it switches; a docker exec into this container runs as root unless it
@@ -268,6 +272,9 @@ http_access deny CONNECT !SSL_ports
 http_access allow allowed_hosts
 http_access deny all
 
+# Squid waits 30 s after SIGTERM by default; Docker kills it after 10 s
+# (compose-keys.md section 4, stop_grace_period). Its one client stops with it.
+shutdown_lifetime 1 seconds
 http_port 3128
 cache deny all
 # Allowed and denied requests go to a file the proxy user owns; Squid drops root before it
@@ -281,7 +288,9 @@ the one package index. GitHub, paste sites and wildcard domains are left out, so
 push code or post data there. The proxy resolves every outside name. The agent's container uses
 Docker's embedded DNS only to find `proxy`. On an internal network that resolver once forwarded
 other names too [16]; [agent-containers.md](agent-containers.md) section 5 names the Docker releases
-that leak.
+that leak. Squid waits `shutdown_lifetime`, 30 seconds by default, after SIGTERM [26], longer than
+the 10 seconds Compose waits before it kills ([compose-keys.md](compose-keys.md) section 4), so the
+file sets 1 second.
 
 ## 5. Run it, and take the work back
 
@@ -374,7 +383,7 @@ anything itself.
 
 What this example does not claim: it was not built or run when it was written. The host list
 assumes an API key; a claude.ai login also needs the sign-in hosts on Claude Code's network access
-page [9]. Claude Code 2.1.301 and uv 0.13.1 were the latest releases in October 2026 [17], [18]. The
+page [9]. Claude Code 2.1.301 and uv 0.13.1 were the latest releases on 2026-10-15 [17], [18]. The
 proxy does not terminate TLS, so it decides by host name and cannot stop domain fronting, and an
 allowed host is still a way out ([agent-containers.md](agent-containers.md) section 5) [19].
 Integration tests that start containers do not run here: they run in CI (section 8 of the same
@@ -400,11 +409,12 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [14] Docker — docker compose down (CLI reference) — https://docs.docker.com/reference/cli/docker/compose/down/
 - [15] Docker — Build context — https://docs.docker.com/build/concepts/context/#dockerignore-files
 - [16] Moby project — GHSA-mq39-4gv4-mvpx, External DNS requests from 'internal' networks could lead to data exfiltration (CVE-2024-29018) — https://github.com/moby/moby/security/advisories/GHSA-mq39-4gv4-mvpx
-- [17] npm registry — `@anthropic-ai/claude-code`, the latest version — https://registry.npmjs.org/@anthropic-ai/claude-code/latest
+- [17] npm registry — `@anthropic-ai/claude-code`, its versions and their publish times — https://registry.npmjs.org/@anthropic-ai/claude-code — checked 2026-10-17
 - [18] Astral — uv releases — https://github.com/astral-sh/uv/releases
 - [19] Anthropic — Sandboxing (Claude Code docs) — https://code.claude.com/docs/en/sandboxing
 - [20] Docker Official Images — library/debian — https://github.com/docker-library/official-images/blob/6b287dc80f463f088b8d6432ceeb633ec0c0b8a4/library/debian
 - [21] Debuerreotype — debuerreotype-minimizing-config (the docker-clean APT configuration) — https://github.com/debuerreotype/debuerreotype/blob/ccebaf58b6f640746e6bb0e8046235681dc5018e/scripts/debuerreotype-minimizing-config
 - [22] Debian — nodejs package in trixie — https://packages.debian.org/trixie/nodejs
-- [23] Anthropic — Advanced setup, install with npm (Claude Code docs) — https://code.claude.com/docs/en/setup
 - [24] Squid — src/tools.cc (leave_suid, enter_suid) — https://github.com/squid-cache/squid/blob/a433a54f0fd4a9d5b629bbfdf010097bd7581cbf/src/tools.cc
+- [25] Python — The Python Tutorial: Using the Python Interpreter, 3.13 — https://docs.python.org/3.13/tutorial/interpreter.html
+- [26] Squid — src/cf.data.pre (shutdown_lifetime) — https://github.com/squid-cache/squid/blob/a433a54f0fd4a9d5b629bbfdf010097bd7581cbf/src/cf.data.pre

@@ -73,7 +73,7 @@ or a test fixture, stays out of every image until someone adds a line for it. In
 # runs is the lint gate (images.md section 7).
 # One Python image for both stages: a venv only works where its interpreter sits at the same
 # path (images.md section 11). Renovate updates the tag and the digest together.
-# The Docker Official Image, slim: most guides use it, and it is republished at least monthly;
+# The Docker Official Image, slim, which its maintainers strive to republish at least monthly;
 # images.md section 4 weighs the others.
 ARG PYTHON_IMAGE=python:3.13-slim-trixie@sha256:...
 
@@ -124,7 +124,7 @@ CMD ["acme-api"]
 | `# syntax=docker/dockerfile:1.28.0@sha256:...` | a fixed frontend, by its version and its digest, so neither a new release nor a moved tag can change this build without a pull request [8] |
 | `# check=error=true` | the build checks fail the build instead of printing warnings; the build CI runs is the lint gate [9] |
 | `ARG PYTHON_IMAGE=…` and both `FROM ${PYTHON_IMAGE}` | one pin for the two stages; Renovate reads an `ARG` default, Dependabot would not [10], [11] |
-| `python:3.13-slim-trixie` | the Docker Official Image most guides use, which its maintainers strive to republish at least monthly ([images.md](images.md) section 4) [12]; names the Debian release, so the tag cannot move to the next one [13] |
+| `python:3.13-slim-trixie` | the Docker Official Image, which its maintainers strive to republish at least monthly ([images.md](images.md) section 4) [12]; names the Debian release, so the tag cannot move to the next one [13] |
 | `COPY --from=ghcr.io/astral-sh/uv:0.13.1@…` | a pinned uv, copied into the builder only [14] |
 | `UV_LINK_MODE=copy`, `UV_PYTHON_DOWNLOADS=0` | uv copies files out of the cache mount instead of warning that it cannot link them, and uses the image's Python instead of downloading one [14] |
 | first `uv sync … --no-install-project` | the dependency layer, from the lock file through bind mounts; `--locked` stops the build when `uv.lock` does not match `pyproject.toml`; `--no-dev`, in both `uv sync` lines, keeps the development tools out of the runtime environment [15] |
@@ -151,6 +151,7 @@ printf 'FROM busybox:1.37@sha256:...\nCOPY . /ctx\nRUN find /ctx -type f\n' |
   docker build --no-cache --progress=plain -f - .
 
 docker run --rm acme-api:dev id -u  # prints 10001
+docker run --rm acme-api:dev stat -c '%u' /app/.venv  # prints 0: root owns the venv (images.md section 6)
 # The package imports from the venv, and the entry point is on PATH.
 docker run --rm acme-api:dev python -c "import acme.api.main, acme.api.app"
 docker run --rm acme-api:dev sh -c 'command -v acme-api'

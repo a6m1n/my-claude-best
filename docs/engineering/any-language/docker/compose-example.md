@@ -60,10 +60,10 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
-    # A departure from compose.md section 7 (cap_drop: [ALL]): the Postgres entrypoint needs root
-    # powers to set up its data folder and switch to its own user. The cost: Docker's default
-    # capabilities stay, including ones it never uses, such as NET_RAW; a build that lists what
-    # the entrypoint uses can keep only those with cap_drop: [ALL] and cap_add.
+    # No cap_drop: [ALL], as compose.md section 7 says for a third-party image: the Postgres
+    # entrypoint changes file owners and then switches to its own user. The cost: Docker's default
+    # capabilities stay, such as NET_RAW; dropping them all, as compose.md section 7 prefers,
+    # needs user: and a test that starts the service.
     security_opt: [no-new-privileges:true]
     pids_limit: 200  # a fork loop stops here, not on the host (compose.md section 7)
     # No published port: only the api service reaches the database.
@@ -87,8 +87,9 @@ volumes:
 | no `ports:` on `db` | the database is not reachable from the host or the network |
 
 It is good because the API never starts before its database can answer, no secret value is in
-the file, and the API gets no Linux capability, while the database keeps Docker's default set as a
-declared departure, with its reason and its cost written next to it.
+the file, and the API gets no Linux capability, while the database keeps Docker's default set, as
+compose.md section 7 says for a third-party image, with its reason and its cost written next to
+it.
 
 ## 2. Run it
 

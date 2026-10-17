@@ -82,7 +82,7 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 │   └── guides/                             # for people who call the app
 ├── .github/workflows/
 ├── .env.example                            # every setting, no real values
-├── .devcontainer/                          # the dev containers (any-language/docker/agent-containers.md section 9)
+├── .devcontainer/                          # the dev containers (any-language/docker/dev-containers.md; an agent's: agent-containers.md section 9)
 ├── .dockerignore                           # an allow-list of what the build reads (any-language/docker/images.md section 2)
 ├── Dockerfile
 ├── compose.yaml                            # the local stack (any-language/docker/compose.md)

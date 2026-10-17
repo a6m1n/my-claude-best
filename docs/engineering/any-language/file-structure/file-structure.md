@@ -341,7 +341,7 @@ sit where [python/testing/layout.md](../../python/testing/layout.md) section 1 p
 ├── scripts/            # run by hand; the application never imports them
 ├── .github/workflows/
 ├── .env.example        # every setting, no real value
-├── .devcontainer/      # the dev containers (any-language/docker/agent-containers.md section 9)
+├── .devcontainer/      # the dev containers (any-language/docker/dev-containers.md; an agent's: agent-containers.md section 9)
 ├── .dockerignore       # an allow-list of what the build reads (any-language/docker/images.md section 2)
 ├── Dockerfile
 ├── compose.yaml        # the local stack (any-language/docker/compose.md)

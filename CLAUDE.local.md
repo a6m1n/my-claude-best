@@ -93,8 +93,9 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   is divided by the cases it asked for, and every judge that gates has its TPR and TNR on held-back
   labels.
 - Before you write or change a `Dockerfile`, a `.dockerignore`, a `compose.yaml`, the CI job that
-  builds or pushes an image, or a container, a dev container or a sandbox a coding agent works in,
-  read `docs/engineering/any-language/docker/README.md` and the file it routes to for that work, and
+  builds or pushes an image, a dev container a person works in, or a container, a dev container or
+  a sandbox a coding agent works in, read `docs/engineering/any-language/docker/README.md` and the
+  file it routes to for that work, and
   `docs/engineering/any-language/docker/dockerfile-example.md` when you write a service's first
   Dockerfile, `docs/engineering/any-language/docker/compose-example.md` when you write a
   `compose.yaml`, `docs/engineering/any-language/docker/ci-example.md` when you write or change the

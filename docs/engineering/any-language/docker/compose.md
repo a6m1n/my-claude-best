@@ -40,6 +40,10 @@ Why it matters:
   of `compose.yaml` by default, and `-f compose.yaml -f compose.production.yaml` reads both in
   that order [5]. Lists such as `ports` are combined, and `environment` merges by variable
   name [5].
+- **An override cannot remove a key by leaving it out; tag it.** Compose merges an override into
+  the file below it, and lists such as `volumes` merge by their target path; to drop a value, set
+  it with `!reset` (`build: !reset null`, `env_file: !reset []`), and to replace a whole list, use
+  `!override` [33].
 - **Read the merged result with `docker compose config` before you trust it.** It prints the file
   Compose will run, with every variable filled in and every override applied [6], [2].
 
@@ -115,14 +119,39 @@ until the server answers, and `docker compose down`.
 
 ## 7. Hardening keys
 
-Each key below narrows what a compromised process in the container can do. Set them on every
-service whose image allows it, and say next to a missing one why the service needs that power.
+Each key below narrows what a compromised process in the container can do. Which keys a service
+takes depends on whose image it runs, as the tiers below say; [compose-keys.md](compose-keys.md)
+adds other leave-out cases for some of them.
+
+- **Every service** takes `no-new-privileges`, `pids_limit`, and, in a local stack, ports
+  published on `127.0.0.1`.
+- **A service built from your own image**, which runs as a non-root user and is tested in CI,
+  also takes `cap_drop: [ALL]`, and `read_only` if you choose it. An own image that must start as
+  root, such as a proxy installed from a distribution package, is section 10's case.
+- **A service that runs a third-party image** takes `cap_drop: [ALL]` or `read_only` only with
+  `user:` set and a test that starts it. The official Postgres entrypoint changes file owners and
+  then switches to its own user [8]; this practice reads those two steps as needing capabilities
+  that `cap_drop: [ALL]` removes. Asked for the minimum set of capabilities, a maintainer wrote in
+  2019 that this "isn't something we really test for typically" [30]. Dropping all capabilities
+  and adding back the ones the entrypoint uses also works for some: the issue behind that comment
+  opens with Postgres run with `cap_drop: ALL` and `cap_add` of `CHOWN`, `DAC_READ_SEARCH`,
+  `FOWNER`, `SETGID` and `SETUID`, a set that "seems to work well so far, superficially" [34].
+  This practice prefers `user:` (its own call), because the image's maintainers do not usually
+  test such a list [30] and the image documents running as another user [15]. The nginx image's
+  scripts edit its configuration at start, which a read-only filesystem blocks [31].
+
+Write next to a service each key its tier gives it that it lacks, and why. A key whose condition
+does not hold (`init` where images.md section 6 asks for none, a port nobody opens from the host)
+needs no note. The keys:
 
 - **`cap_drop: [ALL]`**, then `cap_add` only for a capability the service shows it needs. Docker
   starts a container with a default set of Linux capabilities; the best practice in Docker's
   security documentation is to remove all that the process does not need [22].
 - **`security_opt: [no-new-privileges:true]`.** It stops container processes "from gaining new
   privileges", in the words of Docker's reference, for example through a set-user-ID binary [23].
+  OWASP asks for it on every container [16]. A process that is already privileged can still call
+  `setuid(2)`, so an entrypoint that drops to its own user keeps working, while `sudo` and other
+  set-user-ID programs stop working [32].
 - **`init: true` where [images.md](images.md) section 6 asks for an init.** Compose then runs
   `docker-init` (a tini build) as PID 1, which forwards signals and reaps the children [7], [23].
 - **`pids_limit`**, so a process that forks without end cannot exhaust the host. If you also set
@@ -158,7 +187,7 @@ input" [2].
 - **Use Compose in production only on a single host.** Docker's documentation says "Compose
   supports production deployments on single hosts", with a production override file that, for
   example, removes source-code bind mounts and adds `restart: always` [28], [29]. For more than one
-  host, Docker points to Swarm [29]; teams on Kubernetes write manifests for it.
+  host, Docker points to Swarm [29].
 
 A production host runs the image CI pushed, by digest ([images.md](images.md) section 8), and gets
 no `.env` ([python.md](../../python/language/python.md) section 5).
@@ -187,7 +216,7 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [12] Docker — Environment variables precedence in Docker Compose — https://docs.docker.com/compose/how-tos/environment-variables/envvars-precedence/
 - [13] Docker — Interpolation (Compose file reference) — https://docs.docker.com/reference/compose-file/interpolation/
 - [14] Docker — Manage secrets securely in Docker Compose — https://docs.docker.com/compose/how-tos/use-secrets/
-- [15] Docker Official Images — postgres (Docker Hub page) — https://hub.docker.com/_/postgres
+- [15] Docker Official Images — postgres (Docker Hub page) — https://hub.docker.com/_/postgres — checked 2026-10-17
 - [16] OWASP Cheat Sheet Series — Docker Security Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html
 - [17] Docker — Using profiles with Compose — https://docs.docker.com/compose/how-tos/profiles/
 - [18] Docker — Use Compose Watch — https://docs.docker.com/compose/how-tos/file-watch/
@@ -198,7 +227,12 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [23] Docker — docker container run (CLI reference) — https://docs.docker.com/reference/cli/docker/container/run/
 - [24] Docker — Port publishing and mapping — https://docs.docker.com/engine/network/port-publishing/
 - [25] Docker — Packet filtering and firewalls — https://docs.docker.com/engine/network/packet-filtering-firewalls/
-- [26] Ricky Curtice — Add `gid` and `uid` to `tmpfs` long-form mount options a la the current `mode` support (compose-spec/compose-spec issue #278, 2022; opinion) — https://github.com/compose-spec/compose-spec/issues/278
-- [27] opencontainers/runc — Recent security update changed default permissions of tmpfs (runc issue #4971, 2025; case) — https://github.com/opencontainers/runc/issues/4971
+- [26] Ricky Curtice — Add `gid` and `uid` to `tmpfs` long-form mount options a la the current `mode` support (GitHub, compose-spec/compose-spec issue #278, 2022; opinion) — https://github.com/compose-spec/compose-spec/issues/278
+- [27] Kyle Huey — Recent security update changed default permissions of tmpfs (GitHub, opencontainers/runc issue #4971, 2025; case) — https://github.com/opencontainers/runc/issues/4971
 - [28] Docker — Why use Compose? — https://docs.docker.com/compose/intro/features-uses/
 - [29] Docker — Use Compose in production — https://docs.docker.com/compose/how-tos/production/
+- [30] Tianon Gravi — comment in "Minimum set of Linux capabilities?" (GitHub, docker-library/postgres issue #649, 2019; opinion) — https://github.com/docker-library/postgres/issues/649#issuecomment-561892422 — checked 2026-10-17
+- [31] Konstantin Pavlov — comment in "Issue with securityContext.readOnlyRootFilesystem=true in NGINX Docker Image" (GitHub, nginx/docker-nginx issue #927, 2024; opinion) — https://github.com/nginx/docker-nginx/issues/927#issuecomment-2332341147 — checked 2026-10-17
+- [32] Linux kernel — No New Privileges Flag (`Documentation/userspace-api/no_new_privs.rst`) — https://github.com/torvalds/linux/blob/master/Documentation/userspace-api/no_new_privs.rst
+- [33] Compose Specification — Merge and override (`13-merge.md`) — https://github.com/compose-spec/compose-spec/blob/de28432802a367d650bd4ad6748b19491b6cf986/13-merge.md
+- [34] Sebastian Pipping — Minimum set of Linux capabilities? (GitHub, docker-library/postgres issue #649, 2019; case) — https://github.com/docker-library/postgres/issues/649 — checked 2026-10-17
