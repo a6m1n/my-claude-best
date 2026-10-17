@@ -588,12 +588,13 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   never exposed outside the module" [54], and ASVS 5.0 requirement 13.3.3, at Level 3, asks that
   "all cryptographic operations are performed using an isolated security module (such as a vault
   or hardware security module)" [44]. When each one fits is this practice's choice.
-- **BFF: store each cookie key with its id, its material and the time it starts protecting new
-  cookies, and have an instance protect new cookies with the newest key whose start time has
-  passed,** so a key added to the store reaches every running instance before any of them protects
-  with it. The start time is this practice's choice, after ASP.NET Core, which gives a new key "an
-  activation date of { now + 2 days }" so that other applications can "observe the key at their
-  next auto-refresh period" (Microsoft's docs on key management) [22].
+- **BFF: store each cookie key with its id, its format version, its material and the time it
+  starts protecting new cookies, and have an instance protect new cookies with the newest key
+  whose start time has passed,** so a key added to the store reaches every running instance
+  before any of them protects with it. The start time is this practice's choice, after ASP.NET
+  Core, which gives a new key "an activation date of { now + 2 days }" so that other
+  applications can "observe the key at their next auto-refresh period" (Microsoft's docs on key
+  management) [22].
 - **BFF: have an instance re-read the key list at an interval the team writes down ("Write it
   down" above), and also on a reload signal where the platform has one, and log the key ids it
   loaded,** so a key added to the store reaches it within one interval, and the log shows which
@@ -1155,11 +1156,16 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   after the first logout [57]. ASVS 5.0 requirement 7.4.1 names both ways for sessions held in a
   token [42].
 - **BFF: when a back-channel logout token carries no `sid`, end every session of the user its
-  `iss` and `sub` name,** since Back-Channel Logout 1.0 section 2.4 says a token without `sid` asks
-  for all of that user's sessions at the client to be logged out [57].
+  `iss` and `sub` name, but only the sessions that started before the token's `iat`,** since
+  Back-Channel Logout 1.0 section 2.4 says a token without `sid` asks for all of that user's
+  sessions at the client to be logged out [57]. The limit holds for the reason the rule above
+  gives for the state in the cookie: a provider may send the token again after a failure and the
+  `jti` check is optional, so without the limit a re-sent token would also end the sessions the
+  user opened after the first logout [57].
 - **BFF: with the session's state on the server, after a back-channel logout ends a session, revoke
   its refresh token at the provider, unless the token was issued with `offline_access`, log a
-  revoke that fails, and do not retry it,** since Back-Channel Logout 1.0 section 2.7 says that
+  revoke that fails at `WARNING` ([logging.md](../../python/logging/logging.md) section 4) with the
+  provider's error code, and do not retry it,** since Back-Channel Logout 1.0 section 2.7 says that
   "Refresh tokens issued without the "offline_access" property to a session being logged out
   SHOULD be revoked" [57]. Not retrying follows the logout rule above. With the session's state in
   the cookie, the BFF cannot revoke it (section 5).
