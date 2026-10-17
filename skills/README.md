@@ -41,8 +41,9 @@ These skills stand alone:
   template, shows you the draft, and opens or updates the pull request after your yes. Read
   [pr/README.md](pr/README.md) first: it says how to install the skill, what to fill in, and
   where it departs from git.md.
-- [create-jira-ticket/README.md](create-jira-ticket/README.md): turns short notes into one Jira
-  story, bug or task, shows every field before it writes, and creates the issue after your yes.
+- [create-jira-ticket/README.md](create-jira-ticket/README.md): turns short notes into a Jira
+  story, bug or task, or an epic with its stories, shows every field before it writes, and
+  creates the issues after your yes.
   Read the README for how to connect Jira; the skill needs the Atlassian MCP server.
 - [commit/SKILL.md](commit/SKILL.md): writes the commit message for your changes, shows you the
   draft, and stages and commits the files it names after your yes. Its message format differs
