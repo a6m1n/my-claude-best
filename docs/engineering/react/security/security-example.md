@@ -148,7 +148,8 @@ export class ApiClient {
         Accept: "application/json",
         "Content-Type": "application/json",
         // A custom header forces a CORS preflight, so another site cannot send this request from
-        // a plain form. The server rejects a request without it (security.md section 7).
+        // a plain form. The server rejects a request without it (backend-for-frontend.md
+        // section 3, "CSRF").
         "X-Requested-With": "billing-app",
       },
       body: request.body === undefined ? undefined : JSON.stringify(request.body),
@@ -172,7 +173,8 @@ export class ApiClient {
 
   // Sends a small report about this visit, such as a web vital or an error, to the API's report
   // intake. No cookie and no custom header: the intake takes anonymous reports, so a forged one
-  // gains nothing, and no answer is read (security.md section 7).
+  // gains nothing, and no answer is read (backend-for-frontend.md section 3, "Fetch Metadata and
+  // exemptions").
   report(path: string, report: Record<string, unknown>): void {
     void fetch(new URL(path, this.#baseUrl), {
       method: "POST",
@@ -180,7 +182,7 @@ export class ApiClient {
       // The request outlives the page, so a report sent while the tab closes still arrives.
       keepalive: true,
       // No cookie: the intake takes anonymous reports, so a forged one gains nothing
-      // (security.md section 7).
+      // (backend-for-frontend.md section 3, "Fetch Metadata and exemptions").
       credentials: "omit",
     }).catch(() => {
       // A report that fails is dropped: an error raised here would itself need a report.
@@ -446,7 +448,8 @@ section 1 of this file quotes the whole file.
 
   // Sends a small report about this visit, such as a web vital or an error, to the API's report
   // intake. No cookie and no custom header: the intake takes anonymous reports, so a forged one
-  // gains nothing, and no answer is read (security.md section 7).
+  // gains nothing, and no answer is read (backend-for-frontend.md section 3, "Fetch Metadata and
+  // exemptions").
   report(path: string, report: Record<string, unknown>): void {
     void fetch(new URL(path, this.#baseUrl), {
       method: "POST",
@@ -454,7 +457,7 @@ section 1 of this file quotes the whole file.
       // The request outlives the page, so a report sent while the tab closes still arrives.
       keepalive: true,
       // No cookie: the intake takes anonymous reports, so a forged one gains nothing
-      // (security.md section 7).
+      // (backend-for-frontend.md section 3, "Fetch Metadata and exemptions").
       credentials: "omit",
     }).catch(() => {
       // A report that fails is dropped: an error raised here would itself need a report.

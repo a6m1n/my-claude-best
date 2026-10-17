@@ -1258,7 +1258,8 @@ async request<TSchema extends z.ZodType>(path: string, request: ApiRequest<TSche
       Accept: "application/json",
       "Content-Type": "application/json",
       // A custom header forces a CORS preflight, so another site cannot send this request from
-      // a plain form. The server rejects a request without it (security.md section 7).
+      // a plain form. The server rejects a request without it (backend-for-frontend.md
+      // section 3, "CSRF").
       "X-Requested-With": "billing-app",
     },
     body: request.body === undefined ? undefined : JSON.stringify(request.body),
@@ -1632,7 +1633,7 @@ is named.
 | A01 Broken Access Control [4] | the server decides every access; the page hides what the user cannot use, for the user's sake. OWASP counts CSRF, CORS mistakes and server-side request forgery here [4] | 2, 7, 8; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) sections 2, 3 |
 | A02 Security Misconfiguration [178] | headers, cookie attributes, the CORS policy and the dev server are configuration | 5, 6, 7, 11; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) sections 2, 3 |
 | A03 Software Supply Chain Failures [178] | the packages you install, the lockfile and the CI workflow | 10 |
-| A04 Cryptographic Failures [178] | mostly the server's: HTTPS, HSTS and no caching of responses with personal data; the browser side keeps secrets out of the bundle; password storage for a first-party login is outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 5) | 5, 9, 13 |
+| A04 Cryptographic Failures [178] | mostly the server's: HTTPS, HSTS, no caching of responses with personal data, and the keys that sign or encrypt the cookies and their rotation; the browser side keeps secrets out of the bundle; password storage for a first-party login is outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 5) | 5, 9, 13; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) sections 2, 3 |
 | A05 Injection [178] | XSS is injection into the page; the server checks the format of each path segment and of each report ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3); injection into the server's own interpreters, such as SQL or an OS command, is outside this practice | 3, 4, 5, 7; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3 |
 | A06 Insecure Design [178] | a check in the page helps the user and protects nothing; the design puts every control on the server, and the session in a BFF; OWASP asks to model the threats of critical flows such as sign-in and access control (the threat-modelling step above) [184] | 2, 6 |
 | A07 Authentication Failures [178] | mostly the server's: the OAuth flow, a new session id at login, timeouts, logout and re-authentication; the browser side holds no token and runs the sign-out path on a `401`; a first-party login's password storage, throttling and sign-in error messages are outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 5) | 6; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |

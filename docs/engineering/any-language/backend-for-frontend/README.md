@@ -28,7 +28,9 @@ with such a server is the [React security practice](../../react/security/).
 1. Copy this folder into your repository at `docs/engineering/any-language/backend-for-frontend/`,
    and `docs/engineering/react/security/` with it, since the rules link security.md for the
    page's side. The rules also link the logging, readability and project-management practices
-   and the React architecture practice; copy those folders too, or those links break.
+   and the React architecture practice; copy those folders too, or those links break. Instead of
+   copying the logging practice, which is written for Python, you may replace each link to
+   `logging.md` with your own rule on the same topic, such as your logger's levels.
 2. In the BFF's own repository, add this line to your `CLAUDE.md` or `AGENTS.md`: "Before you
    handle a session or a token, set the session cookie, rotate a cookie key, change how the
    session starts, times out or ends, change the CORS or CSRF checks, add a route, a WebSocket, a
