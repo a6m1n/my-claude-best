@@ -85,7 +85,9 @@ rules that hold only with an identity provider:
 Any other rule that needs an identity provider says `with an identity provider` in its prefix.
 A BFF whose identity provider sends no back-channel logout skips, in the same way, in "Logout",
 the rules on back-channel logout, and in section 3, the rules on the back-channel logout endpoint
-and the alerts on back-channel logout.
+and the alerts on back-channel logout. With the session's state in the cookie, such a BFF still
+keeps the per-user time, which the every-request check in "Logout" reads and the rule on a
+disabled or deleted account, in "Re-authentication", sets.
 
 The words below have one meaning in this file. "The server" is the component that receives the
 browser's session cookie: the BFF, which in the examples is also the API at
@@ -709,8 +711,9 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   at least once per reload interval and keeps no state of its own outside the key store. On each
   run it reads the key list and does only the step that is due: it adds a key when the newest key
   is older than the period, runs the check of step 1 when its window has come, and runs step 3
-  when its condition holds. Two runs at once must not both add a key, so a run adds a key only
-  when no key younger than the period exists. Each run logs at `INFO`
+  when its condition holds. A run adds a key only when no key younger than the period exists; two
+  runs at once may still both add one, which is harmless, since every instance loads both keys and
+  step 1 checks each. Each run logs at `INFO`
   ([logging.md](../../python/logging/logging.md) section 4) what it decided. These run rules are
   this practice's choice.
 - **BFF: before the first instance of an environment starts, run the rotation job once by hand,
@@ -1132,7 +1135,8 @@ flight, and the session's state is on the server. They run in the order given.
   counts revocation as enough on its own [1]; the list is this practice's addition.
 - **BFF: with the session's state in the cookie, on every request reject a cookie whose session id
   or provider `sid` is on the list of ended sessions, or whose start time is earlier than its
-  user's per-user time (the back-channel logout rules below),** so a copy of the cookie stops
+  user's per-user time (set by the back-channel logout rules below and by the rule on a disabled
+  or deleted account, in "Re-authentication" below),** so a copy of the cookie stops
   working as soon as its session ends. ASVS 5.0 requirement 7.4.1 asks to verify that, when a
   session ends, "the application disallows any further use of the session" [42].
 - **BFF: with the session's state in the cookie, keep the access token's lifetime short, and write
