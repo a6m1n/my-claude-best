@@ -3,9 +3,10 @@
 What the browser side of a React application must and must not do: keep outside data from
 running as script, keep tokens and secrets out of the browser, send the headers that limit an
 injected script, install packages under a cooldown and a script block, keep the dev server to
-the developer's machine, and leave every access decision to the server. It also says what the
-backend that holds the session must do for that browser side: the session cookie, the session's
-life from login to logout, CSRF and CORS.
+the developer's machine, and leave every access decision to the server. What the backend that
+holds the session must do for that browser side, the session cookie, the session's life from
+login to logout, CSRF and CORS, is the
+[backend-for-frontend](../../any-language/backend-for-frontend/) practice.
 
 **Navigation**
 
@@ -17,7 +18,7 @@ life from login to logout, CSRF and CORS.
 
 - [security.md](security.md) — the rules, one topic per section: XSS and its sinks, sanitising
   and Trusted Types, the Content-Security-Policy and the other headers, sessions and tokens (the
-  session cookie and the session's life from login to logout), CSRF and CORS, server-side React,
+  choice of a BFF, and the page's side), CSRF and CORS (the page's side), server-side React,
   secrets, the supply chain, the dev server, third-party code, data the browser exposes, and the
   lint rules and scanners; then the common mistakes as bad and good pairs, where the rules stop
   holding, a review checklist,
@@ -32,24 +33,22 @@ life from login to logout, CSRF and CORS.
 ## How to adopt
 
 1. Copy this folder into your repository at `docs/engineering/react/security/`. Where the BFF or
-   the API that holds the session lives in a repository of its own, copy the folder there too,
-   since most of sections 6 and 7 are the server's rules.
+   the API that holds the session lives in a repository of its own, copy the
+   [backend-for-frontend](../../any-language/backend-for-frontend/) practice there, with this
+   folder, which its rules link.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you put data from outside a React
    application on its page, spread an object from outside as props, handle a session or a token
-   in one, keep or send a credential, set its session cookie, change how its session starts, times
-   out or ends, change its API's CORS or CSRF checks, add an environment variable, a dependency, a
-   third-party script, a response header or a CI step to one, change the dev server's settings,
-   add a route, a WebSocket or a file download to its API or to the server that holds its
-   session, set up its query client, add polling, or build the shell its screens share, read
-   `docs/engineering/react/security/security.md`." Without it an agent never opens the file. In
-   the BFF's own repository, add this line instead: "Before you handle a session or a token, set
-   the session cookie, change how the session starts, times out or ends, change the CORS or CSRF
-   checks, add a route, a WebSocket, a file download or a response header to the API, store a file
-   users upload, or add or update a dependency, read sections 5, 6, 7, 10 and 17 of
-   `docs/engineering/react/security/security.md`."
+   in one, keep or send a credential, add an environment variable, a dependency, a third-party
+   script, a response header or a CI step to one, change the dev server's settings, set up its
+   query client, add polling, or build the shell its screens share, read
+   `docs/engineering/react/security/security.md`." Without it an agent never opens the file. The
+   BFF's own repository takes the line in the
+   [backend-for-frontend README](../../any-language/backend-for-frontend/README.md#how-to-adopt).
 3. In the same change, turn on the lint rules of section 14 and the package manager settings of
    section 10, so the rules are checked from the first commit on. On an application that already
-   has users, roll out section 7's server checks as its log-only rule says.
+   has users, roll out the server checks of
+   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+   section 3 as its log-only rule says.
 4. Use section 17's checklist as the security part of your review template.
 5. The practice links the other React practices (architecture, components, design, performance),
    [file-structure.md](../../any-language/file-structure/file-structure.md),
@@ -82,8 +81,9 @@ life from login to logout, CSRF and CORS.
    or ticket a feature, for a feature that touches authentication, access control, business logic
    or a key flow; add a line "tested against the OWASP Web Security Testing Guide" to the team's
    release checklist, for a release that changes those parts; and write the person or channel
-   that receives security advisories and alerts into the decision log (security.md sections 6, 7
-   and 8).
+   that receives security advisories and alerts into the decision log (security.md section 8, and
+   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+   sections 2 and 3).
 
 ## The points to adapt
 
@@ -93,7 +93,9 @@ life from login to logout, CSRF and CORS.
   When your own server signs the user in with no identity provider, section 6's opening paragraph
   says which rules drop.
 - **Where the session's state lives.** On the server, with only an id in the cookie, or in the
-  cookie itself, signed and encrypted; section 6 says which rules change with the choice.
+  cookie itself, signed and encrypted;
+  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2 says which rules change with the choice.
 - **The cooldown length.** One day covered the short-lived package hijacks of 2025 and 2026, and
   seven days is CISA's advice; a longer wait delays every normal update by as much. Whatever the
   length, the cooldown has a named emergency path.
@@ -102,9 +104,11 @@ life from login to logout, CSRF and CORS.
 - **The host.** The format of the headers file depends on where the application is served.
 - **One origin or two.** The example serves the page and the API from two origins of one site,
   so the API needs CORS. An API served on the page's own origin needs none: the rules under "CORS"
-  in section 7 then do not apply, while its CSRF rules still do.
-- **The session timeouts.** The idle and absolute timeouts come from your risk level; section 6
-  gives OWASP's ranges and NIST's values for each assurance level.
+  in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 3 then do not apply, while its CSRF rules still do.
+- **The session timeouts.** The idle and absolute timeouts come from your risk level;
+  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2 gives OWASP's ranges and NIST's values for each assurance level.
 
 What does not change is the one rule: anything the browser holds, a script on the page can read,
 and anything the browser decides, the user can change.

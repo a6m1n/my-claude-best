@@ -756,8 +756,9 @@ Why it is good:
 ## 9. What the example leaves out
 
 - **The BFF:** it sets the `__Host-Http-` session cookie, rejects a request without the custom
-  header, checks CSRF and decides access. That is server code; security.md sections 6 and 7 list
-  what it must do, the exempt endpoints included.
+  header, checks CSRF and decides access. That is server code;
+  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  sections 2 and 3 list what it must do, the exempt endpoints included.
 - **The reaction to a `401`:** the application has no sign-in screen, so the sign-out path that
   security.md section 6 runs on a `401` is not shown, as
   [architecture.md](../architecture/architecture.md) section 10 says for sign-out.
