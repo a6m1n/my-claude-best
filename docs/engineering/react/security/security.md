@@ -410,7 +410,7 @@ The values are OWASP's HTTP Headers cheat sheet's unless the row says otherwise 
 | Header | Value | What it stops | In the example |
 |---|---|---|---|
 | `Content-Security-Policy` | the policy above | injected script loading or running; the page being framed by another site (`frame-ancestors 'none'`) | yes |
-| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` [51] | a later visit going over plain HTTP, where the traffic can be read and changed | yes, without `preload` |
+| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains`; OWASP's own value adds `preload` [51], and preloading is a separate choice to write down, as [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2, "Reading the `Cookie` header", says | a later visit going over plain HTTP, where the traffic can be read and changed | yes, without `preload` |
 | `X-Content-Type-Options` | `nosniff` [51] | the browser guessing a file's type and running it as script | yes |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` [51] | the path and query string, which can hold sensitive values, going to other sites (MDN; it is also the browsers' default) [52] | yes |
 | `Permissions-Policy` | `geolocation=(), camera=(), microphone=()`, plus any other feature the application does not use [51] | a script or a frame using a device feature the application never needs | yes, plus `payment=()` |
