@@ -22,8 +22,8 @@ way it is. Names are placeholders. The tree is the one
 The code here is quoted from a reference application. The application is not in this folder: the
 example files of the `react/` practices quote its code, and the checks named below were run on it
 on 2026-10-01 and 2026-10-02. Section 1's error handling, the body schema `errorBodySchema`, the
-fields of `ApiError` and `readErrorBody`, was added on 2026-10-16 and is not in the application
-yet; the same checks passed that day on a copy of the application with section 1's file in place.
+fields of `ApiError` and `readErrorBody`, is not in the application yet; the same checks passed on
+2026-10-17 on a copy of the application with section 1's file in place.
 
 What was verified, and what was not. The application in sections 1 to 7 of this file was
 type-checked, linted, unit-tested and built with Vite 8.3. Nothing was run in a browser: the
@@ -81,15 +81,16 @@ security.md section 4 asks for one component and one lint suppression.
 import { z } from "zod";
 
 // The fixed code a failed response's JSON body carries, such as `reauth_required`, and, on a
-// step-up with an identity provider, the provider's authorization URL (security.md section 6).
+// step-up with an identity provider, the `acr_values` of a resource server's challenge
+// (security.md section 6).
 const errorBodySchema = z.object({
   code: z.string(),
-  // A plain string, not a URL type: the page checks it by security.md section 3's rule before it
-  // navigates. Nullish, since a BFF may write an absent URL as `null`, as the logout answer writes
-  // `logoutUrl` (security.md section 6).
+  // A plain string, passed on as it came: the BFF accepts only the values on the list the team
+  // wrote down (backend-for-frontend.md section 2). Nullish, since a BFF may write an absent value
+  // as `null`, as the logout answer writes `logoutUrl` (backend-for-frontend.md section 2).
   // Only the step-up with an identity provider reads it (security.md section 6); a team that skips
   // that step-up leaves it out here, in `ApiError`, in `readErrorBody` and in `request`.
-  authorizationUrl: z.string().nullish(),
+  acrValues: z.string().nullish(),
 });
 
 type ErrorBody = z.infer<typeof errorBodySchema>;
@@ -98,14 +99,14 @@ type ErrorBody = z.infer<typeof errorBodySchema>;
 export class ApiError extends Error {
   readonly status: number;
   readonly code?: string;
-  readonly authorizationUrl?: string;
+  readonly acrValues?: string;
 
-  constructor(message: string, status: number, code?: string, authorizationUrl?: string) {
+  constructor(message: string, status: number, code?: string, acrValues?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
-    this.authorizationUrl = authorizationUrl;
+    this.acrValues = acrValues;
   }
 }
 
@@ -114,9 +115,8 @@ async function readErrorBody(response: Response): Promise<ErrorBody | undefined>
     return errorBodySchema.parse(await response.json());
   } catch {
     // A body that is not JSON, such as a gateway's HTML page, or JSON with no string `code` or
-    // with an `authorizationUrl` that is neither a string nor `null`, gives no code and no URL,
-    // so a failed response never throws a second error
-    // (security.md section 7).
+    // with an `acrValues` that is neither a string nor `null`, gives no code and no `acrValues`,
+    // so a failed response never throws a second error (security.md section 7).
     return undefined;
   }
 }
@@ -161,7 +161,7 @@ export class ApiClient {
         `${path} answered ${String(response.status)}`,
         response.status,
         errorBody?.code,
-        errorBody?.authorizationUrl ?? undefined,
+        errorBody?.acrValues ?? undefined,
       );
     }
 
@@ -208,16 +208,16 @@ Why it is good:
   on, so the class reads no setting
   ([readability.md](../../any-language/readability/readability.md) section 6).
 - **The error carries the response's status and, when the body parses as JSON, its fixed code and
-  any `authorizationUrl`** (security.md section 7), so the page's rules for `cookie_conflict`,
+  any `acrValues`** (security.md section 7), so the page's rules for `cookie_conflict`,
   `reauth_required` and `reauth_failed` (security.md section 6) can read the code, and the step-up
-  with an identity provider can read the URL it opens after the check of security.md section 3.
-  The body is read once, from the response the client already has; a `null` `authorizationUrl`
-  counts as no URL, and a body that is not JSON, or JSON with no string `code` or with an
-  `authorizationUrl` that is neither a string nor `null`, gives no code and no URL and throws no
-  second error, and the message still names the path and the status.
+  with an identity provider can pass the `acrValues` on to the BFF's login endpoint. The body is
+  read once, from the response the client already has; a `null` `acrValues` counts as none, and a
+  body that is not JSON, or JSON with no string `code` or with an `acrValues` that is neither a
+  string nor `null`, gives no code and no `acrValues` and throws no second error, and the message
+  still names the path and the status.
 - **The comments sit at the six lines a reader would likely delete or change**, `credentials` and
   the custom header in `request`, `keepalive` and `credentials: "omit"` in `report`, the `catch`
-  in `readErrorBody`, and the plain, nullish string of `authorizationUrl` in the body schema, and
+  in `readErrorBody`, and the plain, nullish string of `acrValues` in the body schema, and
   say why ([readability.md](../../any-language/readability/readability.md) section 4). The failed
   response ends the method in a guard
   ([readability.md](../../any-language/readability/readability.md) section 3), and blank lines
@@ -227,9 +227,9 @@ Why it is good:
   sections 3 and 4:** `ApiError`, the schema of its body, the `ErrorBody` type and the `ApiRequest`
   type sit in the same file as the class, though a type that `core/` names and a class are
   different kinds of file. They exist only for this one client: `ApiError` is what its request
-  throws, the schema and `ErrorBody` read the code and the URL that error carries, and `ApiRequest`
-  is the shape of `request`'s argument. The cost: a second client class has no shared place for
-  them, so they move to their own `core/` files first.
+  throws, the schema and `ErrorBody` read the code and the `acrValues` that error carries, and
+  `ApiRequest` is the shape of `request`'s argument. The cost: a second client class has no shared
+  place for them, so they move to their own `core/` files first.
 
 ## 2. The public settings
 
@@ -763,10 +763,12 @@ Why it is good:
   security.md section 6 runs on a `401` is not shown, as
   [architecture.md](../architecture/architecture.md) section 10 says for sign-out.
 - **The re-authentication path:** what security.md section 6 asks the page to do on a `403` whose
-  body carries `reauth_required` is not shown: a top-level navigation to the provider's
-  authorization URL that the `403` carries in its `authorizationUrl` field with an identity
-  provider, a prompt with a first-party login. The `ApiError` of section 1 of this file carries the
-  status, the code and the `authorizationUrl` that this reaction reads.
+  body carries `reauth_required` is not shown. With an identity provider, the page keeps the
+  screen and what the user typed in `sessionStorage`, opens the BFF's login endpoint by a top-level
+  navigation with the step-up flag and any `acrValues` the `403` carries, encoded by
+  `URLSearchParams`, and shows the outcome on the route the user comes back to; with a first-party
+  login, it shows a prompt. The `ApiError` of section 1 of this file carries the status, the code
+  and the `acrValues` that this reaction reads.
 - **The CI workflow:** pinned actions, a read-only token, no fork code in `pull_request_target`
   (security.md section 10).
 - **Server-side React:** the application renders in the browser only, so section 8 of security.md

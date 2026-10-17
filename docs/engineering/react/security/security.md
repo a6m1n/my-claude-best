@@ -497,8 +497,9 @@ security" (section 6) [3]:
   libraries or SDKs; writing the flow yourself is this practice's ban), so the flow's checks come
   from code that others review and keep patched [60]. The library runs the protocol: the
   authorization request, `state`, the nonce, PKCE, the token exchange and the ID token checks. The
-  step-up's binding and the bookkeeping of its login cookie, below, are the team's own code around
-  it.
+  step-up's checks and the bookkeeping of its login cookie are the team's own code around it
+  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2, "The login cookie" and "Re-authentication").
 - **Browser-only client: set the SDK's token storage option explicitly.** Vendors' defaults
   differ: Auth0's SPA SDK keeps tokens in memory, MSAL.js in `sessionStorage`, Okta's auth-js in
   `localStorage` [61], [62], [63].
@@ -575,7 +576,8 @@ The flow, in order, with the page's own acts in bold:
 3. The callback: the BFF checks the login cookie, gets the tokens and sets the session cookie.
 4. The session: **the page calls the API through the one API client**; the BFF adds the token.
 5. Refresh: the BFF refreshes the tokens when the access token expires.
-6. Step-up: on `403 reauth_required`, **the page sends the user to re-authenticate**.
+6. Step-up: on `403 reauth_required`, **the page opens the BFF's login endpoint again, with the
+   step-up flag**.
 7. Logout: **the page calls the logout endpoint and runs the sign-out path**.
 
 - **Page: when the session check answers `401` on a route that needs no session, show the
@@ -605,11 +607,12 @@ section 2, "A new session id at login".
   that request carried the session id the renewal destroyed, while the session may be live under
   its new id; this is an exception to the `401` rule above, and the rule is this practice's
   choice.
-- **Page: where the query client is made, tell it not to retry a `401`,** since `useQuery` retries
-  a failed query three times by default in the browser (TanStack Query docs, read 2026-10-16)
-  [68], [70]. The query client is made as
-  [architecture.md](../architecture/architecture.md) section 8 says. The rule is this practice's
-  choice.
+- **Page: where the query client is made, tell it not to retry a `401`, nor a `403` or a `400`
+  whose body carries a fixed code,** since these answers say what the page must do, and a retry
+  only sends a guarded request again, while `useQuery` retries a failed query three times by
+  default in the browser (TanStack Query docs, read 2026-10-16) [68], [70]. The query client is
+  made as [architecture.md](../architecture/architecture.md) section 8 says. The rule is this
+  practice's choice.
 - **Page: on a `502` or a `503`, the session check's included, and on a `403` whose body carries
   no code, never run the sign-out path, and show the error as for any failed request
   ([architecture.md](../architecture/architecture.md) sections 9 and 12), and for the logout
@@ -634,31 +637,43 @@ section 2, "A new session id at login".
   cannot take the user to another site, and the reference policy's `form-action 'self'` (section
   5) blocks a form posted to another origin. RP-Initiated Logout 1.0 section 2 has the client
   redirect the user's browser to the provider's logout endpoint [72]. The URL comes
-  from the answer, so it is data, as the step-up's `authorizationUrl` is ("Re-authentication"
-  below). When the check refuses the URL, run the sign-out path without the navigation, since the
-  BFF has already ended the local session; the rule is this practice's choice.
+  from the answer, so it is data. When the check refuses the URL, run the sign-out path without the
+  navigation, since the BFF has already ended the local session; the rule is this practice's
+  choice.
 
 ### Re-authentication
 
 - **Page: on a `403`, check its body for the code `reauth_required` before the `401` rule,** so
   the user re-authenticates, by the path of the login type that the next rules give, instead of
   seeing a plain refusal; the rule is this practice's choice.
-- **Page, with an identity provider: on a `403` whose body carries `reauth_required`, check the
-  authorization URL in the `authorizationUrl` field of the `403`'s body by section 3's rule for a
-  URL that comes from data, and open it by a top-level navigation,** since the provider's sign-in
-  page is another site; the user comes back on the step-up's outcome route (the rule on that route
-  below). The rule is this practice's choice.
-- **Page, with an identity provider: when that `403`'s body has no `authorizationUrl` field, or
-  section 3's check refuses it, show the error as for any failed request
-  ([architecture.md](../architecture/architecture.md) sections 9 and 12) and do not navigate,** so
-  the user sees that the change did not go through; the rule is this practice's choice.
+- **Page, with an identity provider: before the step-up's navigation, keep in `sessionStorage` the
+  screen of the guarded change and what the user typed into it, or start the step-up as the user
+  opens that screen, before they type,** since the navigation unloads the page and everything typed
+  into it. A screen that takes a password, a one-time code or another credential takes the second
+  way, since the storage rule above keeps every credential out of `sessionStorage`. The rule is this
+  practice's choice.
+- **Page, with an identity provider: on a `403` whose body carries `reauth_required`, or as the user
+  opens a guarded change's screen (the rule above), open the BFF's login endpoint by a top-level
+  navigation, with the step-up flag and, when the `403` carried `acrValues`, that value as a query
+  parameter encoded by `URLSearchParams`,** since the browser reaches the login endpoint by a
+  navigation, so the BFF can answer with the redirect that takes the browser to the authorization
+  server (RFC 10017 section 6.1.2.1) [3]. `URLSearchParams` encodes every character of a value
+  except the ASCII letters and digits, `*`, `-`, `.` and `_`, so an `&`, a `=` or a `#` in
+  `acrValues` cannot add a parameter or end the query (URL Standard sections 5.2 and 6.2) [75]. The
+  BFF accepts only the values on the list the team wrote down
+  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2, "Re-authentication"). The step-up flag and the encoding are this practice's choice.
 - **Page: with a first-party login, on a `403` whose body carries `reauth_required`, show the
   re-authentication prompt and send the guarded request again with the answer, and on a `403`
   whose body carries `reauth_failed`, show the prompt again,** so the change the BFF guards can go
   through; leave a `401` to the sign-out path. The rule is this practice's choice.
-- **Page, with an identity provider: on the step-up's outcome route, show the outcome its code
-  names and read the changed data again,** since the navigation to the provider unloaded the page
-  that sent the change; the rule is this practice's choice.
+- **Page, with an identity provider: on the step-up's outcome route, read what was kept in
+  `sessionStorage` and delete it, show the outcome its code names (`reauthenticated`, `refused` or
+  `failed`), and after `reauthenticated` put the user back on the kept screen with what they typed,
+  its data read again from the BFF, so they can send the change again,** since the BFF applied
+  nothing of the change and kept nothing of the request
+  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2, "Re-authentication"); the rule is this practice's choice.
 
 The BFF's rules on forwarding requests to resource servers are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
@@ -708,11 +723,11 @@ section 3, "What the server does".
   the default already sends it.
 - **Page: when the API answers with a status that is not `2xx`, have the API client throw an error
   that carries the response's status and, when the body parses as JSON, its fixed code and the
-  body's `authorizationUrl` when it has one; a body that does not parse, such as a gateway's HTML
-  page, gives no code and no URL,** so the `Page:` rules that read a status and a code, such as
+  body's `acrValues` when it has them; a body that does not parse, such as a gateway's HTML page,
+  gives no code and no `acrValues`,** so the `Page:` rules that read a status and a code, such as
   `cookie_conflict` and `reauth_required` (section 6), can read both, and the step-up with an
-  identity provider can read the URL it opens (section 6, "Re-authentication"); the rule is this
-  practice's choice.
+  identity provider can pass the `acrValues` on to the BFF's login endpoint (section 6,
+  "Re-authentication"); the rule is this practice's choice.
 - **Load an API resource that the page shows without `fetch`, such as an image or a PDF preview,
   through the API client, and show it from a `URL.createObjectURL` URL,** because an `<img>` and a
   frame cannot send the custom header; the reason is this practice's reading.
@@ -1628,10 +1643,10 @@ is named.
 | A01 Broken Access Control [4] | the server decides every access; the page hides what the user cannot use, for the user's sake. OWASP counts CSRF, CORS mistakes and server-side request forgery here [4] | 2, 7, 8; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) sections 2, 3 |
 | A02 Security Misconfiguration [178] | headers, cookie attributes, the CORS policy and the dev server are configuration | 5, 6, 7, 11; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) sections 2, 3 |
 | A03 Software Supply Chain Failures [178] | the packages you install, the lockfile and the CI workflow | 10 |
-| A04 Cryptographic Failures [178] | mostly the server's: HTTPS, HSTS and no caching of responses with personal data; the browser side keeps secrets out of the bundle; password storage for a first-party login is outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 4) | 5, 9, 13 |
+| A04 Cryptographic Failures [178] | mostly the server's: HTTPS, HSTS and no caching of responses with personal data; the browser side keeps secrets out of the bundle; password storage for a first-party login is outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 5) | 5, 9, 13 |
 | A05 Injection [178] | XSS is injection into the page; the server checks the format of each path segment and of each report ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3); injection into the server's own interpreters, such as SQL or an OS command, is outside this practice | 3, 4, 5, 7; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3 |
 | A06 Insecure Design [178] | a check in the page helps the user and protects nothing; the design puts every control on the server, and the session in a BFF; OWASP asks to model the threats of critical flows such as sign-in and access control (the threat-modelling step above) [184] | 2, 6 |
-| A07 Authentication Failures [178] | mostly the server's: the OAuth flow, a new session id at login, timeouts, logout and re-authentication; the browser side holds no token and runs the sign-out path on a `401`; a first-party login's password storage, throttling and sign-in error messages are outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 4) | 6; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
+| A07 Authentication Failures [178] | mostly the server's: the OAuth flow, a new session id at login, timeouts, logout and re-authentication; the browser side holds no token and runs the sign-out path on a `401`; a first-party login's password storage, throttling and sign-in error messages are outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 5) | 6; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
 | A08 Software or Data Integrity Failures [178] | scripts from other origins, Subresource Integrity, and state the server writes into the page; an object from outside spread as props (section 3); the session's state in a signed and encrypted cookie ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2); the arguments of a Server Function (section 8) | 3, 6, 8, 10, 12; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
 | A09 Security Logging and Alerting Failures [178] | mostly the server's: it logs security events, and alerts a person when the rejections of one check pass their written rate and on every step-up from another account; the browser side keeps credentials out of its own reports [188] | 6, 7, 13; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) sections 2, 3 |
 | A10 Mishandling of Exceptional Conditions [178] | mostly the server's: it fails closed; the browser side shows a message of its own on a failed screen, never the error's text | 6, 13; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
@@ -1719,7 +1734,7 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [72] OpenID Foundation — OpenID Connect RP-Initiated Logout 1.0, final, 12 September 2022 — https://openid.net/specs/openid-connect-rpinitiated-1_0.html
 - [73] OWASP Cheat Sheet Series — Cross-Site Request Forgery Prevention Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/1a78ae3e443cef156e947f87e892efbcc62876ee/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md
 - [74] MDN — Request: credentials property — https://developer.mozilla.org/en-US/docs/Web/API/Request/credentials
-- [75] WHATWG — URL Standard, section 4.7 "Origin" — https://url.spec.whatwg.org/commit-snapshots/fde3f74f063341a28d437216f75735b8b40128f5/#origin
+- [75] WHATWG — URL Standard, sections 4.7 "Origin", 5.2 "application/x-www-form-urlencoded serializing" and 6.2 "URLSearchParams class", commit snapshot fde3f74 — https://url.spec.whatwg.org/commit-snapshots/fde3f74f063341a28d437216f75735b8b40128f5/
 - [76] W3C — File API, Editor's Draft, 12 September 2026, sections 8.2, 8.3.1 and 8.4 — https://w3c.github.io/FileAPI/#url-model
 - [77] MDN Web Docs (Mozilla) — Content-Disposition header — https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Disposition
 - [78] MDN Web Docs (Mozilla) — EventSource() constructor — https://developer.mozilla.org/en-US/docs/Web/API/EventSource/EventSource

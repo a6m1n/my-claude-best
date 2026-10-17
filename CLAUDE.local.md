@@ -125,8 +125,9 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   holds a credential (`security.md` section 6), and no secret sits in a variable the bundler exposes
   (`security.md` section 9).
 - Before you build or change the server that holds a browser application's session (a Backend for
-  Frontend): its session or login cookie, how a session starts, is refreshed, times out or ends, a
-  re-authentication, its CSRF or CORS checks, or a route, a WebSocket or a file download on it, read
+  Frontend): its session or login cookie, a key that signs or encrypts them, how a session starts,
+  is refreshed, times out or ends, a re-authentication, its CSRF or CORS checks, a route, a
+  WebSocket or a file download on it, or the library or framework it is built on, read
   `docs/engineering/any-language/backend-for-frontend/backend-for-frontend.md`. The check: every
   session or login cookie the change sets is named with the `__Host-Http-` prefix and written with
   `Secure`, `HttpOnly`, `Path=/` and a `SameSite` value, and no `Domain`
