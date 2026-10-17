@@ -16,7 +16,10 @@
 This file is for everyone who decides whether a repository gets a dev container, or writes one:
 people and AI agents alike. A container an AI agent works in, and the security of dev containers,
 are [agent-containers.md](agent-containers.md); the image a person works in is
-[images.md](images.md) section 12.
+[images.md](images.md) section 12. One topic is covered only in part: a check that shows a
+`devcontainer.json` follows these rules. Some rules route to checks in other files, such as
+`--frozen-lockfile` in CI and the merged-configuration read
+([agent-containers.md](agent-containers.md) section 9); for the rest, a check is not covered yet.
 
 The one rule: **add a dev container when the part of the environment a lock file does not record
 differs between the team's machines and matters to the code; leave it out when the lock files and

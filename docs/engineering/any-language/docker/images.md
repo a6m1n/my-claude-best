@@ -208,8 +208,9 @@ Whatever the choice:
 - **Give each path the service writes a directory of its own, owned by the runtime user.** Create
   it with `COPY --chown` or `RUN install -d -o 10001 -g 10001 /app/data`, never with a
   `RUN chown -R`: it copies every file it touches into a new layer [141], and in one Rails build a
-  recursive `chown` of only the four write directories (`db`, `log`, `storage`, `tmp`) took
-  627.6 s, until the Dockerfile moved to `COPY --chown` [140].
+  recursive `chown` of only the directories the generated Dockerfile handed to the runtime user
+  at the time (`db`, `log`, `storage` and `tmp` in a default app [149]) took 627.6 s, until the
+  Dockerfile moved to `COPY --chown` [140].
 - **An existing volume keeps its owner.** Docker copies the image's files into a named volume only
   while the volume is empty; a volume that already holds data hides the image's files under its
   own [148], so its files keep the owner they had (this practice's reading). When the runtime user
@@ -570,3 +571,4 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [146] hadolint — rule DL4006 source, v2.15.1 — https://github.com/hadolint/hadolint/blob/v2.15.1/src/Hadolint/Rule/DL4006.hs — checked 2026-10-17
 - [147] Astral — uv: Locking and syncing, uv 0.13.1 — https://github.com/astral-sh/uv/blob/0.13.1/docs/concepts/projects/sync.md
 - [148] Docker — Volumes, Mounting a volume over existing data (`content/manuals/engine/storage/volumes.md`) — https://github.com/docker/docs/blob/31d174d090fd7111ca2199ed54a3978e0d4ac74d/content/manuals/engine/storage/volumes.md
+- [149] Rails — railties: `app_base.rb`, `dockerfile_chown_directories` — https://github.com/rails/rails/blob/d1deb4e897886f594e850bc135e77f1346927182/railties/lib/rails/generators/app_base.rb#L801-L808 — checked 2026-10-17
