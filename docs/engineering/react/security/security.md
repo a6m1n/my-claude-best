@@ -23,22 +23,24 @@
 
 ## 1. Purpose and the one rule
 
-This file is for everyone who writes or reviews the browser side of a React application and the
-backend that holds its session (a Backend for Frontend, BFF for short, or the API): people and AI
-agents alike. Read it before you put data from outside the application on the page, spread an
-object from outside as props, handle a session or a token, keep or send a credential, set the
-session cookie, change how the session starts, times out or ends, change the API's Cross-Origin
-Resource Sharing (CORS) or cross-site request forgery (CSRF) checks, add an environment variable, a
-dependency, a third-party script, a response header or a CI step, change the dev server's
-settings, add a route, a WebSocket or a file download to its API or to the server that holds its
-session, set up its query client, add polling, or build the shell its screens share. Every line
-that carries a read date is to be distrusted six months after that date until it is read again,
-the earliest on 2027-04-01; the README's "How to adopt" says how to list those lines.
+This file is for everyone who writes or reviews the browser side of a React application: people
+and AI agents alike. Read it before you put data from outside the application on the page, spread
+an object from outside as props, handle a session or a token, keep or send a credential, add an
+environment variable, a dependency, a third-party script, a response header or a CI step, change
+the dev server's settings, set up its query client, add polling, or build the shell its screens
+share. The server that holds the application's session, the Backend for Frontend (BFF for short),
+has its own practice,
+[backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md).
+Every line that carries a read date is to be distrusted six months after that date until it is
+read again, the earliest on 2027-04-01; the README's "How to adopt" says how to list those lines.
 
 The default case is a client-rendered application built with Vite and served as static files. A
-framework that renders on the server or runs Server Functions is the second case: section 8 and
-parts of section 5 add its rules. The examples use the billing screens of `Acme Corp`, and
-[security-example.md](security-example.md) shows the whole set in one application. The example
+framework that renders on the server or runs Server Functions is the second case: section 8, parts
+of section 5, and the server's CSRF rules for Server Functions in
+[backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
+3, "Fetch Metadata and exemptions", add its rules. The examples use the billing screens of
+`Acme Corp`, and [security-example.md](security-example.md) shows the whole set in one
+application. The example
 assumes the page at one origin and the API at another origin of the same site
 (`https://app.example.com` and `https://api.example.com`). That is why the API answers CORS
 preflights for the page's origin, why the request sets `credentials: "include"`, and why a
@@ -50,8 +52,9 @@ rules here come from OWASP, the Open Worldwide Application Security Project, a n
 foundation; what its Top 10 and its Application Security Verification Standard (ASVS) are, and how
 to work with them, is in [section 17](#what-the-owasp-top-10-is-and-how-to-work-with-it).
 
-The rules stand on six terms, in this file's own wording. The cookie, CORS and CSRF rules use the
-first four; the last two are this file's own:
+The rules stand on six terms, in this file's own wording. The cookie, Cross-Origin Resource Sharing
+(CORS) and cross-site request forgery (CSRF) rules use the first four; the last two are this file's
+own:
 
 - An origin is a URL's scheme, host and port, such as `https://app.example.com`; two URLs that
   differ in any of the three are two origins [1]. CORS works by origin [1].
@@ -63,10 +66,10 @@ first four; the last two are this file's own:
 - A preflight is the `OPTIONS` request a browser sends before a cross-origin request whose method
   or headers are outside the CORS safelist, to ask the server whether it allows that request
   [2], [1].
-- **Write it down** means: a choice goes into the project's decision log, and a value goes into the
-  BFF's settings with its reason next to it
-  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 2, "The session's life", says more).
+- **Write it down** means: a choice goes into the project's decision log
+  ([roles-and-decisions.md](../../any-language/project-management/roles-and-decisions.md) section
+  7), and a value goes into the settings with its reason next to it
+  ([readability.md](../../any-language/readability/readability.md) section 4).
 - **The sign-out path** is what the page runs when the session has ended: it clears what the
   session loaded and sends the user to sign in (section 6, "Timeouts and refresh").
 
@@ -416,35 +419,14 @@ The values are OWASP's HTTP Headers cheat sheet's unless the row says otherwise 
 | `Cross-Origin-Resource-Policy` | `same-site` [51] | another site loading this site's files into its own pages | no |
 | `Cross-Origin-Embedder-Policy` | `require-corp` [51] | part of cross-origin isolation; it blocks every file from another origin that does not opt in, so test it on its own before you send it [51] | no |
 | `X-XSS-Protection` | `0` [51] | turns off the XSS filter old browsers had, which OWASP says can create XSS holes in otherwise safe sites [51] | no |
-| `Cache-Control` | `no-store`, on the responses section 13 names | a shared cache keeping one user's data for the next user (OWASP's Session Management cheat sheet) [55] | the API's responses, not this file |
+| `Cache-Control` | `no-store`, on the HTML pages section 13 names, and on the API's responses as [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3, "Response headers", says | a shared cache keeping one user's data for the next user (OWASP's Session Management cheat sheet) [55] | no: its `index.html` holds no personal data and gets `no-cache`, and the API's responses are not in it |
 ## 6. Sessions and tokens
 
-In this file the BFF is the server that holds the OAuth tokens and sets the session cookie. In
-sections 6 and 7, "the server" means the component that receives the browser's session cookie:
-the BFF, which in the example is also the API at `https://api.example.com`, so "the API" names it
-too. If your own server logs the user in and there is no identity provider, that server plays the
-BFF's part: the cookie, session-life and CSRF rules apply unchanged; the rules about the identity
-provider (its tokens, refresh-token revocation, and RP-initiated, back-channel and front-channel
-logout) do not; ending the session at logout still does. With such a first-party login, keep the
-session's state on the server (this practice's choice). With the session's state in the cookie,
-there would be no provider tokens to revoke at logout. The list of ended sessions, whose rules are
-in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-section 2, "Logout", would then be the only control that stops a copy of the cookie.
-
-With a first-party login, skip these parts of
-[backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md), which
-hold only with an identity provider:
-
-- "The login cookie" and "Forwarding to resource servers", whole;
-- in "Timeouts and refresh", the refresh rules, from the `invalid_grant` rule to the rule on a
-  provider that rotates refresh tokens and has no reuse window;
-- in "Logout", the rules on revoking the tokens and on RP-initiated, back-channel and
-  front-channel logout;
-- in "The login and logout responses", the login callback's response;
-- in its section 3, the rules on refreshing before a request is forwarded and on a resource server's
-  `401`.
-
-Any other rule that needs an identity provider says `with an identity provider` in its prefix.
+In this file the BFF is the server that holds the OAuth tokens and sets the session cookie. What
+"the server", "the API" and "an API route" mean, and which BFF rules a server that signs users in
+itself, with no identity provider, skips, are in
+[backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
+1.
 
 In this section, every rule the page follows starts with `Page:` or
 `Page, with an identity provider:`, or with `Browser-only client:` where the page itself holds the
@@ -492,14 +474,14 @@ security" (section 6) [3]:
   code flow with PKCE, never the implicit grant** (RFC 10017 section 7.2; RFC 9700 sections 2.1.1
   and 2.1.2), so no access token travels in a redirect URL, where it can leak and be replayed
   [3], [58], [59].
-- **BFF or browser-only client: use a maintained library or the provider's SDK for the OAuth
-  flow, never your own code** (OWASP's Authentication cheat sheet asks to prefer well-maintained
-  libraries or SDKs; writing the flow yourself is this practice's ban), so the flow's checks come
-  from code that others review and keep patched [60]. The library runs the protocol: the
-  authorization request, `state`, the nonce, PKCE, the token exchange and the ID token checks. The
-  step-up's checks and the bookkeeping of its login cookie are the team's own code around it
-  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 2, "The login cookie" and "Re-authentication").
+- **Browser-only client: use a maintained library or the provider's SDK for the OAuth flow, never
+  your own code** (OWASP's Authentication cheat sheet asks to prefer well-maintained libraries or
+  SDKs; writing the flow yourself is this practice's ban), so the flow's checks come from code that
+  others review and keep patched [60]. The library runs the protocol: the authorization request,
+  `state`, the nonce, PKCE, the token exchange and the ID token checks. The BFF's rule on its own
+  library is in
+  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2, "The login cookie".
 - **Browser-only client: set the SDK's token storage option explicitly.** Vendors' defaults
   differ: Auth0's SPA SDK keeps tokens in memory, MSAL.js in `sessionStorage`, Okta's auth-js in
   `localStorage` [61], [62], [63].
@@ -577,7 +559,7 @@ The flow, in order, with the page's own acts in bold:
 4. The session: **the page calls the API through the one API client**; the BFF adds the token.
 5. Refresh: the BFF refreshes the tokens when the access token expires.
 6. Step-up: on `403 reauth_required`, **the page opens the BFF's login endpoint again, with the
-   step-up flag**.
+   step-up flag `step_up=1`**.
 7. Logout: **the page calls the logout endpoint and runs the sign-out path**.
 
 - **Page: when the session check answers `401` on a route that needs no session, show the
@@ -594,10 +576,9 @@ section 2, "A new session id at login".
 - **Page: do not keep an idle session alive with requests sent on a timer.** OWASP measures idle
   time by activity in the session, on the server, so a request the page sends on a timer resets
   the clock as a click does [55]. In TanStack Query that means no `refetchInterval` on data that
-  needs the session, unless the BFF leaves those requests out of its idle clock. Polling is off by
-  default, and a hidden tab polls only with `refetchIntervalInBackground` set (TanStack Query docs,
-  read 2026-10-15) [68], [69]. OWASP states the definition, not this rule; the rule
-  is this practice's reading of it.
+  needs the session. Polling is off by default, and a hidden tab polls only with
+  `refetchIntervalInBackground` set (TanStack Query docs, read 2026-10-15) [68], [69]. OWASP
+  states the definition, not this rule; the rule is this practice's reading of it.
 - **Page: run the sign-out path on the first `401` the API answers:** clear what the session
   loaded and send the user to sign in, so the screen shows no data from a session the server has
   ended. What the sign-out handler does is [architecture.md](../architecture/architecture.md)
@@ -643,9 +624,9 @@ section 2, "A new session id at login".
 
 ### Re-authentication
 
-- **Page: on a `403`, check its body for the code `reauth_required` before the `401` rule,** so
-  the user re-authenticates, by the path of the login type that the next rules give, instead of
-  seeing a plain refusal; the rule is this practice's choice.
+- **Page: on a `403`, check its body's field `code` for `reauth_required` before the `401`
+  rule,** so the user re-authenticates, by the path of the login type that the next rules give,
+  instead of seeing a plain refusal; the rule is this practice's choice.
 - **Page, with an identity provider: before the step-up's navigation, keep in `sessionStorage` the
   screen of the guarded change and what the user typed into it, or start the step-up as the user
   opens that screen, before they type,** since the navigation unloads the page and everything typed
@@ -654,23 +635,26 @@ section 2, "A new session id at login".
   practice's choice.
 - **Page, with an identity provider: on a `403` whose body carries `reauth_required`, or as the user
   opens a guarded change's screen (the rule above), open the BFF's login endpoint by a top-level
-  navigation, with the step-up flag and, when the `403` carried `acrValues`, that value as a query
-  parameter encoded by `URLSearchParams`,** since the browser reaches the login endpoint by a
-  navigation, so the BFF can answer with the redirect that takes the browser to the authorization
-  server (RFC 10017 section 6.1.2.1) [3]. `URLSearchParams` encodes every character of a value
-  except the ASCII letters and digits, `*`, `-`, `.` and `_`, so an `&`, a `=` or a `#` in
-  `acrValues` cannot add a parameter or end the query (URL Standard sections 5.2 and 6.2) [75]. The
+  navigation, with the step-up flag `step_up=1` and, when the `403` carried `acrValues`, that value
+  as the query parameter `acr_values`, encoded by `URLSearchParams`,** since the browser reaches the
+  login endpoint by a navigation, so the BFF can answer with the redirect that takes the browser to
+  the authorization server (RFC 10017 section 6.1.2.1) [3]. `URLSearchParams` encodes every
+  character of a value except the ASCII letters and digits, `*`, `-`, `.` and `_`, so an `&`, a
+  `=` or a `#` in `acrValues` cannot add a parameter or end the query (URL Standard sections 5.2
+  and 6.2) [75]. The
   BFF accepts only the values on the list the team wrote down
   ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
   section 2, "Re-authentication"). The step-up flag and the encoding are this practice's choice.
 - **Page: with a first-party login, on a `403` whose body carries `reauth_required`, show the
-  re-authentication prompt and send the guarded request again with the answer, and on a `403`
-  whose body carries `reauth_failed`, show the prompt again,** so the change the BFF guards can go
+  re-authentication prompt and send the guarded request again with the answer in its JSON body
+  field `reauthAnswer`, and on a `403` whose body carries `reauth_failed`, show the prompt
+  again,** so the change the BFF guards can go
   through; leave a `401` to the sign-out path. The rule is this practice's choice.
 - **Page, with an identity provider: on the step-up's outcome route, read what was kept in
-  `sessionStorage` and delete it, show the outcome its code names (`reauthenticated`, `refused` or
-  `failed`), and after `reauthenticated` put the user back on the kept screen with what they typed,
-  its data read again from the BFF, so they can send the change again,** since the BFF applied
+  `sessionStorage` and delete it, show the outcome that its query parameter `outcome` names
+  (`reauthenticated`, `refused` or `failed`), and after `reauthenticated` put the user back on the
+  kept screen with what they typed, its data read again from the BFF, so they can send the change
+  again,** since the BFF applied
   nothing of the change and kept nothing of the request
   ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
   section 2, "Re-authentication"); the rule is this practice's choice.
@@ -685,12 +669,9 @@ section 2, "The login and logout responses".
 
 ## 7. CSRF and CORS
 
-As in section 6, "the server" means the component that receives the browser's session cookie: the
-BFF, which in the example is also the API, so the `API:` and `BFF:` rules of
-[backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3
-name the same server. An API route is any route of that server other than a `GET` that serves the
-page's own files (the HTML and its scripts) or, with a framework that renders on the server, a `GET`
-that renders one of its pages.
+What "the server" and "an API route" mean, and whose acts the `API:` and `BFF:` rules are, is in
+[backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
+1.
 
 The page's rules in this section are under "What the React code does", and in "Fixing a CORS
 error" they are the bullets that start with "The page" or `Page:`.
@@ -709,8 +690,9 @@ section 3, "What the server does".
   the requests the exemption table of
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
   3 names that the page sends: the login start, which the page opens by a top-level navigation, the
-  `report` method's calls, the WebSocket handshake and a download link. A header such as
-  `X-Requested-With` makes the browser send a CORS preflight first, and the server allows it only
+  `report` method's calls, the WebSocket handshake and a download link. The header is
+  `X-Requested-With`, with any value that is not empty, as section 3 of that file names it; it
+  makes the browser send a CORS preflight first, and the server allows it only
   for the application's origin (`https://app.example.com`), so another site cannot send the request
   from a form (OWASP, item 4 in
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
@@ -722,12 +704,12 @@ section 3, "What the server does".
   default, `same-origin`, sends no cookie to another origin (MDN) [74]. On the page's own origin
   the default already sends it.
 - **Page: when the API answers with a status that is not `2xx`, have the API client throw an error
-  that carries the response's status and, when the body parses as JSON, its fixed code and the
-  body's `acrValues` when it has them; a body that does not parse, such as a gateway's HTML page,
-  gives no code and no `acrValues`,** so the `Page:` rules that read a status and a code, such as
-  `cookie_conflict` and `reauth_required` (section 6), can read both, and the step-up with an
-  identity provider can pass the `acrValues` on to the BFF's login endpoint (section 6,
-  "Re-authentication"); the rule is this practice's choice.
+  that carries the response's status and, when the body parses as JSON, the fixed code in its field
+  `code` and the body's `acrValues` when it has them; a body that does not parse, such as a
+  gateway's HTML page, gives no code and no `acrValues`,** so the `Page:` rules that read a status
+  and a code, such as `cookie_conflict` and `reauth_required` (section 6), can read both, and the
+  step-up with an identity provider can pass the `acrValues` on to the BFF's login endpoint
+  (section 6, "Re-authentication"); the rule is this practice's choice.
 - **Load an API resource that the page shows without `fetch`, such as an image or a PDF preview,
   through the API client, and show it from a `URL.createObjectURL` URL,** because an `<img>` and a
   frame cannot send the custom header; the reason is this practice's reading.
@@ -822,6 +804,11 @@ Next.js, React Router in framework mode, and others. A client-only application h
 endpoints; React's December 2025 advisory lists client-only React as not affected [88]. An
 application that uses Server Components can be exposed even when it defines no Server Function of
 its own (the same advisory) [88].
+
+The server's CSRF rules for Server Functions and a framework's route actions, and for Next.js's
+`allowedOrigins`, are in
+[backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
+3, "Fetch Metadata and exemptions".
 
 - **Treat every Server Function as a public HTTP endpoint.** Anyone can send it a POST directly,
   not only through your UI, and a check on the page that shows the form does not cover it (Next.js
@@ -986,9 +973,9 @@ updates only, never to security updates (read 2026-10-01) [101], [102],
 - **Have every security advisory of your dependencies reach you on the day it is published:**
   turn on the host's dependency alerts for the repository, such as Dependabot alerts on GitHub,
   and watch the advisory sources section 18 lists for React's server packages, the framework, the
-  router, Vite and DOMPurify [144]. Where a BFF holds the session, turn on dependency alerts in
-  the BFF's own repository too, for its server framework, its session and cookie library and its
-  OAuth or OpenID Connect client library. A critical fix can then go in through the emergency path
+  router, Vite and DOMPurify [144]. Where a BFF holds the session, the alerts of its own repository
+  are in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2, "Reading the `Cookie` header". A critical fix can then go in through the emergency path
   on the day it ships, not at the next dated re-check or CI run.
 
 Before an AI coding agent installs a package:
@@ -1186,11 +1173,12 @@ iframes, redirects and service workers:
   Authentication cheat sheet asks to allow paste in the username, password and MFA fields
   [60]. The UK's NCSC asks services to let users paste passwords, so people can use password
   managers [167].
-- **Send `Cache-Control: no-store` on any response that carries personal data or a session id,
-  HTML included,** so no shared cache keeps one user's data for the next one. OWASP's Session
-  Management cheat sheet asks for it on responses that carry a session id [55]. OWASP's REST
-  Security cheat sheet asks for it on API responses a browser may read [161]. Personal
-  data and HTML pages are this practice's choice.
+- **Send `Cache-Control: no-store` on any HTML page that carries personal data or a session id,**
+  so no shared cache keeps one user's data for the next one. OWASP's Session Management cheat sheet
+  asks for it on responses that carry a session id [55]. Personal data and HTML pages are this
+  practice's choice. The API's responses take it from
+  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 3, "Response headers".
 
 ## 14. Automation: lint rules and header scanners
 
@@ -1543,9 +1531,10 @@ change which badge shows, never which props the element gets (section 3).
 
 ## 17. Review checklist and the OWASP Top 10:2025
 
-A review question per section; sections 6 and 7 each get one row for the page here and one for the
-server in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-section 5. OWASP's ASVS 5.0, chapter V3 "Web Frontend Security", is the longer checklist for the
+A review question per section; sections 6 and 7 each get one row for the page here, and the
+server's rows are in
+[backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
+6. OWASP's ASVS 5.0, chapter V3 "Web Frontend Security", is the longer checklist for the
 same ground [64]. Each red flag is a way in, so one red flag is enough to stop the merge until
 it is fixed or the author shows why it does not apply; that bar is the practice's choice.
 
@@ -1555,7 +1544,7 @@ it is fixed or the author shows why it does not apply; that bar is the practice'
 | 3. XSS | Can a value from outside reach HTML, a URL, a props object, a style or code? | a URL from data with no scheme allowlist; outside data spread as props; a renderer's `urlTransform` overridden [13] |
 | 4. Sanitising | Is the HTML sanitised in the sink's own render? | a second `dangerouslySetInnerHTML`; a sanitised string changed or joined after cleaning |
 | 5. Headers | Does the built page run under a policy with no `'unsafe-inline'` in `script-src`? | `'unsafe-inline'` or `data:` in `script-src`; a policy only in `<meta>`; a nonce in a cached response; a check or a policy still log-only after its written end |
-| 6a. Sessions, page | Can script read anything that grants access? | a token or session id in `localStorage`, `sessionStorage` or a cookie set by script; a cookie the page sets without `Secure`, a written `SameSite` or a `__Host-` or `__Secure-` prefix; `refetchInterval` on data that needs the session, unless the BFF leaves those requests out of its idle clock |
+| 6a. Sessions, page | Can script read anything that grants access? | a token or session id in `localStorage`, `sessionStorage` or a cookie set by script; a cookie the page sets without `Secure`, a written `SameSite` or a `__Host-` or `__Secure-` prefix; `refetchInterval` on data that needs the session |
 | 7a. CSRF and CORS, page | Does each request to an API route carry the CSRF defence, and does the page fix CORS errors and build API paths as section 7 says? | `mode: "no-cors"` or a public proxy in the page; a value from outside put into an API path unchecked; a request to an API route, other than the exempt ones in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3, made outside the one API client or without the custom header, or without `credentials: "include"` when the API is on another origin; a blob made with the response's own type, or an SVG blob |
 | 8. Server-side React | Does each Server Function check the user and the record itself? | authorisation only in middleware; a secret written in server code |
 | 9. Secrets | Would you publish every `VITE_` value on the login page? | a key, a token or a password behind a public prefix; production source maps published |
