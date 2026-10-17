@@ -154,8 +154,9 @@ wrote.
 # syntax=docker/dockerfile:1.28.0@sha256:...
 # check=error=true
 
-# The check line above makes a build check fail the build instead of warning (images.md
-# section 7).
+# The two lines above pin the frontend by its version and digest, so a new release cannot change
+# this build without a pull request, and make a build check fail the build instead of warning
+# (images.md section 7).
 # An image the agent works in: one stage, its tools included (images.md section 12).
 # The project's own Python image, so the agent runs the code the way the service does.
 ARG PYTHON_IMAGE=python:3.13-slim-trixie@sha256:...
@@ -211,8 +212,9 @@ package that [agent-containers.md](agent-containers.md) section 9 gives.
 # syntax=docker/dockerfile:1.28.0@sha256:...
 # check=error=true
 
-# The check line above makes a build check fail the build instead of warning (images.md
-# section 7).
+# The two lines above pin the frontend by its version and digest, so a new release cannot change
+# this build without a pull request, and make a build check fail the build instead of warning
+# (images.md section 7).
 # A departure from images.md section 3: Squid comes as a Debian package, so there is no build
 # output to move into a second stage, and apt's lists stay in the cache mount, out of the layer.
 # The cost: apt and dpkg stay in the image.

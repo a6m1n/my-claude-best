@@ -127,9 +127,10 @@ What a dev container costs:
   section 9 lists it, and says why an agent's container gets none of it.
 
 The smallest `devcontainer.json` for a Python service. One part is left out here: the
-`Dockerfile` it names, which starts from a pinned Python image ([images.md](images.md) section 4),
-installs uv and the system libraries the code needs, and creates the user `dev` with a home
-directory ([images.md](images.md) section 12).
+`Dockerfile` it names, which pins its frontend and turns its build checks into errors
+([images.md](images.md) section 7), starts from a pinned Python image and copies uv from a pinned
+uv image ([images.md](images.md) section 4), installs the system libraries the code needs, and
+creates the user `dev` with a home directory ([images.md](images.md) section 12).
 
 ```jsonc
 // .devcontainer/devcontainer.json

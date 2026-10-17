@@ -37,7 +37,7 @@ on:
     branches: [main]
     tags: ["v*"]
   # Weekly as well: the scan reads a fresh vulnerability database, so a new finding in an
-  # unchanged image fails the job (images.md section 4).
+  # unchanged image fails the job.
   schedule:
     - cron: "0 5 * * 1"
 
@@ -92,6 +92,8 @@ jobs:
           test "$(docker run --rm acme-api:test id -u)" = 10001
           docker run --rm acme-api:test python -c "import acme.api.main, acme.api.app"
           docker run --rm acme-api:test sh -c 'command -v acme-api'
+          # The one path the service writes, read-only everywhere else, as compose.yaml runs it (images.md section 6).
+          docker run --rm --read-only --tmpfs /tmp:mode=1770,uid=10001,gid=10001 acme-api:test python -c "import tempfile; tempfile.TemporaryFile().write(b'x')"
 
       # One scanner, one written policy: fail on critical and high findings that have a fix.
       - uses: aquasecurity/trivy-action@...  # v0.36.0
@@ -148,7 +150,7 @@ CVE-2026-0000 exp:2026-12-31
 | `metadata-action` with `type=semver` and `type=sha` | the tags `1.4.2` and `sha-1a2b3c4`, and the OCI labels `source` and `revision`; `latest` appears only on a release tag, and nobody deploys it [12] |
 | the first `build-push-action` with `load: true` | builds and puts the image in the runner, so the test and the scan check the image that will be pushed from the same cache [8] |
 | `cache-to: type=gha,scope=acme-api,mode=max` | this image's own cache scope; GitHub keeps a pull request's cache apart from `main`'s, so a pull request cannot write the cache a release build reads [13], [14] |
-| `Test the image` | the process runs as the non-root user, the package imports from the venv, and the entry point `acme-api` is on `PATH` |
+| `Test the image` | the process runs as the non-root user, the package imports from the venv, the entry point `acme-api` is on `PATH`, and the one path the service writes, `/tmp`, works with the rest of the filesystem read-only, as compose-example.md runs it (images.md section 6) |
 | `trivy-action` with `severity`, `ignore-unfixed`, `exit-code: "1"` | the written policy of [images.md](images.md) section 10; `version` pins the Trivy release the action installs [15] |
 | `.trivyignore` | one waiver per entry, with its reason and an expiry date; after the `exp:` date the finding fails the job again ([images.md](images.md) section 10) [16] |
 | the second `build-push-action` (`id: push`), only on a push | pushes the tags with an SBOM and provenance, and gives the pushed image's digest as its `digest` output (`steps.push.outputs.digest`) [17]. A pull request or a scheduled run builds, tests and scans, and publishes nothing |

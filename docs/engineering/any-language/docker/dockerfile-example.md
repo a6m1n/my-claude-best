@@ -69,8 +69,9 @@ or a test fixture, stays out of every image until someone adds a line for it. In
 # syntax=docker/dockerfile:1.28.0@sha256:...
 # check=error=true
 
-# The check line above makes a build check fail the build instead of warning, so the build CI
-# runs is the lint gate (images.md section 7).
+# The two lines above pin the frontend by its version and digest, so a new release cannot change
+# this build without a pull request, and make a build check fail the build instead of warning, so
+# the build CI runs is the lint gate (images.md section 7).
 # One Python image for both stages: a venv only works where its interpreter sits at the same
 # path (images.md section 11). Renovate updates the tag and the digest together.
 # The Docker Official Image, slim, which its maintainers strive to republish at least monthly;
@@ -98,7 +99,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # The second uv sync reads both files from /app, not from a bind mount.
 COPY pyproject.toml uv.lock ./
 COPY src ./src
-# --no-editable installs the package into the venv, so the runtime stage needs only .venv.
+# --no-editable installs the package into the venv, so the runtime stage needs only .venv
+# (images.md section 11).
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --no-dev --no-editable
 
@@ -106,7 +108,7 @@ FROM ${PYTHON_IMAGE} AS runtime
 # A fixed UID and GID, so file ownership is the same in every build (images.md section 6).
 RUN groupadd --gid 10001 app \
  && useradd --uid 10001 --gid app --create-home app
-# Owned by root: the process can read its code but cannot change it.
+# Owned by root: the process can read its code but cannot change it (images.md section 6).
 COPY --from=builder /app/.venv /app/.venv
 # The venv's Python comes first on PATH; PYTHONUNBUFFERED=1 means a crash cannot swallow the last
 # log lines (images.md section 11).
@@ -114,8 +116,10 @@ ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1
 USER 10001:10001
 EXPOSE 8000
-# No HEALTHCHECK: the runtime that acts on a check reads its own (compose.yaml, Kubernetes probes).
-# Exec form, so the server is PID 1 and receives SIGTERM; uvicorn handles it, so no init is needed.
+# No HEALTHCHECK (images.md section 6): Compose and Kubernetes read their own checks, and this
+# image is not published for others to run with plain Docker; add one if you publish it.
+# Exec form, so the server is PID 1 and receives SIGTERM; uvicorn handles it, so no init is
+# needed (images.md section 6).
 CMD ["acme-api"]
 ```
 
@@ -130,7 +134,7 @@ CMD ["acme-api"]
 | first `uv sync … --no-install-project` | the dependency layer, from the lock file through bind mounts; `--locked` stops the build when `uv.lock` does not match `pyproject.toml`; `--no-dev`, in both `uv sync` lines, keeps the development tools out of the runtime environment [15] |
 | second `uv sync … --no-editable` | installs `acme` itself, from `src/`, as a normal package [14] |
 | `useradd --uid 10001`, `USER 10001:10001` | a non-root process with a known number |
-| `COPY --from=builder /app/.venv` without `--chown` | the code stays owned by root [16] |
+| `COPY --from=builder /app/.venv` without `--chown` | the code stays owned by root [16], so the process cannot change it (images.md section 6) |
 | `PATH` | `acme-api` and `python` resolve to the venv |
 | `PYTHONUNBUFFERED=1` | a crash cannot swallow the last log lines [17], [18]; where the logs go is [logging.md](../../python/logging/logging.md) section 6 |
 | `CMD ["acme-api"]` | the entry point of section 1, in exec form |
