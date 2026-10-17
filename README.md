@@ -59,7 +59,7 @@ More parts are about Claude Code itself:
 - [Two skills for a copied practice](skills/README.md) — copy a practice in, record why your copy differs, and merge new commits from this repository without losing your changes.
 - [The meta-thinking skill](skills/meta-thinking/) — before a large task starts, an independent agent asks you only what the code cannot answer and proposes one route, step by step.
 - [The pr skill](skills/pr/README.md) — writes the pull request for the current branch from one fixed template, and opens or updates it after your yes.
-- [The create-jira-ticket skill](skills/create-jira-ticket/) — turns short notes into one Jira ticket, shows every field before it writes, and creates the issue after your yes.
+- [The create-jira-ticket skill](skills/create-jira-ticket/) — turns short notes into a Jira ticket, or an epic with its stories, shows every field before it writes, and creates the issues after your yes.
 - [The commit skill](skills/commit/README.md) — drafts a commit message for your changes, shows it to you, and commits only after your yes.
 
 What it does not do:
