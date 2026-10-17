@@ -114,10 +114,13 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   the closing summary says which steps of the manual accessibility pass were run (`accessibility.md`
   section 11), and someone other than the author of the screen answered its review checklist
   (`designing-with-claude-code.md` section 6).
-- Before you render a value from outside as HTML or as a URL in a React application, spread an
-  object from outside as props, keep or send a credential in one, or add an environment variable, a
-  dependency, a third-party script, a response header or a CI step to one, or change the dev
-  server's settings, read `docs/engineering/react/security/security.md`, and
+- Before you put data from outside a React application on its page, spread an object from outside as
+  props, handle a session or a token in one, keep or send a credential, set its session cookie,
+  change how its session starts, times out or ends, change its API's CORS or CSRF checks, add an
+  environment variable, a dependency, a third-party script, a response header or a CI step to one,
+  change the dev server's settings, add a route, a WebSocket or a file download to its API or to the
+  server that holds its session, set up its query client, add polling, or build the shell its
+  screens share, read `docs/engineering/react/security/security.md`, and
   `docs/engineering/react/security/security-example.md` when you set these up in an application. The
   check: `grep -rln dangerouslySetInnerHTML src/` prints one file, the one that sanitises
   (`security.md` section 4), `grep -rnE 'localStorage|sessionStorage' src/` prints no line that
