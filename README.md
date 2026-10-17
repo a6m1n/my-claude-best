@@ -44,6 +44,7 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 - [any-language/prompt-engineering](docs/engineering/any-language/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
 - [python/testing](docs/engineering/python/testing/) — which code earns a test, and how a pytest suite is laid out and written.
 - [python/evals](docs/engineering/python/evals/) — how to check what a language model does in an application, with real calls on real cases.
+- [any-language/docker](docs/engineering/any-language/docker/) — one application's image from the build context to the registry, running it with Compose, and a container an AI coding agent works in.
 - [react/architecture](docs/engineering/react/architecture/) — the format of a React application, its tree, where state and server data live, and the library for each job.
 - [react/components](docs/engineering/react/components/) — how one component and one hook are written, and the common mistakes.
 - [react/design](docs/engineering/react/design/) — how a screen looks and behaves, accessibility, and designing with Claude Code.
@@ -66,7 +67,7 @@ What it does not do:
 
 - It is not a standard. The practices are one author's choices: change or drop any rule in your copy.
 - It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself. The two sync skills in `skills/` bring in new commits only when you run them.
-- It has no examples in languages other than Python and TypeScript.
+- It has no examples in languages other than Python and TypeScript, apart from the configuration files they run with: YAML, TOML, Dockerfiles and the like.
 - It is not an official Anthropic project, and Anthropic does not endorse it.
 
 ## Why it is useful

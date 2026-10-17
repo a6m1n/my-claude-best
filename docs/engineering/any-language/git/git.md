@@ -256,7 +256,10 @@ as the normal case.
   `git worktree add -b <branch> ../<name> origin/main`. For a branch that already exists:
   `git worktree add ../<name> <branch>`. Git refuses a branch that is already checked out in
   another tree, which is the guard you want. A working tree placed inside the repository
-  directory goes into `.gitignore`.
+  directory goes into `.gitignore`. An agent that runs in a container gets its own clone
+  instead, except in the one case [agent-containers.md](../docker/agent-containers.md) section 11
+  names, because a linked worktree shares the repository's hooks and config with your host
+  (section 7 there).
 - In a shared working tree the index is shared too. Stage by explicit path, and never
   `git add -A` or `git add .`: they sweep up whatever anyone else left in the tree.
 - Before committing, `git diff --cached --name-only` should list only your files. It reads the

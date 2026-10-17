@@ -82,7 +82,13 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 │   └── guides/                             # for people who call the app
 ├── .github/workflows/
 ├── .env.example                            # every setting, no real values
+├── .pre-commit-config.yaml                 # the hooks before a commit (python/static-checks/static-checks.md section 4)
+├── .devcontainer/                          # only when a dev container pays off (any-language/docker/dev-containers.md section 3) or an agent works in one (any-language/docker/agent-containers.md section 9)
+├── .dockerignore                           # an allow-list of what the build reads (any-language/docker/images.md section 2)
+├── .trivyignore                            # each accepted scan finding with its reason and an expiry date (any-language/docker/images.md section 10)
 ├── Dockerfile
+├── compose.yaml                            # the local stack (any-language/docker/compose.md)
+├── renovate.json                           # the bot that keeps the digest pins current (any-language/docker/images.md section 4)
 ├── pyproject.toml
 ├── uv.lock
 ├── CLAUDE.md
