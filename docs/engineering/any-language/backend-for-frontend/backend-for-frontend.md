@@ -632,11 +632,11 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   others do not hold yet signs users out at random, and a key removed too early signs out every
   user whose cookie it protected.
   1. The rotation job adds the new key to the store with a start time two reload intervals, plus
-     the clock skew between instances, ahead, so the check below has a full interval to run.
-     Before the start time, the job checks the key ids logged by the instances the load balancer
-     lists at that moment: each must have logged a key list that holds the new key id. When one
-     has not, the job moves the start time later by the same margin and checks again the same
-     way, and the team finds out why.
+     the clock skew between instances, ahead, so a moved start time still reaches every instance
+     before the old one passes. One reload interval after it writes the key, the job checks the
+     key ids logged by the instances the load balancer lists at that moment: each must have
+     logged a key list that holds the new key id. When one has not, the job moves the start time
+     later by the same margin at once and checks again the same way, and the team finds out why.
   2. The start time passes, and every instance protects new cookies with the new key; this step
      needs no act.
   3. The job removes the old key only when the new key's start time, plus one reload interval,
@@ -1146,8 +1146,9 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   yours sends and write the choice down [57].
 - **BFF: with the session's state in the cookie, end the session that a back-channel logout names
   by adding its `sid` to the list of ended sessions, and for a logout token with no `sid`, set a
-  time per user, the token's `iat`, before which no cookie of that user counts; keep each such
-  entry for one absolute timeout after it was written,** since the cookie carries the provider's
+  time per user, the latest `iat` of such a token, before which no cookie of that user counts,
+  and never replace it with an earlier time; keep each such entry for one absolute timeout after
+  it was written,** since the cookie carries the provider's
   `sid`, when the ID token has one ("A new session id at login" above), the every-request check
   above rejects both, and every session the entry ends started before the token was issued.
   Back-Channel Logout 1.0 makes the check that no token with the same `jti` was received recently
@@ -1546,13 +1547,13 @@ because ASVS is the standard and the cheat sheet is guidance below it.
   destroyed; only a store error is a failed destroy.
 - **BFF: when an account is disabled or deleted, end every session of the user yourself: with the
   session's state on the server, destroy each session of the user, as the logout rules above
-  destroy one; with the session's state in the cookie, set that user's per-user time to now
-  ("Logout" above),** so a disabled or deleted account keeps no session that still works (ASVS 5.0
-  requirement 7.4.2) [42]. Where the provider disables the account, its back-channel logout
-  ends the sessions as the back-channel rules above say. When ending them fails, log it at
-  `ERROR` ([logging.md](../../python/logging/logging.md) section 4), return the error to the caller
-  that disabled the account, and alert a person (section 3, "Logging"); the failure path is this
-  practice's choice.
+  destroy one; with the session's state in the cookie, set that user's per-user time to now,
+  unless it is already later ("Logout" above),** so a disabled or deleted account keeps no session
+  that still works (ASVS 5.0 requirement 7.4.2) [42]. Where the provider disables the account,
+  its back-channel logout ends the sessions as the back-channel rules above say. When ending them
+  fails, log it at `ERROR` ([logging.md](../../python/logging/logging.md) section 4), return the
+  error to the caller that disabled the account, and alert a person (section 3, "Logging"); the
+  failure path is this practice's choice.
 
 ### Forwarding to resource servers
 
@@ -1870,10 +1871,11 @@ into the page's memory; a file the page shows goes through the API client and a 
 - **BFF, with an identity provider: when a logout token names a key id the BFF does not hold,
   refetch the provider's keys at most once per interval the team writes down,** so a flood of
   tokens with made-up key ids cannot make the BFF call the provider on each one; the rule is this
-  practice's choice. When the interval refuses a refetch, or a refetch fails, answer `400`, log it
-  at `ERROR` ([logging.md](../../python/logging/logging.md) section 4) with the token's `iss` and
-  the key id, and count it in the alert on a back-channel logout that could not end its session
-  ("Logging" below).
+  practice's choice. When the interval refuses a refetch, answer `400` and log it at `WARNING`
+  ([logging.md](../../python/logging/logging.md) section 4) with the token's `iss` and the key id,
+  since such a refusal is what a flood of made-up key ids produces. When a refetch fails, answer
+  `400`, log it at `ERROR` with the token's `iss` and the key id, and count it in the alert on a
+  back-channel logout that could not end its session ("Logging" below).
 - **Never change the user's data or session on a `GET`; the login start, which starts a login
   attempt, and the login callback, which creates the session or, after a step-up, replaces it,
   are the only exceptions, each guarded as its row in the exemption table says.** OWASP notes that
@@ -2167,7 +2169,8 @@ subsection and its section 4 rows.
   the rule is this practice's choice.
 - **BFF, with an identity provider: alert a person on every back-channel logout that could not
   end its session (section 2, "Logout"), or whose logout token named a key the BFF could not
-  refetch (section 3, "Fetch Metadata and exemptions"),** since Back-Channel Logout 1.0 leaves
+  refetch because the refetch failed (section 3, "Fetch Metadata and exemptions"),** since
+  Back-Channel Logout 1.0 leaves
   sending the logout request again to the provider (section 2.5) and names nothing the provider
   does after the BFF's `400` (section 2.8), so the session may stay live until its timeouts [57].
   The rule is this practice's choice.
