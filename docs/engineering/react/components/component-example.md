@@ -11,7 +11,7 @@ The code is quoted verbatim from a reference application on React 19.3, React Co
 TypeScript 6.0, Vite 8, TanStack Router 1 and TanStack Query 5 (versions read 2026-10-01). It was
 type-checked, linted with Oxlint and ESLint, unit-tested and built; nothing was run in a browser.
 The application is not in this folder: the example files of the `react/` practices quote its code,
-and the checks named were run on it on 2026-10-01, 2026-10-02 and 2026-10-03.
+and the checks named were run on it on 2026-10-01, 2026-10-02, 2026-10-03 and 2026-10-16.
 The whole tree and the configuration files are
 [layout-example.md](../architecture/layout-example.md); the accessibility of the markup is
 [accessibility.md](../design/accessibility.md) section 3.
@@ -440,6 +440,12 @@ export function PayInvoiceForm({ apiClient, invoiceId, onPaid }: PayInvoiceFormP
         {payment.isError ? "We could not confirm the payment. Check the invoice list before you try again." : null}
       </p>
 
+      {/* The wait is a status message too (WCAG 2.2 Understanding 4.1.3: "the waiting state of an
+          application"), and a screen reader may not read the button's new label. `<output>` is a
+          polite status region, in the page from the first render like the one above
+          (accessibility.md section 7). */}
+      <output className="sr-only">{payment.isPending ? "Paying the invoice" : null}</output>
+
       {/* Disabled while the payment runs, so a second click cannot send a second payment
           (ux.md section 2). */}
       <Button type="submit" disabled={payment.isPending}>
@@ -474,5 +480,7 @@ Why it is good:
 - **HTML from outside reaches the page only through `SanitizedHtml`**; why, and how, is
   [security.md](../security/security.md) sections 3 and 4.
 - **The live region is in the page before any error is**, and its comment says why, so nobody
-  renders it only on error; that rule is [accessibility.md](../design/accessibility.md) section 7. The message says what happened, what it means and what to do next, which
+  renders it only on error; that rule is [accessibility.md](../design/accessibility.md) section 7.
+  The `<output>` below it does the same for the wait, which WCAG 2.2 Understanding 4.1.3 counts as
+  a status message. The message says what happened, what it means and what to do next, which
   [ux.md](../design/ux.md) section 2 asks of a failed action.

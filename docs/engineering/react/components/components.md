@@ -118,7 +118,7 @@ What happens when a rule breaks:
 | Who | What it does |
 |---|---|
 | The linter | Oxlint's `react` plugin reports a hook called conditionally, a missing effect dependency, and the compiler's diagnostics: an impure call in render, a synchronous `setState` in an effect, a changed prop or state, and more. Its rules are those of `eslint-plugin-react-hooks` 7, whose pages document each one; the reference application runs them in Oxlint alone. In the reference application, Oxlint 1.85.0 reported its controls as `react-hooks(rules-of-hooks)`, `react(purity)` and `react(set-state-in-effect)` (read 2026-10-01). Which linter runs which rule is [libraries.md](../architecture/libraries.md) section 4. |
-| The compiler | It "skips code that breaks the Rules of React": the component still runs, without the compiler's memoisation. With the lint off, nothing tells you. One practitioner found such a skip only "by way of a re-render regression no profiler was looking for". |
+| The compiler | When code breaks the Rules of React, "it automatically skips over those components and hooks, while keeping the rest of your app compiled" (react.dev): the component still runs, without the compiler's memoisation. With the lint off, nothing tells you. One practitioner found such a skip only "by way of a re-render regression no profiler was looking for". |
 | React, in development | Strict Mode runs each effect's setup, cleanup and setup again, and calls a state initializer twice, so a missing cleanup or an impure initializer shows up while you work. |
 
 Check: CI runs the linter with the hooks rules and the compiler's rules as errors, and fails the
@@ -273,11 +273,12 @@ context), read react.dev's "Using TypeScript", then the React TypeScript Cheatsh
 Patterns by Use Case" page; this file does not restate them.
 
 - *Taste.* **Type the props on the function's parameter, `function Button({ ... }: ButtonProps)`,
-  not with `React.FC`.** Matt Pocock: since React 18 and TypeScript 5.1, `React.FC` "is fine to use
-  again", but he still prefers annotating props directly, which is simpler and easier to turn into
-  a generic component. So the choice is style, not safety. react.dev's TypeScript page types props
-  on plain functions. Type props with `type`, as the example does, so the code base has one form
-  (the React TypeScript Cheatsheet: `type` for props, `interface` for a public API).
+  not with `React.FC`.** Matt Pocock: "As of TypeScript 5.1 and React 18, `React.FC` is now
+  officially 'fine'", but he still prefers annotating props directly, which is simpler and easier
+  to turn into a generic component. So the choice is style, not safety. react.dev's TypeScript page
+  types props on plain functions. Type props with `type`, as the example does, so the code base has
+  one form (the React TypeScript Cheatsheet: `type` for props, `interface` for a public API); a
+  wrapper whose props extend a wide type takes `interface … extends` instead (below).
 - *Advice.* **Type `children` as `ReactNode`**, so a caller can pass anything JSX accepts as a
   child and nothing React cannot render (react.dev, "Using TypeScript").
 - *Advice.* **Type an event as the element's event type, such as
@@ -303,8 +304,8 @@ Patterns by Use Case" page; this file does not restate them.
   `Button` below does.
 - *Advice.* **In React 19, take `ref` as an ordinary prop, and render a context as
   `<CurrentAccountContext value={account}>`.** Do not write `forwardRef` or `<Context.Provider>` in
-  new code. react.dev: "In future versions we will deprecate and remove `forwardRef`"; it
-  plans the same for `<Context.Provider>` (read 2026-10-01).
+  new code. react.dev: "In future versions we will deprecate and remove `forwardRef`", and "In
+  future versions we will deprecate `<Context.Provider>`" (read 2026-10-16).
 - *Advice.* **Give states that exclude each other one prop with a union type, never one boolean
   per state.** Two booleans for three states allow a fourth that means nothing. When each state
   needs different props, use a discriminated union of
@@ -318,13 +319,12 @@ Patterns by Use Case" page; this file does not restate them.
   use and maintain", and adds a warning: do not build the abstraction before there are several
   real callers. `InvoiceList` takes its pay link as a render prop
   ([component-example.md](component-example.md)).
-- *Advice.* **Pass data as props, through a few layers if needed, before you reach for Context.**
-  Props show which component reads which data. Context is an input the props do not show; Josh
+- **Where state two components share, and how it travels, is
+  [architecture.md](../architecture/architecture.md) section 7.** The reason at the component:
+  props show which component reads which data. Context is an input the props do not show; Josh
   Comeau calls it "invisible props", the hidden input
-  [readability.md](../../any-language/readability/readability.md) section 6 warns about. react.dev
-  lists two steps before Context: pass props, then extract components and pass JSX as `children`.
-  Context fits a value many distant components read, such as the theme or the signed-in account.
-  Kent C. Dodds: prop drilling in moderation keeps the data flow explicit.
+  [readability.md](../../any-language/readability/readability.md) section 6 warns about. Kent C.
+  Dodds: prop drilling in moderation keeps the data flow explicit.
 
 ```tsx
 // Bad: two booleans for three states that exclude each other. A caller can pass
@@ -424,10 +424,10 @@ server data. This section is about the state one component keeps.
   "Whenever a state setter function is only used synchronously in an effect, get rid of the
   state!" The effect form costs a second render, and the first render shows the old value. A
   costly computation is memoised by the compiler (section 7).
-- *Advice.* **Keep state in the lowest component that uses it. When two components need it, lift
-  it to their closest common parent, which then owns it alone**, so each state has one owner close
-  to the code that uses it, and no copy of it can fall behind (react.dev, "Sharing State Between
-  Components"; Kent C. Dodds on colocation).
+- **Where state two components share, and how it travels, is
+  [architecture.md](../architecture/architecture.md) section 7.** Following it gives each state one
+  owner close to the code that uses it, so no copy of it can fall behind (react.dev, "Sharing State
+  Between Components"; Kent C. Dodds on colocation).
 - *Advice.* **To start a component fresh when what it shows changes, give it a `key`**, such as
   `<InvoiceNoteEditor key={invoice.id} invoice={invoice} />`, instead of an effect that clears its
   fields. A different key at the same place in the tree resets the component's state (react.dev).
@@ -523,10 +523,11 @@ when no row fits.** The cases are react.dev's "You Might Not Need an Effect".
 When an effect is the right tool:
 
 - *Advice.* **Give each effect one concern, list every reactive value it reads as a dependency,
-  and never silence `exhaustive-deps`.** react.dev says to "always follow" the lint. When it asks
-  for a dependency you do not want, change the code: move the value out of the component, move it
-  into the effect, or split the effect in two. Oxlint's `react/exhaustive-deps` reports the missing
-  dependency ([libraries.md](../architecture/libraries.md) section 4).
+  and never silence `exhaustive-deps`.** react.dev: "Suppressing the linter leads to very confusing
+  bugs, and you should always avoid it." When it asks for a dependency you do not want, change the
+  code: move the value out of the component, move it into the effect, or split the effect in two.
+  Oxlint's `react/exhaustive-deps` reports the missing dependency
+  ([libraries.md](../architecture/libraries.md) section 4).
 - *Advice.* **Give every `useEffect` a comment that names the outside system it keeps in step
   with**, so a later reader can tell an effect that belongs from one that copies state
   ([readability.md](../../any-language/readability/readability.md) section 4).
@@ -581,11 +582,11 @@ export function ScreenError() {
 
 Why it is good: the effect keeps an outside system, TanStack Query's error state, in step with the
 screen being shown. No user event causes it; the error screen appearing does, which is react.dev's
-definition of an effect. TanStack Query's Suspense guide says a suspense query needs "a mechanism
-to retry after errors occur", and offers `useQueryErrorResetBoundary` for it. The effect has one
-concern, lists its one dependency, and starts nothing that needs a cleanup. The comment says why
-it exists, so nobody deletes it as an effect "you might not need". The retry itself runs in the
-click handler.
+definition of an effect. TanStack Query's Suspense guide says a suspense query needs "a way to let
+queries know that you want to try again when re-rendering after some error occurred", and offers
+`useQueryErrorResetBoundary` for it. The effect has one concern, lists its one dependency, and
+starts nothing that needs a cleanup. The comment says why it exists, so nobody deletes it as an
+effect "you might not need". The retry itself runs in the click handler.
 
 One misuse react.dev names is an effect that does what an event handler should do.
 
@@ -632,10 +633,14 @@ nothing renders it.
 A custom hook is a function, and readability holds for it as for a component. React adds these
 rules (react.dev, "Reusing Logic with Custom Hooks"):
 
-- *Advice.* **Start a hook's name with `use` and a capital letter (`useInvoiceFilters`), and give
-  that name only to a function that calls a hook.** The convention lets a reader "always look at a
-  component and know where its state, Effects, and other React features might 'hide'". A function
-  that calls no hook is a plain function with a plain name: `getSorted`, not `useSorted`.
+- *Rule of React.* **Start the name of a function that calls a hook with `use` and a capital
+  letter (`useInvoiceFilters`).** react.dev: "Hook names must start with `use` followed by a
+  capital letter". The linter accepts a hook call only inside a component or a `use` function, so
+  a hook called from a function named otherwise fails `react-hooks(rules-of-hooks)`.
+- *Advice.* **Give that name only to a function that calls a hook.** The convention lets a reader
+  "always look at a component and know where its state, Effects, and other React features might
+  'hide'". A function that calls no hook is a plain function with a plain name: `getSorted`, not
+  `useSorted`.
 - *Advice.* **Write a hook for one concrete purpose and name it for that purpose, never a wrapper
   around the lifecycle** such as `useMount`, `useEffectOnce` or `useUpdateEffect`. react.dev:
   such hooks "don't fit well into the React paradigm", and a missing dependency inside one goes
@@ -678,15 +683,15 @@ A hook's file is named for the hook; the names are
   go. react.dev says to treat opt-outs as temporary and to use directives sparingly; one
   practitioner found that they otherwise become "permanent technical debt".
 - *Advice.* **Know the libraries the compiler skips.** React's `incompatible-library` lint flags
-  them, and the compiler "automatically skips over components using these incompatible APIs". The
-  list, read 2026-10-01:
+  them, and the compiler "can automatically skip over components that use these incompatible
+  APIs". The list, read 2026-10-01:
 
   | Library API | What to do |
   |---|---|
   | React Hook Form's `watch` | use `useWatch({ control, name })`; react.dev's lint page names it as the fix. A community thread (discussion #12524, no maintainer statement) reports three patterns that still break under the compiler: `watch()` read through `useFormContext`, `formState` read through context in child components, and `register` together with `reset()` or `useForm({values})` |
-  | TanStack Table's `useReactTable` | the compiler skips the component that calls it; know that it runs unmemoised |
-  | TanStack Virtual's `useVirtualizer` | flagged by Oxlint's `incompatible-library`: memoisation "by the compiler or by hand" makes the list stop "reflecting new data" (Oxc's docs). Add `"use no memo"` to the component that calls it, with its reason; the library's issue #1119 was open with no maintainer reply |
-  | MobX's `observer` | "not yet detected by linter"; add `"use no memo"` with its reason |
+  | TanStack Table's `useReactTable` | the compiler skips the component that calls it; know that it runs unmemoised. `incompatible-library` reports the call: silence that one line for that rule, with its reason, as for TanStack Virtual (next row) |
+  | TanStack Virtual's `useVirtualizer` | on React's own known-incompatible list since compiler 1.0, so the compiler skips the component that calls it; memoisation "by the compiler or by hand" makes the list stop "reflecting new data" (Oxc's docs). `incompatible-library` reports the call: a warning in React's `recommended` preset, and an error under the example's `"correctness": "error"` ([layout-example.md](../architecture/layout-example.md)), because Oxlint files the rule under Correctness (read 2026-10-16); the error fails CI (section 2). Silence that one line for that rule, with the reason in the comment, as section 5 does for `set-state-in-effect` ([readability.md](../../any-language/readability/readability.md) section 4). Issue #1119 is open. A maintainer wrote there that the `directDomUpdates` option, off by default, "should make it compatible" (2026-06-08), and that silencing the rule "should not by itself cause a de-opt" (2026-06-11); the compiler still skips the component, so no `"use no memo"` is needed (read 2026-10-16) |
+  | MobX's `observer` | react.dev: "the linter does not yet detect them"; add `"use no memo"` with its reason |
 
 - *Advice.* **Measure where speed matters; do not assume the compiler did its part.** It skips a
   component that breaks a Rule of React or uses syntax it does not support, and nothing at run time
@@ -863,9 +868,9 @@ named as Oxlint prints it, such as `react-hooks(rules-of-hooks)`; the key that t
 | a component called as a function | render it with JSX (section 2) | Rule of React | review |
 | a component name in lower case | a capital first letter (section 9) | Rule of React | review |
 | a value copied into state and kept in step by an effect | compute it during render (section 4) | Advice | `react(set-state-in-effect)` |
-| a component defined inside another | define it at the top level of the file (section 4) | Advice | review |
-| a list keyed by index or by a random value | key by the item's id (section 4) | Advice | review |
-| an effect that clears fields when an id changes | a `key` on the component (section 4) | Advice | review |
+| a component defined inside another | define it at the top level of the file (section 4) | Advice | `react(static-components)`; not run as a control |
+| a list keyed by index or by a random value | key by the item's id (section 4) | Advice | `react/no-array-index-key` exists (Oxlint `perf`, off in the example); a random key: review |
+| an effect that clears fields when an id changes | a `key` on the component (section 4) | Advice | `react(set-state-in-effect)`, as in the row 'a value copied into state'; not run as a control |
 | work a click causes, run by an effect | run it in the event handler (section 5) | Advice | review |
 | a silenced `exhaustive-deps` | change the code: move the value, or split the effect (section 5) | Advice | `react-hooks(exhaustive-deps)` once the silencing comment is gone; not run as a control |
 | an effect that starts something and returns no cleanup | return the cleanup (section 5) | Advice | review; Strict Mode shows it in development |
@@ -875,7 +880,7 @@ named as Oxlint prints it, such as `react-hooks(rules-of-hooks)`; the key that t
 | one configuration prop per caller | let the caller pass the part: `children`, a render prop, compound components (section 3) | Advice | review |
 | Context for data two layers down | props (section 3) | Advice | review |
 | `forwardRef` or `<Context.Provider>` in new code | `ref` as a prop; `<Context value>` (section 3) | Advice | review |
-| a new `useMemo`, `useCallback` or `memo` | delete it; the compiler memoises (section 7) | Advice | review |
+| a new `useMemo`, `useCallback` or `memo` | delete it, unless it is one of section 7's two escape hatches and carries its comment | Advice | review |
 | React Hook Form's `watch` under the compiler | `useWatch` (section 7) | Advice | the `incompatible-library` lint; not run as a control |
 | a hand-kept loading or error flag | the mutation's or the transition's state (section 8) | Advice | review |
 | a state update after `await` in a transition, not wrapped | wrap it in `startTransition` (section 8) | Advice | review |
@@ -891,7 +896,7 @@ named as Oxlint prints it, such as `react-hooks(rules-of-hooks)`; the key that t
   ([refactoring.md](../../any-language/refactoring/refactoring.md) section 2). Existing
   memoisation stays even then (section 7).
 - **A shape a library requires.** An error boundary is a class: react.dev says "there is
-  currently no way to write an Error Boundary as a function component", so use
+  currently no way to write an Error Boundary as a function component" (read 2026-10-16), so use
   `react-error-boundary` ([architecture.md](../architecture/architecture.md) section 12). A route
   component takes the router's shape.
 - **A Server Component.** In a framework that renders on the server, a Server Component runs on the
@@ -908,7 +913,7 @@ named as Oxlint prints it, such as `react-hooks(rules-of-hooks)`; the key that t
 
 ## 12. Review checklist
 
-A review question per section. A break of a Rule of React (section 2 or 9) means the component is
+A review question per section. A break of a Rule of React (section 2, 6 or 9) means the component is
 not ready. Any other single red flag is something to raise with the author, not a demand to rewrite;
 when a component or a hook the change wrote or edited shows two or more, it is not ready.
 
@@ -1009,8 +1014,9 @@ when a component or a hook the change wrote or edited shows two or more, it is n
 30. react.dev, "Synchronizing with Effects", https://react.dev/learn/synchronizing-with-effects:
     what an effect is for; cleanup; Strict Mode's second setup.
 31. react.dev, "Lifecycle of Reactive Effects",
-    https://react.dev/learn/lifecycle-of-reactive-effects: always follow `exhaustive-deps`; one
-    concern per effect.
+    https://react.dev/learn/lifecycle-of-reactive-effects: one concern per effect; and "Removing
+    Effect Dependencies", https://react.dev/learn/removing-effect-dependencies: never suppress
+    `exhaustive-deps`, change the code instead.
 32. react.dev, "Separating Events from Effects",
     https://react.dev/learn/separating-events-from-effects, and `useEffectEvent`,
     https://react.dev/reference/react/useEffectEvent: logic that reads the latest values without
@@ -1038,9 +1044,11 @@ when a component or a hook the change wrote or edited shows two or more, it is n
     2026-10-01: `reactCompilerPreset` on Vite.
 41. Oxc, the `react/incompatible-library` rule,
     https://oxc.rs/docs/guide/usage/linter/rules/react/incompatible-library.html; TanStack Virtual
-    issue #1119, https://github.com/TanStack/virtual/issues/1119; React Hook Form discussion
-    #12524, https://github.com/orgs/react-hook-form/discussions/12524: libraries under the
-    compiler; `useVirtualizer`; `useWatch`.
+    issue #1119, https://github.com/TanStack/virtual/issues/1119; react/react pull request #34493,
+    https://github.com/react/react/pull/34493 (`useVirtualizer` on the compiler's known-incompatible
+    list); React Hook Form discussion #12524,
+    https://github.com/orgs/react-hook-form/discussions/12524: libraries under the compiler;
+    `useVirtualizer`; `useWatch`.
 42. Sascha Becker, an 18-month retrospective on the React Compiler, 2026-04-22,
     https://saschb2b.com/blog/react-compiler-year-in-review: silent skips, opt-outs that stay (one
     practitioner).
@@ -1064,8 +1072,8 @@ when a component or a hook the change wrote or edited shows two or more, it is n
 48. Paul Hebert, on the shadcn/ui radio button, 2026-01-20,
     https://paulmakeswebsites.com/writing/shadcn-radio-button/: a copied component that draws a
     radio from buttons with ARIA roles.
-49. react.dev, `Component`, https://react.dev/reference/react/Component: no error boundary as a
-    function component.
+49. react.dev, `Component`, https://react.dev/reference/react/Component, read 2026-10-16: no error
+    boundary as a function component.
 
 **TypeScript, added on review, 2026-10-03**
 

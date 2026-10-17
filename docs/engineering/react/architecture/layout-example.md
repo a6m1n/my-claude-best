@@ -6,7 +6,7 @@ rules, the startup file, the routes and one module's reads and writes. Each part
 follows and why. Names are invented. The code was type-checked, linted, unit-tested and built;
 nothing was run in a browser. The code is quoted from a reference application that is not in this
 folder: the example files of the `react/` practices quote its code, and the checks named were run
-on it on 2026-10-01, 2026-10-02 and 2026-10-03.
+on it on 2026-10-01, 2026-10-02, 2026-10-03 and 2026-10-16.
 
 **Navigation**
 
@@ -243,7 +243,6 @@ Why it is good:
   a missing element a type error, not a crash. `verbatimModuleSyntax` keeps type-only imports
   marked, so a bundler that strips types keeps no runtime import by mistake. `erasableSyntaxOnly`
   allows only syntax a type stripper can erase, so the code also runs under Node's type stripping.
-  There is no `exactOptionalPropertyTypes`.
 - **`moduleResolution: "bundler"`, `allowImportingTsExtensions` and `noEmit`** let every import
   name its `.ts` or `.tsx` file ([architecture.md](architecture.md) section 5). Vite builds the
   code; `tsc` only checks it.
@@ -474,6 +473,10 @@ Why it is good:
   "rules": {
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
+    // Upstream `recommended` has this compiler rule; Oxlint files it under `restriction`, which
+    // `categories` does not turn on, so code the compiler skips would get no report (oxc.rs
+    // blog, 2026-08-18; react.dev, eslint-plugin-react-hooks; libraries.md section 4).
+    "react/unsupported-syntax": "error",
     "import/no-cycle": "error",
     "oxc/no-barrel-file": "error",
     "no-eval": "error",
@@ -500,6 +503,9 @@ Why it is good:
 - **`import/no-cycle` fails on two files that import each other.** Inside one module the boundary
   rule allows any import, so this is the rule that keeps a module's own files from going in a
   circle.
+- **`react/unsupported-syntax` is turned on by name**: Oxlint files it under `restriction`, which
+  `categories` leaves off, so without it code the React Compiler skips gets no report
+  ([libraries.md](libraries.md) section 4).
 - The React rules are [components.md](../components/components.md)'s, the `jsx-a11y` plugin is
   [accessibility.md](../design/accessibility.md)'s, and `no-eval`, `no-implied-eval`,
   `no-new-func`, `no-script-url` and `react/no-danger` are [security.md](../security/security.md)'s.
@@ -760,17 +766,19 @@ the list module uses too.
 ```ts
 // The root of every cached read about invoices. It lives in core because two modules read
 // invoices, and a write in one has to mark the reads of both as stale (file-structure.md
-// section 4; architecture.md section 9).
+// section 4; architecture.md section 9). Only the root: the rest of each key stays with its
+// query in the module that reads it (architecture.md section 6).
 export const invoiceKeys = {
   all: ["invoices"] as const,
-  detail: (invoiceId: string) => ["invoices", invoiceId] as const,
 };
 ```
 
 Why it is good: the key root is data both modules share, so it sits in `core/`, and its comment
-says why ([architecture.md](architecture.md) section 6). `detail` starts with the root, so an
-invalidation of `all` reaches every invoice by prefix ([architecture.md](architecture.md)
-section 9).
+says why ([architecture.md](architecture.md) section 6). The file holds only the root: the key of
+one invoice is built in `pay-invoice/invoice.queries.ts`, the one module that reads it, and starts
+with the root, so an invalidation of `all` reaches every invoice by prefix
+([architecture.md](architecture.md) sections 6 and 9;
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 4).
 
 `src/core/query-client.ts`:
 
@@ -804,7 +812,7 @@ import { invoiceSchema } from "@/core/invoice.schema.ts";
 
 export function invoiceQueryOptions(apiClient: ApiClient, invoiceId: string) {
   return queryOptions({
-    queryKey: invoiceKeys.detail(invoiceId),
+    queryKey: [...invoiceKeys.all, invoiceId],
     queryFn: ({ signal }) =>
       // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
       apiClient.request(`/invoices/${encodeURIComponent(invoiceId)}`, { schema: invoiceSchema, signal }),
@@ -866,6 +874,7 @@ keeps the role word in its name, so `paymentMethodSchema` and the type
 ```ts
 import { mutationOptions } from "@tanstack/react-query";
 
+import { invoiceQueryOptions } from "@/billing/pay-invoice/invoice.queries.ts";
 import type { PaymentMethod } from "@/billing/pay-invoice/payment.schema.ts";
 import { paymentReceiptSchema } from "@/billing/pay-invoice/payment.schema.ts";
 import type { ApiClient } from "@/core/api-client.ts";
@@ -873,7 +882,9 @@ import { invoiceKeys } from "@/core/invoice.keys.ts";
 
 export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: string) {
   return mutationOptions({
-    mutationKey: [...invoiceKeys.detail(invoiceId), "pay"],
+    // This key lets `useMutationState` and `useIsMutating` find this payment. Built from the
+    // invoice query's own key, so both keys name the same invoice (architecture.md section 6).
+    mutationKey: [...invoiceQueryOptions(apiClient, invoiceId).queryKey, "pay"],
     mutationFn: (method: PaymentMethod) =>
       // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
       apiClient.request(`/invoices/${encodeURIComponent(invoiceId)}/payments`, {
@@ -896,7 +907,9 @@ Why it is good:
   reasons, so the next editor does not move it into the form ([architecture.md](architecture.md)
   section 9).
 - **It invalidates the invoice root**, so the list and the invoice both refresh, and it imports no
-  other module ([architecture.md](architecture.md) sections 6 and 9).
+  other module ([architecture.md](architecture.md) sections 6 and 9). Its mutation key lets
+  `useMutationState` and `useIsMutating` find the payment, and it is built from the invoice query's
+  own key, so both keys name the same invoice ([architecture.md](architecture.md) section 6).
 - **The receipt is parsed with its schema, and the cache is not written from it**: a receipt is not
   the full invoice ([architecture.md](architecture.md) section 9). There is no `retry`: a payment
   whose answer was lost would be sent a second time. There is no optimistic update: a payment can

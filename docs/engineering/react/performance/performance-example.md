@@ -16,8 +16,8 @@ application, with the metric it serves and why it is good. Names are placeholder
 - [Not in the reference application](#not-in-the-reference-application)
 
 The reference application is not in this folder. The example files of the `react/` practices
-quote its code, and the checks named here were run on it on 2026-10-01, 2026-10-02 and
-2026-10-03.
+quote its code, and the checks named here were run on it on 2026-10-01, 2026-10-02, 2026-10-03
+and 2026-10-16.
 
 What was verified, and what was not: the code was type-checked, linted, unit-tested and built.
 Nothing was run in a browser, so no metric of this application was measured. The example shows
@@ -51,12 +51,17 @@ type CoreWebVital = CLSMetricWithAttribution | INPMetricWithAttribution | LCPMet
 // This application sits behind a login, so it is in no public data set of field metrics.
 // It measures its own visits and sends each value to its own backend (performance.md section 3).
 export function reportWebVitals(apiClient: ApiClient): void {
-  // A route change loads no page, so without this option only the first screen of a visit
-  // would be measured (performance.md section 3).
+  // A route change loads no page. Without this option, LCP covers the first screen only, while
+  // INP and CLS cover the whole visit and are filed under its first URL; browsers other than
+  // Chromium 151+ always report that way (web.dev, "vitals-spa-faq", updated 2026-10-13;
+  // performance.md section 3).
   const options = { reportSoftNavs: true };
 
   function reportMetric(metric: CoreWebVital): void {
     apiClient.report("/web-vitals", {
+      // CLS and INP can be reported more than once per page load; the backend keeps the last
+      // value per id (web-vitals README; performance.md section 3).
+      id: metric.id,
       name: metric.name,
       value: metric.value,
       rating: metric.rating,
@@ -86,7 +91,10 @@ Why it is good:
   the people who use them (performance.md section 2).
 - **Soft navigations are on**, so each route change is measured as a navigation of its own, and
   the comment says what goes wrong without the option. It works in Chromium 151 and newer with
-  `web-vitals` 6; other browsers report the first screen only (read 2026-10-01).
+  `web-vitals` 6 (read 2026-10-01). Browsers other than Chromium 151+ measure LCP on the first
+  screen only and file the INP and CLS of the whole visit under its first URL
+  (web.dev, read 2026-10-16), so the backend reads INP and CLS per route from Chromium 151+
+  visits only (performance.md section 3).
 - **It loads the attribution build and sends the path with each value**, so the backend can read
   each metric at the 75th percentile per route. The path comes from the URL the metric belongs
   to, `metric.navigationURL`, so a value that arrives after a route change lands on the right
@@ -95,6 +103,10 @@ Why it is good:
   classes. The full attribution object is not sent: when a metric
   fails and `target` is not enough, the fields that split it into parts are added in
   `reportMetric`, one place (performance.md section 4).
+- **Each value carries `metric.id`**, and the backend keeps the last value per id before it takes
+  the 75th percentile (performance.md section 3). CLS and INP can be reported more than once in
+  one page load (web-vitals README); counted as separate visits, the earlier and smaller values
+  would pull the percentile down, and a failing route could look as if it passes.
 - **The report goes out as a `fetch` with `keepalive: true` and `credentials: "omit"`**
   (the `report` method of the API client). `keepalive` lets the request outlive the page, so the
   final values of a visit, known only when the page closes, still arrive. No cookie is sent, so
@@ -166,8 +178,9 @@ reportWebVitals(apiClient);
 Why it is good:
 
 - **`defaultPreload: "intent"` serves the LCP of each route change.** The target's loader runs on
-  hover or focus, so its request is often done by the time of the click (performance.md section 5,
-  prefetch on intent). How much it saves for these screens was not measured.
+  hover or focus, so its request is often done by the time of the click
+  ([architecture.md](../architecture/architecture.md) section 10; performance.md section 5, data).
+  How much it saves for these screens was not measured.
 - **One cache decides what is fresh.** With `defaultPreloadStaleTime: 0` the router always calls
   the loader and the query cache answers from its own `staleTime`, so a screen's data has one
   lifetime, not two.
@@ -215,8 +228,8 @@ Why it is good:
   splitting keeps the loader in the main chunk, so the request and the download of the screen's
   chunk run side by side: one round trip less before the screen's LCP (performance.md section 5,
   data). The same route with the request moved out of the loader is in performance.md section 9.
-- **The loaders use `queryClient.query()`**, the method TanStack Query's prefetching guide names
-  now that `prefetchQuery` and `ensureQueryData` are deprecated (read 2026-10-01).
+- **The loaders use `queryClient.query()`**, the loader method of
+  [architecture.md](../architecture/architecture.md) section 8.
 - **The components read the same cache.** The screen reads `apiClient` with
   `Route.useRouteContext()` and gives it to `InvoiceList`, which calls `useSuspenseQuery` with the
   same query options, finds the data the loader fetched, and starts no second request.
@@ -242,9 +255,10 @@ export function createQueryClient(): QueryClient {
 Why it is good:
 
 - **It replaces TanStack Query's default `staleTime` of 0**, which marks every result stale at
-  once and asks the server again on each mount, window focus and reconnect (performance.md
-  section 5). A screen opened again within a minute renders from the cache, which serves the LCP
-  of that route change.
+  once and asks the server again on each mount, window focus and reconnect
+  ([architecture.md](../architecture/architecture.md) section 8). A screen opened again within a
+  minute renders from the cache, which serves the LCP of that route change (performance.md
+  section 5, data).
 - **The value has its reason at the line**, and the unit is in the name
   ([readability.md](../../any-language/readability/readability.md) sections 4 and 7). One minute
   is a product decision about how stale an invoice list may be; the practice does not set it.
@@ -290,13 +304,13 @@ The production build of the reference application printed these files (Vite 8.3.
 
 ```text
 dist/index.html                                    0.53 kB │ gzip:  0.30 kB
-dist/assets/index-CmulJnWv.css                     9.30 kB │ gzip:  2.78 kB
+dist/assets/index-CwyK9Hdg.css                    11.46 kB │ gzip:  3.13 kB
 dist/assets/rolldown-runtime-CbXtAM7H.js           0.58 kB │ gzip:  0.36 kB
-dist/assets/invoices.index-m_HDp9I8.js             3.66 kB │ gzip:  1.47 kB
-dist/assets/money.format-CUDBypya.js               8.07 kB │ gzip:  3.00 kB
-dist/assets/invoices._invoiceId.pay-B_GXieUv.js   34.05 kB │ gzip: 13.51 kB
-dist/assets/preload-helper-C1JRZSNY.js           123.77 kB │ gzip: 37.88 kB
-dist/assets/index-jrUD5Y6A.js                    301.45 kB │ gzip: 96.88 kB
+dist/assets/invoices.index-DUSh4GUz.js             3.66 kB │ gzip:  1.47 kB
+dist/assets/money.format-B4a1FwYu.js               8.07 kB │ gzip:  3.00 kB
+dist/assets/invoices._invoiceId.pay-CMGf22R2.js   34.21 kB │ gzip: 13.57 kB
+dist/assets/preload-helper-98yH0uSP.js           123.75 kB │ gzip: 37.87 kB
+dist/assets/index-DpqloCIC.js                    301.41 kB │ gzip: 96.88 kB
 ```
 
 The built `index.html` asks for the entry chunk and preloads two shared chunks:
@@ -307,10 +321,10 @@ The built `index.html` asks for the entry chunk and preloads two shared chunks:
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="module" crossorigin src="/assets/index-jrUD5Y6A.js"></script>
+    <script type="module" crossorigin src="/assets/index-DpqloCIC.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-CbXtAM7H.js">
-    <link rel="modulepreload" crossorigin href="/assets/preload-helper-C1JRZSNY.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-CmulJnWv.css">
+    <link rel="modulepreload" crossorigin href="/assets/preload-helper-98yH0uSP.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-CwyK9Hdg.css">
   </head>
   <body>
     <div id="root"></div>
@@ -324,12 +338,12 @@ Why it is good:
   a visit to the list does not download the payment form (performance.md section 5, code
   splitting). This serves the LCP of the first screen, which waits for the entry chunk to run.
 - **A dependency of one route stays in that route's chunk.** Only the payment screen imports the
-  HTML sanitiser, through its form, and its chunk is the larger one: 34.05 kB against 3.66 kB.
+  HTML sanitiser, through its form, and its chunk is the larger one: 34.21 kB against 3.66 kB.
   The build output lists sizes, not contents; a bundle analyser (performance.md section 3) is how
   to confirm what each chunk holds.
 - **The first screen's JavaScript is small.** The entry and the two chunks `index.html` preloads
-  come to 96.88 + 0.36 + 37.88 = 135.12 kB after gzip. The first screen, `/invoices`, also loads
-  its route chunk and `money.format`: 135.12 + 1.47 + 3.00 = 139.59 kB. The budget of
+  come to 96.88 + 0.36 + 37.87 = 135.11 kB after gzip. The first screen, `/invoices`, also loads
+  its route chunk and `money.format`: 135.11 + 1.47 + 3.00 = 139.58 kB. The budget of
   performance.md section 3 counts compressed bytes, by the practice's reading of Russell's model,
   so this is the figure to compare: 0.62 MiB, about 650 kB, is the budget for a page that is
   mostly JavaScript, and this application is well under it. That is a size from the build, not a
@@ -362,7 +376,7 @@ are [security.md](../security/security.md) section 5's.
 Why it is good:
 
 - **Built assets are cached for a year.** Vite puts a hash of the content in every asset name
-  (`index-jrUD5Y6A.js`), so a new build changes the name and a returning user downloads only what
+  (`index-DpqloCIC.js`), so a new build changes the name and a returning user downloads only what
   changed. This serves the LCP of a repeat visit (performance.md section 5, caching).
 - **`index.html` is revalidated on every visit**, so a deploy reaches users at once and a new
   page load never points to chunks the host has deleted; the Vite guide recommends `no-cache` on

@@ -92,8 +92,9 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   request's Verification holds the eval's result next to its baseline, every rate the eval reports
   is divided by the cases it asked for, and every judge that gates has its TPR and TNR on held-back
   labels.
-- Before you create a React application, or add a module, a route, a query, a mutation or a
-  dependency to one, read `docs/engineering/react/architecture/architecture.md`, and
+- Before you create a React application, add a module, a route, a query, a mutation or a
+  dependency to one, or change its TypeScript or lint configuration, read
+  `docs/engineering/react/architecture/architecture.md`, and
   `docs/engineering/react/architecture/layout-example.md` when you lay out an application or add a
   module, `docs/engineering/react/architecture/libraries.md` when you pick a library or a tool. The
   check: every import the change adds is absolute and names the file that holds the name, with no
@@ -107,13 +108,14 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   adds carries a comment that names the outside system or the escape hatch it is for
   (`components.md` sections 5 and 7).
 - Before you design or restyle a screen of a React application, add a control, a form or a route to
-  one, or ask an agent to build a screen, read `docs/engineering/react/design/README.md` and the
-  file it routes to for that work, and `docs/engineering/react/design/design-brief-example.md` when
-  you write the brief for a screen. The check: every colour, radius and space the change adds is a
-  token role, a step of the scale or one of the two exceptions (`visual-design.md` sections 3 and 6),
-  the closing summary says which steps of the manual accessibility pass were run (`accessibility.md`
-  section 11), and someone other than the author of the screen answered its review checklist
-  (`designing-with-claude-code.md` section 6).
+  one, ask an agent to build a screen, or review such a change, read
+  `docs/engineering/react/design/README.md` and the file it routes to for that work, and
+  `docs/engineering/react/design/design-brief-example.md` when you write the brief for a screen. The
+  check: every colour, radius and space the change adds is a token role, a step of the scale or one
+  of the two exceptions (`visual-design.md` sections 3 and 6), the closing summary says which steps
+  of the manual accessibility pass were run (`accessibility.md` section 11), and someone other than
+  the author of the screen answered its review checklist (`designing-with-claude-code.md` section
+  6).
 - Before you render a value from outside as HTML or as a URL in a React application, spread an
   object from outside as props, keep or send a credential in one, or add an environment variable, a
   dependency, a third-party script, a response header or a CI step to one, or change the dev
