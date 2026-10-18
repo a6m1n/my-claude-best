@@ -611,9 +611,10 @@ What it leaves out, on purpose or for a later step:
   `X-XSS-Protection` headers; the table in security.md section 5 says what each would add.
 
 Limits: nothing was run in a browser, so no browser has enforced this policy against the running
-page. After the first deploy, run it through CSP Evaluator, which should report only the `'self'`
-finding that security.md section 14 names, and the site through MDN's HTTP Observatory
-(security.md section 14). Vercel reads headers from `vercel.json`, not from this file.
+page. After the first deploy, run it through CSP Evaluator, which with its default option should
+report only the two findings that security.md section 14 names, the `'self'` one and the Trusted
+Types hint, and the site through MDN's HTTP Observatory (security.md section 14). Vercel reads
+headers from `vercel.json`, not from this file.
 
 ## 7. The lint rules
 

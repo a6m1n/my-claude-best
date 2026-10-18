@@ -602,8 +602,8 @@ section 2, "A new session id at login".
   rule is this practice's choice.
 - **Page: when that session check answers `200` for the user the page loaded, fetch a failed read
   once more, and show a failed write's error,** since a request answered `401` "has not been
-  applied" (RFC 9110 section 15.5.2), so the write did not happen [202]; the rule is this
-  practice's choice.
+  applied" (RFC 9110 section 15.5.2), so the write did not happen [202]. A second `401` for the
+  same read shows the error as for any failed request. The rule is this practice's choice.
 - **Page: where the query client is made, tell it not to retry a `401`, nor a `403` or a `400`
   whose body carries a fixed code,** since these answers say what the page must do, and a retry
   only sends a guarded request again, while `useQuery` retries a failed query three times by
@@ -659,8 +659,8 @@ section 2, "A new session id at login".
   what is typed.** The navigation unloads the page and everything typed into it, and the outcome
   route needs the screen to return to. A screen that takes a password, a one-time code or
   another credential takes the second way, since the storage rule above keeps every credential out
-  of `sessionStorage`. When the page starts, it deletes an entry older than the re-authentication
-  window the team wrote down
+  of `sessionStorage`. When the page starts on any route other than the outcome route, it deletes
+  an entry older than the re-authentication window the team wrote down
   ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
   section 2, "Re-authentication"), so a step-up that never reached the outcome route leaves nothing
   behind. The rule is this practice's choice.
@@ -692,8 +692,9 @@ section 2, "A new session id at login".
   the user can try again
   ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
   section 2, "Re-authentication"). The screen's own session check decides whether the session is
-  still live, and a `401` there runs the sign-out path. A missing or unknown `outcome`, or no kept
-  entry, counts as `failed` with nothing to restore. The rule is this practice's choice.
+  still live, and a `401` there runs the sign-out path. A missing or unknown `outcome` counts as
+  `failed`, and with no kept entry the route shows the outcome its parameter names; either way
+  there is nothing to restore. The rule is this practice's choice.
 
 The BFF's rules on forwarding requests to resource servers are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
@@ -802,8 +803,9 @@ Node 20's URL parser, 2026-10-15).
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
   3, "What the server does"); the rule is this practice's choice.
 - **Page: when a WebSocket that the page did not close closes with any other code, ask the API
-  through the API client whether the session is still live before each reconnect, and stop
-  reconnecting when that check answers anything but `200`.** A handshake the server refuses
+  through the API client whether the session is still live before each reconnect. On a `401`
+  from that check, run the sign-out path (section 6); on any other answer that is not `200`, count
+  it as an attempt and back off.** A handshake the server refuses
   reaches the page only as a close with code 1006, the code for a connection closed with no close
   frame, so the `401` rule of section 6 cannot fire for a socket (MDN's `CloseEvent.code` page; the
   WHATWG WebSockets Standard) [84], [85]. The rule is this practice's choice.
@@ -930,7 +932,8 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
   source with its comments. Demir et al. (2026 preprint) studied 10 million rendered sites and
   found 1,748 live credentials in front ends; 62% of the exposures in JavaScript appeared only in
   compiled bundles [111].
-  Check: the deployed output lists no `.map` file.
+  Check: a request for a bundle's `.map` URL on the deployed site gets no map (it answers `404` or
+  `403`).
 - **Restrict at the provider any key that must ship to the browser.** A maps key gets a website
   restriction and an API restriction (Google Maps Platform) [112]. A "public" database key,
   such as a Supabase anon key, is safe only behind server-side rules such as row-level security: a
@@ -941,11 +944,12 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
   scanning and repository-level push protection, which is off by default (GitHub's docs, read
   2026-10-01), and run a scanner such as gitleaks as a pre-commit hook [115], [116]. Run it
   over the build output too: the study above found most JavaScript exposures only in the compiled
-  bundle [111]. Scan the output with `gitleaks dir dist/`, put a key this section lets ship into
-  `.gitleaksignore` by its fingerprint, with its provider restriction written down ("Write it
-  down", section 1), and let any other hit fail the build [116]. Gitleaks takes security fixes
-  only, and its maintainer is moving to Betterleaks (read 2026-10-01); re-check before you adopt
-  it [116].
+  bundle [111]. Scan the output with `gitleaks dir dist/`, and allow a key this section lets ship
+  by its value, as a `regexes` entry of a `[[rules.allowlists]]` or a global allowlist in the
+  gitleaks config, with its provider restriction written next to it; such an entry "defaults to
+  check the _Secret_ in the finding" [116]. Let any other hit fail the build [116]. Gitleaks takes
+  security fixes only, and its maintainer is moving to Betterleaks (read 2026-10-01); re-check
+  before you adopt it [116].
 - **When a secret leaks, revoke it at the provider first.** GitHub's guide calls revocation the
   most important step: deleting the secret from the code, pushing a new commit or recreating the
   repository does not stop its use [117].
@@ -1271,10 +1275,13 @@ default [173], [174]. They were not compared here.
   through MDN's HTTP Observatory, and put the result into the pull request.** CSP Evaluator looks
   for ways around a policy, and Google offers it for convenience, with no promise that a clean
   result means a safe policy; the Observatory checks the headers and settings the deployed site
-  actually sends [175], [176]. The policy of section 5 always draws one finding, "'self' can be
-  problematic if you host JSONP, AngularJS or user uploaded files" [198]; section 5's rule on
-  serving uploaded files from another site answers it. Fix or revert every other finding, and every
-  failed Observatory test, before the next deploy.
+  actually sends [175], [176]. With the tool's default option, "CSP Version 3 (nonce based +
+  backward compatibility checks)", the policy of section 5 draws two findings [175], [204]. The
+  first is "'self' can be problematic if you host JSONP, AngularJS or user uploaded files" [198];
+  section 5's rule on serving uploaded files from another site answers it. The second is the
+  Trusted Types hint, "Consider requiring Trusted Types for scripts to lock down DOM XSS injection
+  sinks" [204]; section 4's report-only rollout answers it until its written end date. Fix or
+  revert every other finding, and every failed Observatory test, before the next deploy.
 - **Run the supply-chain and secret checks in CI:** `npm audit signatures`, OSV-Scanner and the
   secret scanner (sections 9 and 10) [138]. OSV-Scanner fails on any finding, so record an
   advisory the application does not reach in `osv-scanner.toml` as an `[[IgnoredVulns]]` entry
@@ -1896,7 +1903,7 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [172] Mozilla — eslint-plugin-no-unsanitized README, v4.1.5 — https://github.com/mozilla/eslint-plugin-no-unsanitized/blob/v4.1.5/README.md — checked 2026-10-01
 - [173] Biome — noDangerouslySetInnerHtml — https://biomejs.dev/linter/rules/no-dangerously-set-inner-html/
 - [174] Biome — noGlobalEval — https://biomejs.dev/linter/rules/no-global-eval/
-- [175] Google — CSP Evaluator — https://csp-evaluator.withgoogle.com/
+- [175] Google — CSP Evaluator — https://csp-evaluator.withgoogle.com/ — checked 2026-10-18
 - [176] Mozilla (MDN) — HTTP Observatory — https://developer.mozilla.org/en-US/observatory
 - [177] Chris Thompson — New permission prompt for Local Network Access (Chrome for Developers blog, 2025; sponsored by Google) — https://developer.chrome.com/blog/local-network-access — checked 2026-10-15
 - [178] OWASP Foundation — OWASP Top 10:2025 — https://top10.owasp.org/2025/ — checked 2026-10-16
@@ -1925,3 +1932,4 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [201] Marc Brooker — Timeouts, retries, and backoff with jitter (Amazon Builders' Library, AWS Builder Center, 2019; case) — https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter — checked 2026-10-18
 - [202] IETF — RFC 9110, HTTP Semantics, STD 97, June 2022 — https://www.rfc-editor.org/rfc/rfc9110.txt
 - [203] NIST NVD — CVE-2025-48757, NVD API record — https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2025-48757 — checked 2026-10-18
+- [204] Google — CSP Evaluator source, checks/strictcsp_checks.ts — https://github.com/google/csp-evaluator/blob/ad530f3ae5473f9e03c8bf500ee0ada8d9e9b822/checks/strictcsp_checks.ts
