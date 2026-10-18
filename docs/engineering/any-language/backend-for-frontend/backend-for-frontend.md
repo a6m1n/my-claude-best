@@ -178,7 +178,20 @@ The session cookie the BFF sets:
   sign-out, write it down ("Write it down" in "The session's life, from login to logout" below
   says where). For the re-issue, ship the code that reads the new format first, wait until no
   instance runs the old code, then switch the code that writes it. An instance that still runs the
-  old code cannot read a cookie in the new format. The rule is this practice's choice.
+  old code cannot read a cookie in the new format. Re-issue only an old cookie that passes the
+  checks a new cookie gets, run on the old cookie's session id and start time: the list of ended
+  sessions, the per-user time and both timeouts. Carry the start time over unchanged, and expire
+  the old cookie by its name in the same response, unless the new cookie keeps that name: a
+  response carries only one `Set-Cookie` per cookie name, and the new cookie replaces the old one
+  (RFC 6265bis draft, sections 4.1.1 and 4.1.2) [2]. Where the session's state stays where it is,
+  as at a rename or a change of how the cookie is protected, keep the session id, so a later
+  logout, which lists or destroys that id, also stops any copy of the old cookie. Where the state
+  moves between the cookie and the server, give the session a new id from a CSPRNG, never create
+  it under an id the request brought, and end the old session at the re-issue. When the state
+  leaves the cookie, list the old id as ended, and keep checking old cookies against that list for
+  as long as the BFF still reads them; when the state leaves the server, destroy the old record.
+  Where the old format carries no session id or start time, take the sign-out instead. The rule is
+  this practice's choice.
 
 ### The login cookie
 
@@ -837,8 +850,7 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   every moment.** Where the provider allows two credentials at once, keep the credentials as named
   entries in the secret store, each with the time it was written: "current", which every instance
   uses, and during a rotation "next" or "previous":
-  1. Have the rotation job list the client credentials at the provider and remove any that no
-     entry names. Then have it add the new credential at the provider, through the provider's
+  1. Have the rotation job add the new credential at the provider, through the provider's
      management API, with a credential for that API kept in the secret store under the rule above
      on the two other entries there.
   2. Have the rotation job write it into the secret store as "next", and let every instance
@@ -850,18 +862,27 @@ cookies, these rules are checks on it; write code only for a rule it does not me
      before each rotation. When the test answers `invalid_grant`, keep "next" and log that the
      test account must sign in again. Remove "next" only when the test answers `invalid_client` or
      `unauthorized_client`: then remove it at the provider and from the store, keep "current", and
-     log it at `ERROR` ([logging.md](../../python/logging/logging.md) section 4).
+     log it. Log the first failed test of a rotation at `ERROR`
+     ([logging.md](../../python/logging/logging.md) section 4), since a person must act: sign the
+     test account in again on `invalid_grant`, or fix the refused credential on `invalid_client`
+     or `unauthorized_client`. A later run that finds the same failure in the job's earlier lines
+     in the log store, read as the check in step 1 of the cookie-key rotation reads them, logs it
+     at `WARNING`.
   4. Have the job mark "next" as "current" and the old "current" as "previous", writing both
      entries under their new names, and let every instance reload.
   5. When every instance the load balancer lists at that moment as registered and in use, counted
      as in step 1 of the cookie-key rotation, has logged an entry list whose "current" is the new
      credential, have the job remove "previous" at the provider, through its management API with
-     the credential of step 1, and then from the secret store. The rotation is done when the store
-     holds "current" only. Each instance logs that list in the line of the reload rule above,
-     which names each entry by an id, never by the secret. When step 5 has still not run once the
-     stale-list limit plus one reload interval has passed since step 4, by the time stored with
-     "previous", the job logs it at `ERROR` ([logging.md](../../python/logging/logging.md) section
-     4), which alerts a person (section 3, "Logging").
+     the credential of step 1, and then from the secret store. Then have it list the client
+     credentials at the provider and remove any that no entry names. Do that clean-up here, not
+     before step 1: "current" was just written, so no other run starts step 1 now, while before
+     step 1 a second run at once could remove the credential the first run had just added. The
+     rotation is done when the store holds "current" only. Each instance logs that list in the
+     line of the reload rule above, which names each entry by an id, never by the secret. When
+     step 5 has still not run once the stale-list limit plus one reload interval has passed since
+     step 4, by the time stored with "previous", the job logs it at `ERROR`
+     ([logging.md](../../python/logging/logging.md) section 4), which alerts a person (section 3,
+     "Logging").
 
   To switch back before step 5, mark "previous" as "current" again, and remove the new credential
   at the provider and from the store, as step 3's failure path does. Where the provider allows only
@@ -873,7 +894,7 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   rotation" [146]. The named entries and their stored times, the order, the job as the actor at
   the provider with its credential for the management API, the test account and its refresh token
   in the secret store, and the sign-in again are this practice's choice. So are what a failed test
-  does, the clean-up before step 1, the switch back, and the check before step 5 with its limit.
+  does, the clean-up at step 5, the switch back, and the check before step 5 with its limit.
 - **BFF: treat a session or login cookie that fails to decrypt or verify, or names a key the BFF no
   longer holds, as a request with no cookie, never as a `500`, and log the reason (unknown key,
   failed check, expired) at `INFO` ([logging.md](../../python/logging/logging.md) section 4)
@@ -892,8 +913,8 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   protects new cookies, a previous key still in its read period, a key whose start time has not
   passed, and each other purpose's key. The steps below call each of them a leaked key; that scope
   is this practice's choice.
-  1. Sign a test user in, and keep its session cookie and one login cookie with its `state`, both
-     protected by a leaked key; step 7 uses them.
+  1. Sign a test user in, and keep its session cookie and, where the BFF uses login cookies, one
+     login cookie with its `state`, both protected by a leaked key; step 7 uses them.
   2. Start the emergency run of the rotation job: it writes to the store a new key for each purpose
      where keys have one, with a start time of now, as the key that protects new cookies.
   3. Where a leaked key encrypts the tokens in session records, first restart or reload every
@@ -938,9 +959,10 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   7. Check each instance by its own address, not through the load balancer. For a key that
      protects login cookies, send each instance's login callback the login cookie that step 1
      kept, with its `state`, and expect the error page of a failed callback. For the session
-     cookie with the session's state in the cookie, use the test session's cookie that step 1
-     kept: at the session check it answers `200` before step 4 and `401` after step 5, which shows
-     the check can fail. In every case, also check that every instance logged a key list without
+     cookie with the session's state in the cookie, or a session cookie that the framework signs
+     with the session's state on the server, use the test session's cookie that step 1 kept: at
+     the session check it answers `200` before step 4 and `401` after step 5, which shows the check
+     can fail. In every case, also check that every instance logged a key list without
      any leaked key id, and that zero failures to end a session were logged in step 3. An instance
      that fails leaves the load balancer, restarts and is checked again; the replacement is done
      only when every instance passes.
@@ -2668,7 +2690,7 @@ save, the cookie parser or the router's path handling.
 | an abandoned request leaves a rotated refresh token stored | OpenID Connect client | When the provider rotates the BFF's refresh tokens, has no reuse window that covers the requests in flight, and the session's state is on the server, does it run the token call and the store of its answer to their timeout when the browser abandons the request? Test it: send parallel requests with an expired access token, against a stub token endpoint that rotates refresh tokens and counts the calls, abandon the request whose refresh runs, and expect the stored refresh token to stay usable. | wrap | [section 2, "Timeouts and refresh"](#timeouts-and-refresh), rule "store the new tokens before you release the lock" |
 | an outage lets a copied cookie through | session store | When the session store or the list of ended sessions cannot be read, does it fail with an error, rather than sign the user out or accept the cookie? Test it: make the store unreachable, send a request with a live cookie, and expect `503`. | replace | [section 2, "Timeouts and refresh"](#timeouts-and-refresh) |
 | a timed-out session keeps its tokens at rest | session store | With the session's state on the server, does its store delete a session's record when a timeout ends the session? | wrap | [section 2, "Timeouts and refresh"](#timeouts-and-refresh) |
-| an evicted or lost entry lets a logged-out cookie work again | session store | Can it keep the list of ended sessions, the per-user times, the single-use marks and the refresh locks until their own expiry, never evicting them, and keep them through a restart? A yes may come from a setting: name the setting. Test it: write an entry, restart the store, read it; and read the store's eviction setting. | replace | [section 2, "Timeouts and refresh"](#timeouts-and-refresh), rule "keep the list of ended sessions" |
+| an evicted or lost entry lets a logged-out cookie work again | session store | Can it keep the list of ended sessions, the per-user times, the single-use marks, the step-up guess counts and the refresh locks until their own expiry, never evicting them, and keep them through a restart? A yes may come from a setting: name the setting. Test it: write an entry, restart the store, read it; and read the store's eviction setting. | replace | [section 2, "Timeouts and refresh"](#timeouts-and-refresh), rule "keep the list of ended sessions" |
 | the session records a leaked key encrypted cannot be found | session store | With the tokens encrypted in session records, can it list the records that start with a given key id? | replace | [section 2, "Keys and secrets"](#keys-and-secrets), rule "when you suspect that a cookie key leaked" |
 | a logout that only deletes the cookie | session store | With the session's state on the server, does logout delete the session on the server? | wrap | [section 2, "Logout"](#logout) |
 | a second tab is told that its sign-out failed | HTTP server | Does logout answer with success also when no session exists? | wrap | [section 2, "Logout"](#logout), rule "answer the logout request with success" |
