@@ -576,9 +576,11 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   new key for each purpose where keys have one, with a start time of now, then deletes each leaked
   key id. When the client credential leaked, on its own or where a key leaked, the emergency run
   also removes the leaked credential at the provider, adds the new one there and writes it into
-  the secret store as "current"; that is this practice's choice. Step 3 of the leaked-key plan
-  below names the one other identity that may read the keys and the client credential, only while
-  that run lasts.
+  the secret store as "current"; that is this practice's choice. When only the client credential
+  leaked, the emergency run writes and deletes no key, since a key with a start time of now signs
+  users out at random (the cookie-key rotation below). Step 3 of the leaked-key plan below names
+  the one other identity that may read the keys and the client credential, only while that run
+  lasts.
 - **BFF, with an identity provider: let only the rotation job and one person or role the team
   writes down ("Write it down" above) reach the two other entries that the client-credential rule
   below keeps in the secret store,** since one of them, the credential for the provider's
@@ -598,9 +600,9 @@ cookies, these rules are checks on it; write code only for a rule it does not me
 - **BFF: have each run of the rotation job log at `INFO` the key ids it added and removed, at
   `WARNING` a step that failed and that the next run tries again, and at `ERROR` a step that failed
   past the limit its rule names,** so a run that stopped, or a removal that did not happen, shows
-  in the log. Such a limit is the window of the check in step 1 of the rotation below, or the test
-  refresh and the limit on step 5 of the client-credential rule below. The logs are this
-  practice's choice.
+  in the log. Such a limit is the window of the check in step 1 of the rotation below, or the first
+  failed test refresh of a rotation and the limit on step 5 of the client-credential rule below.
+  The logs are this practice's choice.
 - **BFF: generate every cookie key from the operating system's CSPRNG, 32 bytes (256 bits), never
   from a password, a phrase or a value a person typed,** so nobody can guess the key, and it gives
   at least the 128 bits of security that ASVS 5.0 requirement 11.2.3 asks for [47].
@@ -873,8 +875,9 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   5. When every instance the load balancer lists at that moment as registered and in use, counted
      as in step 1 of the cookie-key rotation, has logged an entry list whose "current" is the new
      credential, have the job remove "previous" at the provider, through its management API with
-     the credential of step 1, and then from the secret store. Then have it list the client
-     credentials at the provider and remove any that no entry names. Do that clean-up here, not
+     the credential of step 1. Then have it list the client credentials at the provider and remove
+     any that no entry names, and only then remove "previous" from the secret store, so a failed
+     call leaves step 5 due and the next run tries it again. Do that clean-up here, not
      before step 1: "current" was just written, so no other run starts step 1 now, while before
      step 1 a second run at once could remove the credential the first run had just added. The
      rotation is done when the store holds "current" only. Each instance logs that list in the
@@ -914,7 +917,7 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   passed, and each other purpose's key. The steps below call each of them a leaked key; that scope
   is this practice's choice.
   1. Sign a test user in, and keep its session cookie and, where the BFF uses login cookies, one
-     login cookie with its `state`, both protected by a leaked key; step 7 uses them.
+     login cookie with its `state`, each protected by a leaked key; step 7 uses them.
   2. Start the emergency run of the rotation job: it writes to the store a new key for each purpose
      where keys have one, with a start time of now, as the key that protects new cookies.
   3. Where a leaked key encrypts the tokens in session records, first restart or reload every
@@ -945,9 +948,10 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   5. Restart or reload every instance. Restart them all at once, or expect failed sign-ins until
      the last one restarts, since a login cookie that a restarted instance wrote under the new key
      fails at a callback that reaches an instance not restarted yet.
-  6. When the client credential sat where the key leaked, in the same secret store, replace the
-     credential too, since RFC 6749 section 10.4 binds a refresh token to the client it was issued
-     to [15]. Have the emergency run replace it in the order the next rule gives for a client
+  6. When the client credential sat where the key leaked, in the same secret store or in the same
+     instance's memory, replace the credential too, since RFC 6749 section 10.4 binds a refresh
+     token to the client it was issued to [15]. Have the emergency run replace it in the order the
+     next rule gives for a client
      credential leaked on its own: remove the leaked credential at the provider first, accepting
      the outage, then add the new one, write it into the secret store as "current" and let every
      instance load it. Never replace it by the steps of the client-credential rule above, which
@@ -1702,8 +1706,9 @@ it lets through whichever guarded change comes first.
 - **BFF, with a first-party login: count every answer to a step-up per session with one atomic
   increment in the session store, never in the session object the request loaded and saves back
   at its end,** so a thief who holds a stolen session cannot guess the password through the
-  step-up, not even with answers sent in parallel. Keep the count in the session's record, or under
-  a key that expires with it, and delete it when the session ends or moves to a new id. Keep it in
+  step-up, not even with answers sent in parallel. Keep the count under its own key in the session
+  store, never in the record the framework saves back, with the session's expiry, and delete it
+  when the session ends or moves to a new id. Keep it in
   a store that never evicts it before its session ends (the rule on stores that never evict these
   entries, in "Timeouts and refresh" above), since an evicted count starts again at zero and gives
   more guesses than the number below allows. Compare an answer only while its raised count is
@@ -2675,7 +2680,7 @@ save, the cookie parser or the router's path handling.
 | an instance writes a key of its own | cookie protection | Can you keep every instance from generating or writing a key, so it only reads the keys the rotation job writes? | wrap | [section 2, "Keys and secrets"](#keys-and-secrets), rules "let the BFF's own identity only read" and "when an instance starts and finds no key" |
 | the rotation check has nothing to read | cookie protection | Does it tell your code, at each reload of the key list, which key ids the instance loaded, so the instance can log them? | wrap | [section 2, "Keys and secrets"](#keys-and-secrets), rule "have an instance re-read the key list" |
 | a client-credential rotation needs a restart | OpenID Connect client | With an identity provider, can it switch its client credential between "current" and "next" while it runs, with no restart? | wrap | [section 2, "Keys and secrets"](#keys-and-secrets), rule "rotate the client credential so that one credential works" |
-| a cookie name or format change signs every user out | cookie protection | Can it read a cookie under its old name and format, and re-issue it under the new ones, for a time you set? | wrap | [section 2, "The session cookie"](#the-session-cookie), rule "when a BFF that already has users renames its session cookie" |
+| a cookie name or format change signs every user out | cookie protection | Can it read a cookie under its old name and format, and re-issue it under the new ones, for a time you set, and does it let your code run the new cookie's checks on the old cookie first, carry its start time over, and keep or replace the session id as section 2 says? | wrap | [section 2, "The session cookie"](#the-session-cookie), rule "when a BFF that already has users renames its session cookie" |
 | session fixation | session store | Does it issue a new session id at login and at every re-authentication, and destroy the old session? | wrap | [section 2, "A new session id at login"](#a-new-session-id-at-login) |
 | a failed destroy of the old session passes in silence | session store | With an identity provider, does a failed destroy of the old session stop the login? | wrap | [section 2, "A new session id at login"](#a-new-session-id-at-login) |
 | a session id the attacker chose | session store | With the session's state on the server, does it refuse a session id it never created? Test it: send a session cookie with an id the store never held, and expect no session and no record under that id. | replace | [section 2, "A new session id at login"](#a-new-session-id-at-login) |
