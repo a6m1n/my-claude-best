@@ -527,9 +527,12 @@ Why it is good:
   # No 'unsafe-inline' in script-src: the build puts no script into the page itself, so an
   # injected one stays blocked (security.md section 5).
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.example.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
-  # Trusted Types in report-only mode: with no report endpoint, a violation shows only in the
-  # browser console of whoever visits a deploy that serves this file; a live application adds a
-  # report endpoint and enforces once the reports stop (security.md section 4).
+  # Trusted Types in report-only mode (security.md section 4). A departure from two rules of
+  # security.md section 5, the named report receiver and the written end date: the reference
+  # application has no report receiver and no tracker. The cost: a violation shows only in the
+  # browser console of whoever visits a deploy that serves this file. A live application names a
+  # receiver and writes an end date before it deploys this header, and enforces on the end date
+  # written in the decision log (security.md section 5).
   Content-Security-Policy-Report-Only: require-trusted-types-for 'script'
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   X-Content-Type-Options: nosniff
@@ -588,7 +591,7 @@ The two security comments in the file give their reason at the line:
   in the browser console of whoever visits a deploy that serves this file, preview or production,
   because the header names no `report-to` endpoint; the team sees its own visits, on its preview
   deploys. A live application adds a report endpoint, the way the main policy's report-only phase
-  below does, and enforces when the reports stop.
+  below does, and enforces on the end date written in the decision log (security.md section 5).
   DOMPurify returns a `TrustedHTML` where the browser has Trusted Types, so the one sink of
   section 4 of this file passes the report-only check (security.md section 4, "Make the policy
   sanitise"); this was type-checked and not run in a browser.
@@ -602,14 +605,15 @@ What it leaves out, on purpose or for a later step:
   `Content-Security-Policy-Report-Only`, with a report endpoint, before it enforces it. The example
   shows the main policy in its enforced form; only the Trusted Types header is report-only.
 - **Enforced Trusted Types.** They run in report-only mode now. A live application adds a report
-  endpoint and enforces once its reports stop; until then a violation shows only in the console
-  (security.md section 4).
+  endpoint and enforces on the end date written in the decision log (security.md section 5); until
+  then a violation shows only in the console (security.md section 4).
 - **`preload` in `Strict-Transport-Security`,** and the `X-Frame-Options`, CORP, COEP and
   `X-XSS-Protection` headers; the table in security.md section 5 says what each would add.
 
 Limits: nothing was run in a browser, so no browser has enforced this policy against the running
-page. After the first deploy, run it through CSP Evaluator and the site through MDN's HTTP
-Observatory (security.md section 14). Vercel reads headers from `vercel.json`, not from this file.
+page. After the first deploy, run it through CSP Evaluator, which should report only the `'self'`
+finding that security.md section 14 names, and the site through MDN's HTTP Observatory
+(security.md section 14). Vercel reads headers from `vercel.json`, not from this file.
 
 ## 7. The lint rules
 
@@ -672,13 +676,6 @@ They are written from the owners' docs (npm's config page and changelog, CISA's 
 pnpm's settings and supply-chain pages, read 2026-10-01) and were not run: the machine had npm
 10.8.
 
-`min-release-age` exists since npm 11.10.0 (2026-02-11) and `min-release-age-exclude` since
-11.17.0; npm before 11.10.0 has neither. There `--before=<date>` on the install command installs
-only versions that were available on or before that date (npm's config page, read 2026-10-02). It
-takes a fixed date that the person running the install has to choose each time, where
-`min-release-age` is a rolling window set once in the repository. The reference application was
-installed with the flag (npm 10.8, `--before=2026-09-24`).
-
 `.npmrc`, for npm 12:
 
 ```ini
@@ -692,8 +689,9 @@ allow-git=none
 allow-remote=none
 # A version is installed only once it is 7 days old (CISA's advice after the axios compromise).
 # Emergency path, for a critical advisory only, approved by a second person in the pull request:
-# list the patched package in min-release-age-exclude; remove it when the version is 7 days old
-# (security.md section 10).
+# list the patched package in min-release-age-exclude, which matches names only, and add a
+# tracker task, dated for when the version is 7 days old and owned by the change's author, to
+# remove it (security.md section 10).
 min-release-age=7
 ```
 
@@ -703,7 +701,9 @@ sources, so the file turns them off. npm 11.10 to 11.16 has the cooldown but no 
 exemption, so the emergency path works from 11.17.0 on.
 
 ```ini
-# npm 11 runs dependency install scripts; this stops them (security.md section 10).
+# npm 11 runs dependency install scripts; this stops them (security.md section 10). It also
+# stops the repository's own `prepare` and every pre- and post-script, so the team installs its
+# git hooks with a setup command.
 ignore-scripts=true
 # Refuses git dependencies: a cooldown cannot see a commit (security.md section 10).
 allow-git=none
@@ -711,8 +711,9 @@ allow-git=none
 allow-remote=none
 # A version is installed only once it is 7 days old (CISA's advice after the axios compromise).
 # Emergency path, for a critical advisory only, approved by a second person in the pull request:
-# list the patched package in min-release-age-exclude; remove it when the version is 7 days old
-# (security.md section 10).
+# list the patched package in min-release-age-exclude, which matches names only, and add a
+# tracker task, dated for when the version is 7 days old and owned by the change's author, to
+# remove it (security.md section 10).
 min-release-age=7
 ```
 
@@ -725,8 +726,8 @@ warning and ignores it, so on an older npm 11 the `allow-remote` line has no eff
 ```yaml
 # A version is installed only once it is 7 days old (CISA's advice after the axios compromise).
 # Emergency path, for a critical advisory only, approved by a second person in the pull request:
-# add the patched package to minimumReleaseAgeExclude; remove it when the version is 7 days old
-# (security.md section 10).
+# add the patched version to minimumReleaseAgeExclude as name@x.y.z, never the bare name, which
+# exempts every version; remove it when the version is 7 days old (security.md section 10).
 minimumReleaseAge: 10080 # minutes
 # The next two are pnpm defaults, written out so the policy shows in review.
 # An unreviewed dependency build script fails the install (security.md section 10).
@@ -765,13 +766,10 @@ Why it is good:
 - **The reaction to a `401`:** the application has no sign-in screen, so the sign-out path that
   security.md section 6 runs on a `401` is not shown, as
   [architecture.md](../architecture/architecture.md) section 10 says for sign-out.
-- **The re-authentication path:** what security.md section 6 asks the page to do on a `403` whose
-  body carries `reauth_required` is not shown. With an identity provider, the page keeps the
-  screen and what the user typed in `sessionStorage`, opens the BFF's login endpoint by a top-level
-  navigation with the step-up flag and any `acrValues` the `403` carries, encoded by
-  `URLSearchParams`, and shows the outcome on the route the user comes back to; with a first-party
-  login, it shows a prompt. The `ApiError` of section 1 of this file carries the status, the code
-  and the `acrValues` that this reaction reads.
+- **The re-authentication path:** the page's reaction to a `403` whose body carries
+  `reauth_required` is not shown; security.md section 6, "Re-authentication", gives it. The
+  `ApiError` of section 1 of this file carries the status, the code and the `acrValues` that this
+  reaction reads.
 - **The CI workflow:** pinned actions, a read-only token, no fork code in `pull_request_target`
   (security.md section 10).
 - **Server-side React:** the application renders in the browser only, so section 8 of security.md

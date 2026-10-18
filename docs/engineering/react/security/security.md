@@ -27,12 +27,12 @@ This file is for everyone who writes or reviews the browser side of a React appl
 and AI agents alike. Read it before you put data from outside the application on the page, spread
 an object from outside as props, handle a session or a token, keep or send a credential, add an
 environment variable, a dependency, a third-party script, a response header or a CI step, change
-the dev server's settings, set up its query client, add polling, or build the shell its screens
-share. The server that holds the application's session, the Backend for Frontend (BFF for short),
-has its own practice,
+the dev server's settings, set up its query client, add polling, build the shell its screens
+share, write or change a Server Function, a server-rendered route or middleware, or register a
+service worker. The server that holds the application's session, the Backend for Frontend (BFF for
+short), has its own practice,
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md).
-Every line that carries a read date is to be distrusted six months after that date until it is
-read again, the earliest on 2027-04-01; the README's "How to adopt" says how to list those lines.
+When to read this file's sources again is in the README's "How to adopt", step 6.
 
 The default case is a client-rendered application built with Vite and served as static files. A
 framework that renders on the server or runs Server Functions is the second case: section 8, parts
@@ -71,7 +71,8 @@ own:
   7), and a value goes into the settings with its reason next to it
   ([readability.md](../../any-language/readability/readability.md) section 4).
 - **The sign-out path** is what the page runs when the session has ended: it clears what the
-  session loaded and sends the user to sign in (section 6, "Timeouts and refresh").
+  session loaded and what the step-up kept in `sessionStorage`, and sends the user to sign in
+  (section 6, "Timeouts and refresh" and "Re-authentication").
 
 The one rule: **anything the browser holds, a script on the page can read, and anything the
 browser decides, the user can change.** So the browser side keeps no secret, makes no access
@@ -137,7 +138,7 @@ React 19 blocks only `javascript:` URLs (read 2026-10-16) [9].
 | Sink | Why escaping does not reach it | The rule |
 |---|---|---|
 | `dangerouslySetInnerHTML` | the string is parsed as HTML; React's docs warn that markup from a source that is not fully trusted makes XSS easy [10] | one component writes HTML into the page and sanitises at the sink (section 4) |
-| a URL from data in `href` or `src` | React 19 refuses a `javascript:` URL and no other scheme; `data:` and other schemes pass, and the refusal is new in React 19, listed there as a breaking change [11], [12] | parse the URL and allow a short list of schemes |
+| a URL from data in `href` or `src` | React 19 refuses a `javascript:` URL and no other scheme; `data:` and other schemes pass, and the refusal is new in React 19, listed there as a breaking change [11], [12], [200] | parse the URL and allow a short list of schemes |
 | an object from outside spread as props | the object chooses the props, `dangerouslySetInnerHTML` and `href` among them | pass each prop by name, from a value you checked |
 | a Markdown renderer | escapes HTML and checks URLs by default; unsafe once its URL check is overridden or raw HTML is turned on [13] | keep the renderer's defaults; raw HTML only through its sanitiser plugin [13] |
 | MDX | MDX from outside can carry JavaScript expressions that run when it is compiled [14] | MDX only from people who may change the application's code |
@@ -152,7 +153,7 @@ inside a `<script>` element, a `<style>` element and an HTML comment [9].
 - **When a URL comes from data, parse it with `URL` and allow only the schemes the link needs,**
   such as `https:` and `mailto:`. React 19's guard replaces a `javascript:` URL in `href`, `src`
   and a few other URL props with one that throws, and checks no other scheme, so a `data:` URL
-  passes it [11], [12], [8]. That is why this practice checks the scheme itself. An
+  passes it [11], [12], [200], [8]. That is why this practice checks the scheme itself. An
   allowlist also stops a scheme nobody planned for; a check for `javascript:` stops one scheme.
   Philippe De Ryck (2020) recommends an allowlist over a blocklist, and react-markdown's default
   list (`http`, `https`, `irc`, `ircs`, `mailto`, `xmpp` and relative URLs) is a maintainer's
@@ -384,22 +385,30 @@ injected inline script or event handler is blocked. The policy was checked only 
   collector or the report intake of
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
   3; without one, do not start report-only, since a violation then shows only in the browser console
-  of whoever visits ([security-example.md](security-example.md) section 6).
+  of whoever visits ([security-example.md](security-example.md) section 6). The receiver accepts
+  the two formats browsers send: `application/csp-report` from `report-uri`, and
+  `application/reports+json` with the type `csp-violation` from `report-to` [193], [194]. The
+  BFF's report intake takes them only when its schema has them. Before you read no reports as
+  nothing to fix, cause one violation on a test deploy and see its report arrive. Drop the reports
+  whose source is a browser extension before you read them: at Dropbox, extensions that insert
+  scripts into the page were the largest source of noise in CSP reports [195].
 - **When a policy starts as report-only, write down the date by which it is enforced, and add a
   task for that date, with an owner, to the team's tracker, linked from the decision log's entry
-  ("Write it down" in
-  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
-  2 says where),** since a report-only policy blocks nothing, and without a written end it can stay
-  that way, while the decision log reminds nobody on the date; the rule is this practice's choice.
+  ("Write it down", section 1),** since a report-only policy blocks nothing, and without a written
+  end it can stay that way, while the decision log reminds nobody on the date; the rule is this
+  practice's choice.
 - **Send the policy as an HTTP header, not in a `<meta>` tag.** MDN says a `<meta>` policy suits a
   client-rendered single-page application with only static files, but it does not support every
   feature: `frame-ancestors` is not supported there, and a report-only policy cannot be delivered
   that way [45], [46], [47].
-- **Set the headers in your host's file.** Netlify and Cloudflare Pages read a `_headers` file
-  from the folder they publish; Vercel reads the `headers` array in `vercel.json` (vendors' docs,
-  read 2026-10-01) [48], [49], [50]. Vite copies `public/_headers`
-  into `dist/` as it is [41]. Copy the format, not a sample policy; the rule is
-  this practice's choice.
+- **On a static host, set the headers in the host's file,** since a `<meta>` tag cannot carry
+  `frame-ancestors` [47]. Netlify and Cloudflare Pages read a `_headers` file from the folder they
+  publish; Vercel reads the `headers` array in `vercel.json` (vendors' docs, read 2026-10-01) [48],
+  [49], [50]. Vite copies `public/_headers` into `dist/` as it is [41]. Copy the format, not a
+  sample policy: a vendor's sample can carry `'unsafe-inline'`, as Next.js's example without
+  nonces does [37]. A server-rendered application sets the headers in its server, which gives each
+  response its own nonce (the subsection on the server-rendered policy above). The rule is this
+  practice's choice.
 - **After every deploy that changes a header, check the deployed result** with the scanners of
   section 14.
 
@@ -428,13 +437,14 @@ itself, with no identity provider, skips, are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
 1.
 
-In this section, every rule the page follows starts with `Page:` or
+In this section, every rule the page's code follows starts with `Page:` or
 `Page, with an identity provider:`, or with `Browser-only client:` where the page itself holds the
-tokens, so a search for those words finds them all. In section 7, the page's rules are under "What
-the React code does", and in "Fixing a CORS error" they are the bullets that start with "The page"
-or `Page:`. With a BFF, the page's only token rules are the two bans below: no token in
-`localStorage` or `sessionStorage`, and no token in a cookie written from JavaScript. The BFF's own
-rules start at
+tokens, so a search for those words finds them all. The two rules with no prefix, on choosing the
+pattern and on what a BFF does not stop, are the team's design choices. In section 7, the page's
+rules are under "What the React code does", and in "Fixing a CORS error" they are the bullets that
+start with "The page" or `Page:`. With a BFF, the page's only token rules are the two bans below:
+no token in `localStorage` or `sessionStorage`, and no token in a cookie written from JavaScript.
+The BFF's own rules start at
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
 2, "The session cookie".
 
@@ -549,8 +559,9 @@ section 2, "The login cookie".
 
 ### The session's life, from login to logout
 
-The BFF holds the session, so most of these rules are the server's. Each rule below starts with
-whose act it is: the BFF's or the page's.
+Most acts in this flow are the server's
+([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+section 2); the page's acts are the `Page:` rules below.
 
 The flow, in order, with the page's own acts in bold:
 
@@ -581,26 +592,30 @@ section 2, "A new session id at login".
   needs the session. Polling is off by default, and a hidden tab polls only with
   `refetchIntervalInBackground` set (TanStack Query docs, read 2026-10-15) [68], [69]. OWASP
   states the definition, not this rule; the rule is this practice's reading of it.
-- **Page: run the sign-out path on the first `401` the API answers:** clear what the session
-  loaded and send the user to sign in, so the screen shows no data from a session the server has
-  ended. What the sign-out handler does is [architecture.md](../architecture/architecture.md)
-  section 10. The rule is this practice's choice.
-- **Page: on a `401` that answers a request sent before a sign-in or a step-up renewed the session,
-  ask the session check once, and run the sign-out path only when it also answers `401`,** since
-  that request carried the session id the renewal destroyed, while the session may be live under
-  its new id; this is an exception to the `401` rule above, and the rule is this practice's
-  choice.
+- **Page: on a `401` from the session check, run the sign-out path; on a `401` from any other API
+  route, ask the session check once, and run the sign-out path unless it answers `200` for the
+  user the page loaded,** so the screen shows no data from a session the server has ended. A
+  request sent before a sign-in or a step-up renewed the session, in this tab or another, carries
+  the session id the renewal destroyed, while the session is live under its new id. The sign-out
+  path also removes what the step-up kept in `sessionStorage` (its definition in section 1). What
+  the sign-out handler does is [architecture.md](../architecture/architecture.md) section 10. The
+  rule is this practice's choice.
+- **Page: when that session check answers `200` for the user the page loaded, fetch a failed read
+  once more, and show a failed write's error,** since a request answered `401` "has not been
+  applied" (RFC 9110 section 15.5.2), so the write did not happen [202]; the rule is this
+  practice's choice.
 - **Page: where the query client is made, tell it not to retry a `401`, nor a `403` or a `400`
   whose body carries a fixed code,** since these answers say what the page must do, and a retry
   only sends a guarded request again, while `useQuery` retries a failed query three times by
   default in the browser (TanStack Query docs, read 2026-10-16) [68], [70]. The query client is
   made as [architecture.md](../architecture/architecture.md) section 8 says. The rule is this
   practice's choice.
-- **Page: on a `502` or a `503`, the session check's included, and on a `403` whose body carries
-  no code, never run the sign-out path, and show the error as for any failed request
-  ([architecture.md](../architecture/architecture.md) sections 9 and 12), and for the logout
-  endpoint as the rule in "Logout" below on any other failure says,** since these answers say that
-  the server or a check failed, not that the session ended; the rule is this practice's choice.
+- **Page: on a `502` or a `503` from any endpoint, the session check included, on a `403` with no
+  code, and on any other answer the rules here do not name (a `405`, a fetch that rejects, a code
+  the page does not know), keep the session.** Show the error as for any failed request
+  ([architecture.md](../architecture/architecture.md) sections 9 and 12), never the sign-out path,
+  since these answers say that the server or a check failed, not that the session ended; the rule
+  is this practice's choice.
 
 ### Logout
 
@@ -616,31 +631,47 @@ section 2, "A new session id at login".
   offer it again,** since the page cannot remove an `HttpOnly` cookie, so the session is still in
   this browser; the rule is this practice's choice.
 - **Page: when the logout answer carries the provider's logout URL, check it by section 3's rule
-  for a URL that comes from data, and open it by a top-level navigation,** because a `fetch`
-  cannot take the user to another site, and the reference policy's `form-action 'self'` (section
-  5) blocks a form posted to another origin. RP-Initiated Logout 1.0 section 2 has the client
-  redirect the user's browser to the provider's logout endpoint [72]. The URL comes
-  from the answer, so it is data. When the check refuses the URL, run the sign-out path without the
-  navigation, since the BFF has already ended the local session; the rule is this practice's
+  for a URL that comes from data, tell the user that sign-out finishes at the provider, where they
+  confirm it, and open the URL by a top-level navigation.** A `fetch` cannot take the user to
+  another site, and the reference policy's `form-action 'self'` (section 5) blocks a form posted
+  to another origin. RP-Initiated Logout 1.0 section 2 has the client redirect the user's
+  browser to the provider's logout endpoint, and has the provider ask the user to confirm when no
+  `id_token_hint` was sent [72]. The BFF sends none
+  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2, "Logout"). The URL comes from the answer, so it is data. When the check refuses the
+  URL, run the sign-out path without the navigation, tell the user that the provider sign-out did
+  not happen, and send an error report that names the refusal, never the URL. The BFF has already
+  ended the local session, and the report tells the team that a provider session stayed live; the
+  rule is this practice's choice.
+- **Page: while the page's own logout call is in flight, start no sign-out path on a session-ended
+  close or a `401`; the logout handler runs it after the answer, and opens the provider's logout
+  URL from the mutation's own options.** The BFF ends the session and closes the user's sockets
+  during the logout request, so a sign-out path started then would drop the provider logout.
+  Callbacks passed to `mutate` do not run once the component unmounts
+  ([architecture.md](../architecture/architecture.md) section 9). The rule is this practice's
   choice.
 
 ### Re-authentication
 
-- **Page: on a `403`, check its body's field `code` for `reauth_required` before the `401`
-  rule,** so the user re-authenticates, by the path of the login type that the next rules give,
-  instead of seeing a plain refusal; the rule is this practice's choice.
 - **Page, with an identity provider: before the step-up's navigation, keep in `sessionStorage` the
-  screen of the guarded change and what the user typed into it, or start the step-up as the user
-  opens that screen, before they type,** since the navigation unloads the page and everything typed
-  into it. A screen that takes a password, a one-time code or another credential takes the second
-  way, since the storage rule above keeps every credential out of `sessionStorage`. The rule is this
-  practice's choice.
+  screen of the guarded change, what the user typed into it and the time of writing, or start the
+  step-up as the user opens that screen, before they type, and keep the screen and the time, never
+  what is typed.** The navigation unloads the page and everything typed into it, and the outcome
+  route needs the screen to return to. A screen that takes a password, a one-time code or
+  another credential takes the second way, since the storage rule above keeps every credential out
+  of `sessionStorage`. When the page starts, it deletes an entry older than the re-authentication
+  window the team wrote down
+  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2, "Re-authentication"), so a step-up that never reached the outcome route leaves nothing
+  behind. The rule is this practice's choice.
 - **Page, with an identity provider: on a `403` whose body carries `reauth_required`, or as the user
   opens a guarded change's screen (the rule above), open the BFF's login endpoint by a top-level
   navigation, with the step-up flag `step_up=1` and, when the `403` carried `acrValues`, that value
-  as the query parameter `acr_values`, encoded by `URLSearchParams`,** since the browser reaches the
-  login endpoint by a navigation, so the BFF can answer with the redirect that takes the browser to
-  the authorization server (RFC 10017 section 6.1.2.1) [3]. `URLSearchParams` encodes every
+  as the query parameter `acr_values`, encoded by `URLSearchParams`.** Do not start it as the
+  screen opens when the outcome route has just put the user back on it, so the user does not go
+  round the provider again. The browser reaches the login endpoint by a navigation, so the BFF can
+  answer with the redirect that takes the browser to the authorization server (RFC 10017 section
+  6.1.2.1) [3]. `URLSearchParams` encodes every
   character of a value except the ASCII letters and digits, `*`, `-`, `.` and `_`, so an `&`, a
   `=` or a `#` in `acrValues` cannot add a parameter or end the query (URL Standard sections 5.2
   and 6.2) [75]. The
@@ -653,13 +684,16 @@ section 2, "A new session id at login".
   again,** so the change the BFF guards can go
   through; leave a `401` to the sign-out path. The rule is this practice's choice.
 - **Page, with an identity provider: on the step-up's outcome route, read what was kept in
-  `sessionStorage` and delete it, show the outcome that its query parameter `outcome` names
-  (`reauthenticated`, `refused` or `failed`), and after `reauthenticated` put the user back on the
-  kept screen with what they typed, its data read again from the BFF, so they can send the change
-  again,** since the BFF applied
-  nothing of the change and kept nothing of the request
+  `sessionStorage` and delete it before the route's session check, show the outcome that its query
+  parameter `outcome` names (`reauthenticated`, `refused` or `failed`), and put the user back on
+  the kept screen with what they typed.** Its data is read again from the BFF, so the user can send
+  the change again or try the step-up again. The BFF applied nothing of the change and kept nothing
+  of the request, and on a `refused` or a `failed` such as a provider error it keeps the session so
+  the user can try again
   ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 2, "Re-authentication"); the rule is this practice's choice.
+  section 2, "Re-authentication"). The screen's own session check decides whether the session is
+  still live, and a `401` there runs the sign-out path. A missing or unknown `outcome`, or no kept
+  entry, counts as `failed` with nothing to restore. The rule is this practice's choice.
 
 The BFF's rules on forwarding requests to resource servers are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
@@ -671,12 +705,9 @@ section 2, "The login and logout responses".
 
 ## 7. CSRF and CORS
 
-What "the server" and "an API route" mean, and whose acts the `API:` and `BFF:` rules are, is in
+What "the server" and "an API route" mean is in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
 1.
-
-The page's rules in this section are under "What the React code does", and in "Fixing a CORS
-error" they are the bullets that start with "The page" or `Page:`.
 
 What CSRF is, and the server's defence against it, are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
@@ -770,12 +801,19 @@ Node 20's URL parser, 2026-10-15).
   since that code is the server's word that the session ended (the WebSocket rules in
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
   3, "What the server does"); the rule is this practice's choice.
-- **Page: when a WebSocket closes with any other code, reconnect with a bounded backoff, and before
-  each reconnect ask the API through the API client whether the session is still live,** since a
-  handshake the server refuses reaches the page only as a close with code 1006, the code for a
-  connection closed with no close frame, so the `401` rule of section 6 cannot fire for a socket
-  (MDN's `CloseEvent.code` page; the WHATWG WebSockets Standard) [84],
-  [85]. The rule is this practice's choice.
+- **Page: when a WebSocket that the page did not close closes with any other code, ask the API
+  through the API client whether the session is still live before each reconnect, and stop
+  reconnecting when that check answers anything but `200`.** A handshake the server refuses
+  reaches the page only as a close with code 1006, the code for a connection closed with no close
+  frame, so the `401` rule of section 6 cannot fire for a socket (MDN's `CloseEvent.code` page; the
+  WHATWG WebSockets Standard) [84], [85]. The rule is this practice's choice.
+- **Page: space the reconnects by exponential backoff with random jitter, under a delay cap and an
+  attempt cap the team writes down, and when the attempts run out, show that live updates
+  stopped, with a control to reconnect,** so the tabs do not all reconnect at the same moments, and
+  the user knows the screen no longer updates. At Amazon, retries at the same moments "cause
+  contention or overload again", so its clients add jitter, and a capped backoff alone keeps
+  clients "retrying constantly at the capped rate", so they also limit the retries [201]. The rule
+  is this practice's choice.
 
 The API's CORS rules are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
@@ -847,12 +885,16 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
   Check: when you set up the repository, see that the person or channel that receives security
   advisories and alerts is in the decision log
   ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 3, the first rule under "Logging"), so the advisories of React, the framework and the
-  router reach them on the day they are published.
-- **Read the advisory again in the days after you patch.** After React2Shell, follow-up
+  section 3, the first rule under "Logging"), and that the person watches the repository with
+  security alerts on, or the channel is subscribed to its Dependabot alerts. Then the advisories of
+  React, the framework and the router reach them on the day they are published. By default,
+  GitHub emails a new alert only to people with write access or more who watch the repository with
+  security alerts or all activity on [199].
+- **When you patch, add a task to the team's tracker, dated a few days later and owned by whoever
+  patched, that names the advisory id, to read the advisory again.** After React2Shell, follow-up
   advisories for denial of service and source exposure moved the patched version more than once,
-  so the first fix was not the last [96]. Write the advisory id in your notes,
-  never a version number as "the safe version".
+  so the first fix was not the last [96]. The task names the advisory id, never a version number
+  as "the safe version".
 - **After a flaw that ran code on the server, treat the server's credentials as stolen.** Rotate
   every cloud, database and API key the server could reach; Next.js's React2Shell advisory asks
   you to "rotate any secrets it uses, starting with your most critical ones" [99].
@@ -882,22 +924,28 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
 - **Publish no source maps from a production build.** Vite's `build.sourcemap` is off by default,
   and `'hidden'` writes maps without the comment that points to them, which this practice keeps
   for upload to an error tracker; Next.js keeps browser source maps off by default (read
-  2026-10-01) [109], [110]. A published map hands out the original
+  2026-10-01) [109], [110]. `'hidden'` still writes the `.map` files into the build output [109],
+  so delete them after the upload and before the deploy, or make the host refuse `*.map`, the two
+  fixes Sentry's Vite guide gives [191]. A published map hands out the original
   source with its comments. Demir et al. (2026 preprint) studied 10 million rendered sites and
   found 1,748 live credentials in front ends; 62% of the exposures in JavaScript appeared only in
   compiled bundles [111].
+  Check: the deployed output lists no `.map` file.
 - **Restrict at the provider any key that must ship to the browser.** A maps key gets a website
   restriction and an API restriction (Google Maps Platform) [112]. A "public" database key,
   such as a Supabase anon key, is safe only behind server-side rules such as row-level security: a
   scan by two researchers found 170 of 1,645 Lovable-built apps exposing tables to anyone holding
   that key, because their row-level security policies were missing or insufficient
-  (CVE-2025-48757, which Lovable disputes) [113], [114].
+  (CVE-2025-48757) [113], [114]. Lovable disputes the CVE, as its NVD record notes [203].
 - **Scan for secrets before they leave the machine and after the build.** Turn on GitHub secret
   scanning and repository-level push protection, which is off by default (GitHub's docs, read
   2026-10-01), and run a scanner such as gitleaks as a pre-commit hook [115], [116]. Run it
   over the build output too: the study above found most JavaScript exposures only in the compiled
-  bundle [111]. Gitleaks takes security fixes only, and its maintainer is moving to Betterleaks
-  (read 2026-10-01); re-check before you adopt it [116].
+  bundle [111]. Scan the output with `gitleaks dir dist/`, put a key this section lets ship into
+  `.gitleaksignore` by its fingerprint, with its provider restriction written down ("Write it
+  down", section 1), and let any other hit fail the build [116]. Gitleaks takes security fixes
+  only, and its maintainer is moving to Betterleaks (read 2026-10-01); re-check before you adopt
+  it [116].
 - **When a secret leaks, revoke it at the provider first.** GitHub's guide calls revocation the
   most important step: deleting the secret from the code, pushing a new commit or recreating the
   repository does not stop its use [117].
@@ -927,7 +975,7 @@ for this table did not cover it):
 
 | Control | npm 12 | pnpm 11 and later |
 |---|---|---|
-| dependency install scripts | blocked unless `allowScripts` in the root `package.json` approves them; `strict-allow-scripts=true` turns the warning into a failed install. npm 11 still runs them: set `ignore-scripts=true` there [130], [131], [132] | blocked; `strictDepBuilds` (default `true`) fails the install on an unreviewed build script; reviewed packages go in `allowBuilds`, which replaced `onlyBuiltDependencies` in pnpm 11; never `dangerouslyAllowAllBuilds` [133], [134] |
+| dependency install scripts | blocked unless `allowScripts` in the root `package.json` approves them; `strict-allow-scripts=true` turns the warning into a failed install. npm 11 still runs them: set `ignore-scripts=true` there, which also stops the repository's own `prepare` and every pre- and post-script, so the team installs its git hooks with a setup command [130], [131], [132] | blocked; `strictDepBuilds` (default `true`) fails the install on an unreviewed build script; reviewed packages go in `allowBuilds`, which replaced `onlyBuiltDependencies` in pnpm 11; never `dangerouslyAllowAllBuilds` [133], [134] |
 | release cooldown | `min-release-age` in days, off by default in npm 12 as well (the setting exists since npm 11.10.0, 2026-02-11; npm 10 has none); `min-release-age-exclude` (since 11.17.0) exempts packages [130], [135], [136] | `minimumReleaseAge` in minutes, default 1440 (one day) since pnpm 11; `minimumReleaseAgeExclude` exempts packages [137] |
 | git and tarball sources | `allow-git` and `allow-remote` default to `none` [131] | `blockExoticSubdeps` (default `true`): only direct dependencies may come from git or a tarball URL [137] |
 | provenance | `npm audit signatures` checks registry signatures and provenance attestations [138] | `trustPolicy: no-downgrade` fails when a version's trust level is lower than that of earlier versions [137] |
@@ -949,21 +997,22 @@ updates only, never to security updates (read 2026-10-01) [101], [102],
 - **Set the cooldown to at least one day.** One day covered axios, Nx and TanStack, whose versions
   were live for hours; CISA advised seven after the axios compromise [121], [122],
   [124], [125]. A longer wait delays every normal update by as much; that
-  is the trade.
-  `min-release-age` exists since npm 11.10.0 (2026-02-11); npm 10 has neither it nor
-  `min-release-age-exclude` [135], [136]. On npm before 11.10.0,
-  `--before=<date>` on the install command installs only versions that were available on or
-  before that date (npm's config page, read 2026-10-02) [136]. It takes a fixed date
-  that the person running the install has to choose each time, where `min-release-age` is a
-  rolling window set once in the repository. The reference application was installed this way
-  (npm 10.8, `--before=2026-09-24`); it is a command flag, not repository config.
+  is the trade. On npm before 11.10.0, `--before=<date>` on the install command installs only
+  versions that were available on or before that date (npm's config page, read 2026-10-02) [136].
+  It takes a fixed date that the person running the install has to choose each time, where
+  `min-release-age` is a rolling window set once in the repository.
 - **Write the emergency path next to the cooldown.** A one-day pnpm cooldown blocked the
   React2Shell patch while it was under a day old, and the developer got it through with
   `minimumReleaseAgeExclude` (a practitioner's account, 2025) [143]. The path names the setting
   that exempts one package, who may add an entry, and that the entry comes out once the version is
-  older than the cooldown [143]. Who may add an entry, and that it comes out once the version
-  is older than the cooldown, are this practice's choice. npm has `min-release-age-exclude` since
-  11.17.0; an older npm has no per-package exemption [135].
+  older than the cooldown [143]. In pnpm, exempt the patched version as `name@x.y.z`, never the
+  bare name, since an entry by name exempts every version of the package; exact versions are
+  allowed since pnpm 10.19.0 [137]. npm's `min-release-age-exclude` matches package names only
+  [130], so with npm the author of the change adds a task to the team's tracker, dated for when
+  the version is older than the cooldown and owned by that author, to remove the entry. Who may
+  add an entry, and that it comes out once the version is older than the cooldown, are this
+  practice's choice. npm has `min-release-age-exclude` since 11.17.0; an older npm has no
+  per-package exemption [135].
   Check: when you set a cooldown, ask: if a critical fix ships today, which line do we change? If
   no line next to the setting answers, the path is missing.
 - **Allow a dependency's build script only after someone has read it,** by adding that package to
@@ -975,8 +1024,10 @@ updates only, never to security updates (read 2026-10-01) [101], [102],
 - **Have every security advisory of your dependencies reach you on the day it is published:**
   turn on the host's dependency alerts for the repository, such as Dependabot alerts on GitHub,
   and watch the advisory sources section 18 lists for React's server packages, the framework, the
-  router, Vite and DOMPurify [144]. Where a BFF holds the session, the alerts of its own repository
-  are in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  router, Vite and DOMPurify [144]. Dependabot alerts skip a GitHub Action pinned to a SHA; the
+  pinning rule under "CI" below covers those [150]. Where a BFF holds the session, the alerts of
+  its own repository are in
+  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
   section 2, "Reading the `Cookie` header". A critical fix can then go in through the emergency path
   on the day it ships, not at the next dated re-check or CI run.
 
@@ -1019,10 +1070,12 @@ CI (GitHub Actions; the rules are GitHub's own, from its secure-use reference) [
 - **Pin every third-party action to its full commit SHA, unless the repository uses GitHub's
   workflow dependency lockfile.** GitHub's docs call the lockfile "the strongest protection
   available" and say it "supersedes SHA pinning for repositories that adopt it"; for a repository
-  without one, they list pinning actions to a full-length commit SHA [150]. Dependabot keeps the
-  pinned versions current [150].
+  without one, they list pinning actions to a full-length commit SHA [150]. Dependabot raises no
+  alert for an action pinned to a SHA, and moves such pins only through Dependabot version updates
+  [150], so turn on version updates for the `github-actions` ecosystem in `.github/dependabot.yml`.
   Check: the repository uses GitHub's workflow dependency lockfile, or
-  `grep -rhn "uses:" .github/workflows/ | grep -vE "@[0-9a-f]{40}|uses: \./"` prints nothing.
+  `grep -rhn "uses:" .github/workflows/ | grep -vE "@[0-9a-f]{40}|uses: \./"` prints nothing, and
+  `.github/dependabot.yml` has a `github-actions` entry.
 - **Set the default `GITHUB_TOKEN` permission to read the repository contents, and raise it per
   job only where a job needs more.** A workflow that runs an attacker's input, as the Nx one did,
   then holds a token that cannot write [121], [150].
@@ -1043,7 +1096,9 @@ The Vite dev server serves your source tree. Between January 2025 and June 2026 
 thirteen advisories against it: twelve let a request read files outside the `server.fs` limits, and
 one let any website the developer visited send requests to the dev server and read the source,
 through CORS and the WebSocket (Vite's advisories, read 2026-10-01) [144]. Each was closed only
-by an upgrade [144].
+by an upgrade [144]. Vite published more advisories after June 2026, among them GHSA-9jrq-w75r-8gcw,
+which let a site the developer visited load scripts into a page from a dev server behind custom
+middleware (`server.middlewareMode: true` or `appType: 'custom'`) [192].
 
 - **Keep Vite current on every machine that runs the dev server.** The rules below shrink who can
   reach it; only the patch closes a bug.
@@ -1101,8 +1156,9 @@ Third-party scripts:
 - **Load a fixed version of a script from another origin with Subresource Integrity:** the
   `integrity` attribute and `crossorigin="anonymous"` [153]. SRI refuses any file whose hash
   does not match, a vendor's own update included, and it covers scripts and stylesheet and preload
-  links only (MDN) [153]. So it fits only a file that never changes at its URL; that reading is
-  the practice's.
+  links only (MDN) [153]. So it fits only a file that never changes at its URL: OWASP's Third
+  Party JavaScript Management cheat sheet warns that a vendor's update can leave you with code
+  that is "secure but not working" [152].
 - **Keep analytics, session replay and any other script that listens to keystrokes off the login
   and payment screens.** Munir et al. (2025) crawled a random sample of 15,000 of the top million
   sites and found third-party keystroke listeners on 38.52% of them; at least 3.18% of the sites
@@ -1130,9 +1186,12 @@ iframes, redirects and service workers:
 - **Load content you do not control in an `<iframe>` with `sandbox`, and never give it
   `allow-scripts` together with `allow-same-origin`.** With both, a same-origin document can remove
   its own sandbox (MDN) [158].
-- **Redirect after login only to a target from an allowlist, or to one the server maps from a
-  short id.** A `?next=` value used as it is sends the user to any site from a link that shows your
-  domain (OWASP's Unvalidated Redirects cheat sheet) [159].
+- **Page: when the page itself sends the user on after sign-in (a browser-only client, or a
+  first-party login form), accept only a local path, or a short id the code maps to a path.** A
+  `?next=` value used as it is sends the user to any site from a link that shows your domain
+  (OWASP's Unvalidated Redirects cheat sheet) [159]. With a BFF, its callback does this
+  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2, "The login cookie").
 - **Register a service worker only from your own origin and over HTTPS** (OWASP's HTML5 Security
   cheat sheet), since the worker sits between the page and the network for every request in its
   scope [157].
@@ -1177,8 +1236,9 @@ iframes, redirects and service workers:
   managers [167].
 - **Send `Cache-Control: no-store` on any HTML page that carries personal data or a session id,**
   so no shared cache keeps one user's data for the next one. OWASP's Session Management cheat sheet
-  asks for it on responses that carry a session id [55]. Personal data and HTML pages are this
-  practice's choice. The API's responses take it from
+  asks to set the cache policy in the response headers of sensitive pages, and to send `no-store`
+  on responses that carry a session id or sensitive session data [55]. The API's responses take
+  it from
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
   section 3, "Response headers".
 
@@ -1208,11 +1268,18 @@ default [173], [174]. They were not compared here.
   the rule and the reason, in the form
   [static-checks.md](../../python/static-checks/static-checks.md) section 6 gives.
 - **After every deploy that changes a header, run the policy through CSP Evaluator and the site
-  through MDN's HTTP Observatory.** CSP Evaluator looks for ways around a policy, and Google offers
-  it for convenience, with no promise that a clean result means a safe policy; the Observatory
-  checks the headers and settings the deployed site actually sends [175], [176].
+  through MDN's HTTP Observatory, and put the result into the pull request.** CSP Evaluator looks
+  for ways around a policy, and Google offers it for convenience, with no promise that a clean
+  result means a safe policy; the Observatory checks the headers and settings the deployed site
+  actually sends [175], [176]. The policy of section 5 always draws one finding, "'self' can be
+  problematic if you host JSONP, AngularJS or user uploaded files" [198]; section 5's rule on
+  serving uploaded files from another site answers it. Fix or revert every other finding, and every
+  failed Observatory test, before the next deploy.
 - **Run the supply-chain and secret checks in CI:** `npm audit signatures`, OSV-Scanner and the
-  secret scanner (sections 9 and 10) [138].
+  secret scanner (sections 9 and 10) [138]. OSV-Scanner fails on any finding, so record an
+  advisory the application does not reach in `osv-scanner.toml` as an `[[IgnoredVulns]]` entry
+  with a `reason` and an `ignoreUntil` date: the job stays required, and the exception expires
+  [196], [197].
 ## 15. Common mistakes
 
 Each pair shows one problem and its fix. The BAD is written by hand: the same file or lines as
@@ -1406,7 +1473,7 @@ export function ExternalLink({ href, children }: ExternalLinkProps) {
 
 The link follows whatever scheme the data holds. React 19 refuses `javascript:` and nothing else,
 so a `data:` URL passes, and versions before React 19 do not refuse `javascript:` either
-[11], [8]. `no-script-url` does not report this line: it sees a `javascript:` string
+[11], [200], [8]. `no-script-url` does not report this line: it sees a `javascript:` string
 written in the code, not a value that arrives as data.
 
 Good: the rule in `src/billing/list-invoices/link-url.rules.ts`, the whole file, which is new, and
@@ -1508,9 +1575,11 @@ change which badge shows, never which props the element gets (section 3).
 - **A page with no session and no user data,** such as a public marketing page, has no token to
   protect and no request to forge: sections 6 and 7 do not apply. Its headers, its dependencies and
   its build still do.
-- **A lower-risk application may run a browser-only OAuth client.** RFC 10017 recommends a BFF for
-  business, sensitive and personal-data applications, and describes the other two patterns
-  without forbidding them [3]. Choose one knowingly, with section 6's storage rules.
+- **Where [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 1 does not call for a BFF, an application may run a browser-only OAuth client.** RFC
+  10017 recommends a BFF for business, sensitive and personal-data applications, and describes the
+  other two patterns without forbidding them [3]. Choose one knowingly, with section 6's storage
+  rules.
 - **A client-only application has no Server Functions;** section 8 applies once a framework
   renders on the server.
 - **A script an attacker already runs on the page** acts as the user under every rule here. The
@@ -1529,8 +1598,8 @@ change which badge shows, never which props the element gets (section 3).
   ([refactoring.md](../../any-language/refactoring/refactoring.md) section 6).
 - **Moving targets** change under these rules: package manager defaults, the framework and Vite
   advisories, browser support for Trusted Types and the Sanitizer API, the lint presets, the OWASP
-  Top 10 edition. Each line that names one carries the date it was read, and
-  [README.md](README.md) lists what to re-check.
+  Top 10 edition. The sources of each line that names one carry their dates in the Sources
+  section, and [README.md](README.md) "How to adopt", step 6, says when to read them again.
 
 ## 17. Review checklist and the OWASP Top 10:2025
 
@@ -1546,12 +1615,12 @@ it is fixed or the author shows why it does not apply; that bar is the practice'
 | 2. What the browser can protect | Does the server check this request on its own? | a permission enforced only by hiding a button or a route |
 | 3. XSS | Can a value from outside reach HTML, a URL, a props object, a style or code? | a URL from data with no scheme allowlist; outside data spread as props; a renderer's `urlTransform` overridden [13] |
 | 4. Sanitising | Is the HTML sanitised in the sink's own render? | a second `dangerouslySetInnerHTML`; a sanitised string changed or joined after cleaning |
-| 5. Headers | Does the built page run under a policy with no `'unsafe-inline'` in `script-src`? | `'unsafe-inline'` or `data:` in `script-src`; a policy only in `<meta>`; a nonce in a cached response; a check or a policy still log-only after its written end |
+| 5. Headers | Does the built page run under a policy with no `'unsafe-inline'` in `script-src`? | `'unsafe-inline'` or `data:` in `script-src`; a policy only in `<meta>`; a nonce in a cached response; a report-only policy with no named receiver or no written end date, or still report-only after that date; a log-only check past its written end |
 | 6a. Sessions, page | Can script read anything that grants access? | a token or session id in `localStorage`, `sessionStorage` or a cookie set by script; a cookie the page sets without `Secure`, a written `SameSite` or a `__Host-` or `__Secure-` prefix; `refetchInterval` on data that needs the session |
 | 7a. CSRF and CORS, page | Does each request to an API route carry the CSRF defence, and does the page fix CORS errors and build API paths as section 7 says? | `mode: "no-cors"` or a public proxy in the page; a value from outside put into an API path unchecked; a request to an API route, other than the exempt ones in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3, made outside the one API client or without the custom header, or without `credentials: "include"` when the API is on another origin; a blob made with the response's own type, or an SVG blob |
 | 8. Server-side React | Does each Server Function check the user and the record itself? | authorisation only in middleware; a secret written in server code |
 | 9. Secrets | Would you publish every `VITE_` value on the login page? | a key, a token or a password behind a public prefix; production source maps published |
-| 10. Supply chain | Does every install obey the cooldown and the script block, with a named emergency path? | a new dependency nobody checked on the registry; an action pinned by tag; fork code in `pull_request_target` |
+| 10. Supply chain | Does every install obey the cooldown and the script block, with a named emergency path? | a new dependency nobody checked on the registry; an action pinned by tag; fork code in `pull_request_target`; a cooldown exclusion past its removal date |
 | 11. Dev server | Does the dev server answer only localhost? | `allowedHosts: true`; `cors: true`; `host` open on a network you do not trust |
 | 12. Edges | Does each `message` listener check one exact origin? | `postMessage(…, "*")`; a sandbox with both `allow-scripts` and `allow-same-origin`; a redirect to a raw `?next=` |
 | 13. Data exposure | Can a URL, a log line or a replay carry a credential, and does a failed screen show a message of its own, not the error's text? | a token in a query string; replay masking turned off; paste blocked; the error's own text on a failed screen |
@@ -1563,7 +1632,7 @@ The OWASP Top 10 is a list of the ten most critical risk categories for web appl
 the OWASP Foundation [178], [179]. OWASP calls it an awareness document for developers and
 web application security, one that "represents a broad consensus about the most critical security
 risks to web applications" [178], [179]. The current edition is the 2025 one, the eighth
-(OWASP's Impact Report 2025, read 2026-10-17); 2021 and 2017 came before it [180].
+(OWASP's Impact Report 2025, read 2026-10-17); 2021 and 2017 came before it [179], [180].
 Read it at [top10.owasp.org/2025](https://top10.owasp.org/2025/), where each category has its own
 page with its weaknesses, attack scenarios and prevention steps; the source text is in the
 OWASP/Top10 repository on GitHub (both read 2026-10-16) [178], [179].
@@ -1578,19 +1647,19 @@ years after it appears [179].
 
 Work with it this way:
 
-- **In a review, check against the checklist above; use the Top 10 only to name a finding's
-  category.** OWASP calls it "primarily an awareness document", and as a coding or testing
-  standard "the bare minimum and just a starting point" [181]. Some of its
-  risks, such as A06 Insecure Design, are "beyond the scope of most forms of testing", and OWASP
-  discourages any claim of full coverage because it is "simply untrue" [181]. A team that
-  checks only the ten categories believes it is done. The table below says which section of this
-  file covers each 2025 category. The checklist above holds the red flags of the highest-risk acts;
-  a review also reads the rules of every section the change touches.
+- **In a review, read the rules of every section the change touches and check the red flags of
+  the checklist above; use the Top 10 only to name a finding's category.** OWASP calls it
+  "primarily an awareness document", and as a coding or testing standard "the bare minimum and just
+  a starting point" [181]. Some of its risks, such as A06 Insecure Design, are "beyond the scope of
+  most forms of testing", and OWASP discourages any claim of full coverage because it is "simply
+  untrue" [181]. A team that checks only the ten categories can take itself to be done, which is
+  the claim of full coverage OWASP calls untrue; this reading is the practice's. The table below
+  says which section of this file covers each 2025 category. The checklist above holds the red
+  flags of the highest-risk acts.
 - **When the project starts, pick its
   [ASVS](https://owasp.org/www-project-application-security-verification-standard/) level and
-  write it into the decision log ("Write it down" in
-  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
-  2 says where),** so reviews and tests know the target; writing it down is this practice's choice.
+  write it into the decision log ("Write it down", section 1),** so reviews and tests know the
+  target; writing it down is this practice's choice.
   OWASP's Application Security Verification Standard (ASVS 5.0, read 2026-10-16) has three levels:
   Level 1 holds "the minimum requirements to consider when securing an application", Level 2 is the
   level "most applications should be striving to achieve", and Level 3 is for applications that must
@@ -1607,12 +1676,13 @@ Work with it this way:
   such as authentication, access control, business logic and key flows [183], [181],
   [184].
 - **When you build a feature, first read what the
-  [OWASP Top 10 Proactive Controls](https://top10proactive.owasp.org/) and the
+  [OWASP Top 10 Proactive Controls](https://top10proactive.owasp.org/archive/2024/) and the
   [Cheat Sheet Series](https://cheatsheetseries.owasp.org/) say about what it handles,** such as a
   session, input or output, since OWASP's guide to an application security program names them as
   "a good starting point" for designing security in [181]. The Proactive Controls (2024 edition,
-  read 2026-10-16) are the techniques OWASP writes for developers, and the Cheat Sheet Series gives
-  concise guidance on one topic at a time; this file cites both throughout [185], [186].
+  read 2026-10-18; a next edition is in progress) are the techniques OWASP writes for developers,
+  and the Cheat Sheet Series gives concise guidance on one topic at a time; this file cites both
+  throughout [185], [186].
 - **Before a release that changes authentication, access control, business logic or a key flow,
   test the application against the
   [OWASP Web Security Testing Guide](https://owasp.org/www-project-web-security-testing-guide/),
@@ -1658,12 +1728,12 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [4] OWASP — OWASP Top 10:2025, A01:2025 Broken Access Control — https://top10.owasp.org/2025/A01_2025-Broken_Access_Control
 - [5] OWASP — Authorization Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
 - [6] OWASP Cheat Sheet Series — Cookie Theft Mitigation Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/cedcdcb3e94d1748e964e296f9f3c71d1de8da0d/cheatsheets/Cookie_Theft_Mitigation_Cheat_Sheet.md
-- [7] Google — Protecting Cookies with Device Bound Session Credentials — https://blog.google/security/protecting-cookies-with-device-bound-session-credentials/
+- [7] Benjamin Ackerman, Daniel Rubery and Guillaume Ehinger — Protecting Cookies with Device Bound Session Credentials (Google blog, 2026; sponsored by Google) — https://blog.google/security/protecting-cookies-with-device-bound-session-credentials/ — checked 2026-10-15
 - [8] Philippe De Ryck — Preventing XSS in React (Part 1): Data binding and URLs (Pragmatic Web Security, 2020; opinion) — https://pragmaticwebsecurity.com/articles/spasecurity/react-xss-part1.html
-- [9] OWASP — Cross Site Scripting Prevention Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html
+- [9] OWASP — Cross Site Scripting Prevention Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html — checked 2026-10-16
 - [10] React — Common components (e.g. <div>) — https://react.dev/reference/react-dom/components/common
 - [11] React — React 19 Upgrade Guide — https://react.dev/blog/2024/04/25/react-19-upgrade-guide#other-breaking-changes
-- [12] kassens — sanitize javascript: urls for <object> tags (React, GitHub pull request #29808, 2024; kind not confirmed) — https://github.com/react/react/pull/29808
+- [12] kassens — sanitize javascript: urls for <object> tags (React, GitHub pull request #29808, 2024; case) — https://github.com/react/react/pull/29808
 - [13] remarkjs — react-markdown README — https://github.com/remarkjs/react-markdown/blob/8545ebd7416beb2af2bfef59440db231abe69f13/readme.md
 - [14] HashiCorp — HCSEC-2026-01: Arbitrary code execution in React server-side rendering of untrusted MDX content — https://discuss.hashicorp.com/t/hcsec-2026-01-arbitrary-code-execution-in-react-server-side-rendering-of-untrusted-mdx-content/77155
 - [15] Yahoo — serialize-javascript README, v7.1.2 — https://github.com/yahoo/serialize-javascript/blob/v7.1.2/README.md
@@ -1677,31 +1747,31 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [23] Vercel — GHSA-gx5p-jg67-6x7h: Next.js has cross-site scripting in beforeInteractive scripts with untrusted input (CVE-2026-44580) — https://github.com/advisories/GHSA-gx5p-jg67-6x7h
 - [24] Cure53 — GHSA-h8r8-wccr-v5f2: DOMPurify is vulnerable to mutation-XSS via Re-Contextualization (CVE-2026-65914) — https://github.com/advisories/GHSA-h8r8-wccr-v5f2
 - [25] Cure53 — DOMPurify README, 3.4.17 — https://github.com/cure53/DOMPurify/blob/3.4.17/README.md
-- [26] MDN Web Docs (Mozilla) — Element: setHTML() method — https://developer.mozilla.org/en-US/docs/Web/API/Element/setHTML
+- [26] MDN Web Docs (Mozilla) — Element: setHTML() method — https://developer.mozilla.org/en-US/docs/Web/API/Element/setHTML — checked 2026-10-01
 - [27] Cure53 — DOMPurify releases 3.4.0 to 3.4.17 — https://github.com/cure53/DOMPurify/releases
 - [28] Cure53 — GHSA-v9jr-rg53-9pgp: DOMPurify: Prototype Pollution to XSS Bypass via CUSTOM_ELEMENT_HANDLING Fallback (CVE-2026-41238) — https://github.com/advisories/GHSA-v9jr-rg53-9pgp
-- [29] MDN Web Docs (Mozilla) — Trusted Types API — https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API
+- [29] MDN Web Docs (Mozilla) — Trusted Types API — https://developer.mozilla.org/en-US/docs/Web/API/Trusted_Types_API — checked 2026-10-01
 - [30] Krzysztof Kotowicz — Prevent DOM-based cross-site scripting vulnerabilities with Trusted Types (web.dev, no date; opinion) — https://web.dev/articles/trusted-types
 - [31] Vik Vanderlinden and Gertjan Franken — Security, The 2025 Web Almanac, chapter 9 (HTTP Archive, 2025; research) — https://almanac.httparchive.org/en/2025/security
 - [32] Lukas Weichselbaum, Michele Spagnuolo, Sebastian Lekies and Artur Janc — CSP Is Dead, Long Live CSP! On the Insecurity of Whitelists and the Future of Content Security Policy (ACM CCS 2016, 2016; research, sponsored by Google) — https://doi.org/10.1145/2976749.2978363
-- [33] Vite — HTML plugin source, packages/vite/src/node/plugins/html.ts — https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/packages/vite/src/node/plugins/html.ts
+- [33] Vite — HTML plugin source, packages/vite/src/node/plugins/html.ts — https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/packages/vite/src/node/plugins/html.ts — checked 2026-10-01
 - [34] Lukas Weichselbaum — Mitigate cross-site scripting (XSS) with a strict Content Security Policy (CSP) (web.dev, no date; opinion) — https://web.dev/articles/strict-csp
-- [35] David Dworken — Securely hosting user data in modern web applications (web.dev, 2023; case) — https://web.dev/articles/securely-hosting-user-data
-- [36] Vite — Features, "Content Security Policy (CSP)" — https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/guide/features.md
-- [37] Next.js (Vercel) — How to set a Content Security Policy (CSP) for your Next.js application, v16.4.2 — https://github.com/vercel/next.js/blob/v16.4.2/docs/01-app/02-guides/content-security-policy.mdx
+- [35] David Dworken — Securely hosting user data in modern web applications (web.dev, 2023; case) — https://web.dev/articles/securely-hosting-user-data — checked 2026-10-16
+- [36] Vite — Features, "Content Security Policy (CSP)" — https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/guide/features.md — checked 2026-10-01
+- [37] Next.js (Vercel) — How to set a Content Security Policy (CSP) for your Next.js application, v16.4.2 — https://github.com/vercel/next.js/blob/v16.4.2/docs/01-app/02-guides/content-security-policy.mdx — checked 2026-10-01
 - [38] OWASP Cheat Sheet Series — Content Security Policy Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/1a78ae3e443cef156e947f87e892efbcc62876ee/cheatsheets/Content_Security_Policy_Cheat_Sheet.md
 - [39] Matteo Golinelli, Francesco Bonomi and Bruno Crispo — The Nonce-nce of Web Security: an Investigation of CSP Nonces Reuse (arXiv, accepted at the WASP workshop of ESORICS 2023, 2023; research) — https://arxiv.org/abs/2309.07782v1
 - [40] Ryan Chaplin — Bypassing a WAF and a CSP with Google Tag Manager: An Attacker's Perspective and Remediation Advice (Raxis blog, 2026; opinion) — https://raxis.com/blog/bypassing-waf-and-csp-with-google-tag-manager/
-- [41] Vite — Shared Options (`html.cspNonce`, `publicDir`) — https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/config/shared-options.md
+- [41] Vite — Shared Options (`html.cspNonce`, `publicDir`) — https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/config/shared-options.md — checked 2026-10-01
 - [42] MDN Web Docs (Mozilla) — Content-Security-Policy: style-src directive — https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/style-src
-- [43] Emotion — @emotion/cache README — https://github.com/emotion-js/emotion/blob/b882bcba85132554992e4bd49e94c95939bbf810/packages/cache/README.md
-- [44] styled-components — FAQs — https://styled-components.com/docs/faqs
+- [43] Emotion — @emotion/cache README — https://github.com/emotion-js/emotion/blob/b882bcba85132554992e4bd49e94c95939bbf810/packages/cache/README.md — checked 2026-10-01
+- [44] styled-components — FAQs — https://styled-components.com/docs/faqs — checked 2026-10-01
 - [45] MDN Web Docs (Mozilla) — Content Security Policy (CSP) — https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP
 - [46] MDN Web Docs (Mozilla) — Content Security Policy (CSP) implementation — https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/CSP
 - [47] MDN Web Docs (Mozilla) — Content-Security-Policy: frame-ancestors directive — https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/frame-ancestors
-- [48] Netlify — Custom headers — https://docs.netlify.com/manage/routing/headers/
-- [49] Cloudflare — Headers (Cloudflare Pages docs) — https://developers.cloudflare.com/pages/configuration/headers/
-- [50] Vercel — Static Configuration with vercel.json, "headers" — https://vercel.com/docs/project-configuration/vercel-json#headers
+- [48] Netlify — Custom headers — https://docs.netlify.com/manage/routing/headers/ — checked 2026-10-01
+- [49] Cloudflare — Headers (Cloudflare Pages docs) — https://developers.cloudflare.com/pages/configuration/headers/ — checked 2026-10-01
+- [50] Vercel — Static Configuration with vercel.json, "headers" — https://vercel.com/docs/project-configuration/vercel-json#headers — checked 2026-10-01
 - [51] OWASP Cheat Sheet Series — HTTP Security Response Headers Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/1a78ae3e443cef156e947f87e892efbcc62876ee/cheatsheets/HTTP_Headers_Cheat_Sheet.md
 - [52] MDN Web Docs (Mozilla) — Referrer policy configuration — https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Referrer_policy
 - [53] MDN — Cross-Origin-Opener-Policy (COOP) header — https://github.com/mdn/content/blob/44a1a0348720bbd1b1085c7d92b93b4fd311a3dd/files/en-us/web/http/reference/headers/cross-origin-opener-policy/index.md
@@ -1710,7 +1780,7 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [56] Philippe De Ryck — Why avoiding LocalStorage for tokens is the wrong solution (Pragmatic Web Security, 2020; opinion) — https://pragmaticwebsecurity.com/articles/oauthoidc/localstorage-xss.html
 - [57] Andrea Chiarelli — Things Developers Get Wrong About the Backend for Frontend Pattern (Auth0 blog, 2026; sponsored by Auth0) — https://auth0.com/blog/things-developers-get-wrong-about-the-backend-for-frontend-pattern/
 - [58] IETF — RFC 9700, Best Current Practice for OAuth 2.0 Security, BCP 240, January 2025 — https://www.rfc-editor.org/rfc/rfc9700.txt
-- [59] oauth.net — OAuth 2.0 for Browser-Based Apps (oauth.net, no date; kind not confirmed) — https://oauth.net/2/browser-based-apps/
+- [59] oauth.net — OAuth 2.0 for Browser-Based Apps (oauth.net, no date; opinion) — https://oauth.net/2/browser-based-apps/
 - [60] OWASP Cheat Sheet Series — Authentication Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/1a78ae3e443cef156e947f87e892efbcc62876ee/cheatsheets/Authentication_Cheat_Sheet.md
 - [61] Auth0 — Auth0 Single Page App SDK — https://auth0.com/docs/libraries/auth0-single-page-app-sdk
 - [62] Microsoft — Caching in MSAL.js — https://learn.microsoft.com/en-us/entra/msal/javascript/browser/caching
@@ -1719,9 +1789,9 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [65] IETF HTTP Working Group (S. Bingler, M. West, J. Wilander, eds.) — Cookies: HTTP State Management Mechanism, draft-ietf-httpbis-rfc6265bis-22, December 2025 — https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-22
 - [66] IETF — RFC 9449, OAuth 2.0 Demonstrating Proof of Possession (DPoP), September 2023 — https://www.rfc-editor.org/rfc/rfc9449
 - [67] Philippe De Ryck — A Critical Analysis of Refresh Token Rotation in Single-page Applications (Ping Identity blog, guest post, 2021; opinion) — https://www.pingidentity.com/en-us/docs/blogs/refresh-token-rotation-spa
-- [68] TanStack — TanStack Query docs (React), Important Defaults — https://github.com/TanStack/query/blob/67b12ae1a0bca52472d0e54a38a6822458aaa858/docs/framework/react/guides/important-defaults.md
-- [69] TanStack — TanStack Query docs (React), Polling — https://github.com/TanStack/query/blob/67b12ae1a0bca52472d0e54a38a6822458aaa858/docs/framework/react/guides/polling.md
-- [70] TanStack — TanStack Query docs (React), Query Retries — https://github.com/TanStack/query/blob/4e8be3f46f35b9208184f95e50fa1dc61fccef1f/docs/framework/react/guides/query-retries.md
+- [68] TanStack — TanStack Query docs (React), Important Defaults — https://github.com/TanStack/query/blob/67b12ae1a0bca52472d0e54a38a6822458aaa858/docs/framework/react/guides/important-defaults.md — checked 2026-10-15
+- [69] TanStack — TanStack Query docs (React), Polling — https://github.com/TanStack/query/blob/67b12ae1a0bca52472d0e54a38a6822458aaa858/docs/framework/react/guides/polling.md — checked 2026-10-15
+- [70] TanStack — TanStack Query docs (React), Query Retries — https://github.com/TanStack/query/blob/4e8be3f46f35b9208184f95e50fa1dc61fccef1f/docs/framework/react/guides/query-retries.md — checked 2026-10-16
 - [71] OWASP — Application Security Verification Standard, chapter V7 Session Management, 5.0.0 — https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x16-V7-Session-Management.md
 - [72] OpenID Foundation — OpenID Connect RP-Initiated Logout 1.0, final, 12 September 2022 — https://openid.net/specs/openid-connect-rpinitiated-1_0.html
 - [73] OWASP Cheat Sheet Series — Cross-Site Request Forgery Prevention Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/1a78ae3e443cef156e947f87e892efbcc62876ee/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.md
@@ -1729,22 +1799,22 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [75] WHATWG — URL Standard, sections 4.7 "Origin", 5.2 "application/x-www-form-urlencoded serializing" and 6.2 "URLSearchParams class", commit snapshot fde3f74 — https://url.spec.whatwg.org/commit-snapshots/fde3f74f063341a28d437216f75735b8b40128f5/
 - [76] W3C — File API, Editor's Draft, 12 September 2026, sections 8.2, 8.3.1 and 8.4 — https://w3c.github.io/FileAPI/#url-model
 - [77] MDN Web Docs (Mozilla) — Content-Disposition header — https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Disposition
-- [78] MDN Web Docs (Mozilla) — EventSource() constructor — https://developer.mozilla.org/en-US/docs/Web/API/EventSource/EventSource
+- [78] MDN Web Docs (Mozilla) — EventSource() constructor — https://developer.mozilla.org/en-US/docs/Web/API/EventSource/EventSource — checked 2026-10-16
 - [79] Maxence Schmitt — Exploiting Client-Side Path Traversal to Perform Cross-Site Request Forgery - Introducing CSPT2CSRF (Doyensec blog, 2024; research, sponsored by Doyensec) — https://blog.doyensec.com/2024/07/02/cspt2csrf.html
 - [80] Maxence Schmitt — Exploiting Client-Side Path Traversal: CSRF is dead, long live CSRF (Doyensec, no date; research, sponsored by Doyensec) — https://www.doyensec.com/resources/Doyensec_CSPT2CSRF_Whitepaper.pdf
 - [81] NIST NVD — CVE-2023-45316 (Mattermost) — https://nvd.nist.gov/vuln/detail/CVE-2023-45316
 - [82] OWASP Cheat Sheet Series — WebSocket Security Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/fdd74a30ff147436f218df84778651cad6b8d9a4/cheatsheets/WebSocket_Security_Cheat_Sheet.md
-- [83] W3C — Content Security Policy Level 3, Editor's Draft, 16 September 2026, section 6.7.2.9 "scheme-part matching" — https://w3c.github.io/webappsec-csp/#match-schemes
+- [83] W3C — Content Security Policy Level 3, Editor's Draft, 16 September 2026, section 6.7.2.9 "scheme-part matching" — https://w3c.github.io/webappsec-csp/#match-schemes — checked 2026-10-16
 - [84] MDN — CloseEvent: code property — https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
 - [85] WHATWG — WebSockets Standard, Living Standard, commit snapshot 9879e5c — https://websockets.spec.whatwg.org/commit-snapshots/9879e5cf0d66c66af6990e4c75f72dda794e1b87/
 - [86] MDN — Request: mode property — https://developer.mozilla.org/en-US/docs/Web/API/Request/mode
 - [87] Vite — Server options (docs/config/server-options.md) — https://github.com/vitejs/vite/blob/ce4293f15cc5cd221c5ed60f5cd64e82ca5cbaf5/docs/config/server-options.md
 - [88] React — Critical Security Vulnerability in React Server Components — https://github.com/reactjs/react.dev/blob/046f17d04295ba047bb5739026b4ac3110f17028/src/content/blog/2025/12/03/critical-security-vulnerability-in-react-server-components.md
 - [89] Next.js — How to think about data security in Next.js — https://github.com/vercel/next.js/blob/e2e7393c1f8449759aa1ae502b64fd7e946fbf37/docs/01-app/02-guides/data-security.mdx
-- [90] Next.js (Sebastian Markbåge) — How to Think About Security in Next.js — https://nextjs.org/blog/security-nextjs-server-components-actions
+- [90] Sebastian Markbåge — How to Think About Security in Next.js (Next.js blog, 2023; sponsored by Vercel) — https://nextjs.org/blog/security-nextjs-server-components-actions
 - [91] Next.js — GHSA-f82v-jwr5-mffw, Authorization Bypass in Next.js Middleware (CVE-2025-29927) — https://github.com/advisories/GHSA-f82v-jwr5-mffw
 - [92] Ty Sbano — Postmortem on Next.js Middleware bypass (Vercel blog, 2025; case) — https://vercel.com/blog/postmortem-on-next-js-middleware-bypass
-- [93] Netlify — Next.js & React security release (May 2026): what to know (Netlify changelog, 2026; kind not confirmed) — https://www.netlify.com/changelog/2026-05-08-react-nextjs-security-vulnerabilities/
+- [93] Netlify — Next.js & React security release (May 2026): what to know (Netlify changelog, 2026; sponsored by Netlify) — https://www.netlify.com/changelog/2026-05-08-react-nextjs-security-vulnerabilities/
 - [94] React — experimental_taintObjectReference — https://github.com/reactjs/react.dev/blob/046f17d04295ba047bb5739026b4ac3110f17028/src/content/reference/react/experimental_taintObjectReference.md
 - [95] Next.js — Next.js Security Update: December 11, 2025 — https://nextjs.org/blog/security-update-2025-12-11
 - [96] React — Denial of Service and Source Code Exposure in React Server Components — https://github.com/reactjs/react.dev/blob/046f17d04295ba047bb5739026b4ac3110f17028/src/content/blog/2025/12/11/denial-of-service-and-source-code-exposure-in-react-server-components.md
@@ -1752,22 +1822,22 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [98] Microsoft Defender Security Research Team — Defending against the CVE-2025-55182 (React2Shell) vulnerability in React Server Components (Microsoft Security Blog, 2025; case) — https://www.microsoft.com/en-us/security/blog/2025/12/15/defending-against-the-cve-2025-55182-react2shell-vulnerability-in-react-server-components/
 - [99] Next.js — Security Advisory: CVE-2025-66478 — https://nextjs.org/blog/CVE-2025-66478
 - [100] Aragorn Tseng, Robert Weiner, Casey Charrier, Zander Work, Genevieve Stark, Austin Larsen — Multiple Threat Actors Exploit React2Shell (CVE-2025-55182) (Google Cloud Blog, Google Threat Intelligence Group, 2025; case) — https://cloud.google.com/blog/topics/threat-intelligence/threat-actors-exploit-react2shell-cve-2025-55182
-- [101] Renovate — Configuration options — https://docs.renovatebot.com/configuration-options/#minimumreleaseage
-- [102] Renovate — Security presets — https://docs.renovatebot.com/presets-security/
-- [103] GitHub — Dependabot options reference — https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference
+- [101] Renovate — Configuration options — https://docs.renovatebot.com/configuration-options/#minimumreleaseage — checked 2026-10-01
+- [102] Renovate — Security presets — https://docs.renovatebot.com/presets-security/ — checked 2026-10-01
+- [103] GitHub — Dependabot options reference — https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference — checked 2026-10-01
 - [104] React Router — GHSA-3cgp-3xvw-98x8, XSS in meta() script:ld+json (CVE-2025-59057) — https://github.com/advisories/GHSA-3cgp-3xvw-98x8
 - [105] React Router — GHSA-8v8x-cx79-35w7, SSR XSS in ScrollRestoration (CVE-2026-21884) — https://github.com/advisories/GHSA-8v8x-cx79-35w7
 - [106] React Router — GHSA-2w69-qvjg-hvjx, XSS via Open Redirects (CVE-2026-22029) — https://github.com/advisories/GHSA-2w69-qvjg-hvjx
 - [107] Vite — Env Variables and Modes — https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/guide/env-and-mode.md
 - [108] Next.js — Environment Variables guide — https://github.com/vercel/next.js/blob/e2e7393c1f8449759aa1ae502b64fd7e946fbf37/docs/01-app/02-guides/environment-variables.mdx
-- [109] Vite — Build Options — https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/config/build-options.md
-- [110] Next.js — productionBrowserSourceMaps — https://github.com/vercel/next.js/blob/e2e7393c1f8449759aa1ae502b64fd7e946fbf37/docs/01-app/03-api-reference/05-config/01-next-config-js/productionBrowserSourceMaps.mdx
+- [109] Vite — Build Options — https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/docs/config/build-options.md — checked 2026-10-01
+- [110] Next.js — productionBrowserSourceMaps — https://github.com/vercel/next.js/blob/e2e7393c1f8449759aa1ae502b64fd7e946fbf37/docs/01-app/03-api-reference/05-config/01-next-config-js/productionBrowserSourceMaps.mdx — checked 2026-10-01
 - [111] Nurullah Demir, Yash Vekaria, Georgios Smaragdakis, Zakir Durumeric — Keys on Doormats: Exposed API Credentials on the Web (arXiv preprint v3, 2026; research) — https://arxiv.org/abs/2603.12498v3
 - [112] Google — Google Maps Platform security guidance — https://developers.google.com/maps/api-security-best-practices
 - [113] Michael Bires — CVE-2025-48757: 170+ Lovable Apps With Open Supabase Tables (michaelbir.es, 2026; case, on the author's page that sells security audits) — https://www.michaelbir.es/case-studies/lovable-supabase-rls-security-audit/
 - [114] Matt Palmer — CVE-2025-48757 (mattpalmer.io, 2025; case) — https://mattpalmer.io/posts/CVE-2025-48757/
-- [115] GitHub — Push protection — https://github.com/github/docs/blob/dae83f7d28f3b8e10015bd6b6d8b72267cedceca/content/code-security/concepts/secret-security/push-protection.md
-- [116] Gitleaks — Gitleaks README — https://github.com/gitleaks/gitleaks/blob/b58d3f102cf3a2c84cb7f923d05c25c9b1aed84b/README.md
+- [115] GitHub — Push protection — https://github.com/github/docs/blob/dae83f7d28f3b8e10015bd6b6d8b72267cedceca/content/code-security/concepts/secret-security/push-protection.md — checked 2026-10-01
+- [116] Gitleaks — Gitleaks README — https://github.com/gitleaks/gitleaks/blob/b58d3f102cf3a2c84cb7f923d05c25c9b1aed84b/README.md — checked 2026-10-01
 - [117] GitHub — Remediating a leaked secret in your repository — https://github.com/github/docs/blob/dae83f7d28f3b8e10015bd6b6d8b72267cedceca/content/code-security/tutorials/remediate-leaked-secrets/remediating-a-leaked-secret.md
 - [118] Xavier René-Corail — Our plan for a more secure npm supply chain (The GitHub Blog, 2025; case) — https://github.blog/security/supply-chain-security/our-plan-for-a-more-secure-npm-supply-chain/
 - [119] Justin Moore — "Shai-Hulud" Worm Compromises npm Ecosystem in Supply Chain Attack (Unit 42, Palo Alto Networks, 2025; research, sponsored by Palo Alto Networks) — https://unit42.paloaltonetworks.com/npm-supply-chain-attack/
@@ -1781,29 +1851,29 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [127] Microsoft Security Research, Ravikant Tiwari, Sagar Patil, Suriyaraj Natarajan and Arvind Gowda — Unpacking the AsyncAPI npm supply chain compromise and import-time payload delivery (Microsoft Security Blog, 2026; research, sponsored by Microsoft) — https://www.microsoft.com/en-us/security/blog/2026/07/15/unpacking-asyncapi-npm-supply-chain-compromise-import-time-payload-delivery/
 - [128] lilting channel — Blocking Shai-Hulud npm waves with pnpm 11 default minimumReleaseAge, Yarn 4.10 npmMinimalAgeGate, and npm v11.10 (with ignore-scripts gotchas) (lilting channel, 2026; opinion) — https://lilting.ch/en/articles/pnpm-11-minimum-release-age-default-shai-hulud-defense
 - [129] Kush Pandya — 2025 Report: Destructive Malware in Open Source Packages (Socket blog, 2025; research, sponsored by Socket) — https://socket.dev/blog/2025-report-destructive-malware-in-open-source-packages
-- [130] npm — Config, v12 — https://docs.npmjs.com/cli/v12/using-npm/config
-- [131] npm — Changelog, v12 — https://docs.npmjs.com/cli/v12/using-npm/changelog
-- [132] npm — Config, v11 — https://docs.npmjs.com/cli/v11/using-npm/config
-- [133] pnpm — Settings: build — https://pnpm.io/settings/build
-- [134] pnpm — Mitigating supply chain attacks — https://pnpm.io/supply-chain-security
-- [135] npm — Changelog, v11 — https://docs.npmjs.com/cli/v11/using-npm/changelog
-- [136] npm — Config, v10 — https://docs.npmjs.com/cli/v10/using-npm/config
-- [137] pnpm — Settings: dependency resolution — https://pnpm.io/settings/dependency-resolution
-- [138] npm — npm-audit, v11 — https://docs.npmjs.com/cli/v11/commands/npm-audit
-- [139] npm — npm-ci, v12 — https://docs.npmjs.com/cli/v12/commands/npm-ci
-- [140] npm — package.json, v11 — https://docs.npmjs.com/cli/v11/configuring-npm/package-json#overrides
+- [130] npm — Config, v12 — https://docs.npmjs.com/cli/v12/using-npm/config — checked 2026-10-01
+- [131] npm — Changelog, v12 — https://docs.npmjs.com/cli/v12/using-npm/changelog — checked 2026-10-01
+- [132] npm — Config, v11 — https://docs.npmjs.com/cli/v11/using-npm/config — checked 2026-10-01
+- [133] pnpm — Settings: build — https://pnpm.io/settings/build — checked 2026-10-01
+- [134] pnpm — Mitigating supply chain attacks — https://pnpm.io/supply-chain-security — checked 2026-10-01
+- [135] npm — Changelog, v11 — https://docs.npmjs.com/cli/v11/using-npm/changelog — checked 2026-10-01
+- [136] npm — Config, v10 — https://docs.npmjs.com/cli/v10/using-npm/config — checked 2026-10-01
+- [137] pnpm — Settings: dependency resolution — https://pnpm.io/settings/dependency-resolution — checked 2026-10-01
+- [138] npm — npm-audit, v11 — https://docs.npmjs.com/cli/v11/commands/npm-audit — checked 2026-10-01
+- [139] npm — npm-ci, v12 — https://docs.npmjs.com/cli/v12/commands/npm-ci — checked 2026-10-01
+- [140] npm — package.json, v11 — https://docs.npmjs.com/cli/v11/configuring-npm/package-json#overrides — checked 2026-10-01
 - [141] Yarn — Configuration options (.yarnrc.yml) — https://yarnpkg.com/configuration/yarnrc
 - [142] Bun — bunfig.toml — https://bun.com/docs/runtime/bunfig
 - [143] Tadashi Shigeoka — How pnpm's minimumReleaseAgeExclude Helped with Emergency Security Updates (CodeNote.net, 2025; case) — https://codenote.net/en/posts/pnpm-minimumreleaseageexclude-for-emergency-vulnerability-fixes/
-- [144] Vite — Security advisories — https://github.com/vitejs/vite/security/advisories
+- [144] Vite — Security advisories — https://github.com/vitejs/vite/security/advisories — checked 2026-10-01
 - [145] Joseph Spracklen, Raveen Wijewickrama, A H M Nazmus Sakib, Anindya Maiti, Bimal Viswanath and Murtuza Jadliwala — We Have a Package for You! A Comprehensive Analysis of Package Hallucinations by Code Generating LLMs (USENIX Security 2025; research) — https://arxiv.org/abs/2406.10279v3
 - [146] Aleksandr Churilov — The Range Shrinks, the Threat Remains: Re-evaluating LLM Package Hallucinations on the 2026 Frontier-Model Cohort (arXiv preprint, 2026; research) — https://arxiv.org/abs/2605.17062v3
-- [147] Liran Tal — lockfile-lint README (GitHub, 2026; kind not confirmed) — https://github.com/lirantal/lockfile-lint/blob/72a368dfe5890612cc2b531251430be681f8370c/README.md
+- [147] Liran Tal — lockfile-lint README — https://github.com/lirantal/lockfile-lint/blob/72a368dfe5890612cc2b531251430be681f8370c/README.md
 - [148] Dan Abramov — npm audit: Broken by Design (overreacted, 2021; opinion) — https://overreacted.io/npm-audit-broken-by-design/
 - [149] OSV-Scanner — Supported languages and lockfiles — https://github.com/google/osv-scanner/blob/f0e28d3623dc9e451003c424dde7ac03430a1147/docs/supported_languages_and_lockfiles.md
 - [150] GitHub — Secure use reference (GitHub Actions) — https://docs.github.com/en/actions/reference/security/secure-use
 - [151] Vite — Preview options (docs/config/preview-options.md) — https://github.com/vitejs/vite/blob/91b5dc18e7119d0df59abfdaa6126e9f58503c65/docs/config/preview-options.md
-- [152] OWASP — Third Party JavaScript Management Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/41da8e658d9163fbc77c27f89c262262a59f1f03/cheatsheets/Third_Party_Javascript_Management_Cheat_Sheet.md
+- [152] OWASP — Third Party JavaScript Management Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/41da8e658d9163fbc77c27f89c262262a59f1f03/cheatsheets/Third_Party_Javascript_Management_Cheat_Sheet.md — checked 2026-10-16
 - [153] Mozilla (MDN Web Docs) — Subresource Integrity — https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Subresource_Integrity
 - [154] Munir, Demir, Li, Kollnig and Shafiq — Every Keystroke You Make: A Tech-Law Measurement and Analysis of Event Listeners for Wiretapping (arXiv preprint, 2025; research) — https://doi.org/10.48550/arXiv.2508.19825
 - [155] Mozilla (MDN Web Docs) — Window: postMessage() method — https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage
@@ -1811,34 +1881,47 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [157] OWASP Cheat Sheet Series — HTML5 Security Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/1a78ae3e443cef156e947f87e892efbcc62876ee/cheatsheets/HTML5_Security_Cheat_Sheet.md
 - [158] Mozilla (MDN Web Docs) — <iframe>: The Inline Frame element — https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe
 - [159] OWASP Cheat Sheet Series — Unvalidated Redirects and Forwards Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html
-- [160] Mozilla (MDN Web Docs) — rel="noopener" — https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/rel/noopener
+- [160] Mozilla (MDN Web Docs) — rel="noopener" — https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/rel/noopener — checked 2026-10-01
 - [161] OWASP Cheat Sheet Series — REST Security Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html
 - [162] OWASP Cheat Sheet Series — Logging Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html
 - [163] OWASP Cheat Sheet Series — Error Handling Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html
-- [164] Sentry — Session Replay: Privacy (Sentry for React) — https://docs.sentry.io/platforms/javascript/guides/react/session-replay/privacy/
-- [165] PostHog — Session replay: Privacy controls — https://posthog.com/docs/session-replay/privacy
+- [164] Sentry — Session Replay: Privacy (Sentry for React) — https://docs.sentry.io/platforms/javascript/guides/react/session-replay/privacy/ — checked 2026-10-01
+- [165] PostHog — Session replay: Privacy controls — https://posthog.com/docs/session-replay/privacy — checked 2026-10-01
 - [166] Mozilla (MDN Web Docs) — HTML attribute: autocomplete — https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete
 - [167] NCSC — Password policy: updating your approach, version 1.0 — https://www.ncsc.gov.uk/collection/passwords/updating-your-approach
-- [168] ESLint — eslint:recommended rule set (packages/js/src/configs/eslint-recommended.js), v10.13.0 — https://github.com/eslint/eslint/blob/v10.13.0/packages/js/src/configs/eslint-recommended.js
-- [169] typescript-eslint — no-implied-eval, v8.71.2 — https://typescript-eslint.io/rules/no-implied-eval/
-- [170] jsx-eslint — eslint-plugin-react README, v7.37.5 — https://github.com/jsx-eslint/eslint-plugin-react/blob/v7.37.5/README.md
-- [171] ESLint React — Rules overview — https://www.eslint-react.xyz/docs/rules/overview
-- [172] Mozilla — eslint-plugin-no-unsanitized README, v4.1.5 — https://github.com/mozilla/eslint-plugin-no-unsanitized/blob/v4.1.5/README.md
+- [168] ESLint — eslint:recommended rule set (packages/js/src/configs/eslint-recommended.js), v10.13.0 — https://github.com/eslint/eslint/blob/v10.13.0/packages/js/src/configs/eslint-recommended.js — checked 2026-10-01
+- [169] typescript-eslint — no-implied-eval, v8.71.2 — https://typescript-eslint.io/rules/no-implied-eval/ — checked 2026-10-01
+- [170] jsx-eslint — eslint-plugin-react README, v7.37.5 — https://github.com/jsx-eslint/eslint-plugin-react/blob/v7.37.5/README.md — checked 2026-10-01
+- [171] ESLint React — Rules overview — https://www.eslint-react.xyz/docs/rules/overview — checked 2026-10-01
+- [172] Mozilla — eslint-plugin-no-unsanitized README, v4.1.5 — https://github.com/mozilla/eslint-plugin-no-unsanitized/blob/v4.1.5/README.md — checked 2026-10-01
 - [173] Biome — noDangerouslySetInnerHtml — https://biomejs.dev/linter/rules/no-dangerously-set-inner-html/
 - [174] Biome — noGlobalEval — https://biomejs.dev/linter/rules/no-global-eval/
 - [175] Google — CSP Evaluator — https://csp-evaluator.withgoogle.com/
 - [176] Mozilla (MDN) — HTTP Observatory — https://developer.mozilla.org/en-US/observatory
-- [177] Google Chrome — New permission prompt for Local Network Access — https://developer.chrome.com/blog/local-network-access
-- [178] OWASP Foundation — OWASP Top 10:2025 — https://top10.owasp.org/2025/
-- [179] OWASP — OWASP Top 10:2025, index, Introduction, About OWASP and "What are Application Security Risks" — https://github.com/OWASP/Top10/blob/57db8ec5ddbca1dfef5aa77cbb81951e94f714cf/2025/docs/en/0x00_2025-Introduction.md, https://github.com/OWASP/Top10/blob/57db8ec5ddbca1dfef5aa77cbb81951e94f714cf/2025/docs/en/0x02_2025-What_are_Application_Security_Risks.md, https://github.com/OWASP/Top10/blob/57db8ec5ddbca1dfef5aa77cbb81951e94f714cf/2025/docs/en/index.md
+- [177] Chris Thompson — New permission prompt for Local Network Access (Chrome for Developers blog, 2025; sponsored by Google) — https://developer.chrome.com/blog/local-network-access — checked 2026-10-15
+- [178] OWASP Foundation — OWASP Top 10:2025 — https://top10.owasp.org/2025/ — checked 2026-10-16
+- [179] OWASP — OWASP Top 10:2025, index, Introduction, About OWASP and "What are Application Security Risks" — https://github.com/OWASP/Top10/blob/57db8ec5ddbca1dfef5aa77cbb81951e94f714cf/2025/docs/en/0x00_2025-Introduction.md, https://github.com/OWASP/Top10/blob/57db8ec5ddbca1dfef5aa77cbb81951e94f714cf/2025/docs/en/0x02_2025-What_are_Application_Security_Risks.md, https://github.com/OWASP/Top10/blob/57db8ec5ddbca1dfef5aa77cbb81951e94f714cf/2025/docs/en/index.md — checked 2026-10-16
 - [180] OWASP Foundation — OWASP Impact Report 2025, "A word from our Executive Director" (page 4) — https://owasp.org/assets/files/OWASP_Impact_Report_2025.pdf
 - [181] OWASP — OWASP Top 10:2025, "Establishing a Modern Application Security Program" — https://github.com/OWASP/Top10/blob/57db8ec5ddbca1dfef5aa77cbb81951e94f714cf/2025/docs/en/0x03_2025-Establishing_a_Modern_Application_Security_Program.md
-- [182] OWASP — Application Security Verification Standard 5.0.0, "What is the ASVS?" — https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x03-What-is-the-ASVS.md
+- [182] OWASP — Application Security Verification Standard 5.0.0, "What is the ASVS?" — https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x03-What-is-the-ASVS.md — checked 2026-10-16
 - [183] OWASP Cheat Sheet Series — Threat Modeling Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/1a78ae3e443cef156e947f87e892efbcc62876ee/cheatsheets/Threat_Modeling_Cheat_Sheet.md
 - [184] OWASP — OWASP Top 10:2025, A06:2025 Insecure Design — https://github.com/OWASP/Top10/blob/3a31f35346c3f4e90f350395124382fa53af2afe/2025/docs/en/A06_2025-Insecure_Design.md
-- [185] OWASP — OWASP Top 10 Proactive Controls, 2024 — https://top10proactive.owasp.org/
+- [185] OWASP — OWASP Top 10 Proactive Controls, 2024 — https://top10proactive.owasp.org/archive/2024/ — checked 2026-10-18
 - [186] OWASP — OWASP Cheat Sheet Series — https://cheatsheetseries.owasp.org/
-- [187] OWASP — Web Security Testing Guide, v4.2 — https://owasp.org/www-project-web-security-testing-guide/; https://github.com/OWASP/wstg/blob/v4.2/document/2-Introduction/README.md
+- [187] OWASP — Web Security Testing Guide, v4.2 — https://owasp.org/www-project-web-security-testing-guide/; https://github.com/OWASP/wstg/blob/v4.2/document/2-Introduction/README.md — checked 2026-10-16
 - [188] OWASP — OWASP Top 10:2025, A09:2025 Security Logging & Alerting Failures — https://github.com/OWASP/Top10/blob/3a31f35346c3f4e90f350395124382fa53af2afe/2025/docs/en/A09_2025-Security_Logging_and_Alerting_Failures.md
-- [189] OWASP Foundation — OWASP Top 10 Client-Side Security Risks (Incubator project) — https://owasp.org/www-project-top-10-client-side-security-risks/
-- [190] OWASP Cheat Sheet Series — React Security Cheat Sheet (draft) — https://github.com/OWASP/CheatSheetSeries/blob/995524d4a18e64672c80c8e13869d29ef850bd43/cheatsheets_draft/React_Security_Cheat_Sheet.md
+- [189] OWASP Foundation — OWASP Top 10 Client-Side Security Risks (Incubator project) — https://owasp.org/www-project-top-10-client-side-security-risks/ — checked 2026-10-15
+- [190] OWASP Cheat Sheet Series — React Security Cheat Sheet (draft) — https://github.com/OWASP/CheatSheetSeries/blob/995524d4a18e64672c80c8e13869d29ef850bd43/cheatsheets_draft/React_Security_Cheat_Sheet.md — checked 2026-10-15
+- [191] Sentry — Sentry for JavaScript, Uploading Source Maps: Vite — https://docs.sentry.io/platforms/javascript/sourcemaps/uploading/vite/ — checked 2026-10-18
+- [192] Vite — GHSA-9jrq-w75r-8gcw: Cross origin script execution through Vite custom middleware — https://github.com/vitejs/vite/security/advisories/GHSA-9jrq-w75r-8gcw — checked 2026-10-18
+- [193] MDN Web Docs (Mozilla) — Content-Security-Policy: report-uri directive — https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/report-uri — checked 2026-10-18
+- [194] MDN Web Docs (Mozilla) — Content-Security-Policy: report-to directive — https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/report-to — checked 2026-10-18
+- [195] Devdatta Akhawe — [CSP] On Reporting and Filtering (Dropbox.Tech, 2015; case) — https://dropbox.tech/security/on-csp-reporting-and-filtering — checked 2026-10-18
+- [196] OSV-Scanner — Configuration (docs/configuration.md) — https://github.com/google/osv-scanner/blob/f0e28d3623dc9e451003c424dde7ac03430a1147/docs/configuration.md
+- [197] OSV-Scanner — Output, "Return Codes" (docs/output.md) — https://github.com/google/osv-scanner/blob/f0e28d3623dc9e451003c424dde7ac03430a1147/docs/output.md
+- [198] Google — CSP Evaluator source, checks/security_checks.ts — https://github.com/google/csp-evaluator/blob/ad530f3ae5473f9e03c8bf500ee0ada8d9e9b822/checks/security_checks.ts
+- [199] GitHub — Dependabot alerts, "How alert notifications work" — https://docs.github.com/en/code-security/concepts/supply-chain-security/dependabot-alerts — checked 2026-10-18
+- [200] React — sanitizeURL.js (packages/react-dom-bindings/src/shared/sanitizeURL.js), v19.0.0 — https://github.com/facebook/react/blob/v19.0.0/packages/react-dom-bindings/src/shared/sanitizeURL.js
+- [201] Marc Brooker — Timeouts, retries, and backoff with jitter (Amazon Builders' Library, AWS Builder Center, 2019; case) — https://builder.aws.com/content/3EumjoZascWd1oZiEgL8ORlv3qE/timeouts-retries-and-backoff-with-jitter — checked 2026-10-18
+- [202] IETF — RFC 9110, HTTP Semantics, STD 97, June 2022 — https://www.rfc-editor.org/rfc/rfc9110.txt
+- [203] NIST NVD — CVE-2025-48757, NVD API record — https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2025-48757 — checked 2026-10-18

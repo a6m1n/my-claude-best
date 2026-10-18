@@ -18,10 +18,10 @@ login to logout, CSRF and CORS, is the
 
 - [security.md](security.md) — the rules, one topic per section: XSS and its sinks, sanitising
   and Trusted Types, the Content-Security-Policy and the other headers, sessions and tokens (the
-  choice of a BFF, and the page's side), CSRF and CORS (the page's side), server-side React,
-  secrets, the supply chain, the dev server, third-party code, data the browser exposes, and the
-  lint rules and scanners; then the common mistakes as bad and good pairs, where the rules stop
-  holding, a review checklist,
+  comparison of the session patterns, and the page's side), CSRF and CORS (the page's side),
+  server-side React, secrets, the supply chain, the dev server, third-party code, data the
+  browser exposes, and the lint rules and scanners; then the common mistakes as bad and good
+  pairs, where the rules stop holding, a review checklist,
   [what the OWASP Top 10 is and how to work with it](security.md#what-the-owasp-top-10-is-and-how-to-work-with-it),
   with its 2025 categories mapped to the sections, and the sources.
   Read it at the moments its section 1 lists.
@@ -40,17 +40,22 @@ login to logout, CSRF and CORS, is the
    application on its page, spread an object from outside as props, handle a session or a token
    in one, keep or send a credential, add an environment variable, a dependency, a third-party
    script, a response header or a CI step to one, change the dev server's settings, set up its
-   query client, add polling, or build the shell its screens share, read
+   query client, add polling, build the shell its screens share, write or change a Server
+   Function, a server-rendered route or middleware in one, or register a service worker, read
    `docs/engineering/react/security/security.md`." Without it an agent never opens the file. The
    BFF's own repository takes the line in the
    [backend-for-frontend README](../../any-language/backend-for-frontend/README.md#how-to-adopt).
 3. In the same change, turn on the lint rules of section 14 and the package manager settings of
    section 10, so the rules are checked from the first commit on. On an application that already
-   has users, roll out the server checks of
-   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-   section 3 as its log-only rule says.
-4. Use section 17's checklist as the security part of your review template.
-5. The practice links the other React practices (architecture, components, design, performance),
+   exists, review each build script the strict setting refuses and add it to the allow list
+   (`allowBuilds` or `allowScripts`) before the setting lands, and mark the old lint violations as
+   [refactoring.md](../../any-language/refactoring/refactoring.md) section 4 says, with the fix-by
+   date its section 6 asks for.
+4. Use section 17's first work step as the security part of your review template: read the rules
+   of every section the change touches, and check the red flags of section 17's checklist.
+5. The practice links the
+   [backend-for-frontend](../../any-language/backend-for-frontend/) practice, which owns the
+   server's rules, the other React practices (architecture, components, design, performance),
    [file-structure.md](../../any-language/file-structure/file-structure.md),
    [readability.md](../../any-language/readability/readability.md),
    [refactoring.md](../../any-language/refactoring/refactoring.md),
@@ -59,17 +64,20 @@ login to logout, CSRF and CORS, is the
    [static-checks.md](../../python/static-checks/static-checks.md) and what never goes into a log
    in [logging.md](../../python/logging/logging.md). Copy those folders too, or replace each link
    with your own rule for that topic.
-6. Re-check what moves when you adopt the practice, and again six months after each line's read
-   date: distrust every dated line from then until it is read again, the earliest on 2027-04-01.
+6. Re-check what moves when you adopt the practice, and again six months after each source's date
+   in security.md's Sources section: the date on the section's first line, or the date a source's
+   own line ends with (`— checked <date>`). From six months after a source's date until it is read
+   again, distrust every line that cites it; the earliest such day is 2027-04-01.
 
-   Dated lines: when you adopt the practice, add a task dated 2027-04-01 to the team's tracker, so
-   the re-check does not rest on anyone's memory. At that task, re-read the source of each dated
-   line, update its date, and add the next task for six months after the oldest date left. List
-   every dated line with
-   `grep -rnE '20[0-9]{2}-[0-9]{2}-[0-9]{2}' docs/engineering/react/security/`; the lines whose
-   date is a read date are the ones to re-check, and each line in security.md that names a moving
-   target carries the date it was read. At the same task, check whether OWASP has published a new
-   Top 10 edition, or a newer ASVS, Proactive Controls or WSTG version (security.md section 17).
+   Dated sources: when you adopt the practice, add a task dated 2027-04-01 to the team's tracker,
+   with an owner, so the re-check does not rest on anyone's memory. At that task, the owner
+   re-reads each source whose date is six months old or more, updates its date, and adds the next
+   task, with an owner, for six months after the oldest date left. List the sources' dates with
+   `grep -nE '^Checked|— checked' docs/engineering/react/security/security.md`, and the lines in
+   the text that carry a read date with
+   `grep -rnE '20[0-9]{2}-[0-9]{2}-[0-9]{2}' docs/engineering/react/security/`. At the same task,
+   check whether OWASP has published a new Top 10 edition, or a newer ASVS, Proactive Controls or
+   WSTG version (security.md section 17).
 
    Advisories: for the advisories of React's server packages, your framework, your router, Vite
    and DOMPurify, do not wait for a re-check. Turn on the host's dependency alerts (Dependabot
@@ -77,25 +85,23 @@ login to logout, CSRF and CORS, is the
    [security.md](security.md) section 10 says, since a critical one is patched within the day.
 7. When you adopt the practice, do four things that security.md asks for at moments when nobody
    has it open: pick the ASVS level and write it into the decision log (security.md section 17);
-   add a line "threats modelled (security.md section 17)" to the template the team uses to design
-   or ticket a feature, for a feature that touches authentication, access control, business logic
-   or a key flow; add a line "tested against the OWASP Web Security Testing Guide" to the team's
-   release checklist, for a release that changes those parts; and write the person or channel
-   that receives security advisories and alerts into the decision log (security.md section 8, and
+   add a line "threats modelled, and security requirements taken from ASVS level <n> (security.md
+   section 17)" to the template the team uses to design or ticket a feature, for a feature that
+   touches authentication, access control, business logic or a key flow; add a line "tested
+   against the OWASP Web Security Testing Guide" to the team's release checklist, for a release
+   that changes those parts; and write the person or channel that receives security advisories and
+   alerts into the decision log (security.md section 8, and
    [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
    sections 2 and 3).
 
 ## The points to adapt
 
 - **The session pattern.** This practice picks the Backend for Frontend, which RFC 10017
-  recommends for business, sensitive and personal-data applications. A lower-risk application may
-  run a browser-only OAuth client; section 6's storage and refresh-token rules then apply in full.
-  When your own server signs the user in with no identity provider, section 6's opening paragraph
-  says which rules drop.
-- **Where the session's state lives.** On the server, with only an id in the cookie, or in the
-  cookie itself, signed and encrypted;
+  recommends for business, sensitive and personal-data applications. Where
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 2 says which rules change with the choice.
+  section 1 does not call for a BFF, an application may run a browser-only OAuth client; section
+  6's storage and refresh-token rules then apply in full. When your own server signs the user in
+  with no identity provider, section 6's opening paragraph says which rules drop.
 - **The cooldown length.** One day covered the short-lived package hijacks of 2025 and 2026, and
   seven days is CISA's advice; a longer wait delays every normal update by as much. Whatever the
   length, the cooldown has a named emergency path.
@@ -105,10 +111,9 @@ login to logout, CSRF and CORS, is the
 - **One origin or two.** The example serves the page and the API from two origins of one site,
   so the API needs CORS. An API served on the page's own origin needs none: the rules under "CORS"
   in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 3 then do not apply, while its CSRF rules still do.
-- **The session timeouts.** The idle and absolute timeouts come from your risk level;
-  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 2 gives OWASP's ranges and NIST's values for each assurance level.
+  section 3 then do not apply, while its CSRF rules still do. On the page's side, the two rules in
+  security.md section 7 that start "When the API is on another origin of the site" then do not
+  apply either.
 
 What does not change is the one rule: anything the browser holds, a script on the page can read,
 and anything the browser decides, the user can change.

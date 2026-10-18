@@ -117,8 +117,9 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
 - Before you put data from outside a React application on its page, spread an object from outside as
   props, handle a session or a token in one, keep or send a credential, add an environment variable,
   a dependency, a third-party script, a response header or a CI step to one, change the dev server's
-  settings, set up its query client, add polling, or build the shell its screens share, read
-  `docs/engineering/react/security/security.md`, and
+  settings, set up its query client, add polling, build the shell its screens share, write or
+  change a Server Function, a server-rendered route or middleware in one, or register a service
+  worker, read `docs/engineering/react/security/security.md`, and
   `docs/engineering/react/security/security-example.md` when you set these up in an application. The
   check: `grep -rln dangerouslySetInnerHTML src/` prints one file, the one that sanitises
   (`security.md` section 4), `grep -rnE 'localStorage|sessionStorage' src/` prints no line that
