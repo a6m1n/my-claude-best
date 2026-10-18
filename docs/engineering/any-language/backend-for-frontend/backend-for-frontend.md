@@ -79,7 +79,8 @@ rules that hold only with an identity provider:
 - in "The login and logout responses", the login callback's response;
 - in section 3, the rules on refreshing before a request is forwarded and on a resource server's
   `401`;
-- "Keys and secrets", whole, since such a server protects no cookie and no token with a key.
+- "Keys and secrets", whole, unless its framework signs or encrypts the session cookie, as
+  express-session signs the session id [48].
 
 Any other rule that needs an identity provider says `with an identity provider` in its prefix.
 A BFF whose identity provider sends no back-channel logout skips, in the same way, in "Logout",
@@ -241,9 +242,9 @@ The session cookie the BFF sets:
   write on every login start, anonymous ones included, and the rate limit that keeps those writes
   bounded, the anti-automation control that ASVS 5.0 requirement 2.4.1 asks for against
   "garbage-data creation" [17]. Its saving: with the session's state on the server, a record on
-  the server for each attempt leaves no cookie that the BFF protects with a key, so "Keys and
-  secrets" does not apply unless the BFF encrypts the tokens in session records, as its first line
-  says. The rule is this practice's choice.
+  the server for each attempt leaves no login cookie that the BFF protects with a key, so "Keys
+  and secrets" applies only where the BFF encrypts the tokens in session records or its framework
+  signs or encrypts the session cookie, as its first line says. The rule is this practice's choice.
 - **BFF: at the callback, read the attempt's values, such as the time it started, only from that
   protected record,** so an edited value never passes a check; the rule is this practice's choice.
 - **BFF, with more than one identity provider: record in the attempt's protected record the issuer
@@ -511,7 +512,7 @@ later reader finds why.
   tokens has already rotated the one in the cookie the browser
   keeps; the sign-in case stays as above, and the rule for a re-issue is this practice's choice.
 - **BFF: with the session's state on the server, let only the BFF's own identity, and the identity
-  of step 2 of the leaked-key plan ("Keys and secrets" below) only while that run lasts, reach the
+  of step 3 of the leaked-key plan ("Keys and secrets" below) only while that run lasts, reach the
   session store, over TLS, and encrypt the store's backups and replicas at rest,** since the store
   holds every user's tokens. Server-side sessions "keep all data on the server", as RFC 10017
   section 6.1.2.3 puts it [1]. OWASP's Session Management cheat sheet asks to "restrict access to
@@ -550,34 +551,43 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   only the secret store holds, never in code or a build artifact,** so no copy of the code holds a
   secret (ASVS 5.0 requirement 13.3.1) [44]. The client credential is what the BFF authenticates
   with to the identity provider that registered it. OWASP's Cryptographic Storage cheat sheet asks
-  that a key which encrypts other keys be stored apart from them [46].
-- **BFF: let the BFF's own identity only read the client credential and the keys in the store, and
-  only the job that rotates the keys write them,** so nobody else who reaches the store, the BFF's
-  own instances included, can add a key of their own and forge cookies (ASVS 5.0 requirement
-  13.3.2; Microsoft's ASP.NET Core Data Protection docs) [44], [45]. Requirement 13.3.2 asks that
-  "access to secret assets adheres to the principle of least privilege" [44]. The read-only
-  identity is this practice's choice. An emergency run during an incident, which the leaked-key
-  plan below names who starts, is a run of the job that writes a new key with a start time of now,
-  then deletes the leaked key id. The one other identity this rule allows to read the keys and the
-  client credential is that of step 2 of the leaked-key plan below: it reads the leaked key and the
-  client credential, only while that run lasts; that identity is this practice's choice. With an
-  identity provider, the client-credential rule below keeps two more entries in the store: the
-  credential for the provider's management API and the test account's refresh token. The rotation
-  job reads the management credential, and reads and writes the test account's refresh token,
-  since it stores the answer of each test refresh; the BFF's own identity reads neither. One
-  person or role the team writes down ("Write it down" above) puts both entries into the store and
-  replaces them: the test account's token at each sign-in again (step 3 of that rule), and the
-  management credential when it leaks, or when it sat where a cookie key leaked (step 4 of the
-  leaked-key plan below). Who reads and writes these two entries, and who replaces them, are this
+  that a key which encrypts other keys be stored apart from them [46]. In these rules, the key
+  store is the store that holds the cookie keys: the secret store, or that shared store.
+- **BFF: let the BFF's own identity only read the client credential in the secret store and the
+  keys in the key store, and only the job that rotates the keys write them,** so nobody else, the
+  BFF's own instances included, can add a key of their own and forge cookies (ASVS 5.0
+  requirement 13.3.2; Microsoft's ASP.NET Core Data Protection docs) [44], [45]. Requirement
+  13.3.2 asks that "access to secret assets adheres to the principle of least
+  privilege" [44]. The read-only identity is this practice's choice. An emergency run during an
+  incident, which the leaked-key plan below names who starts, is a run of the job that writes a
+  new key for each purpose where keys have one, with a start time of now, then deletes each leaked
+  key id. When the client credential leaked, on its own or where a key leaked, the emergency run
+  also removes the leaked credential at the provider, adds the new one there and writes it into
+  the secret store as "current"; that is this practice's choice. Step 3 of the leaked-key plan
+  below names the one other identity that may read the keys and the client credential, only while
+  that run lasts.
+- **BFF, with an identity provider: let only the rotation job and one person or role the team
+  writes down ("Write it down" above) reach the two other entries that the client-credential rule
+  below keeps in the secret store,** since one of them, the credential for the provider's
+  management API, can add client credentials at the provider. The other is the test account's
+  refresh token. The rotation job reads the management credential, and reads and writes the test
+  account's refresh token, since it stores the answer of each test refresh; the BFF's own identity
+  reads neither. The person or role puts both entries into the store and replaces them: the test
+  account's token at each sign-in again (step 3 of that rule), and the management credential when
+  it leaks, or when it sat where a cookie key leaked (step 6 of the leaked-key plan below). Who
+  reads and writes these two entries, and who replaces them, are this practice's choice.
+- **BFF: where the key store or the secret store keeps a log of writes, alert a person (section 3,
+  "Logging") on a write to it by any identity other than the rotation job,** since such a write may
+  be a planted key, which every instance accepts at its next reload; the alert is this practice's
+  choice. Leave out a write of the management credential or the test account's refresh token by
+  the person or role the rule above names; every other write by an identity other than the
+  rotation job still alerts.
+- **BFF: have each run of the rotation job log at `INFO` the key ids it added and removed, at
+  `WARNING` a step that failed and that the next run tries again, and at `ERROR` a step that failed
+  past the limit its rule names,** so a run that stopped, or a removal that did not happen, shows
+  in the log. Such a limit is the window of the check in step 1 of the rotation below, or the test
+  refresh and the limit on step 5 of the client-credential rule below. The logs are this
   practice's choice.
-- **BFF: where the key store keeps a log of writes, alert a person (section 3, "Logging") on a
-  write by any identity other than the rotation job,** since such a write may be a planted key,
-  which every instance accepts at its next reload; the alert is this practice's choice. Leave out
-  a write of the management credential or the test account's refresh token by the person or role
-  the rule above names; every other write by an identity other than the rotation job still alerts.
-- **BFF: have each run of the rotation job log at `INFO` the key ids it added and removed, and at
-  `ERROR` any step that failed,** so a run that stopped, or a removal that did not happen, shows in
-  the log; the logs are this practice's choice.
 - **BFF: generate every cookie key from the operating system's CSPRNG, 32 bytes (256 bits), never
   from a password, a phrase or a value a person typed,** so nobody can guess the key, and it gives
   at least the 128 bits of security that ASVS 5.0 requirement 11.2.3 asks for [47].
@@ -627,8 +637,9 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   never exposed outside the module" [54], and ASVS 5.0 requirement 13.3.3, at Level 3, asks that
   "all cryptographic operations are performed using an isolated security module (such as a vault
   or hardware security module)" [44]. When each one fits is this practice's choice.
-- **BFF: store each cookie key with its id, its format version, its material and the time it starts
-  protecting new cookies.** Where the cookies use separate keys rather than subkeys of one key, also
+- **BFF: store each cookie key with its id, its format version, its material, the time it starts
+  protecting new cookies and the time the job wrote it.** Where the cookies use separate keys rather
+  than subkeys of one key, also
   store its purpose, the cookie it protects. Have an instance protect new cookies with the newest
   key whose start time has passed, of that cookie's purpose where keys have one. A key added to the
   store then reaches every running instance before any of them protects with it, and the job and
@@ -636,30 +647,39 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   practice's choice. The start time is this practice's choice, after ASP.NET
   Core, which gives a new key "an activation date of { now + 2 days }" so that other
   applications can "observe the key at their next auto-refresh period" (Microsoft's docs on key
-  management) [22].
+  management) [22]. The job rewrites the written time at each move of the start time (step 1 of the
+  rotation below), so the check of step 1 has a time to count from; the written time is this
+  practice's choice.
 - **BFF: have an instance re-read the key list at an interval the team writes down ("Write it
   down" above), and also on a reload signal where the platform has one, and log the key ids it
   loaded with the id under which the load balancer lists the instance,** so a key added to the
   store reaches it within one interval. The log shows which keys each listed instance holds.
   The same line names the format versions the instance reads and, with an identity provider, the
-  id of each client-credential entry it loaded and which one is "current", never the secret.
-  Write the interval down long enough that half of it still covers the rotation job's gap between
-  runs, the log store's ingestion delay and the scheduler's start delay. So a run of the job
-  falls inside the check window of step 1 below, and the alert on a rotation job that logged no
-  run (section 3, "Logging") stays quiet while the job runs on schedule. That length is this
-  practice's choice. When the list holds an entry the instance cannot parse, or one whose format
-  version it does not know, the instance skips that entry, logs it at `ERROR`
-  ([logging.md](../../python/logging/logging.md) section 4) with the key id, and counts that load
-  as failed for the stale-list limit below. The rotation job writes a key in a new format version
-  only after every instance has logged that it reads that version, which the job reads from the
-  log store as it reads the key ids in step 1. The reload is this practice's choice, after ASP.NET
-  Core, which checks the store for changes "approximately every 24 hours" [22]. Skipping such an
-  entry and the order for a new format version are this practice's choice.
+  id of each client-credential entry it loaded and which one is "current", never the secret. The
+  reload is this practice's choice, after ASP.NET Core, which checks the store for changes
+  "approximately every 24 hours" [22].
+- **BFF: write the reload interval down long enough that the rotation job's gap between runs, plus
+  the log store's ingestion delay, plus the scheduler's start delay, is at most half of it,** so a
+  run of the job falls inside the check window of step 1 below. The alert on a rotation job that
+  logged no run (section 3, "Logging") then stays quiet while the job runs on schedule. That length
+  is this practice's choice.
+- **BFF: when the key list holds an entry the instance cannot parse, or one whose format version it
+  does not know, have the instance skip that entry, log it at `ERROR`
+  ([logging.md](../../python/logging/logging.md) section 4) with the key id, and count that load as
+  failed for the stale-list limit below,** so one bad entry never blocks the others. A load that
+  yields no key whose start time has passed counts as failed too: the instance keeps the list it
+  holds and logs the load as the rule on an instance that cannot read the key store, below, logs a
+  failed reload. Skipping such an entry and counting such a load
+  as failed are this practice's choice.
+- **BFF: have the rotation job write a key in a new format version only after every instance has
+  logged that it reads that version,** which the job reads from the log store as it reads the key
+  ids in step 1 below, since an instance that does not know the version skips the key (the rule
+  above). The order for a new format version is this practice's choice.
 - **BFF: when an instance cannot read the key store, have it keep the list it loaded and log each
   failed reload at `WARNING` ([logging.md](../../python/logging/logging.md) section 4) with the key
   ids it still holds,** so an outage of the store alone signs nobody out. An instance whose last
   successful load of the key list is older than a limit the team writes down reports not ready, so
-  the load balancer takes it out, as step 5 of the leaked-key plan below does, and logs that it
+  the load balancer takes it out, as step 7 of the leaked-key plan below does, and logs that it
   passed the limit at `ERROR` ([logging.md](../../python/logging/logging.md) section 4). Set the
   limit to the longest key-store outage the BFF must ride out plus one reload interval, since
   instances pass the limit up to one reload interval apart, and write the value down with that
@@ -691,9 +711,10 @@ cookies, these rules are checks on it; write code only for a rule it does not me
      key-store outage the BFF must ride out (the rule on an instance that cannot read the key
      store, above), plus three reload intervals, plus the clock skew between instances. So an
      outage the team planned to ride out ends before the start time. It checks on its first run
-     after one reload interval plus the log store's ingestion delay has passed since it wrote the
-     key, and before two reload intervals have passed, so a start time moved by that check still
-     reaches every instance, each within one reload interval, before the old start time passes.
+     after one reload interval plus the log store's ingestion delay has passed since the written
+     time in the key's record, and before two reload intervals have passed, so a start time moved
+     by that check still reaches every instance, each within one reload interval, before the old
+     start time passes.
      The check reads the key ids logged by the instances the load balancer lists at that moment:
      each must have logged a key list that holds the new key id. It counts the instances the load
      balancer lists as registered and in use, and leaves out one it lists as deregistering or not
@@ -705,7 +726,9 @@ cookies, these rules are checks on it; write code only for a rule it does not me
      above); a line it cannot find counts as not loaded. When an instance has not logged the new
      key id, or when a run finds that the check's window passed with no check logged, the job
      moves the start time later by the same margin at once, only while the start time has not
-     passed, and checks again the same way, and the team finds out why. A run that needs to move
+     passed, and checks again the same way. It logs the move at `WARNING`
+     ([logging.md](../../python/logging/logging.md) section 4) with the key id and the ids of the
+     instances that had not logged it. A run that needs to move
      the start time but cannot write the store logs it at `WARNING`
      ([logging.md](../../python/logging/logging.md) section 4) and tries again on its next run; a
      run that finds the check's window passed with the move still unwritten logs it at `ERROR`
@@ -726,7 +749,8 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   and checks with all of them [48]. So there each instance builds that list at each reload, the
   newest key whose start time has passed first and every other key after it, which needs no
   separate move at step 2. The library keeps the array it was given and reads it on each request,
-  so an instance changes that same array in place at each reload; a new array, or a single secret,
+  so at each reload an instance replaces the contents of that same array in one synchronous step,
+  and never leaves it empty; a new array, or a single secret,
   which the library wraps in an array of its own, takes effect only at a restart [153]. Since it
   verifies a cookie by trying each secret in turn, express-session answers no to the section 4 row
   "rotation by trial over every key" [153]. The rival to the start time
@@ -749,10 +773,11 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   read the key store, above). The checks in steps 1 and 3, the job as their actor, the instances
   the load balancer lists as registered and in use as their set, and the log store as their
   channel are this practice's choice. So are the margin with the key-store outage in it, the
-  check's window, the retry of a move the store refused, and what a run does where the platform
-  gives no list of instances or no log line per instance.
+  check's window, the retry of a move the store refused, the `WARNING` line of a move, and what a
+  run does where the platform gives no list of instances or no log line per instance.
 - **BFF: before the BFF's first release to users, write down how long each cookie key protects new
-  cookies and when the client credential is rotated ("Write it down" above),** so the job rotates
+  cookies and after what period the client credential is rotated ("Write it down" above),** so the
+  job rotates
   by a period chosen for the threat model and the key's limits, not by a default. ASVS 5.0
   requirements 13.1.4 and 13.3.4, both at Level 3, ask for a written schedule for rotating the
   critical secrets, and for secrets that expire and are rotated as the documentation says [44].
@@ -774,17 +799,22 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   Management cheat sheet says: "Prefer automated key rotation using Key Management Services (KMS)
   or automated certificate management protocols (such as Automated Certificate Management
   Environment (ACME)) to reduce operational error and ensure timely updates" [54]. The job runs
-  at least twice per reload interval and keeps no state of its own outside the key store. On each
+  at least twice per reload interval, at a gap between runs that the rule on the reload
+  interval's length above allows, and
+  keeps no state of its own outside the key store and the secret store. On each
   run it reads the key list and does only the step that is due: it adds a key when the newest key
   is older than the period, counted per purpose where keys have one, runs the check of step 1 when
   its window has come, and runs step 3 when its condition holds. A run adds a key only when no key
   younger than the period exists, for that purpose where keys have one; two runs at once may still
   both add one, which is harmless, since every instance loads both keys and step 1 checks each.
-  With an identity provider, the job starts the client-credential steps (the rule below) on the
-  credential's written rotation date, and on each run reads which of those steps is due from the
-  entries in the secret store, whether "next" exists and which entry is "current", and from the
-  instances' log lines, as it does for the key steps. Each run logs at `INFO`
-  ([logging.md](../../python/logging/logging.md) section 4) what it decided. These run rules are
+  With an identity provider, the job reads on each run which client-credential step (the rule
+  below) is due from the entries in the secret store, by their names and stored times, and from
+  the instances' log lines, as it does for the key steps. Only "current", older than the written
+  rotation period by its stored time, means step 1, which step 2 follows in the same run; "next"
+  means steps 3 and 4; "previous" means step 5. Each run logs at `INFO`
+  ([logging.md](../../python/logging/logging.md) section 4) what it decided. With the key id, it
+  also logs whether the check of step 1 passed, failed or moved the start time, so a later run can
+  tell whether a check was logged; a move goes at `WARNING`, as step 1 says. These run rules are
   this practice's choice.
 - **BFF: before the first instance of an environment starts, run the rotation job once by hand,
   and give its first key a start time of now,** so the first instance finds a key it can protect
@@ -796,45 +826,54 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   test session is signed out, that step 1 holds back while one instance is kept on its old key
   list, and that the alerts on the key's age and on an old key still in the store (section 3,
   "Logging") fire. The rule is this practice's choice. Run the test with a reload interval the
-  reload rule's lower bound allows, a few minutes where the scheduler runs at most once a minute, a
-  period no shorter than the start margin of step 1 plus one lifetime of a cookie the old key
-  protects, and timeouts of minutes. Where the platform fixes the reload interval, run the
+  rule on the reload interval's length allows, a few minutes where the scheduler runs at most once
+  a minute, a period no shorter than the start margin of step 1 plus one lifetime of a cookie the
+  old key protects, and timeouts of minutes. Where the platform fixes the reload interval, run the
   test with that interval, or with a reload of your own on a timer. ASP.NET Core Data Protection
   fixes it: its source says the refresh period "is currently fixed at 24 hours" and "is not
   settable" [154], and its docs say that "The default key lifetime cannot be shorter than 7 days"
   [22].
 - **BFF, with an identity provider: rotate the client credential so that one credential works at
-  every moment.** Where the provider allows two credentials at once, keep two named entries in the
-  secret store, "current", which every instance uses, and "next":
-  1. Have the rotation job add the new credential at the provider, through the provider's
+  every moment.** Where the provider allows two credentials at once, keep the credentials as named
+  entries in the secret store, each with the time it was written: "current", which every instance
+  uses, and during a rotation "next" or "previous":
+  1. Have the rotation job list the client credentials at the provider and remove any that no
+     entry names. Then have it add the new credential at the provider, through the provider's
      management API, with a credential for that API kept in the secret store under the rule above
-     on who reads and writes the store.
+     on the two other entries there.
   2. Have the rotation job write it into the secret store as "next", and let every instance
      reload, so each holds both entries.
   3. Have the job make a test refresh with "next" itself: one made with the refresh token of a
      test account the team keeps for this in the secret store, outside any session and its
      timeouts, whose answer the job stores there as any refresh's is. When the provider gives that
      refresh token a lifetime shorter than the period, a person signs the test account in again
-     before each rotation. When the test fails, remove "next" at the provider and from the store,
-     keep "current", and log it at `ERROR`
-     ([logging.md](../../python/logging/logging.md) section 4).
-  4. Have the job mark "next" as "current", and let every instance reload.
+     before each rotation. When the test answers `invalid_grant`, keep "next" and log that the
+     test account must sign in again. Remove "next" only when the test answers `invalid_client` or
+     `unauthorized_client`: then remove it at the provider and from the store, keep "current", and
+     log it at `ERROR` ([logging.md](../../python/logging/logging.md) section 4).
+  4. Have the job mark "next" as "current" and the old "current" as "previous", writing both
+     entries under their new names, and let every instance reload.
   5. When every instance the load balancer lists at that moment as registered and in use, counted
      as in step 1 of the cookie-key rotation, has logged an entry list whose "current" is the new
-     credential, have the job remove the old one at the provider, through its management API with
-     the credential of step 1. Each instance logs that list in the line of the reload rule above,
-     which names each entry by an id, never by the secret.
+     credential, have the job remove "previous" at the provider, through its management API with
+     the credential of step 1, and then from the secret store. The rotation is done when the store
+     holds "current" only. Each instance logs that list in the line of the reload rule above,
+     which names each entry by an id, never by the secret. When step 5 has still not run once the
+     stale-list limit plus one reload interval has passed since step 4, by the time stored with
+     "previous", the job logs it at `ERROR` ([logging.md](../../python/logging/logging.md) section
+     4), which alerts a person (section 3, "Logging").
 
-  To switch back before step 5, mark the old entry "current" again. Where the provider allows only
+  To switch back before step 5, mark "previous" as "current" again, and remove the new credential
+  at the provider and from the store, as step 3's failure path does. Where the provider allows only
   one, write down the outage the switch causes ("Write it down" above). A credential the BFF does
   not hold makes every refresh fail (the rule on a refresh error that names the client's setup, in
   "Timeouts and refresh" below). OWASP's Secrets Management cheat sheet lists "Introducing new
   keys for Write operations" and "Leaving old keys for Read operations" among the ways to rotate,
   and describes a rotation in steps: "create new secret, set new secret, test new secret, finish
-  rotation" [146]. The two entries, the order, the job as the actor at the provider with its
-  credential for the management API, the test account and its refresh token in the secret store,
-  the sign-in again, what a failed test does, the switch back and the check before step 5 are this
-  practice's choice.
+  rotation" [146]. The named entries and their stored times, the order, the job as the actor at
+  the provider with its credential for the management API, the test account and its refresh token
+  in the secret store, and the sign-in again are this practice's choice. So are what a failed test
+  does, the clean-up before step 1, the switch back, and the check before step 5 with its limit.
 - **BFF: treat a session or login cookie that fails to decrypt or verify, or names a key the BFF no
   longer holds, as a request with no cookie, never as a `500`, and log the reason (unknown key,
   failed check, expired) at `INFO` ([logging.md](../../python/logging/logging.md) section 4)
@@ -845,16 +884,22 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   `unknown-password` reasons as a sign that a password rotation went wrong [49]. ASP.NET Core's
   docs describe the failure in a web farm: on a node that cannot decrypt the authentication
   cookie, authorization for the requested resource fails [52].
-- **BFF: when you suspect that a cookie key leaked, replace it by the five steps below, though that
-  signs out every user whose cookie the leaked key protected,** since whoever holds the key can
+- **BFF: when you suspect that a cookie key leaked, replace it by the seven steps below, though that
+  signs out every user whose cookie a leaked key protected,** since whoever holds the key can
   write a cookie the BFF accepts and read the tokens in any copy of a cookie it encrypted [54].
-  Each instance keeps the key list it loaded until it reloads [22].
-  1. Start the emergency run of the rotation job: it writes a new key to the store with a start
-     time of now, as the key that protects new cookies.
-  2. Where the leaked key encrypts the tokens in session records, first restart or reload every
+  Each instance keeps the key list it loaded until it reloads [22]. Count as leaked every key that
+  sat where the leaked key sat, in the same store or in the same instance's memory: the key that
+  protects new cookies, a previous key still in its read period, a key whose start time has not
+  passed, and each other purpose's key. The steps below call each of them a leaked key; that scope
+  is this practice's choice.
+  1. Sign a test user in, and keep its session cookie and one login cookie with its `state`, both
+     protected by a leaked key; step 7 uses them.
+  2. Start the emergency run of the rotation job: it writes to the store a new key for each purpose
+     where keys have one, with a start time of now, as the key that protects new cookies.
+  3. Where a leaked key encrypts the tokens in session records, first restart or reload every
      instance and check each by its own address that it logged a key list that holds the new key
-     id, so no instance encrypts a new record under the leaked key. Then have the run end every
-     session whose record the leaked key encrypted, and revoke that session's refresh token as the
+     ids, so no instance encrypts a new record under a leaked key. Then have the run end every
+     session whose record a leaked key encrypted, and revoke that session's refresh token as the
      logout rules revoke it, since once the key is gone those records cannot be read. For this
      step the run uses an identity of its own, only while the run lasts, which the rule on the
      session store's access and the rule on the key store's readers above name as the one other
@@ -870,31 +915,35 @@ cookies, these rules are checks on it; write code only for a rule it does not me
      can be repeated, and keeps the leaked key until that count is zero. When the count stays above
      zero, the person who runs the incident decides when to delete the key anyway: deleting it
      ends those sessions too, since their records can no longer be read, but leaves their refresh
-     tokens valid at the provider until they expire, so write that decision down. Then, and for
-     any other key at once, have the same run delete the leaked key id from the store. The step's
+     tokens valid at the provider until they expire, so write that decision down. The step's
      own identity, the search by key id and the decision to delete the key anyway are this
      practice's choice.
-  3. Restart or reload every instance. Restart them all at once, or expect failed sign-ins until
+  4. Have the emergency run delete each leaked key id from the store: at once for a key that
+     encrypts no session record, and for a key that does, once step 3 has ended the sessions it
+     encrypted or the person who runs the incident decides to delete it anyway.
+  5. Restart or reload every instance. Restart them all at once, or expect failed sign-ins until
      the last one restarts, since a login cookie that a restarted instance wrote under the new key
      fails at a callback that reaches an instance not restarted yet.
-  4. When the client credential sat where the key leaked, in the same secret store, replace the
+  6. When the client credential sat where the key leaked, in the same secret store, replace the
      credential too, since RFC 6749 section 10.4 binds a refresh token to the client it was issued
-     to [15]. Replace it in the order the next rule gives for a client credential leaked on its
-     own: remove the leaked credential at the provider first, accepting the outage, then add and
-     load the new one, never by the steps of the client-credential rule above, which keep the
-     leaked credential working until their last step. When the credential for the provider's
-     management API sat there too, replace it as well, since it can add client credentials at the
-     provider; the person or role the rule on who reads and writes the store names replaces it.
+     to [15]. Have the emergency run replace it in the order the next rule gives for a client
+     credential leaked on its own: remove the leaked credential at the provider first, accepting
+     the outage, then add the new one, write it into the secret store as "current" and let every
+     instance load it. Never replace it by the steps of the client-credential rule above, which
+     keep the leaked credential working until their last step. When the credential for the
+     provider's management API sat there too, replace it as well, since it can add client
+     credentials at the provider; the person or role that the rule on the two other entries in the
+     secret store names replaces it.
      Replace it first, so the client credential's replacement runs with the new one.
-  5. Check each instance by its own address, not through the load balancer. For a key that
-     protects login cookies, send each instance's login callback a login cookie the leaked key
-     protected, with its matching `state`, and expect the error page of a failed callback. For the
-     session cookie with the session's state in the cookie, keep a copy of a live test session's
-     cookie that the leaked key protected: at the session check it answers `200` before step 2 and
-     `401` after step 3, which shows the check can fail. In every case, also check that every
-     instance logged a key list without the leaked id, and that zero failures to end a session
-     were logged in step 2. An instance that fails leaves the load balancer, restarts and is
-     checked again; the replacement is done only when every instance passes.
+  7. Check each instance by its own address, not through the load balancer. For a key that
+     protects login cookies, send each instance's login callback the login cookie that step 1
+     kept, with its `state`, and expect the error page of a failed callback. For the session
+     cookie with the session's state in the cookie, use the test session's cookie that step 1
+     kept: at the session check it answers `200` before step 4 and `401` after step 5, which shows
+     the check can fail. In every case, also check that every instance logged a key list without
+     any leaked key id, and that zero failures to end a session were logged in step 3. An instance
+     that fails leaves the load balancer, restarts and is checked again; the replacement is done
+     only when every instance passes.
 
   ASP.NET Core's docs say that until a refresh "a warmed instance might continue to unprotect data
   created with the revoked key", and ask to restart or reload every instance, to "Verify that all
@@ -908,16 +957,19 @@ cookies, these rules are checks on it; write code only for a rule it does not me
 - **BFF: before the BFF's first release to users, write down the steps for a leaked cookie key, who
   runs them, who starts the emergency run of the rotation job that writes the store, who to notify
   and how to check them,** so the keys can be replaced quickly when a leak comes, not worked out
-  under pressure. Write the list of keys in each environment down with them. OWASP's
+  under pressure. Write the list of keys in each environment down with them. The steps count as
+  leaked every key that sat where the leaked key sat, as the rule above says. OWASP's
   Cryptographic Storage cheat sheet asks that "the code and processes required to rotate a key are
   in place before they are required, so that keys can be quickly rotated in the event of a
   compromise" [46]. Its Key Management cheat sheet says "A
   compromise-recovery plan shall be documented and easily accessible", and lists in it "The
   identification and contact info of the personnel to notify" and "An inventory of all
   cryptographic keys and their use" [54]. With an identity provider, the plan also covers a client
-  credential leaked on its own: remove the leaked credential at the provider first, accepting the
-  outage, then add and load the new one, since the order of the client-credential rule above keeps
-  the old credential working until its last step; that order is this practice's choice.
+  credential leaked on its own: the emergency run removes the leaked credential at the provider
+  first, accepting the outage, then adds the new one, writes it into the secret store as "current"
+  and lets every instance load it. The order of the client-credential rule above keeps the old
+  credential working until its last step; this order, with the emergency run as its actor, is this
+  practice's choice.
 - **BFF: keep the leaked-key plan with the team's incident runbooks, where an incident opens as
   [sla.md](../../any-language/project-management/sla.md) section 3 says,** so whoever opens the
   incident finds the plan there; the plan's home is this practice's choice.
@@ -1103,7 +1155,9 @@ cookies, these rules are checks on it; write code only for a rule it does not me
 
 The rules from here to the rule on a request that waited until the lock expired hold only when
 the provider rotates the BFF's refresh tokens, has no reuse window that covers the requests in
-flight, and the session's state is on the server. They run in the order given.
+flight, and the session's state is on the server. They run in the order given, except that a
+request that takes the lock first reads the refresh's outcome, as the rule on that outcome below
+says.
 
 - **BFF: refresh the tokens of a session at most once at a time, and let the session's other
   requests wait for that refresh and use its result,** because parallel requests would each refresh
@@ -1157,9 +1211,10 @@ flight, and the session's state is on the server. They run in the order given.
   waiting request learns only that the lock was released, not whether the refresh behind it
   failed. The rule is this practice's choice.
 - **BFF: when the refresh that holds the lock fails, or its new tokens cannot be stored, release
-  the lock, answer `503` to every request that waited for it, and log it once at `ERROR`
-  ([logging.md](../../python/logging/logging.md) section 4),** so no waiting request takes the lock
-  and refreshes again with a refresh token the provider may already have rotated. When the store
+  the lock and log it once at `ERROR` ([logging.md](../../python/logging/logging.md) section 4);
+  each request that waited answers `503` when it reads the failed outcome,** so no waiting request
+  takes the lock and refreshes again with a refresh token the provider may already have rotated.
+  When the store
   failed, answer `503` to the holder's own request too. The page sees an outage it can retry, not a
   sign-out. The rule is this practice's choice. A lock in a store that cannot be written ends at
   its expiry. After a failed store, the retry avoids a sign-out only while the provider's reuse
@@ -1184,21 +1239,21 @@ flight, and the session's state is on the server. They run in the order given.
   requirements 16.5.2 and 16.5.3 ask the application to keep operating securely when an external
   resource fails, and to prevent fail-open conditions [56].
 - **BFF: keep the list of ended sessions, the per-user times, the single-use marks of the
-  re-authentication window and the refresh locks in stores that never evict them before their own
-  expiry and keep them through a restart,** since a store that evicted them, restarted empty or
-  failed over answers "not on the list". So a logged-out cookie works again with no error and no
-  log line. Count a read or a write that passes a timeout the team writes down as one that cannot
-  be read (the rule above). The rule is this practice's choice. Keep every entry of the list of
-  ended sessions, whoever writes it, for one absolute timeout after it was written, and every
-  per-user time for one absolute timeout after its latest write, since every cookie such an entry
-  stops started before it was written, so by then the cookie has passed its absolute timeout. The
-  two lifetimes are this practice's choice. Read the store's eviction policy when you deploy, and
-  alert a person (section 3, "Logging") when the store reports an eviction or a restart of the
-  store that holds those entries. With the session's state in the cookie, the entries the store
-  lost cannot be rebuilt. So the person decides either to replace the cookie key by the leaked-key
-  plan ("Keys and secrets" above), which signs every user out, or to accept that a logged-out
-  cookie may work until its absolute timeout, and writes the decision down ("Write it down"
-  above). The decision is this practice's choice.
+  re-authentication window, the step-up guess counts and the refresh locks in stores that never
+  evict them before their own expiry and keep them through a restart,** since a store that evicted
+  them, restarted empty or failed over answers "not on the list". So a logged-out cookie works
+  again with no error and no log line. Count a read or a write that passes a timeout the team
+  writes down as one that cannot be read (the rule above). The rule is this practice's choice.
+  Keep every entry of the list of ended sessions, whoever writes it, for one absolute timeout after
+  it was written, and every per-user time for one absolute timeout after its latest write, since
+  every cookie such an entry stops started before it was written, so by then the cookie has passed
+  its absolute timeout. The two lifetimes are this practice's choice. Read the store's eviction
+  policy when you deploy, and alert a person (section 3, "Logging") when the store reports an
+  eviction or a restart of the store that holds those entries. With the session's state in the
+  cookie, the entries the store lost cannot be rebuilt. So the person decides either to replace
+  the cookie key by the leaked-key plan ("Keys and secrets" above), which signs every user out, or
+  to accept that a logged-out cookie may work until its absolute timeout, and writes the decision
+  down ("Write it down" above). The decision is this practice's choice.
 
 ### Logout
 
@@ -1625,7 +1680,11 @@ it lets through whichever guarded change comes first.
 - **BFF, with a first-party login: count every answer to a step-up per session with one atomic
   increment in the session store, never in the session object the request loaded and saves back
   at its end,** so a thief who holds a stolen session cannot guess the password through the
-  step-up, not even with answers sent in parallel. Compare an answer only while its raised count is
+  step-up, not even with answers sent in parallel. Keep the count in the session's record, or under
+  a key that expires with it, and delete it when the session ends or moves to a new id. Keep it in
+  a store that never evicts it before its session ends (the rule on stores that never evict these
+  entries, in "Timeouts and refresh" above), since an evicted count starts again at zero and gives
+  more guesses than the number below allows. Compare an answer only while its raised count is
   below a small number the team writes down ("Write it down" above). When the count reaches it,
   end the session and log it without comparing the answer. ASVS 5.0 requirement 6.3.1 asks for
   controls against password brute force, and OWASP's Transaction Authorization cheat sheet,
@@ -2300,9 +2359,10 @@ subsection and its section 4 rows.
   alert is not first tried in an incident; the rule is this practice's choice.
 - **BFF: on an alert that names a user's `iss` and `sub`, have the recipient also end every session
   of that user through an operator command the team writes down ("Write it down" in section 2 says
-  where),** so a session that may be in someone else's hands ends at once. The command runs the
-  code path of the rule on a disabled account in section 2, "Re-authentication", for that one
-  user; only a role the team names may run it, and it logs who ran it. ASVS 5.0 requirement 7.4.5
+  where),** so a session that may be in someone else's hands ends at once. The command calls the
+  BFF, which runs the code path of the rule on a disabled account in section 2,
+  "Re-authentication", for that one user under its own identity; only a role the team names may run
+  it, and it logs who ran it. ASVS 5.0 requirement 7.4.5
   asks that "application administrators are able to terminate active sessions for an individual
   user or for all users" [42]. The command, its role and its log line are this practice's choice.
 - **BFF: log at `INFO` ([logging.md](../../python/logging/logging.md) section 4) each request that
@@ -2348,17 +2408,22 @@ subsection and its section 4 rows.
 - **BFF: alert a person when the key that protects new cookies is older than its written rotation
   period plus a margin the team writes down,** so a rotation job that stopped shows before the key
   reaches the limits of its mode (section 2, "Keys and secrets"). With an identity provider, also
-  alert when the client credential passes its written rotation date or comes within that margin of
-  its expiry at the provider, so a credential is replaced before every refresh fails.
+  alert when the "current" client credential, by the time stored with it, is older than its written
+  rotation period plus a margin the team writes down, or comes within that margin of its expiry at
+  the provider, so a credential is replaced before every refresh fails.
   OWASP's Key Management cheat sheet lists "The monitoring of the re-keying operations" in its
-  compromise-recovery plan [54]; the alerts on an old key and on the credential's dates are this
-  practice's choice.
+  compromise-recovery plan [54]; the alerts on an old key and on the credential's age and expiry
+  are this practice's choice.
 - **BFF: alert a person when an old key is still in the store after the time step 3 of the
   rotation (section 2, "Keys and secrets") removes it,** since that shows a job that stopped
   before its clean-up; the rule is this practice's choice.
 - **BFF: alert a person when the rotation job has logged no run for longer than one reload
   interval,** since a job that stopped between the write and the check of step 1 (section 2, "Keys
   and secrets") lets a start time pass unchecked; the rule is this practice's choice.
+- **BFF: alert a person on every `ERROR` line of the rotation job, and when the job moves the same
+  key's start time a second time (section 2, "Keys and secrets"),** since the rate alert on
+  `ERROR` lines below can let one such line through, and a key whose start time keeps moving never
+  protects a cookie. The rule is this practice's choice.
 - **BFF, with an identity provider: alert a person on every step-up whose `iss` or `sub` does not
   match,** for the reason the rule on such a mismatch in section 2, "Re-authentication", gives;
   the rule is this practice's choice.
@@ -2713,16 +2778,19 @@ end of the request, so its row also asks for the store's save code.
   re-issues that cookie, because its last-use time moved past the written step, and its answer
   arrives after the refresh's: the browser keeps the old refresh token.
 - **A cookie key that leaked gives its holder what the cookies it protected hold, after the key is
-  replaced.** With the session's state in the cookie, whoever held the leaked key and a copy of a
+  replaced.** The leaked-key plan counts as leaked every key that sat where the leaked key sat
+  (section 2, "Keys and secrets"), so what follows holds for each of them. With the session's
+  state in the cookie, whoever held the leaked key and a copy of a
   cookie keeps the access token in it, valid at its resource servers until it expires, which the
   short access-token lifetime bounds (section 2, "Logout"). They keep the refresh token only while
   the client credential is unchanged, since RFC 6749 section 10.4 binds a refresh token to its
   client [15]. With the session's state on the server, the key protects only login cookies, which
-  hold no OAuth token. The record of a login or a step-up started from a live session holds that
+  hold no OAuth token, and a session cookie that the framework signs, which holds only the session
+  id. The record of a login or a step-up started from a live session holds that
   session's id, and with the state on the server that id is the session: whoever holds the key and
   a copy of such a cookie, or of a `state` that carries the record, can use that session until it
   ends. The callback ends it, so only an attempt that never reached its callback leaves it live,
-  and the five steps above do not end it.
+  and the seven steps of the leaked-key plan (section 2, "Keys and secrets") do not end it.
 - **Whoever reads the session store and also holds the key that encrypts its tokens** reads every
   user's tokens: the access tokens work at their resource servers until they expire, and the
   refresh tokens only with the client credential, and only until the leaked-key plan revokes them
@@ -2834,7 +2902,7 @@ end of the request, so its row also asks for the store's save code.
 | 2, "The session cookie" | Does the session cookie carry the `__Host-Http-` name and every attribute the table asks for, in every environment? | a session cookie without the `__Host-Http-` prefix; a session cookie without `Secure`, `HttpOnly` or a written `SameSite`, or with `Domain` |
 | 2, "The login cookie" | Is each login attempt's record protected, bound to its own cookie and cleared at every callback? | a callback page that shows a parameter of the request; a login cookie without the `__Host-Http-` prefix; a login attempt's record kept on the server, or in a cookie or `state` that is not encrypted and signed; a BFF with more than one identity provider that checks neither `iss` nor a callback path for each provider; a login cookie left behind after a failed callback; a login's return target taken from the request and redirected to unchecked |
 | 2, "Reading the `Cookie` header" | Does the server read the session cookie only from its own parse of the raw `Cookie` header, after the name checks? | a session or login cookie read without checking that its name appears once, or with a duplicate check that reads only the first `Cookie` field line; a cookie whose name becomes the session or login cookie's name once non-token characters are removed and ASCII letters are lowercased, read instead of answered with `400`; a `Cookie` header that starts with `$Version` accepted, or a cookie parser set to a legacy RFC 2109 or RFC 2965 mode; a session cookie value read from the framework's cookie collection, or looked up or decrypted before its format is checked |
-| 2, "The session's life, from login to logout" | Is the session's state where the rules put it, and does the session check hand out no token? | a session check that returns a token, or answers without `Cache-Control: no-store`; a session store that an identity other than the BFF's can reach, except the identity of step 2 of the leaked-key plan while that run lasts |
+| 2, "The session's life, from login to logout" | Is the session's state where the rules put it, and does the session check hand out no token? | a session check that returns a token, or answers without `Cache-Control: no-store`; a session store that an identity other than the BFF's can reach, except the identity of step 3 of the leaked-key plan while that run lasts |
 | 2, "Keys and secrets" | Do the keys come from the secret store, rotate on a written schedule, and have a routine rotation that was tried and a leaked-key plan that was tried? | a cookie key kept in the code, or shared between environments; a new key that protects cookies before every instance holds it; an unreadable cookie answered with `500`; no rotation job, or no rotation period written down; no leaked-key plan, or one never run in a test environment; a routine rotation never tried in a test environment; an old key removed before step 3's time; a key store an instance can write; no alert on a rotation job that logs no run |
 | 2, "A new session id at login" | Does every login and re-authentication issue a new session id and destroy the old one? | the same session id before and after login |
 | 2, "Timeouts and refresh" | Does the server end the session on timeout, and keep it through a refresh that fails for a reason other than the grant? | a session kept after `invalid_grant` or `interaction_required`; a stored refresh token emptied by an answer that carries none; a timed-out session's record left in the store; a timeout kept only in the page; a session accepted when the session store or the list of ended sessions cannot be read |
