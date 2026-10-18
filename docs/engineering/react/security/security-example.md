@@ -283,7 +283,7 @@ Why it is good:
   (`VITE_API_BASE_URL=https://api.example.com` in the reference application;
   [file-structure.md](../../any-language/file-structure/file-structure.md) section 9).
 - **No source maps are published.** The Vite config sets no `build.sourcemap`, and the default is
-  off (read 2026-10-01); the build output in the verification lists no `.map` file.
+  off (read 2026-10-17); the build output in the verification lists no `.map` file.
 - **What it does not stop:** someone adding a secret to the schema with a `VITE_` prefix. No tool
   reports it; the question in security.md section 9, asked before a variable is added, is the
   guard.
@@ -668,13 +668,13 @@ and `fsevents` (optional, macOS), and the strict settings below fail the install
 nobody reviewed. So the two are denied, not allowed: `false` under `allowBuilds` for pnpm, and
 for npm 12 a denial in `package.json`'s `allowScripts`, which `npm deny-scripts` writes. npm's
 page gives no value format for that entry, so it is not shown here (pnpm's build settings page
-and npm's v12 config page, read 2026-10-03).
+and npm's v12 config page, read 2026-10-17).
 
 The files below make the same controls part of the repository, one for each package manager:
 `.npmrc` for npm 12, `.npmrc` for npm 11.10.0 or later, and `pnpm-workspace.yaml` for pnpm 11; a
 repository takes the one it installs with, so every install obeys them (security.md section 10).
 They are written from the owners' docs (npm's config page and changelog, CISA's axios alert,
-pnpm's settings and supply-chain pages, read 2026-10-01) and were not run: the machine had npm
+pnpm's settings and supply-chain pages, read 2026-10-17) and were not run: the machine had npm
 10.8.
 
 `.npmrc`, for npm 12:

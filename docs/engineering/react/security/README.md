@@ -72,9 +72,9 @@ login to logout, CSRF and CORS, is the
 6. Re-check what moves when you adopt the practice, and again six months after each source's date
    in security.md's Sources section: the date on the section's first line, or the date a source's
    own line ends with (`— checked <date>`). From six months after a source's date until it is read
-   again, distrust every line that cites it; the earliest such day is 2027-04-01.
+   again, distrust every line that cites it; the earliest such day is 2027-04-16.
 
-   Dated sources: when you adopt the practice, add a task dated 2027-04-01 to the team's tracker,
+   Dated sources: when you adopt the practice, add a task dated 2027-04-16 to the team's tracker,
    with an owner, so the re-check does not rest on anyone's memory. At that task, the owner
    re-reads each source whose date is six months old or more, updates its date, and adds the next
    task, with an owner, for six months after the oldest date left. List the sources' dates with
