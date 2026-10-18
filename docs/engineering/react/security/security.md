@@ -71,8 +71,10 @@ own:
   7), and a value goes into the settings with its reason next to it
   ([readability.md](../../any-language/readability/readability.md) section 4).
 - **The sign-out path** is what the page runs when the session has ended: it clears what the
-  session loaded and what the step-up kept in `sessionStorage`, and sends the user to sign in
-  (section 6, "Timeouts and refresh" and "Re-authentication").
+  session loaded and what the step-up kept in `sessionStorage`, and shows the signed-out screen,
+  whose control starts a login (section 6, "Timeouts and refresh" and "Re-authentication"). It
+  never starts a login by itself, since the provider may sign the user straight back in from its
+  own session.
 
 The one rule: **anything the browser holds, a script on the page can read, and anything the
 browser decides, the user can change.** So the browser side keeps no secret, makes no access
@@ -385,7 +387,9 @@ injected inline script or event handler is blocked. The policy was checked only 
   collector or the report intake of
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
   3; without one, do not start report-only, since a violation then shows only in the browser console
-  of whoever visits ([security-example.md](security-example.md) section 6). The receiver accepts
+  of whoever visits ([security-example.md](security-example.md) section 6). A report carries the
+  page's URL and referrer with their query strings (CSP Level 3, section 5.4), so a hosted
+  collector fits only an application whose URLs hold nothing the user typed [83]. The receiver accepts
   the two formats browsers send: `application/csp-report` from `report-uri`, and
   `application/reports+json` with the type `csp-violation` from `report-to` [193], [194]. The
   BFF's report intake takes them only when its schema has them. Before you read no reports as
@@ -402,15 +406,17 @@ injected inline script or event handler is blocked. The policy was checked only 
   feature: `frame-ancestors` is not supported there, and a report-only policy cannot be delivered
   that way [45], [46], [47].
 - **On a static host, set the headers in the host's file,** since a `<meta>` tag cannot carry
-  `frame-ancestors` [47]. Netlify and Cloudflare Pages read a `_headers` file from the folder they
-  publish; Vercel reads the `headers` array in `vercel.json` (vendors' docs, read 2026-10-01) [48],
-  [49], [50]. Vite copies `public/_headers` into `dist/` as it is [41]. Copy the format, not a
-  sample policy: a vendor's sample can carry `'unsafe-inline'`, as Next.js's example without
-  nonces does [37]. A server-rendered application sets the headers in its server, which gives each
-  response its own nonce (the subsection on the server-rendered policy above). The rule is this
+  `frame-ancestors` [47]. OWASP's CSP cheat sheet calls a header "the preferred way", and web.dev
+  recommends an HTTP header for a policy in production [38], [34]. Netlify and Cloudflare Pages
+  read a `_headers` file from the folder they publish; Vercel reads the `headers` array in
+  `vercel.json` (vendors' docs, read 2026-10-01) [48], [49], [50]. Vite copies `public/_headers`
+  into `dist/` as it is [41]. Copy the format, not a sample policy: a vendor's sample can carry
+  `'unsafe-inline'`, as Next.js's example without nonces does [37]. A server-rendered application
+  sets the headers in its server, which gives each response its own nonce (the subsection on the
+  server-rendered policy above). Copying the format, not a vendor's sample policy, is this
   practice's choice.
-- **After every deploy that changes a header, check the deployed result** with the scanners of
-  section 14.
+- **Check each change to a header with the scanners of section 14,** at the moments that section
+  names.
 
 ### The other headers
 
@@ -578,7 +584,8 @@ The flow, in order, with the page's own acts in bold:
 - **Page: when the session check answers `401` on a route that needs no session, show the
   signed-out state instead of running the sign-out path, and check for this case before the `401`
   rule below,** since a visitor on a public page has no session to end, and the sign-out path
-  would send them to sign in; the rule is this practice's choice.
+  would show them the signed-out screen, whose control starts a login; the rule is this practice's
+  choice.
 
 The BFF's rules on a new session id at login are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
@@ -593,13 +600,15 @@ section 2, "A new session id at login".
   `refetchIntervalInBackground` set (TanStack Query docs, read 2026-10-15) [68], [69]. OWASP
   states the definition, not this rule; the rule is this practice's reading of it.
 - **Page: on a `401` from the session check, run the sign-out path; on a `401` from any other API
-  route, ask the session check once, and run the sign-out path unless it answers `200` for the
-  user the page loaded,** so the screen shows no data from a session the server has ended. A
+  route, ask the session check once, and run the sign-out path when it answers `401`, or `200`
+  for another user,** so the screen shows no data from a session the server has ended. On any
+  other answer from that check, keep the session as the rule on `502` and `503` below says. A
   request sent before a sign-in or a step-up renewed the session, in this tab or another, carries
   the session id the renewal destroyed, while the session is live under its new id. The sign-out
-  path also removes what the step-up kept in `sessionStorage` (its definition in section 1). What
-  the sign-out handler does is [architecture.md](../architecture/architecture.md) section 10. The
-  rule is this practice's choice.
+  path also removes what the step-up kept in `sessionStorage` (its definition in section 1). The
+  sign-out handler does both: it removes that entry, and does what
+  [architecture.md](../architecture/architecture.md) section 10 says. The rule is this practice's
+  choice.
 - **Page: when that session check answers `200` for the user the page loaded, fetch a failed read
   once more, and show a failed write's error,** since a request answered `401` "has not been
   applied" (RFC 9110 section 15.5.2), so the write did not happen [202]. A second `401` for the
@@ -607,9 +616,10 @@ section 2, "A new session id at login".
 - **Page: where the query client is made, tell it not to retry a `401`, nor a `403` or a `400`
   whose body carries a fixed code,** since these answers say what the page must do, and a retry
   only sends a guarded request again, while `useQuery` retries a failed query three times by
-  default in the browser (TanStack Query docs, read 2026-10-16) [68], [70]. The query client is
-  made as [architecture.md](../architecture/architecture.md) section 8 says. The rule is this
-  practice's choice.
+  default in the browser (TanStack Query docs, read 2026-10-16) [68], [70]. For a `403`, RFC 9110
+  section 15.5.4 says "The client SHOULD NOT automatically repeat the request with the same
+  credentials" [202]. The query client is made as [architecture.md](../architecture/architecture.md)
+  section 8 says. Not retrying a `401` or a `400` is this practice's choice.
 - **Page: on a `502` or a `503` from any endpoint, the session check included, on a `403` with no
   code, and on any other answer the rules here do not name (a `405`, a fetch that rejects, a code
   the page does not know), keep the session.** Show the error as for any failed request
@@ -623,7 +633,8 @@ section 2, "A new session id at login".
   7.4.4; OWASP's Session Management cheat sheet), so a user on a shared device can always end it
   [71], [55].
 - **Page: call the BFF's logout endpoint through the API client,** so the call carries the custom
-  header (section 7); the rule is this practice's choice.
+  header, as section 7 asks of every request to an API route (RFC 10017 section
+  6.1.3.3.2) [3].
 - **Page: show the user as signed out when the logout endpoint answers with a `2xx`, and also on a
   `401`, which means the session had already ended; then run the sign-out path,** since the
   session no longer exists on the server; the rule is this practice's choice.
@@ -645,8 +656,11 @@ section 2, "A new session id at login".
   rule is this practice's choice.
 - **Page: while the page's own logout call is in flight, start no sign-out path on a session-ended
   close or a `401`; the logout handler runs it after the answer, and opens the provider's logout
-  URL from the mutation's own options.** The BFF ends the session and closes the user's sockets
-  during the logout request, so a sign-out path started then would drop the provider logout.
+  URL from the mutation's own options; when the answer carries that URL, the URL takes the place
+  of the signed-out screen.** The BFF ends the session and closes the user's sockets during the
+  logout request, so a sign-out path started then would drop the provider logout. Give the logout
+  call a time limit the team writes down; when it runs out, the call counts as any other failure
+  (the rule above), so the hold ends.
   Callbacks passed to `mutate` do not run once the component unmounts
   ([architecture.md](../architecture/architecture.md) section 9). The rule is this practice's
   choice.
@@ -654,22 +668,27 @@ section 2, "A new session id at login".
 ### Re-authentication
 
 - **Page, with an identity provider: before the step-up's navigation, keep in `sessionStorage` the
-  screen of the guarded change, what the user typed into it and the time of writing, or start the
-  step-up as the user opens that screen, before they type, and keep the screen and the time, never
-  what is typed.** The navigation unloads the page and everything typed into it, and the outcome
-  route needs the screen to return to. A screen that takes a password, a one-time code or
-  another credential takes the second way, since the storage rule above keeps every credential out
-  of `sessionStorage`. When the page starts on any route other than the outcome route, it deletes
-  an entry older than the re-authentication window the team wrote down
-  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 2, "Re-authentication"), so a step-up that never reached the outcome route leaves nothing
-  behind. The rule is this practice's choice.
-- **Page, with an identity provider: on a `403` whose body carries `reauth_required`, or as the user
-  opens a guarded change's screen (the rule above), open the BFF's login endpoint by a top-level
+  screen of the guarded change and what the user typed into it, or show, in
+  place of the form, a control that starts the step-up, and when the user presses it keep the
+  screen, never what is typed.** The navigation unloads the page and everything typed
+  into it, and the outcome route needs the screen to return to. A screen that takes a password, a
+  one-time code or another credential takes the second way, and so does a screen with a field the
+  team's data classification marks sensitive (ASVS 5.0 requirements 14.1.1 and 14.3.3, Level 2,
+  the level the step-up serves), since the storage rule above keeps every credential out of
+  `sessionStorage` [205]. The page deletes the entry as soon as it shows a route other than the
+  kept screen and the outcome route, whether it started there or the router moved there, so a
+  step-up that never reached the outcome route leaves nothing behind once the user leaves the
+  screen. The rule is this practice's choice.
+- **Page, with an identity provider: on a `403` whose body carries `reauth_required`, or when the
+  user presses that control (the rule above), open the BFF's login endpoint by a top-level
   navigation, with the step-up flag `step_up=1` and, when the `403` carried `acrValues`, that value
-  as the query parameter `acr_values`, encoded by `URLSearchParams`.** Do not start it as the
-  screen opens when the outcome route has just put the user back on it, so the user does not go
-  round the provider again. The browser reaches the login endpoint by a navigation, so the BFF can
+  as the query parameter `acr_values`, encoded by `URLSearchParams`.** The screen shows the form in
+  place of the control only when the outcome route put the user back with `reauthenticated`, which
+  the outcome route passes to it as router state that the screen reads once and clears. On any
+  other arrival, a reload, Back from the provider, a `refused`, a `failed` and a restore from the
+  back/forward cache included, it shows the control and starts nothing by itself, so Back leaves
+  the user on the screen and the control is how the user tries again. The browser reaches the
+  login endpoint by a navigation, so the BFF can
   answer with the redirect that takes the browser to the authorization server (RFC 10017 section
   6.1.2.1) [3]. `URLSearchParams` encodes every
   character of a value except the ASCII letters and digits, `*`, `-`, `.` and `_`, so an `&`, a
@@ -677,7 +696,8 @@ section 2, "A new session id at login".
   and 6.2) [75]. The
   BFF accepts only the values on the list the team wrote down
   ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 2, "Re-authentication"). The step-up flag and the encoding are this practice's choice.
+  section 2, "Re-authentication"). OWASP asks to encode each untrusted query parameter value [9];
+  the step-up flag is this practice's choice.
 - **Page: with a first-party login, on a `403` whose body carries `reauth_required`, show the
   re-authentication prompt and send the guarded request again with the answer in its JSON body
   field `reauthAnswer`, and on a `403` whose body carries `reauth_failed`, show the prompt
@@ -693,8 +713,8 @@ section 2, "A new session id at login".
   ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
   section 2, "Re-authentication"). The screen's own session check decides whether the session is
   still live, and a `401` there runs the sign-out path. A missing or unknown `outcome` counts as
-  `failed`, and with no kept entry the route shows the outcome its parameter names; either way
-  there is nothing to restore. The rule is this practice's choice.
+  `failed`, and with no kept entry the route shows the outcome its parameter names; with no kept
+  entry there is nothing to restore. The rule is this practice's choice.
 
 The BFF's rules on forwarding requests to resource servers are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
@@ -751,17 +771,21 @@ section 3, "What the server does".
   `application/pdf` for a frame, and `image/png`, `image/jpeg`, `image/webp` or `image/gif` for an
   `<img>`, never `image/svg+xml`,** so a file from outside never becomes an HTML or SVG document in
   the page's origin. For a PDF that is
-  `new Blob([await response.arrayBuffer()], { type: "application/pdf" })`. The guard is this
-  practice's choice, after the URL Standard, which gives a blob URL the origin of the page that
-  created it [75], [76].
+  `new Blob([await response.arrayBuffer()], { type: "application/pdf" })`. web.dev asks to set the
+  `Content-Type` of user content to a well-known type that "doesn't contain active content", and
+  names HTML and SVG as active content [35]. Applying that to the blob is this practice's choice,
+  after the URL Standard, which gives a blob URL the origin of the page that created it [75],
+  [76].
 - **Add `blob:` to `img-src` in the page's policy for these images, and to `frame-src` only for
   the PDF preview,** since a blob URL has the page's origin (URL Standard section 4.7), so a
   document loaded from it in a frame runs in that origin; the rule is this practice's choice
   [75].
 - **Never loosen `object-src` for the PDF preview; where the frame shows nothing, offer the file
   through the download link instead, whose answer carries `Content-Disposition: attachment`,** since
-  `object-src 'none'` belongs to the strict policy of section 5, and a blank preview is no reason
-  to give it up; the rule is this practice's choice [77].
+  OWASP's CSP cheat sheet asks for `object-src 'none'` where embedded objects are not needed, and
+  web.dev names `Content-Disposition: attachment` as the header that triggers a download rather
+  than rendering [38], [35], [77]. That a blank frame is no reason to loosen it is this practice's
+  choice.
 - **Read an event stream with `fetch` through the API client, not with `EventSource`,** because
   `EventSource` cannot send the custom header and takes `withCredentials` as its only option (MDN,
   read 2026-10-16) [78].
@@ -804,18 +828,22 @@ Node 20's URL parser, 2026-10-15).
   3, "What the server does"); the rule is this practice's choice.
 - **Page: when a WebSocket that the page did not close closes with any other code, ask the API
   through the API client whether the session is still live before each reconnect. On a `401`
-  from that check, run the sign-out path (section 6); on any other answer that is not `200`, count
-  it as an attempt and back off.** A handshake the server refuses
+  from that check, run the sign-out path (section 6); count every reconnect as an attempt, whatever
+  the check answered, and start the count again only once a socket has stayed open for a time the
+  team writes down.** A handshake the server refuses
   reaches the page only as a close with code 1006, the code for a connection closed with no close
   frame, so the `401` rule of section 6 cannot fire for a socket (MDN's `CloseEvent.code` page; the
   WHATWG WebSockets Standard) [84], [85]. The rule is this practice's choice.
-- **Page: space the reconnects by exponential backoff with random jitter, under a delay cap and an
-  attempt cap the team writes down, and when the attempts run out, show that live updates
-  stopped, with a control to reconnect,** so the tabs do not all reconnect at the same moments, and
-  the user knows the screen no longer updates. At Amazon, retries at the same moments "cause
+- **Page: space the reconnects by exponential backoff with random jitter, under a delay cap, an
+  attempt cap and the open time that starts the count again, which the team writes down, and when
+  the attempts run out, show that live updates stopped, with a control to reconnect.** So the tabs
+  do not all reconnect at the same moments, and the user knows the screen no longer updates. RFC
+  6455 section 7.2.3 asks a client to delay the first reconnect "by a random amount of time" and
+  later ones "by increasingly longer amounts of time, using a method such as truncated binary
+  exponential backoff" [206]. At Amazon, retries at the same moments "cause
   contention or overload again", so its clients add jitter, and a capped backoff alone keeps
-  clients "retrying constantly at the capped rate", so they also limit the retries [201]. The rule
-  is this practice's choice.
+  clients "retrying constantly at the capped rate", so they also limit the retries [201]. The
+  attempt cap and the notice are this practice's choice.
 
 The API's CORS rules are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
@@ -856,8 +884,8 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
   not only through your UI, and a check on the page that shows the form does not cover it (Next.js
   data security guide) [89]. Inside each one: parse the arguments with a schema; check who
   the user is and that they may touch this record; return only the fields the client needs
-  [89], [90]. Why a schema is this practice's reasoning: TypeScript types do not
-  exist at run time.
+  [89], [90]. TypeScript's annotations are not enforced at run time, so Next.js's blog asks each
+  function to validate its arguments, by hand or with `zod` [90].
 - **Read data through a data access layer that runs only on the server.** Next.js's guide
   describes it: it runs only on the server, checks authorisation, and returns small objects with
   only the fields the caller needs; `import "server-only"` at its top makes a client import fail
@@ -880,7 +908,9 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
   CVSS 10.0) let anyone run code on the server without logging in [88]. Groups tried to
   exploit it within hours of disclosure (AWS) and went after cloud and API credentials (Microsoft)
   [97], [98]. Nothing in application code stopped it: Next.js wrote that there
-  was no workaround, only the upgrade [99]. Google called its WAF rule a temporary
+  was no workaround, only the upgrade [99]. The first fix may not be the last: React's follow-up
+  advisories moved the patched version more than once, and they arrive through section 10's
+  alerts [96]. Google called its WAF rule a temporary
   measure until the patch lands, and React told users not to depend on their host's mitigations
   [100], [88]. Turn on Dependabot or Renovate security updates, which skip their
   cooldowns (section 10) [101], [102], [103].
@@ -892,15 +922,12 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
   React, the framework and the router reach them on the day they are published. By default,
   GitHub emails a new alert only to people with write access or more who watch the repository with
   security alerts or all activity on [199].
-- **When you patch, add a task to the team's tracker, dated a few days later and owned by whoever
-  patched, that names the advisory id, to read the advisory again.** After React2Shell, follow-up
-  advisories for denial of service and source exposure moved the patched version more than once,
-  so the first fix was not the last [96]. The task names the advisory id, never a version number
-  as "the safe version".
 - **After a flaw that ran code on the server, treat the server's credentials as stolen.** Rotate
   every cloud, database and API key the server could reach; Next.js's React2Shell advisory asks
   you to "rotate any secrets it uses, starting with your most critical ones" [99].
-  Keeping that set small is this practice's choice.
+  When you give the server a key, give it only the access its job needs, so a flaw that runs code
+  there reaches less: OWASP's Secrets Management cheat sheet asks that "Secrets must have the
+  minimum privileges assigned to them to enable their required use/role" [211].
 - **Patch the framework's XSS advisories as fast as any other critical one.** React Router had
   three XSS advisories in January 2026: `ld+json` in `meta()` and `ScrollRestoration` keys, both
   in server rendering in framework mode, and redirects from loaders and actions, which run script
@@ -916,13 +943,15 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
   the GOOD.
   Check: before you add a `VITE_` or `NEXT_PUBLIC_` variable, ask whether you would print its value
   on the login page. If not, it is a secret.
-- **List the public settings in one schema, so a secret has no place to land.** Where the
+- **List the public settings in one schema, so a secret has no place to land.** The rule is this
+  practice's choice. Where the
   settings file sits and how the application reads it is
   [architecture.md](../architecture/architecture.md) section 3.
 - **Keep files with real values out of git.** Vite's docs say `*.local` env files stay out of
   git, and the Next.js template ignores `.env*`; commit an example file with every name and no
   real value ([file-structure.md](../../any-language/file-structure/file-structure.md) section 9)
-  [107], [108].
+  [107], [108]. The one exception is the gitleaks config of the scan rule below, whose allowlist
+  holds a public key that already ships in the bundle.
 - **Publish no source maps from a production build.** Vite's `build.sourcemap` is off by default,
   and `'hidden'` writes maps without the comment that points to them, which this practice keeps
   for upload to an error tracker; Next.js keeps browser source maps off by default (read
@@ -932,8 +961,8 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
   source with its comments. Demir et al. (2026 preprint) studied 10 million rendered sites and
   found 1,748 live credentials in front ends; 62% of the exposures in JavaScript appeared only in
   compiled bundles [111].
-  Check: a request for a bundle's `.map` URL on the deployed site gets no map (it answers `404` or
-  `403`).
+  Check: a request for a bundle's `.map` URL on the deployed site returns no source map: a `404` or
+  `403`, or the application's `index.html` where the host falls back to it.
 - **Restrict at the provider any key that must ship to the browser.** A maps key gets a website
   restriction and an API restriction (Google Maps Platform) [112]. A "public" database key,
   such as a Supabase anon key, is safe only behind server-side rules such as row-level security: a
@@ -944,10 +973,15 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
   scanning and repository-level push protection, which is off by default (GitHub's docs, read
   2026-10-01), and run a scanner such as gitleaks as a pre-commit hook [115], [116]. Run it
   over the build output too: the study above found most JavaScript exposures only in the compiled
-  bundle [111]. Scan the output with `gitleaks dir dist/`, and allow a key this section lets ship
-  by its value, as a `regexes` entry of a `[[rules.allowlists]]` or a global allowlist in the
-  gitleaks config, with its provider restriction written next to it; such an entry "defaults to
-  check the _Secret_ in the finding" [116]. Let any other hit fail the build [116]. Gitleaks takes
+  bundle [111]. Scan the output with `gitleaks dir dist/ --config .gitleaks.toml`, since the
+  `.gitleaks.toml` gitleaks finds by itself is the one in the scanned folder, and start that file
+  with `[extend]` and `useDefault = true`, so the default rules still run [116]. Allow a key this
+  section lets ship by its value, as a `regexes` entry of a `[[rules.allowlists]]` or a global
+  allowlist in that file, with its provider restriction written next to it; such an entry
+  "defaults to check the _Secret_ in the finding" [116]. The allowed value is a public key that
+  already ships in the bundle, so the gitleaks config that holds it is the one exception to the
+  rule above on keeping files with real values out of git. Let any other hit fail the build [116].
+  Gitleaks takes
   security fixes only, and its maintainer is moving to Betterleaks (read 2026-10-01); re-check
   before you adopt it [116].
 - **When a secret leaks, revoke it at the provider first.** GitHub's guide calls revocation the
@@ -979,7 +1013,7 @@ for this table did not cover it):
 
 | Control | npm 12 | pnpm 11 and later |
 |---|---|---|
-| dependency install scripts | blocked unless `allowScripts` in the root `package.json` approves them; `strict-allow-scripts=true` turns the warning into a failed install. npm 11 still runs them: set `ignore-scripts=true` there, which also stops the repository's own `prepare` and every pre- and post-script, so the team installs its git hooks with a setup command [130], [131], [132] | blocked; `strictDepBuilds` (default `true`) fails the install on an unreviewed build script; reviewed packages go in `allowBuilds`, which replaced `onlyBuiltDependencies` in pnpm 11; never `dangerouslyAllowAllBuilds` [133], [134] |
+| dependency install scripts | blocked unless `allowScripts` in the root `package.json` approves them; `strict-allow-scripts=true` turns the warning into a failed install. npm 11 still runs them: set `ignore-scripts=true` there, which also stops the repository's own `prepare` and every pre- and post-script, so the team installs its git hooks with a setup command [130], [131], [132]; name that command in the repository's README as the first step after cloning; the CI secret scan of section 14 does not depend on it | blocked; `strictDepBuilds` (default `true`) fails the install on an unreviewed build script; reviewed packages go in `allowBuilds`, which replaced `onlyBuiltDependencies` in pnpm 11; never `dangerouslyAllowAllBuilds` [133], [134] |
 | release cooldown | `min-release-age` in days, off by default in npm 12 as well (the setting exists since npm 11.10.0, 2026-02-11; npm 10 has none); `min-release-age-exclude` (since 11.17.0) exempts packages [130], [135], [136] | `minimumReleaseAge` in minutes, default 1440 (one day) since pnpm 11; `minimumReleaseAgeExclude` exempts packages [137] |
 | git and tarball sources | `allow-git` and `allow-remote` default to `none` [131] | `blockExoticSubdeps` (default `true`): only direct dependencies may come from git or a tarball URL [137] |
 | provenance | `npm audit signatures` checks registry signatures and provenance attestations [138] | `trustPolicy: no-downgrade` fails when a version's trust level is lower than that of earlier versions [137] |
@@ -1008,15 +1042,19 @@ updates only, never to security updates (read 2026-10-01) [101], [102],
 - **Write the emergency path next to the cooldown.** A one-day pnpm cooldown blocked the
   React2Shell patch while it was under a day old, and the developer got it through with
   `minimumReleaseAgeExclude` (a practitioner's account, 2025) [143]. The path names the setting
-  that exempts one package, who may add an entry, and that the entry comes out once the version is
-  older than the cooldown [143]. In pnpm, exempt the patched version as `name@x.y.z`, never the
+  that exempts one package; in the practitioner's account the team emptied the setting again once
+  the fix was in [143]. In pnpm, exempt the patched version as `name@x.y.z`, never the
   bare name, since an entry by name exempts every version of the package; exact versions are
   allowed since pnpm 10.19.0 [137]. npm's `min-release-age-exclude` matches package names only
   [130], so with npm the author of the change adds a task to the team's tracker, dated for when
-  the version is older than the cooldown and owned by that author, to remove the entry. Who may
-  add an entry, and that it comes out once the version is older than the cooldown, are this
-  practice's choice. npm has `min-release-age-exclude` since 11.17.0; an older npm has no
-  per-package exemption [135].
+  the version is older than the cooldown and owned by that author, to remove the entry. The path
+  names who may add an entry, and the entry comes out once the version is older than the cooldown;
+  both are this practice's choice. npm has `min-release-age-exclude` since 11.17.0; an older npm has no
+  per-package exemption [135]. A bot's security update to a version younger than the cooldown
+  fails its install until that exemption is in the same pull request, since pnpm checks every
+  lockfile entry against `minimumReleaseAge` on install [207]. Set the bot's own version-update
+  cooldown to at least the package manager's, since Dependabot does not read pnpm's
+  `minimumReleaseAge` [208].
   Check: when you set a cooldown, ask: if a critical fix ships today, which line do we change? If
   no line next to the setting answers, the path is missing.
 - **Allow a dependency's build script only after someone has read it,** by adding that package to
@@ -1039,14 +1077,18 @@ Before an AI coding agent installs a package:
 
 - **It checks on the registry that the package exists, that the name is the one the library's own
   docs give, and how old the version is; a name it cannot find in those docs is not installed.**
-  Models invent package names. A 2025 USENIX study of 16 models found that on average at least
+  OWASP's Secure Coding with AI cheat sheet asks to "Verify every AI-suggested package exists on
+  the public registry before installing" [210]. Models invent package names. A 2025 USENIX study
+  of 16 models found that on average at least
   5.2% of the packages commercial models suggested, and 21.7% of those open-source models
   suggested, did not exist; a 2026 preprint found 4.6% to 6.1% on five frontier models, which all
   invented the same 127 names, 53 of them still free to register [145], [146]. An
   attacker who registers such a name gets installed by the next agent that invents it.
 - **It installs through the repository's config, and never passes a flag that turns off the
   cooldown or the script block.** The rules above hold only if every install goes through them.
-  No owner states this for agents; it is the practice's choice.
+  OWASP's sheet asks for a pre-install hook or CI check "that blocks installation of packages below
+  a minimum age threshold", but names no install flag [210]. Never passing a flag that turns off
+  the cooldown or the script block is this practice's choice.
 - How far to trust a Claude Code plugin or skill is
   [designing-with-claude-code.md](../design/designing-with-claude-code.md) section 7. The
   packages a plugin or a registry brings are dependencies, and this section's rules apply to
@@ -1055,7 +1097,8 @@ Before an AI coding agent installs a package:
 The lockfile:
 
 - **Commit the lockfile,** so every install takes the same versions and a change to them shows in
-  a pull request.
+  a pull request. npm's docs say `package-lock.json` "is intended to be committed into source
+  repositories" [214].
 - **Install in CI with the command that refuses to change the lockfile:** `npm ci`, or Yarn's
   immutable install (npm's and Yarn's docs), so CI builds exactly what the lockfile says and an
   install that would change it fails [139], [141].
@@ -1088,8 +1131,12 @@ CI (GitHub Actions; the rules are GitHub's own, from its secure-use reference) [
 - **Pass pull request fields to a script through an environment variable, never through `${{ }}`
   inside the script.** The Nx attack ran a pull request title as part of a script [121],
   [150].
-- **Share no cache between workflows that run fork code and workflows that publish.** This rule is
-  this practice's choice. TanStack's post-mortem says a pull request running in the base
+- **Share no cache between workflows that run fork code and workflows that publish, and never
+  declare `cache-mode: write` or `cache-mode: write-only` on a job that `pull_request_target`,
+  `issue_comment` or `workflow_run` starts.** GitHub's dependency caching reference asks to "Save
+  caches from trusted triggers", gives a run on such a trigger read-only access to the default
+  branch's caches, and says that declaring either mode "reintroduces the risk of cache-poisoning"
+  [209]. TanStack's post-mortem says a pull request running in the base
   repository's cache scope "can poison entries that production workflows on main will later
   restore" [125]. GitHub says privileged workflows "share the same cache of the main branch with
   other privileged workflow triggers" [150].
@@ -1201,8 +1248,9 @@ iframes, redirects and service workers:
   scope [157].
 - **Cache no response that carries personal data in a service worker,** since the Cache API
   ignores HTTP caching headers and its entries do not expire, so they stay until code deletes them
-  (the same cheat sheet) [157]. That any script on the origin can read them is this
-  practice's reasoning.
+  (the same cheat sheet) [157]. Any script on the origin can read them, since MDN says the `Cache`
+  interface "is exposed to windowed scopes as well as workers", and a window reaches the caches
+  through `Window.caches` [212], [213].
 - No rule is spent on `rel="noopener"`: browsers already treat `target="_blank"` as `noopener`
   (MDN, read 2026-10-01) [160].
 
@@ -1271,22 +1319,31 @@ default [173], [174]. They were not compared here.
   reports every sink, sanitised or not, so the one allowed sink carries a suppression that names
   the rule and the reason, in the form
   [static-checks.md](../../python/static-checks/static-checks.md) section 6 gives.
-- **After every deploy that changes a header, run the policy through CSP Evaluator and the site
-  through MDN's HTTP Observatory, and put the result into the pull request.** CSP Evaluator looks
+- **For every change to a header, run the policy through CSP Evaluator and the site through MDN's
+  HTTP Observatory on the pull request's preview deploy, where the host has one, and again after
+  the production deploy, and put the result into the pull request.** CSP Evaluator looks
   for ways around a policy, and Google offers it for convenience, with no promise that a clean
   result means a safe policy; the Observatory checks the headers and settings the deployed site
   actually sends [175], [176]. With the tool's default option, "CSP Version 3 (nonce based +
-  backward compatibility checks)", the policy of section 5 draws two findings [175], [204]. The
-  first is "'self' can be problematic if you host JSONP, AngularJS or user uploaded files" [198];
+  backward compatibility checks)", the static policy of section 5 draws two findings [175], [204].
+  The first is "'self' can be problematic if you host JSONP, AngularJS or user uploaded files" [198];
   section 5's rule on serving uploaded files from another site answers it. The second is the
   Trusted Types hint, "Consider requiring Trusted Types for scripts to lock down DOM XSS injection
-  sinks" [204]; section 4's report-only rollout answers it until its written end date. Fix or
-  revert every other finding, and every failed Observatory test, before the next deploy.
+  sinks" [204]; section 4's report-only rollout answers it until its written end date. The nonce
+  policy of section 5 draws three. Two are fallback hints for browsers without nonce or
+  `'strict-dynamic'` support, which this practice does not serve, so they are left (checklist row 5
+  flags `'unsafe-inline'`): "Consider adding 'unsafe-inline' (ignored by browsers supporting
+  nonces/hashes)" and "Consider adding https: and http: url schemes (ignored by browsers
+  supporting 'strict-dynamic')" [204]. The third is the Trusted Types hint, answered as for the
+  static policy [204]. Fix or revert every other finding, and every failed Observatory test,
+  before the next deploy, since each is a weakness in what the deployed site sends; the bar is this
+  practice's choice.
 - **Run the supply-chain and secret checks in CI:** `npm audit signatures`, OSV-Scanner and the
   secret scanner (sections 9 and 10) [138]. OSV-Scanner fails on any finding, so record an
   advisory the application does not reach in `osv-scanner.toml` as an `[[IgnoredVulns]]` entry
-  with a `reason` and an `ignoreUntil` date: the job stays required, and the exception expires
-  [196], [197].
+  with a `reason` and an `ignoreUntil` date, and add a task, dated before `ignoreUntil` and owned
+  by whoever wrote the entry, to check again whether the application reaches it: the job stays
+  required, and the exception expires [196], [197].
 ## 15. Common mistakes
 
 Each pair shows one problem and its fix. The BAD is written by hand: the same file or lines as
@@ -1583,9 +1640,8 @@ change which badge shows, never which props the element gets (section 3).
   protect and no request to forge: sections 6 and 7 do not apply. Its headers, its dependencies and
   its build still do.
 - **Where [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 1 does not call for a BFF, an application may run a browser-only OAuth client.** RFC
-  10017 recommends a BFF for business, sensitive and personal-data applications, and describes the
-  other two patterns without forbidding them [3]. Choose one knowingly, with section 6's storage
+  section 1 says a BFF is more than the application needs, follow the way that section names.** A
+  team that runs a browser-only OAuth client instead follows section 6's `Browser-only client:`
   rules.
 - **A client-only application has no Server Functions;** section 8 applies once a framework
   renders on the server.
@@ -1622,12 +1678,12 @@ it is fixed or the author shows why it does not apply; that bar is the practice'
 | 2. What the browser can protect | Does the server check this request on its own? | a permission enforced only by hiding a button or a route |
 | 3. XSS | Can a value from outside reach HTML, a URL, a props object, a style or code? | a URL from data with no scheme allowlist; outside data spread as props; a renderer's `urlTransform` overridden [13] |
 | 4. Sanitising | Is the HTML sanitised in the sink's own render? | a second `dangerouslySetInnerHTML`; a sanitised string changed or joined after cleaning |
-| 5. Headers | Does the built page run under a policy with no `'unsafe-inline'` in `script-src`? | `'unsafe-inline'` or `data:` in `script-src`; a policy only in `<meta>`; a nonce in a cached response; a report-only policy with no named receiver or no written end date, or still report-only after that date; a log-only check past its written end |
+| 5. Headers | Does the built page run under a policy with no `'unsafe-inline'` in `script-src`? | `'unsafe-inline'` or `data:` in `script-src`; a policy only in `<meta>`; a nonce in a cached response; a report-only policy with no named receiver or no written end date, or still report-only after that date; a log-only check past its written end; a header change with no CSP Evaluator and HTTP Observatory result in its pull request |
 | 6a. Sessions, page | Can script read anything that grants access? | a token or session id in `localStorage`, `sessionStorage` or a cookie set by script; a cookie the page sets without `Secure`, a written `SameSite` or a `__Host-` or `__Secure-` prefix; `refetchInterval` on data that needs the session |
 | 7a. CSRF and CORS, page | Does each request to an API route carry the CSRF defence, and does the page fix CORS errors and build API paths as section 7 says? | `mode: "no-cors"` or a public proxy in the page; a value from outside put into an API path unchecked; a request to an API route, other than the exempt ones in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3, made outside the one API client or without the custom header, or without `credentials: "include"` when the API is on another origin; a blob made with the response's own type, or an SVG blob |
 | 8. Server-side React | Does each Server Function check the user and the record itself? | authorisation only in middleware; a secret written in server code |
 | 9. Secrets | Would you publish every `VITE_` value on the login page? | a key, a token or a password behind a public prefix; production source maps published |
-| 10. Supply chain | Does every install obey the cooldown and the script block, with a named emergency path? | a new dependency nobody checked on the registry; an action pinned by tag; fork code in `pull_request_target`; a cooldown exclusion past its removal date |
+| 10. Supply chain | Does every install obey the cooldown and the script block, with a named emergency path? | a new dependency nobody checked on the registry; an action pinned by tag; fork code in `pull_request_target`; a cooldown exclusion past its removal date; an `[[IgnoredVulns]]` entry with no `reason` or no `ignoreUntil` |
 | 11. Dev server | Does the dev server answer only localhost? | `allowedHosts: true`; `cors: true`; `host` open on a network you do not trust |
 | 12. Edges | Does each `message` listener check one exact origin? | `postMessage(…, "*")`; a sandbox with both `allow-scripts` and `allow-same-origin`; a redirect to a raw `?next=` |
 | 13. Data exposure | Can a URL, a log line or a replay carry a credential, and does a failed screen show a message of its own, not the error's text? | a token in a query string; replay masking turned off; paste blocked; the error's own text on a failed screen |
@@ -1659,14 +1715,16 @@ Work with it this way:
   "primarily an awareness document", and as a coding or testing standard "the bare minimum and just
   a starting point" [181]. Some of its risks, such as A06 Insecure Design, are "beyond the scope of
   most forms of testing", and OWASP discourages any claim of full coverage because it is "simply
-  untrue" [181]. A team that checks only the ten categories can take itself to be done, which is
-  the claim of full coverage OWASP calls untrue; this reading is the practice's. The table below
+  untrue" [181]. OWASP also says the Top Ten lists "are not meant to be a complete list, only a
+  starting place" [181]. The table below
   says which section of this file covers each 2025 category. The checklist above holds the red
   flags of the highest-risk acts.
 - **When the project starts, pick its
   [ASVS](https://owasp.org/www-project-application-security-verification-standard/) level and
   write it into the decision log ("Write it down", section 1),** so reviews and tests know the
-  target; writing it down is this practice's choice.
+  target. ASVS asks an organization to "analyze its risks and decide what level it believes it
+  should be at", and to make sure its security decisions "are communicated to developers" [182];
+  the decision log as the place is this practice's choice.
   OWASP's Application Security Verification Standard (ASVS 5.0, read 2026-10-16) has three levels:
   Level 1 holds "the minimum requirements to consider when securing an application", Level 2 is the
   level "most applications should be striving to achieve", and Level 3 is for applications that must
@@ -1715,7 +1773,7 @@ is named.
 | A04 Cryptographic Failures [178] | mostly the server's: HTTPS, HSTS, no caching of responses with personal data, and the keys that sign or encrypt the cookies and their rotation; the browser side keeps secrets out of the bundle; password storage for a first-party login is outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 5) | 5, 9, 13; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) sections 2, 3 |
 | A05 Injection [178] | XSS is injection into the page; the server checks the format of each path segment and of each report ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3); injection into the server's own interpreters, such as SQL or an OS command, is outside this practice | 3, 4, 5, 7; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3 |
 | A06 Insecure Design [178] | a check in the page helps the user and protects nothing; the design puts every control on the server, and the session in a BFF; OWASP asks to model the threats of critical flows such as sign-in and access control (the threat-modelling step above) [184] | 2, 6 |
-| A07 Authentication Failures [178] | mostly the server's: the OAuth flow, a new session id at login, timeouts, logout and re-authentication; the browser side holds no token and runs the sign-out path on a `401`; a first-party login's password storage, throttling and sign-in error messages are outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 5) | 6; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
+| A07 Authentication Failures [178] | mostly the server's: the OAuth flow, a new session id at login, timeouts, logout and re-authentication; the browser side holds no token and handles a `401` as section 6, "Timeouts and refresh", says; a first-party login's password storage, throttling and sign-in error messages are outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 5) | 6; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
 | A08 Software or Data Integrity Failures [178] | scripts from other origins, Subresource Integrity, and state the server writes into the page; an object from outside spread as props (section 3); the session's state in a signed and encrypted cookie ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2); the arguments of a Server Function (section 8) | 3, 6, 8, 10, 12; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
 | A09 Security Logging and Alerting Failures [178] | mostly the server's: it logs security events, and alerts a person when the rejections of one check pass their written rate and on every step-up from another account; the browser side keeps credentials out of its own reports [188] | 6, 7, 13; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) sections 2, 3 |
 | A10 Mishandling of Exceptional Conditions [178] | mostly the server's: it fails closed; the browser side shows a message of its own on a failed screen, never the error's text | 6, 13; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
@@ -1811,7 +1869,7 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [80] Maxence Schmitt — Exploiting Client-Side Path Traversal: CSRF is dead, long live CSRF (Doyensec, no date; research, sponsored by Doyensec) — https://www.doyensec.com/resources/Doyensec_CSPT2CSRF_Whitepaper.pdf
 - [81] NIST NVD — CVE-2023-45316 (Mattermost) — https://nvd.nist.gov/vuln/detail/CVE-2023-45316
 - [82] OWASP Cheat Sheet Series — WebSocket Security Cheat Sheet — https://github.com/OWASP/CheatSheetSeries/blob/fdd74a30ff147436f218df84778651cad6b8d9a4/cheatsheets/WebSocket_Security_Cheat_Sheet.md
-- [83] W3C — Content Security Policy Level 3, Editor's Draft, 16 September 2026, section 6.7.2.9 "scheme-part matching" — https://w3c.github.io/webappsec-csp/#match-schemes — checked 2026-10-16
+- [83] W3C — Content Security Policy Level 3, Editor's Draft, 16 September 2026, sections 5.4 "Strip URL for use in reports" and 6.7.2.9 "scheme-part matching" — https://w3c.github.io/webappsec-csp/ — checked 2026-10-18
 - [84] MDN — CloseEvent: code property — https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent/code
 - [85] WHATWG — WebSockets Standard, Living Standard, commit snapshot 9879e5c — https://websockets.spec.whatwg.org/commit-snapshots/9879e5cf0d66c66af6990e4c75f72dda794e1b87/
 - [86] MDN — Request: mode property — https://developer.mozilla.org/en-US/docs/Web/API/Request/mode
@@ -1933,3 +1991,13 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [202] IETF — RFC 9110, HTTP Semantics, STD 97, June 2022 — https://www.rfc-editor.org/rfc/rfc9110.txt
 - [203] NIST NVD — CVE-2025-48757, NVD API record — https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=CVE-2025-48757 — checked 2026-10-18
 - [204] Google — CSP Evaluator source, checks/strictcsp_checks.ts — https://github.com/google/csp-evaluator/blob/ad530f3ae5473f9e03c8bf500ee0ada8d9e9b822/checks/strictcsp_checks.ts
+- [205] OWASP — Application Security Verification Standard, chapter V14 Data Protection, 5.0.0 — https://github.com/OWASP/ASVS/blob/v5.0.0_release/5.0/en/0x23-V14-Data-Protection.md — checked 2026-10-18
+- [206] IETF — RFC 6455, The WebSocket Protocol, December 2011 — https://www.rfc-editor.org/rfc/rfc6455.txt
+- [207] pnpm — Release notes, v11.1.3 — https://github.com/pnpm/pnpm/releases/tag/v11.1.3 — checked 2026-10-18
+- [208] yeikel — Convert PNPM `minimumReleaseAge` and `minimumReleaseAgeExclude` to Dependabot's `cooldown` equivalents (dependabot-core GitHub issue #13405, 2025; opinion) — https://github.com/dependabot/dependabot-core/issues/13405 — checked 2026-10-18
+- [209] GitHub — Dependency caching reference — https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching — checked 2026-10-18
+- [210] OWASP Cheat Sheet Series — Secure Coding with AI Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Secure_Coding_with_AI_Cheat_Sheet.html — checked 2026-10-18
+- [211] OWASP Cheat Sheet Series — Secrets Management Cheat Sheet — https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html — checked 2026-10-18
+- [212] MDN Web Docs (Mozilla) — Cache — https://developer.mozilla.org/en-US/docs/Web/API/Cache — checked 2026-10-18
+- [213] MDN Web Docs (Mozilla) — CacheStorage — https://developer.mozilla.org/en-US/docs/Web/API/CacheStorage — checked 2026-10-18
+- [214] npm — package-lock.json, v11 — https://docs.npmjs.com/cli/v11/configuring-npm/package-lock-json — checked 2026-10-18

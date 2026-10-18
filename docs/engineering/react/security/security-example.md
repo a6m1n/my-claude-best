@@ -704,7 +704,8 @@ exemption, so the emergency path works from 11.17.0 on.
 ```ini
 # npm 11 runs dependency install scripts; this stops them (security.md section 10). It also
 # stops the repository's own `prepare` and every pre- and post-script, so the team installs its
-# git hooks with a setup command.
+# git hooks with a setup command: name it in the repository's README as the first step after
+# cloning. The CI secret scan of security.md section 14 does not depend on it.
 ignore-scripts=true
 # Refuses git dependencies: a cooldown cannot see a commit (security.md section 10).
 allow-git=none
@@ -764,8 +765,8 @@ Why it is good:
   header, checks CSRF and decides access. That is server code;
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
   sections 2 and 3 list what it must do, the exempt endpoints included.
-- **The reaction to a `401`:** the application has no sign-in screen, so the sign-out path that
-  security.md section 6 runs on a `401` is not shown, as
+- **The reaction to a `401`:** the application has no sign-in screen, so the sign-out path
+  (security.md section 6, "Timeouts and refresh") is not shown, as
   [architecture.md](../architecture/architecture.md) section 10 says for sign-out.
 - **The re-authentication path:** the page's reaction to a `403` whose body carries
   `reauth_required` is not shown; security.md section 6, "Re-authentication", gives it. The

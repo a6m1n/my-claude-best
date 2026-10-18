@@ -1141,8 +1141,8 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   beyond the one the user granted (RFC 6749 section 5.2), which a refresh that asks for the
   granted scope does not ask for [15]. The rule is this practice's choice.
 - **BFF: when a refresh fails in any other way, keep the session, answer the page `502` or `503`,
-  never `401`, and log it,** because on a `401` from the API the page runs the sign-out path,
-  apart from the two exceptions [security.md](../../react/security/security.md) section 6 lists.
+  never `401`, and log it,** because a `401` from the API can make the page run the sign-out path
+  ([security.md](../../react/security/security.md) section 6, "Timeouts and refresh").
   Such a failure is a provider that cannot be reached or does not answer, a `5xx`, a `429`, any
   other `4xx`, or a body that does not parse. `502` says that an upstream server answered badly, and
   `503` that the server cannot answer for now (RFC 9110 sections 15.6.3 and 15.6.4) [61].
@@ -1764,9 +1764,9 @@ a false error and use the repeated sign-in to authorize a change of its own
 because ASVS is the standard and the cheat sheet is guidance below it.
 
 - **BFF: ask the page for re-authentication with a `403` whose JSON body carries the fixed code
-  `reauth_required`, and never with a `401`,** because on a `401` from the API the page runs the
-  sign-out path, apart from the two exceptions [security.md](../../react/security/security.md)
-  section 6 lists. RFC 9470's `401` with the error `insufficient_user_authentication` is a
+  `reauth_required`, and never with a `401`,** because a `401` from the API can make the page run the
+  sign-out path ([security.md](../../react/security/security.md) section 6, "Timeouts and
+  refresh"). RFC 9470's `401` with the error `insufficient_user_authentication` is a
   resource server's challenge to its OAuth client, which here is the BFF [80]. So RFC 9470 governs
   the hop from the resource server to the BFF (section 3, "Forwarding tokens", says what the BFF
   does with it), not the hop to the page, and the signal to the page is this practice's choice.
@@ -2072,9 +2072,12 @@ Where the server has the framework's own CSRF check, that check runs too, with i
   accepted should be rejected with a `403` [91]. A `401` tells the page its
   session has ended, so an origin set up wrong would turn into a sign-in loop.
 - **Answer `401` only when the session has ended or never existed, and `403` to a request the user
-  is not allowed to make** (RFC 9110 sections 15.5.2 and 15.5.4), because on a `401` from the API
-  the page runs the sign-out path, apart from the two exceptions
-  [security.md](../../react/security/security.md) section 6 lists [61]. The `401` carries no
+  is not allowed to make** (RFC 9110 sections 15.5.2 and 15.5.4), because the page reads a `401`
+  as a sign that the session ended [61]. On a `401` from the session check it runs the sign-out
+  path, and on one from any other API route it asks the session check once and runs that path
+  when the check answers `401` or `200` for another user
+  ([security.md](../../react/security/security.md) section 6, "Timeouts and refresh"). The `401`
+  carries no
   `WWW-Authenticate`: no registered authentication scheme describes a cookie session, and the page
   reads the status, not a challenge; this departs from
   the MUST of RFC 9110 section 15.5.2 and is this practice's choice [92],

@@ -50,7 +50,11 @@ login to logout, CSRF and CORS, is the
    exists, review each build script the strict setting refuses and add it to the allow list
    (`allowBuilds` or `allowScripts`) before the setting lands, and mark the old lint violations as
    [refactoring.md](../../any-language/refactoring/refactoring.md) section 4 says, with the fix-by
-   date its section 6 asks for.
+   date its section 6 asks for. Run the install once under the new settings before the change
+   lands. pnpm re-checks every lockfile entry against `minimumReleaseAge` and `trustPolicy`, so an
+   entry younger than the cooldown, or with weaker provenance than an earlier version, fails it.
+   Land the setting once those entries are older than the cooldown, or exempt each one as
+   security.md section 10's emergency path says, with its removal task.
 4. Use section 17's first work step as the security part of your review template: read the rules
    of every section the change touches, and check the red flags of section 17's checklist.
 5. The practice links the
@@ -96,12 +100,12 @@ login to logout, CSRF and CORS, is the
 
 ## The points to adapt
 
-- **The session pattern.** This practice picks the Backend for Frontend, which RFC 10017
-  recommends for business, sensitive and personal-data applications. Where
+- **The session pattern.** Whether the application needs a BFF is
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 1 does not call for a BFF, an application may run a browser-only OAuth client; section
-  6's storage and refresh-token rules then apply in full. When your own server signs the user in
-  with no identity provider, section 6's opening paragraph says which rules drop.
+  section 1; where the team runs a browser-only OAuth client instead,
+  [security.md](security.md) section 6's `Browser-only client:` rules apply in full. When your
+  own server signs the user in with no identity provider, section 6's opening paragraph says which
+  rules drop.
 - **The cooldown length.** One day covered the short-lived package hijacks of 2025 and 2026, and
   seven days is CISA's advice; a longer wait delays every normal update by as much. Whatever the
   length, the cooldown has a named emergency path.
