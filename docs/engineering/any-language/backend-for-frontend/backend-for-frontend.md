@@ -19,9 +19,9 @@ Frontend (BFF) of RFC 10017 section 6.1: the application's confidential OAuth cl
 the tokens in a cookie-based session and forwards each API call to the resource server with the
 user's access token, so the browser holds only a session cookie that script cannot read
 [1]. A team that follows them has a BFF whose session cookie no script on the page can
-read, whose server accepts no planted cookie (section 5 lists the exceptions), whose sessions end
-on the server at logout, at their timeouts and at the provider's back-channel logout, whose keys
-rotate without signing users out, and whose API refuses the requests that other sites make the
+read, and whose server accepts no planted cookie (section 5 lists the exceptions). Its sessions
+end on the server at logout, at their timeouts and at the provider's back-channel logout. Its keys
+rotate without signing users out, and its API refuses the requests that other sites make the
 user's browser send.
 
 The rules are for the team that builds or runs that server, whether it writes the session, cookie
@@ -106,20 +106,24 @@ list of what never goes in a log (section 10), which hold in any language; a tea
 language maps the level names to its own logger's.
 
 Some topics are outside this practice on purpose: the page's side, and the choice of a pattern,
-are [security.md](../../react/security/security.md). These are not covered yet: a silent login run
-in an iframe, which the login start refuses (section 2, "The login cookie"); caps on the size and
-number of WebSocket messages and connections; throttling of sign-in attempts, with the rest of a
-first-party login's credential checks such as password storage, which a practice on
-authentication would own, while the cap on guesses at a step-up is covered (section 2,
-"Re-authentication"); rate limiting or anomaly detection on the requests that a script on
-the page sends through the BFF, for which RFC 10017 section 6.1.4.1 calls the BFF "the ideal
-place" [1]; re-authentication on a risk signal, such as a sign-in from a new device;
-key-based client authentication, which RFC 10017 section 6.1.3.7 names among the practices a
-BFF, as a confidential client, can adopt more easily [1]; and how a resource server that limits
-requests by IP address learns the user's address through the BFF, since otherwise, as RFC 10017
-section 6.1.3.5 warns, "the server might start blocking requests as many users' browsers will
-appear to be coming from the single IP address of the BFF" [1]. A BFF that already has users
-moves to these rules as
+are [security.md](../../react/security/security.md). These are not covered yet:
+
+- a silent login run in an iframe, which the login start refuses (section 2, "The login cookie");
+- caps on the size and number of WebSocket messages and connections;
+- throttling of sign-in attempts, with the rest of a first-party login's credential checks such as
+  password storage, which a practice on authentication would own; the cap on guesses at a step-up
+  is covered (section 2, "Re-authentication");
+- rate limiting or anomaly detection on the requests that a script on the page sends through the
+  BFF, for which RFC 10017 section 6.1.4.1 calls the BFF "the ideal place" [1];
+- re-authentication on a risk signal, such as a sign-in from a new device;
+- key-based client authentication, which RFC 10017 section 6.1.3.7 names among the practices a
+  BFF, as a confidential client, can adopt more easily [1];
+- how a resource server that limits requests by IP address learns the user's address through the
+  BFF, since otherwise, as RFC 10017 section 6.1.3.5 warns, "the server might start blocking
+  requests as many users' browsers will appear to be coming from the single IP address of the
+  BFF" [1].
+
+A BFF that already has users moves to these rules as
 [refactoring.md](../../any-language/refactoring/refactoring.md) section 7 says; the rule on
 changing a live session cookie (section 2, "The session cookie") covers the changes that would
 sign every user out. Section 5 says where the rules that are here stop holding.
@@ -166,15 +170,15 @@ The session cookie the BFF sets:
   [4], [7]. The rule is this practice's choice.
 - **BFF: when a BFF that already has users renames its session cookie, changes how the cookie is
   protected, or moves the session's state between the cookie and the server, either accept that
-  every user is signed out once at that deploy and write it down ("Write it down" in "The
-  session's life, from login to logout" below says where), or for one absolute timeout also read
-  the old cookie and re-issue it under the new name and format,** since the name checks skip a
-  cookie under the old
-  name without a word ("Reading the `Cookie` header" below), and a cookie in the old format names
-  no key the BFF holds ("Keys and secrets" below), so every live session would end at the first
-  deploy. For the re-issue, ship the code that reads the new format first, wait until no instance
-  runs the old code, then switch the code that writes it, since an instance that still runs the
-  old code cannot read a cookie in the new format; the rule is this practice's choice.
+  every user is signed out once at that deploy, or for one absolute timeout also read the old
+  cookie and re-issue it under the new name and format.** Without the re-issue, that deploy ends
+  every live session. The name checks skip a
+  cookie under the old name without a word ("Reading the `Cookie` header" below), and a cookie in
+  the old format names no key the BFF holds ("Keys and secrets" below). When you accept the
+  sign-out, write it down ("Write it down" in "The session's life, from login to logout" below
+  says where). For the re-issue, ship the code that reads the new format first, wait until no
+  instance runs the old code, then switch the code that writes it. An instance that still runs the
+  old code cannot read a cookie in the new format. The rule is this practice's choice.
 
 ### The login cookie
 
@@ -187,10 +191,11 @@ The session cookie the BFF sets:
   it does not meet. The step-up's checks and the bookkeeping of its login cookie
   ("Re-authentication" below) are the team's own code around the library.
 - **BFF: register the BFF at the identity provider as a confidential client with its client
-  authentication, with one exact `https` callback URI and no wildcard, the authorization code
-  grant and the refresh token grant only, only the scopes the BFF uses, the post-logout redirect
-  URI, and the back-channel logout URI with `sid` required,** so the provider sends a code only to
-  the BFF's own callback, and the logout rules below get the values they match on. RFC 9700
+  authentication, and with the values below,** so the provider sends a code only to the BFF's own
+  callback, and the logout rules below get the values they match on. Register one exact `https`
+  callback URI and no wildcard, the authorization code grant and the refresh token grant only,
+  only the scopes the BFF uses, the post-logout redirect URI, and the back-channel logout URI with
+  `sid` required. RFC 9700
   section 2.1 asks authorization servers to compare a redirect URI with the registered ones by
   "exact string matching" [16]. The
   rest of the registration is this practice's choice.
@@ -219,12 +224,12 @@ The session cookie the BFF sets:
   [16]. ASVS 5.0 requirement 10.1.2 asks these values to be "not guessable" and "specific
   to the transaction" [17].
 - **BFF: keep what a login attempt records, a step-up's included, where the user can neither change
-  nor read it: in the login cookie's value, or in `state` when the library keeps it there,
+  nor read it, and never in a record on the server,** since a person at the browser can edit any
+  value that is not protected ([security.md](../../react/security/security.md) section 1's one
+  rule). Keep it in the login cookie's value, or in `state` when the library keeps it there,
   encrypted and signed with authenticated encryption from a vetted library, the framework's own
   data protection where it has one, under the key rules for every cookie the BFF signs or encrypts
-  (section 2, "Keys and secrets"), and never in a record on the server,** since a person at the
-  browser can edit any value that is not protected
-  ([security.md](../../react/security/security.md) section 1's one rule). RFC 9700 section 4.7.1
+  (section 2, "Keys and secrets"). RFC 9700 section 4.7.1
   asks a client to protect `state` "against tampering and swapping", by binding it to the browser
   session or by "signing/encrypting state values" [16]. RFC 7636 section 7.1 adds that the
   PKCE verifier must not be "learned or guessed by the attacker" [14]. ASP.NET Core keeps
@@ -244,10 +249,10 @@ The session cookie the BFF sets:
   protected record,** so an edited value never passes a check; the rule is this practice's choice.
 - **BFF, with more than one identity provider: record in the attempt's protected record the issuer
   the authorization request went to, and at the callback reject a response whose `iss` parameter
-  differs from it; with a provider that sends no `iss`, give each provider a callback path of its
-  own and check the path instead,** since RFC 9700 section 4.4.2 says that a client that talks to
-  two or more authorization servers "MUST store, for each authorization request, the issuer they
-  sent the authorization request to and bind this information to the user agent" [16].
+  differs from it.** With a provider that sends no `iss`, give each provider a callback path of its
+  own and check the path instead. RFC 9700 section 4.4.2 says that a client that talks to two or
+  more authorization servers "MUST store, for each authorization request, the issuer they sent
+  the authorization request to and bind this information to the user agent" [16].
   RFC 9207 section 2.4 adds that when the value "does not match the expected issuer identifier,
   clients MUST reject the authorization response" [19]. RFC 9700 section 4.4.2.2 allows a
   distinct callback path for each provider as the alternative [16]. The ID token's `iss`
@@ -257,17 +262,17 @@ The session cookie the BFF sets:
 - **BFF: give the login cookie a `Max-Age` long enough for the user to finish at the provider, such
   as 15 minutes, and delete it at every callback, whether the sign-in succeeds or fails, a callback
   that carries an `error` from the provider included,** since it is needed only between the login
-  start and the callback, and the user may enrol a second factor on the way. RFC 9700 section 4.2.4
+  start and the callback. The user may enrol a second factor on the way. RFC 9700 section 4.2.4
   asks that "The state value SHOULD be invalidated by the client after its first use at the
   redirection endpoint" [16]. A cookie left behind adds to the login cookies that every
-  request carries: in the open dotnet/aspnetcore issue 53048, a team reports that ASP.NET Core
+  request carries. In the open dotnet/aspnetcore issue 53048, a team reports that ASP.NET Core
   keeps its correlation and nonce cookies after a callback with `error=login_required`, and that
   "Around 4 or 5 navigations to the site without being logged in, within a 15 minute window, will
   cause the errors to occur" [20]. 15 minutes is ASP.NET Core's default for a remote
   sign-in, its `RemoteAuthenticationTimeout` [13].
 - **BFF: when you set a login cookie, write the time its attempt started, in whole seconds since
   1970-01-01T00:00:00Z, into the cookie's value,** so the rules below can tell which login cookies
-  are newest: a `Cookie` header carries only each cookie's name and value, and section 4.2.2 of
+  are newest. A `Cookie` header carries only each cookie's name and value, and section 4.2.2 of
   the cookie spec, the RFC 6265bis draft, tells servers not to rely on the order of the cookies in
   it [2]. The step-up's check compares the same time with the ID token's `auth_time`, which counts
   in the same unit ("Re-authentication" below). The rule is this practice's choice.
@@ -306,8 +311,8 @@ The session cookie the BFF sets:
   [26]. A team that adds silent login gives it a path of its own, which this
   practice does not cover yet (section 1). The rule is this practice's choice.
 - **BFF: at the login start, take the page to return to only as a local path that the framework's
-  helper accepts, or as a short id the BFF maps to a path, keep it in the attempt's protected
-  record, and at the callback redirect only there or to the application's root,** since the login
+  helper accepts, or as a short id the BFF maps to a path, and at the callback redirect only there
+  or to the application's root.** Keep that page in the attempt's protected record. The login
   start and its callback skip every CSRF check (the exemption table of section 3), and a target
   taken from the request as it is sends the user, from a link that shows your domain, to any site.
   RFC 10017 section 6.1.2.1 has the callback answer "with a redirect that triggers the browser to
@@ -316,7 +321,7 @@ The session cookie the BFF sets:
   mapping from an approved destination ID remains preferable to accepting arbitrary URLs" [144].
 - **BFF: at a callback whose login cookie is missing, cannot be read, or does not match the
   `state`, log the reason and answer an error page that offers to sign in again,** so the user has
-  a way on instead of a dead end: a login cookie that expired, that another browser holds, or that
+  a way on instead of a dead end. A login cookie that expired, that another browser holds, or that
   was written under a removed key leaves the callback nothing to check. ASP.NET Core throws "An
   error was encountered while handling the remote login." on a failed callback that no handler
   takes [13]. The rule is this practice's choice.
@@ -344,16 +349,15 @@ The session cookie the BFF sets:
 - **BFF: turn on the host's dependency alerts in the BFF's own repository, and when an advisory
   names your server framework, its session and cookie library or its OpenID Connect client
   library, update it under [security.md](../../react/security/security.md) section 10's advisory
-  path.** The browser checks the
-  prefix; a server that parses the `Cookie` header in another way can read a cookie the browser
-  treated as a different one [29]. PortSwigger's research
+  path.** The browser checks the prefix. A server that parses the `Cookie` header in another way
+  can read a cookie the browser treated as a different one [29]. PortSwigger's research
   (2025) got past the `__Host-` and `__Secure-` prefixes on several server frameworks through such
   differences [29].
 - **BFF: read the session cookie and the login cookie only when the raw `Cookie` header holds the
   cookie's exact name once, compared byte for byte, and answer `400` when it holds the name more
-  than once,** so the server never has to choose between two values for one cookie, since the
-  cookie spec tells servers not to rely on the order of two cookies with one name (RFC 6265bis
-  draft, section 4.2.2) [2]. The raw header is every `Cookie` field line of the request
+  than once,** so the server never has to choose between two values for one cookie. The cookie
+  spec tells servers not to rely on the order of two cookies with one name (RFC 6265bis draft,
+  section 4.2.2) [2]. The raw header is every `Cookie` field line of the request
   joined with `; `, because HTTP/2 and HTTP/3 may split it into several (RFC 9113 section 8.2.3;
   RFC 6265bis draft, section 4.2.1) [30], [2]. For the login cookie the check
   runs on the raw header before the OAuth library reads it.
@@ -400,12 +404,11 @@ The session cookie the BFF sets:
   above are therefore this practice's choice, built on the cookie spec's sections 4.2.2, 5.4 and
   5.6 [2]. The advisory rule above them stays as the second control.
 - **BFF: take the session cookie's value from the same parse of the raw `Cookie` header that ran
-  the name checks, never from the framework's cookie collection: split the header at `;`, drop the
-  one space the browser writes after it, and split each pair at its first `=`,** since that is how
-  the browser writes the header (the layered-cookies draft, section 5.4.6), while a framework's
-  parser can trim or fold the case of names, decode values or split cookies in its own way
-  [3], [29],
-  [33], [36]. The login cookie, which the
+  the name checks, never from the framework's cookie collection,** since a framework's parser can
+  trim or fold the case of names, decode values or split cookies in its own way [29], [33], [36].
+  Split the header at `;`, drop the one space the browser writes after it, and split each pair at
+  its first `=`, since that is how the browser writes the header (the layered-cookies draft,
+  section 5.4.6) [3]. The login cookie, which the
   OpenID Connect library reads, keeps the checks above as its control. The rule is this practice's
   choice.
 - **BFF: check the session cookie's value against the format of the values the BFF writes, its
@@ -418,7 +421,7 @@ The session cookie the BFF sets:
   the field's name are this practice's choice.
 - **BFF: answer a failure on a route the browser reaches by navigation, such as the login start or
   a download link, with a page of fixed text that puts no parameter of the request into it,**
-  since no page code runs on a navigation to read the status or a JSON body, and a parameter of the
+  since no page code runs on a navigation to read the status or a JSON body. A parameter of the
   request comes from outside, as the rule on the failed callback's error page in "The login cookie"
   above says. On a `401` the error page links to the sign-in. On a `400` of the cookie checks
   above, the callback included, it tells the user to clear this site's data in the browser. The
@@ -461,9 +464,9 @@ later reader finds why.
 
 - **BFF: answer the session check, the "check session" endpoint of RFC 10017 section 6.1.2.1,
   with `200`, the user's display fields and no token when the session is live, and with `401` when
-  there is none, and send it the headers of every API response (section 3, "Response headers"),
-  `Cache-Control: no-store` among them,** so the page learns who is signed in without holding a
-  token, and no cache keeps one user's answer for the next [1]. RFC 10017 section 6.1
+  there is none,** so the page learns who is signed in without holding a token [1]. Send it the
+  headers of every API response (section 3, "Response headers"), `Cache-Control: no-store` among
+  them, so no cache keeps one user's answer for the next. RFC 10017 section 6.1
   keeps tokens away from the page, and Duende BFF's user endpoint answers `401` with no session by
   default [1], [40]. The status codes are this practice's choice.
 - **BFF: leave the session check out of the idle clock,** so a page that asks on every load, or
@@ -480,11 +483,11 @@ later reader finds why.
   6, "Timeouts and refresh").
 - **BFF, with an identity provider: keep the session's state on the server by default, with only a
   random id in the cookie; keep it in the cookie, signed and encrypted, only when two conditions
-  hold, and write the choice down: every instance can read a store that takes a read on every
-  request and a write at each logout, and that store cannot take a write on every request or hold
-  every user's tokens.** RFC 10017 section
-  6.1.2.3 says that "using server-side sessions with a BFF is only recommended in small-scale
-  scenarios", since they need sticky sessions or replication [1]. This practice departs
+  hold, and write the choice down.** The two conditions: every instance can read a store that
+  takes a read on every request and a write at each logout, and that store cannot take a write on
+  every request or hold every user's tokens. RFC 10017 section 6.1.2.3 says that "using
+  server-side sessions with a BFF is only recommended in small-scale scenarios", since they need
+  sticky sessions or replication [1]. This practice departs
   from it because a session held in the cookie still needs a list of ended sessions in a store
   every instance reads (ASVS 5.0 requirement 7.4.1) [42]. The two choices cost the store different
   work: with the state on the server, the store holds every user's tokens and takes a write each
@@ -501,17 +504,17 @@ later reader finds why.
   the only control.
 - **BFF: with the session's state in the cookie, check the length of the session cookie's name and
   value before you set it; when the two together pass 4096 bytes, set no cookie, log the reason
-  at `ERROR` ([logging.md](../../python/logging/logging.md) section 4) and answer an error page,**
-  because a browser ignores such a cookie without an error (RFC 6265bis
-  draft, sections 5.6 and 5.7), so the sign-in would look done and the next request would
-  answer `401` [2]. When re-issuing the cookie after a refresh would pass 4096 bytes, end the
-  session and log it at `ERROR` ([logging.md](../../python/logging/logging.md) section 4), since a
-  provider that rotates refresh tokens has already rotated the one in the cookie the browser
+  at `ERROR` ([logging.md](../../python/logging/logging.md) section 4) and answer an error page.**
+  A browser ignores such a cookie without an error (RFC 6265bis draft, sections 5.6 and 5.7) [2].
+  The sign-in would then look done, and the next request would answer `401`. When re-issuing the
+  cookie after a refresh would pass 4096 bytes, end the session and log it at `ERROR`
+  ([logging.md](../../python/logging/logging.md) section 4), since a provider that rotates refresh
+  tokens has already rotated the one in the cookie the browser
   keeps; the sign-in case stays as above, and the rule for a re-issue is this practice's choice.
 - **BFF: with the session's state on the server, let only the BFF's own identity, and the identity
   of step 2 of the leaked-key plan ("Keys and secrets" below) only while that run lasts, reach the
   session store, over TLS, and encrypt the store's backups and replicas at rest,** since the store
-  holds every user's tokens: server-side sessions "keep all data on the server", as RFC 10017
+  holds every user's tokens. Server-side sessions "keep all data on the server", as RFC 10017
   section 6.1.2.3 puts it [1]. OWASP's Session Management cheat sheet asks to "restrict access to
   the session store and encrypt backups and replicas at rest" [8]. Reaching the store over TLS, and
   the leaked-key run's identity as the one other identity that reaches it, are this practice's
@@ -543,12 +546,12 @@ that encrypts the tokens in session records ("The session's life, from login to 
 for that key, read "cookie" in the rules below as "session record". Where a framework protects the
 cookies, these rules are checks on it; write code only for a rule it does not meet.
 
-- **BFF: keep the client credential, with which the BFF authenticates to the identity provider
-  that registered it, and every key that signs or encrypts a cookie, the login cookie's included,
-  in the server's secret store, or in a shared store encrypted under a key that only the secret
-  store holds, never in code or a build artifact,** so no copy of the code holds a secret (ASVS 5.0
-  requirement 13.3.1) [44]. OWASP's Cryptographic Storage cheat sheet asks that a key which
-  encrypts other keys be stored apart from them [46].
+- **BFF: keep the client credential and every key that signs or encrypts a cookie, the login
+  cookie's included, in the server's secret store, or in a shared store encrypted under a key that
+  only the secret store holds, never in code or a build artifact,** so no copy of the code holds a
+  secret (ASVS 5.0 requirement 13.3.1) [44]. The client credential is what the BFF authenticates
+  with to the identity provider that registered it. OWASP's Cryptographic Storage cheat sheet asks
+  that a key which encrypts other keys be stored apart from them [46].
 - **BFF: let the BFF's own identity only read the client credential and the keys in the store, and
   only the job that rotates the keys write them,** so nobody else who reaches the store, the BFF's
   own instances included, can add a key of their own and forge cookies (ASVS 5.0 requirement
@@ -556,12 +559,23 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   "access to secret assets adheres to the principle of least privilege" [44]. The read-only
   identity is this practice's choice. An emergency run during an incident, which the leaked-key
   plan below names who starts, is a run of the job that writes a new key with a start time of now,
-  then deletes the leaked key id. The one other identity this rule allows is that of step 2 of the
-  leaked-key plan below: it reads the leaked key and the client credential, only while that run
-  lasts; that identity is this practice's choice.
+  then deletes the leaked key id. The one other identity this rule allows to read the keys and the
+  client credential is that of step 2 of the leaked-key plan below: it reads the leaked key and the
+  client credential, only while that run lasts; that identity is this practice's choice. With an
+  identity provider, the client-credential rule below keeps two more entries in the store: the
+  credential for the provider's management API and the test account's refresh token. The rotation
+  job reads the management credential, and reads and writes the test account's refresh token,
+  since it stores the answer of each test refresh; the BFF's own identity reads neither. One
+  person or role the team writes down ("Write it down" above) puts both entries into the store and
+  replaces them: the test account's token at each sign-in again (step 3 of that rule), and the
+  management credential when it leaks, or when it sat where a cookie key leaked (step 4 of the
+  leaked-key plan below). Who reads and writes these two entries, and who replaces them, are this
+  practice's choice.
 - **BFF: where the key store keeps a log of writes, alert a person (section 3, "Logging") on a
   write by any identity other than the rotation job,** since such a write may be a planted key,
-  which every instance accepts at its next reload; the alert is this practice's choice.
+  which every instance accepts at its next reload; the alert is this practice's choice. Leave out
+  a write of the management credential or the test account's refresh token by the person or role
+  the rule above names; every other write by an identity other than the rotation job still alerts.
 - **BFF: have each run of the rotation job log at `INFO` the key ids it added and removed, and at
   `ERROR` any step that failed,** so a run that stopped, or a removal that did not happen, shows in
   the log; the logs are this practice's choice.
@@ -577,7 +591,7 @@ cookies, these rules are checks on it; write code only for a rule it does not me
 - **BFF: give the session cookie and the login cookie each its own key, or a subkey derived from
   the key with a fixed purpose label per cookie, and give each environment its own keys,** so a
   value from one cookie never decrypts as the other, and a key copied to a test system cannot
-  forge a production cookie; the rule is this practice's choice. NIST SP 800-57 Part 1 section 5.2
+  forge a production cookie. The rule is this practice's choice. NIST SP 800-57 Part 1 section 5.2
   says: "In general, a single key shall be used for only one purpose" [50]. ASVS 5.0
   requirement 11.1.1 asks that keys are "not overshared" [47]. ASP.NET Core derives a
   subkey for each purpose string, so that "no other component can read its payloads"
@@ -602,23 +616,23 @@ cookies, these rules are checks on it; write code only for a rule it does not me
 - **BFF: with the session's state in the cookie, protect the cookie with authenticated encryption,
   such as AES-GCM, from a vetted library, the framework's own cookie protection where it has one,
   never with a scheme you build from primitives yourself,** so the encryption comes from code that
-  others review and keep patched, and an edited cookie fails the check instead of being read
-  (ASVS 5.0 requirements 11.2.1 and 11.3.3; OWASP's Cryptographic Storage cheat sheet)
+  others review and keep patched [47], [46]. An edited cookie then fails the check instead of
+  being read (ASVS 5.0 requirements 11.2.1 and 11.3.3; OWASP's Cryptographic Storage cheat sheet)
   [47], [46].
 - **BFF: before you build the key list and the rotation below, weigh a managed key service (KMS)
   that holds the keys and runs the encryption itself:** it wins where a KMS is available, the call
-  volume is low and the keys never need to leave it; the hand-built key list is needed where every
+  volume is low and the keys never need to leave it. The hand-built key list is needed where every
   request decrypts a cookie, as with the session's state in the cookie, or where no KMS is
   available. OWASP's Key Management cheat sheet asks that cryptographic operations "be performed
   inside the isolated cryptographic security module boundary so that plaintext key material is
   never exposed outside the module" [54], and ASVS 5.0 requirement 13.3.3, at Level 3, asks that
   "all cryptographic operations are performed using an isolated security module (such as a vault
   or hardware security module)" [44]. When each one fits is this practice's choice.
-- **BFF: store each cookie key with its id, its format version, its material, the time it starts
-  protecting new cookies and, where the cookies use separate keys rather than subkeys of one key,
-  its purpose, the cookie it protects; have an instance protect new cookies with the newest key
-  whose start time has passed, of that cookie's purpose where keys have one,** so a key added to
-  the store reaches every running instance before any of them protects with it, and the job and
+- **BFF: store each cookie key with its id, its format version, its material and the time it starts
+  protecting new cookies.** Where the cookies use separate keys rather than subkeys of one key, also
+  store its purpose, the cookie it protects. Have an instance protect new cookies with the newest
+  key whose start time has passed, of that cookie's purpose where keys have one. A key added to the
+  store then reaches every running instance before any of them protects with it, and the job and
   the instances can tell from the store which cookie a key protects. The purpose is this
   practice's choice. The start time is this practice's choice, after ASP.NET
   Core, which gives a new key "an activation date of { now + 2 days }" so that other
@@ -627,31 +641,35 @@ cookies, these rules are checks on it; write code only for a rule it does not me
 - **BFF: have an instance re-read the key list at an interval the team writes down ("Write it
   down" above), and also on a reload signal where the platform has one, and log the key ids it
   loaded with the id under which the load balancer lists the instance,** so a key added to the
-  store reaches it within one interval, and the log shows which keys each listed instance holds.
+  store reaches it within one interval. The log shows which keys each listed instance holds.
+  The same line names the format versions the instance reads and, with an identity provider, the
+  id of each client-credential entry it loaded and which one is "current", never the secret.
   Write the interval down long enough that half of it still covers the rotation job's gap between
-  runs, the log store's ingestion delay and the scheduler's start delay, so a run of the job
+  runs, the log store's ingestion delay and the scheduler's start delay. So a run of the job
   falls inside the check window of step 1 below, and the alert on a rotation job that logged no
-  run (section 3, "Logging") stays quiet while the job runs on schedule; that length is this
+  run (section 3, "Logging") stays quiet while the job runs on schedule. That length is this
   practice's choice. When the list holds an entry the instance cannot parse, or one whose format
   version it does not know, the instance skips that entry, logs it at `ERROR`
   ([logging.md](../../python/logging/logging.md) section 4) with the key id, and counts that load
-  as failed for the stale-list limit below; the rotation job writes a key in a new format version
-  only after every instance has logged that it reads that version. The reload is this practice's
-  choice, after ASP.NET Core, which checks the store for changes "approximately every 24 hours"
-  [22]. Skipping such an entry and the order for a new format version are this practice's choice.
-- **BFF: when an instance cannot read the key store, have it keep the list it loaded and log at
-  `ERROR` ([logging.md](../../python/logging/logging.md) section 4) with the key ids it still
-  holds,** so an outage of the store alone signs nobody out. An instance whose last successful
-  load of the key list is older than a limit the team writes down reports not ready, so the load
-  balancer takes it out, as step 5 of the leaked-key plan below does. Set the limit to the longest
-  key-store outage the BFF must ride out plus one reload interval, since instances pass the limit
-  up to one reload interval apart, and write the value down with that reason. The limit on a stale
-  list is this practice's choice.
+  as failed for the stale-list limit below. The rotation job writes a key in a new format version
+  only after every instance has logged that it reads that version, which the job reads from the
+  log store as it reads the key ids in step 1. The reload is this practice's choice, after ASP.NET
+  Core, which checks the store for changes "approximately every 24 hours" [22]. Skipping such an
+  entry and the order for a new format version are this practice's choice.
+- **BFF: when an instance cannot read the key store, have it keep the list it loaded and log each
+  failed reload at `WARNING` ([logging.md](../../python/logging/logging.md) section 4) with the key
+  ids it still holds,** so an outage of the store alone signs nobody out. An instance whose last
+  successful load of the key list is older than a limit the team writes down reports not ready, so
+  the load balancer takes it out, as step 5 of the leaked-key plan below does, and logs that it
+  passed the limit at `ERROR` ([logging.md](../../python/logging/logging.md) section 4). Set the
+  limit to the longest key-store outage the BFF must ride out plus one reload interval, since
+  instances pass the limit up to one reload interval apart, and write the value down with that
+  reason. The limit on a stale list is this practice's choice.
 - **BFF: where the load balancer sends requests to instances that report not ready, have the
   instance itself refuse the routes that read or set a cookie once its list is older than the
-  limit, as it does when it starts without a key,** since reporting not ready takes an instance
-  out only where the load balancer sends nothing to an instance that reports not ready, even when
-  every instance does. An AWS ALB, and Envoy past its panic threshold in its mode that sends to
+  limit,** as it does when it starts without a key. Reporting not ready takes an instance out only
+  where the load balancer sends nothing to an instance that reports not ready, even when every
+  instance does. An AWS ALB, and Envoy past its panic threshold in its mode that sends to
   every host, send to such instances anyway. AWS's docs say that when a target group holds only
   unhealthy targets, the load balancer "routes requests to all those targets, regardless of their
   health status" [150]. Envoy's docs say that when too few hosts are healthy, Envoy "will
@@ -668,32 +686,36 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   user whose cookie it protected.
   1. The rotation job adds the new key to the store with a start time ahead by the longest
      key-store outage the BFF must ride out (the rule on an instance that cannot read the key
-     store, above), plus three reload intervals, plus the clock skew between instances, so an
+     store, above), plus three reload intervals, plus the clock skew between instances. So an
      outage the team planned to ride out ends before the start time. It checks on its first run
      after one reload interval plus the log store's ingestion delay has passed since it wrote the
      key, and before two reload intervals have passed, so a start time moved by that check still
      reaches every instance, each within one reload interval, before the old start time passes.
      The check reads the key ids logged by the instances the load balancer lists at that moment:
-     each must have logged a key list that holds the new key id. The job reads the load
-     balancer's list of instances from its API, and the log lines from the log store, with a
-     read-only identity of its own, and matches each listed instance to its lines by the id the
-     instance logs with its key ids (the reload rule above); a line it cannot find counts as not
-     loaded. When an instance has not logged the new key id, or when a run finds that the check's
-     window passed with no check logged, the job moves the start time later by the same margin at
-     once, only while the start time has not passed, and checks again the same way, and the team
-     finds out why. A run that needs to move the start time but cannot write the store logs it at
-     `ERROR` ([logging.md](../../python/logging/logging.md) section 4) and tries again on its next
-     run.
+     each must have logged a key list that holds the new key id. It counts the instances the load
+     balancer lists as registered and in use, and leaves out one it lists as deregistering or not
+     in use, since such an instance may log no new reload: for an AWS Application Load Balancer,
+     the states `draining` and `unused`, where `unused` includes a target "in the stopped or
+     terminated state" [150]. The job reads the load balancer's list of instances from its API,
+     and the log lines from the log store, with a read-only identity of its own, and matches each
+     listed instance to its lines by the id the instance logs with its key ids (the reload rule
+     above); a line it cannot find counts as not loaded. When an instance has not logged the new
+     key id, or when a run finds that the check's window passed with no check logged, the job
+     moves the start time later by the same margin at once, only while the start time has not
+     passed, and checks again the same way, and the team finds out why. A run that needs to move the start time but cannot write the store logs it at
+     `WARNING` ([logging.md](../../python/logging/logging.md) section 4) and tries again on its
+     next run; a run that finds the check's window passed with the move still unwritten logs it at
+     `ERROR` ([logging.md](../../python/logging/logging.md) section 4).
   2. The start time passes, and every instance protects new cookies with the new key; this step
      needs no act.
   3. The job removes the old key only when the new key's start time, plus one reload interval,
-     plus the clock skew, plus the longest lifetime of a cookie the old key protects has passed:
-     the session cookie's absolute timeout where the key protects the session cookie, the login
-     cookie's `Max-Age` where it protects only login cookies, and the session's absolute timeout
-     where it encrypts the tokens in session records. It removes it only when, in addition, every
-     instance the load balancer lists at that moment has logged a key list that holds the new key
-     id, and the most recent reload of each of them succeeded; the job reads both from the log
-     store as in step 1.
+     plus the clock skew, plus the longest lifetime of a cookie the old key protects has passed.
+     That lifetime is the session cookie's absolute timeout where the key protects the session
+     cookie, the login cookie's `Max-Age` where it protects only login cookies, and the session's
+     absolute timeout where it encrypts the tokens in session records. It removes it only when, in
+     addition, every instance the load balancer lists at that moment as registered and in use,
+     counted as in step 1, has logged a key list that holds the new key id, and the most recent
+     reload of each of them succeeded; the job reads both from the log store as in step 1.
 
   NIST SP 800-57 Part 1 section 5.3.5 lets a key keep reading after it stops protecting new data
   [50]. The express-session library has no start time: it signs with the first secret in its list
@@ -709,11 +731,16 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   unchecked, while a key that waits for the act never starts protecting cookies, so the act fails
   safe, at the cost of a second write. This practice keeps the start time, as ASP.NET Core does
   (the rule above), since the job then writes each new key's material once, and its only later act
-  on the key is to move the start time when the check in step 1 fails; it relies on the alert on a
-  rotation job that logged no run (section 3, "Logging") for a job that stops. The checks in steps
-  1 and 3, the job as their actor, the instances the load balancer lists as their set, the log
-  store as their channel, the margin with the key-store outage in it, the check's window and the
-  retry of a move the store refused are this practice's choice.
+  on the key is to move the start time when the check in step 1 fails. It relies on the alert on a
+  rotation job that logged no run (section 3, "Logging") for a job that stops. Where the platform
+  gives no list of instances, or no log line per instance, the job cannot run the check of step 1.
+  It then logs at `INFO` ([logging.md](../../python/logging/logging.md) section 4) on each run that
+  no check ran. The start margin of step 1 and the stale-list limit are then the only controls,
+  and the team writes that down ("Write it down" above). The checks in steps 1 and 3, the job as
+  their actor, the instances the load balancer lists as registered and in use as their set, and
+  the log store as their channel are this practice's choice. So are the margin with the key-store
+  outage in it, the check's window, the retry of a move the store refused, and what a run does
+  where the platform gives no list of instances or no log line per instance.
 - **BFF: before the BFF's first release to users, write down how long each cookie key protects new
   cookies and when the client credential is rotated ("Write it down" above),** so the job rotates
   by a period chosen for the threat model and the key's limits, not by a default. ASVS 5.0
@@ -743,19 +770,29 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   its window has come, and runs step 3 when its condition holds. A run adds a key only when no key
   younger than the period exists, for that purpose where keys have one; two runs at once may still
   both add one, which is harmless, since every instance loads both keys and step 1 checks each.
-  Each run logs at `INFO` ([logging.md](../../python/logging/logging.md) section 4) what it
-  decided. These run rules are this practice's choice.
+  With an identity provider, the job starts the client-credential steps (the rule below) on the
+  credential's written rotation date, and on each run reads which of those steps is due from the
+  entries in the secret store, whether "next" exists and which entry is "current", and from the
+  instances' log lines, as it does for the key steps. Each run logs at `INFO`
+  ([logging.md](../../python/logging/logging.md) section 4) what it decided. These run rules are
+  this practice's choice.
 - **BFF: before the first instance of an environment starts, run the rotation job once by hand,
   and give its first key a start time of now,** so the first instance finds a key it can protect
   cookies with; no instance runs yet that would have to load the key first. The rule is this
   practice's choice.
 - **BFF: before the BFF's first release to users, run one cookie-key rotation and, with an
-  identity provider, one client-credential rotation (the rule below) in a test environment, with
-  a period of minutes and a reload interval of seconds,** and check that no test session is
-  signed out, that step 1 holds back while one instance is kept on its old key list, and that the
-  alerts on the key's age and on an old key still in the store (section 3, "Logging") fire, so a
-  rotation step that does not work shows before the first rotation in production; the rule is
-  this practice's choice.
+  identity provider, one client-credential rotation (the rule below) in a test environment,** so a
+  rotation step that does not work shows before the first rotation in production. Check that no
+  test session is signed out, that step 1 holds back while one instance is kept on its old key
+  list, and that the alerts on the key's age and on an old key still in the store (section 3,
+  "Logging") fire. The rule is this practice's choice. Run the test with a reload interval the
+  reload rule's lower bound allows, a few minutes where the scheduler runs at most once a minute, a
+  period no shorter than the start margin of step 1 plus one lifetime of a cookie the old key
+  protects, and timeouts of minutes. Where the platform fixes the reload interval, run the
+  test with that interval, or with a reload of your own on a timer. ASP.NET Core Data Protection
+  fixes it: its source says the refresh period "is currently fixed at 24 hours" and "is not
+  settable" [154], and its docs say that "The default key lifetime cannot be shorter than 7 days"
+  [22].
 - **BFF, with an identity provider: rotate the client credential so that one credential works at
   every moment.** Where the provider allows two credentials at once, keep two named entries in the
   secret store, "current", which every instance uses, and "next":
@@ -772,9 +809,10 @@ cookies, these rules are checks on it; write code only for a rule it does not me
      keep "current", and log it at `ERROR`
      ([logging.md](../../python/logging/logging.md) section 4).
   4. Have the job mark "next" as "current", and let every instance reload.
-  5. When every instance the load balancer lists at that moment has logged an entry list whose
-     "current" is the new credential, named by an id and never by the secret, have the job remove
-     the old one at the provider, through its management API with the credential of step 1.
+  5. When every instance the load balancer lists at that moment has logged, in the line of the
+     reload rule above, an entry list whose "current" is the new credential, named by an id and
+     never by the secret, have the job remove the old one at the provider, through its management
+     API with the credential of step 1.
 
   To switch back before step 5, mark the old entry "current" again. Where the provider allows only
   one, write down the outage the switch causes ("Write it down" above). A credential the BFF does
@@ -789,19 +827,17 @@ cookies, these rules are checks on it; write code only for a rule it does not me
 - **BFF: treat a session or login cookie that fails to decrypt or verify, or names a key the BFF no
   longer holds, as a request with no cookie, never as a `500`, and log the reason (unknown key,
   failed check, expired) at `INFO` ([logging.md](../../python/logging/logging.md) section 4)
-  without the cookie's value,** so a failed rotation shows in the log as a burst of unknown-key
-  lines, and in the rate alert of section 3, "Logging", not as random sign-outs; the rule is this
-  practice's choice. The
-  iron-session library starts a new empty session when it cannot read a cookie, since "a 500 on
-  every request would be worse", and its README reads a burst of `unknown-password` reasons as a
-  sign that a password rotation went wrong [49]. ASP.NET Core's docs describe the
-  failure in a web farm: on a node that cannot decrypt the authentication cookie, authorization
-  for the requested resource fails [52].
+  without the cookie's value.** A failed rotation then shows in the log as a burst of unknown-key
+  lines, and in the rate alert of section 3, "Logging", not as random sign-outs. The rule is this
+  practice's choice. The iron-session library starts a new empty session when it cannot read a
+  cookie, since "a 500 on every request would be worse", and its README reads a burst of
+  `unknown-password` reasons as a sign that a password rotation went wrong [49]. ASP.NET Core's
+  docs describe the failure in a web farm: on a node that cannot decrypt the authentication
+  cookie, authorization for the requested resource fails [52].
 - **BFF: when you suspect that a cookie key leaked, replace it by the five steps below, though that
   signs out every user whose cookie the leaked key protected,** since whoever holds the key can
-  write a cookie the BFF accepts and read the tokens in any copy of a cookie it encrypted, and each
-  instance keeps the key list it loaded until it reloads [54],
-  [22].
+  write a cookie the BFF accepts and read the tokens in any copy of a cookie it encrypted [54].
+  Each instance keeps the key list it loaded until it reloads [22].
   1. Start the emergency run of the rotation job: it writes a new key to the store with a start
      time of now, as the key that protects new cookies.
   2. Where the leaked key encrypts the tokens in session records, first restart or reload every
@@ -811,7 +847,7 @@ cookies, these rules are checks on it; write code only for a rule it does not me
      logout rules revoke it, since once the key is gone those records cannot be read. For this
      step the run uses an identity of its own, only while the run lasts, which the rule on the
      session store's access and the rule on the key store's readers above name as the one other
-     identity they allow: it has read and write access to the session store, and reads the leaked
+     identity they allow. It has read and write access to the session store, and reads the leaked
      key to read the records and the client credential to revoke. The run reuses the BFF's own
      logout and revoke code, and finds the records by the key id each record starts with. A
      session store that cannot list records by that key id must be able to before the team
@@ -835,7 +871,9 @@ cookies, these rules are checks on it; write code only for a rule it does not me
      to [15]. Replace it in the order the next rule gives for a client credential leaked on its
      own: remove the leaked credential at the provider first, accepting the outage, then add and
      load the new one, never by the steps of the client-credential rule above, which keep the
-     leaked credential working until their last step.
+     leaked credential working until their last step. When the credential for the provider's
+     management API sat there too, replace it as well, since it can add client credentials at the
+     provider; the person or role the rule on who reads and writes the store names replaces it.
   5. Check each instance by its own address, not through the load balancer. For a key that
      protects login cookies, send each instance's login callback a login cookie the leaked key
      protected, with its matching `state`, and expect the error page of a failed callback. For the
@@ -857,8 +895,8 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   organisation as a reason to rotate it [46].
 - **BFF: before the BFF's first release to users, write down the steps for a leaked cookie key, who
   runs them, who starts the emergency run of the rotation job that writes the store, who to notify
-  and how to check them, with the list of keys in each environment,** so the keys can be replaced
-  quickly when a leak comes, not worked out under pressure. OWASP's
+  and how to check them,** so the keys can be replaced quickly when a leak comes, not worked out
+  under pressure. Write the list of keys in each environment down with them. OWASP's
   Cryptographic Storage cheat sheet asks that "the code and processes required to rotate a key are
   in place before they are required, so that keys can be quickly rotated in the event of a
   compromise" [46]. Its Key Management cheat sheet says "A
@@ -894,20 +932,20 @@ cookies, these rules are checks on it; write code only for a rule it does not me
 - **BFF, with an identity provider: at the login callback, when destroying the old session fails,
   log it at `ERROR` ([logging.md](../../python/logging/logging.md) section 4), issue no new
   session and answer the error page of a failed callback** (the login cookie rules above), so a
-  failed destroy never leaves the old session live beside a new one; ASVS 5.0 requirement 16.5.3
+  failed destroy never leaves the old session live beside a new one. ASVS 5.0 requirement 16.5.3
   asks to prevent fail-open conditions [56]. A session the store no longer holds counts as
   destroyed; only a store error is a failed destroy.
 - **BFF, with an identity provider: at the login callback, store the ID token's `iss` and `sub`
   with the new session, and its `sid` when the ID token carries one,** since the back-channel
-  logout rules and the step-up's checks below match on them, and a provider sends `sid` only when
-  it supports it (OpenID Connect Back-Channel Logout 1.0, sections 2.1 and 2.7)
-  [57]. With the session's state on the server, the index rule in
-  "Re-authentication" below writes them into the index of sessions by user and by `sid`.
+  logout rules and the step-up's checks below match on them. A provider sends `sid` only when it
+  supports it (OpenID Connect Back-Channel Logout 1.0, sections 2.1 and 2.7) [57]. With the
+  session's state on the server, the index rule in "Re-authentication" below writes them into the
+  index of sessions by user and by `sid`.
 - **BFF: create the session id from a CSPRNG with at least 128 bits of entropy: check that the
   framework's session manager does, and where you write it yourself, draw 32 bytes from the
   operating system's CSPRNG, never a UUID,** so nobody can guess a live id (ASVS 5.0 requirements
-  7.2.3 and 11.5.1; OWASP's Session Management cheat sheet, which asks for at least 128 bits for an
-  id you create yourself) [42], [47], [8].
+  7.2.3 and 11.5.1) [42], [47]. OWASP's Session Management cheat sheet asks for at least 128 bits
+  for an id you create yourself [8].
 - **BFF: with the session's state on the server, treat a session cookie whose id the store does not
   hold as no session, and never create or save a session under an id the request brought,** so an
   attacker cannot plant an id and wait for the user to sign in under it. OWASP's Session
@@ -939,11 +977,11 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   such as a cookie's `Max-Age`, can be changed to extend the session, so the server checks both
   timeouts on every request [8]. ASVS 5.0 requirements 7.3.1 and 7.3.2
   ask for both timeouts [42]. With the session's state in the cookie, the cookie's
-  protected value carries the session's start time and its last-use time, and the BFF checks both;
-  the idle clock moves when the BFF re-issues the cookie on use, and the BFF re-issues it only when
-  its content changed: new tokens, or a last-use time that moved past a step the team writes down,
-  since a request still in flight with the old cookie can otherwise overwrite a newer one (section
-  5); that is this practice's choice. ASP.NET Core's cookie
+  protected value carries the session's start time and its last-use time, and the BFF checks both.
+  The idle clock moves when the BFF re-issues the cookie on use. The BFF re-issues it only when its
+  content changed: new tokens, or a last-use time that moved past a step the team writes down.
+  Otherwise a request still in flight with the old cookie can overwrite a newer one (section 5).
+  That is this practice's choice. ASP.NET Core's cookie
   authentication, with `ExpireTimeSpan` and `SlidingExpiration`, gives the idle timeout only: it
   re-issues the cookie once more than half of `ExpireTimeSpan` has passed and then sets the
   ticket's issue time to now, so the absolute timeout needs the start time kept as a value of its
@@ -955,11 +993,11 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   invalidate the session data at the application backend [42].
 - **BFF: write both timeout values down, as values with their reason ("Write it down", above, says
   where), and say why where a value is longer than NIST's for the session's assurance level.** The
-  values come from the risk: OWASP gives 2 to 5 minutes idle for high-value applications and 15 to
-  30 minutes for low-risk ones, and 4 to 8 hours absolute for an office application;
+  values come from the risk. OWASP gives 2 to 5 minutes idle for high-value applications and 15 to
+  30 minutes for low-risk ones, and 4 to 8 hours absolute for an office application [8].
   NIST SP 800-63B-4 says the overall timeout should be at most 24 hours and the idle one at most 1
   hour at AAL2, and at AAL3 the overall timeout shall be at most 12 hours and the idle one should
-  be at most 15 minutes [8], [41]. ASVS 5.0
+  be at most 15 minutes [41]. ASVS 5.0
   requirement 7.1.1 asks for the values to be documented, with the reason for any departure from
   NIST SP 800-63B's re-authentication requirements [42]. OWASP's Session Management cheat sheet
   offers a third timeout as the alternative, a renewal timeout "after which the session ID is
@@ -984,11 +1022,11 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   and the conditions that require re-authentication, to be documented and to behave as documented
   [42].
 - **BFF, with an identity provider: where the timeouts must make the user sign in again, send
-  `max_age` with a value the team writes down, the absolute timeout or shorter, on every login
-  start that has no live session, and at its callback refuse an ID token whose `auth_time` is
-  older than that, or that has no `auth_time`,** since `max_age` makes the provider
-  re-authenticate a user whose last sign-in is older than it allows, and puts `auth_time` in the
-  ID token for the client to check (OpenID Connect Core 1.0 sections 3.1.2.1 and 3.1.3.7) [27].
+  `max_age` on every login start that has no live session, and at its callback refuse an ID token
+  whose `auth_time` is older than that, or that has no `auth_time`.** Set its value, the absolute
+  timeout or shorter, and write it down. `max_age` makes the provider re-authenticate a user whose
+  last sign-in is older than it allows, and puts `auth_time` in the ID token for the client to
+  check (OpenID Connect Core 1.0 sections 3.1.2.1 and 3.1.3.7) [27].
   Section 3.1.2.1 makes the claim required when `max_age` is sent: "When max_age is used, the ID
   Token returned MUST include an auth_time Claim Value" [27]. The BFF needs no memory of the
   session that ended; the value is this practice's choice.
@@ -1007,9 +1045,9 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   5.2 lists, keep the session, answer the page `502` and log it at `ERROR`
   ([logging.md](../../python/logging/logging.md) section 4),** since those codes
   (`invalid_request`, `invalid_client`, `unauthorized_client`, `unsupported_grant_type` and
-  `invalid_scope`) mostly name the client's own request or setup, not the user's grant: ending
-  the session on them would sign every user out after one wrong setting, such as a client secret
-  rotated at the provider but not in the BFF [15]. `invalid_scope` can also mean a scope
+  `invalid_scope`) mostly name the client's own request or setup, not the user's grant [15].
+  Ending the session on them would sign every user out after one wrong setting, such as a client
+  secret rotated at the provider but not in the BFF. `invalid_scope` can also mean a scope
   beyond the one the user granted (RFC 6749 section 5.2), which a refresh that asks for the
   granted scope does not ask for [15]. The rule is this practice's choice.
 - **BFF: when a refresh fails in any other way, keep the session, answer the page `502` or `503`,
@@ -1028,7 +1066,7 @@ cookies, these rules are checks on it; write code only for a rule it does not me
 - **BFF, with an identity provider: request what your provider needs to issue a refresh token, and
   when a login's answer carries none, end the session when its access token expires, and write
   that shorter session down ("Write it down" above),** since every refresh rule here needs a
-  refresh token, and without one the session would outlive the access token it stands for. OpenID
+  refresh token. Without one the session would outlive the access token it stands for. OpenID
   Connect Core 1.0 section 11 defines the scope `offline_access` to request a refresh token, and
   lets a provider grant refresh tokens "in other contexts that are beyond the scope of this
   specification" [27], so the provider's docs say which request it needs. The rule is this
@@ -1036,9 +1074,9 @@ cookies, these rules are checks on it; write code only for a rule it does not me
 - **BFF, with an identity provider: where the provider lets you choose, give the BFF refresh
   tokens that do not rotate, or rotation with a reuse window, and write the choice down,** since
   the BFF is a confidential client whose refresh token works only with its client authentication
-  (RFC 10017 section 6.1.2.2), and without rotation the lock rules below are not needed
-  [1]. RFC 9700 section 2.2.2 adds that RFC 6749 "already mandates that refresh tokens
-  for confidential clients can only be used by the client for which they were issued" [16].
+  (RFC 10017 section 6.1.2.2) [1]. Without rotation the lock rules below are not needed. RFC 9700
+  section 2.2.2 adds that RFC 6749 "already mandates that refresh tokens for confidential clients
+  can only be used by the client for which they were issued" [16].
   RFC 9700 section 4.14.2 asks for rotation or sender-constrained refresh tokens only for public
   clients [16]. RFC 10017 asks the same of authorization servers in section 6.3.2.3, for
   refresh tokens issued to browser-based applications, not to a BFF [1]. The cost: the
@@ -1055,13 +1093,13 @@ The rules from here to the rule on a request that waited until the lock expired 
 the provider rotates the BFF's refresh tokens, has no reuse window that covers the requests in
 flight, and the session's state is on the server. They run in the order given.
 
-- **BFF: when the provider rotates the BFF's refresh tokens and has no reuse window that covers the
-  requests in flight, and the session's state is on the server, refresh the tokens of a session at
-  most once at a time, and let the session's other requests wait for that refresh and use its
-  result,** because parallel requests would each refresh with the same refresh token, and where
-  the provider rotates refresh tokens, the second use counts as reuse; the rule is this practice's
-  choice. Auth0 then revokes every refresh token issued since, with the grant, and Okta
-  invalidates the newest refresh token and the access tokens issued since sign-in, unless the
+- **BFF: refresh the tokens of a session at most once at a time, and let the session's other
+  requests wait for that refresh and use its result,** because parallel requests would each refresh
+  with the same refresh token. This rule holds when the provider rotates the BFF's refresh tokens
+  and has no reuse window that covers the requests in flight, and the session's state is on the
+  server. Where the provider rotates refresh tokens, the second use counts as reuse. The rule is
+  this practice's choice. Auth0 then revokes every refresh token issued since, with the grant, and
+  Okta invalidates the newest refresh token and the access tokens issued since sign-in, unless the
   reuse falls in its grace period [65], [62].
 - **BFF: with the session's state on the server, hold that one refresh with a lock that every
   instance shares, keyed by the session id,** since the session's requests can reach any instance;
@@ -1071,8 +1109,8 @@ flight, and the session's state is on the server. They run in the order given.
   twice, which the provider counts as reuse (above); the rule is this practice's choice.
 - **BFF: give the call to the token endpoint, together with the store of its answer, a timeout,
   and give the lock that holds a session's refresh an expiry a little longer than that timeout,**
-  so a lock whose holder stopped frees itself while the requests that wait for it still wait, and
-  a slow provider alone does not make a refresh outlive its lock; a call that times out is a
+  so a lock whose holder stopped frees itself while the requests that wait for it still wait. A
+  slow provider alone also does not make a refresh outlive its lock. A call that times out is a
   provider that does not answer (the refresh failure rule above). Timeouts lower that chance and
   do not remove it. Kleppmann holds that a lock's holder paused past the lock's expiry can still
   write after another client has taken the lock, and that a timeout does not show that the other
@@ -1087,12 +1125,11 @@ flight, and the session's state is on the server. They run in the order given.
   value stored at the key is exactly the one I expect to be", since "Using just `DEL` is not safe
   as a client may remove another client's lock" [152]. The values are this practice's choice.
 - **BFF: after taking the lock, read the session's tokens again from the store, and refresh only
-  when the access token read then still needs it, because it has expired or because it is the
-  token a resource server has just rejected with a `401` (section 3, "Forwarding tokens");
-  otherwise use that token,** since a request that
+  when the access token read then still needs it; otherwise use that token,** since a request that
   read the session before the last holder stored its new tokens carries a refresh token the
-  provider has already rotated, and sending it is the reuse the lock is there to prevent; the rule
-  is this practice's choice.
+  provider has already rotated. Sending it is the reuse the lock is there to prevent. The access
+  token still needs a refresh when it has expired, or when it is the token a resource server has
+  just rejected with a `401` (section 3, "Forwarding tokens"). The rule is this practice's choice.
 - **BFF: store the new tokens before you release the lock,** so the next request that takes it
   refreshes with the newest refresh token, never with one the provider has already rotated; the
   rule is this practice's choice. A session the store no longer holds when the new tokens are
@@ -1102,19 +1139,19 @@ flight, and the session's state is on the server. They run in the order given.
   the browser abandons, such as one for a cancelled query, would otherwise leave stored a refresh
   token the provider has already rotated.
 - **BFF: before the holder releases the lock, write the refresh's outcome, done or failed with its
-  time, under the session's key in the store that holds the lock, with the lock's expiry; a
-  request that takes the lock reads that outcome first, and when it finds a failure written after
-  it began to wait, it answers `503` without refreshing,** since the lock is shared across
-  instances, so a waiting request learns only that the lock was released, not whether the refresh
-  behind it failed; the rule is this practice's choice.
+  time, under the session's key in the store that holds the lock, with the lock's expiry.** A
+  request that takes the lock reads that outcome first. When it finds a failure written after it
+  began to wait, it answers `503` without refreshing. The lock is shared across instances, so a
+  waiting request learns only that the lock was released, not whether the refresh behind it
+  failed. The rule is this practice's choice.
 - **BFF: when the refresh that holds the lock fails, or its new tokens cannot be stored, release
-  the lock, answer `503` to every request that waited for it, and to the holder's own request when
-  the store failed, and log it once at `ERROR` ([logging.md](../../python/logging/logging.md)
-  section 4),** so no waiting request takes the lock and refreshes again with a refresh token the
-  provider may already have rotated, and the page sees an outage it can retry, not a sign-out; the
-  rule is this practice's choice. A lock in a store that cannot be written ends at its expiry.
-  After a failed store, the retry avoids a sign-out only while the provider's reuse window lasts,
-  since the refresh token still stored is one the provider has already rotated.
+  the lock, answer `503` to every request that waited for it, and log it once at `ERROR`
+  ([logging.md](../../python/logging/logging.md) section 4),** so no waiting request takes the lock
+  and refreshes again with a refresh token the provider may already have rotated. When the store
+  failed, answer `503` to the holder's own request too. The page sees an outage it can retry, not a
+  sign-out. The rule is this practice's choice. A lock in a store that cannot be written ends at
+  its expiry. After a failed store, the retry avoids a sign-out only while the provider's reuse
+  window lasts, since the refresh token still stored is one the provider has already rotated.
 - **BFF: answer `503` to a request that waited for the refresh until the lock expired, and log it
   at `ERROR` ([logging.md](../../python/logging/logging.md) section 4),** so the page sees an
   outage it can retry, not a sign-out; the rule is this practice's choice.
@@ -1136,20 +1173,20 @@ flight, and the session's state is on the server. They run in the order given.
   resource fails, and to prevent fail-open conditions [56].
 - **BFF: keep the list of ended sessions, the per-user times, the single-use marks of the
   re-authentication window and the refresh locks in stores that never evict them before their own
-  expiry and keep them through a restart, and count a read or a write that passes a timeout the
-  team writes down as one that cannot be read (the rule above),** since a store that evicted them,
-  restarted empty or failed over answers "not on the list", so a logged-out cookie works again
-  with no error and no log line; the rule is this practice's choice. Keep every entry of the list
-  of ended sessions, whoever writes it, for one absolute timeout after it was written, and every
+  expiry and keep them through a restart,** since a store that evicted them, restarted empty or
+  failed over answers "not on the list". So a logged-out cookie works again with no error and no
+  log line. Count a read or a write that passes a timeout the team writes down as one that cannot
+  be read (the rule above). The rule is this practice's choice. Keep every entry of the list of
+  ended sessions, whoever writes it, for one absolute timeout after it was written, and every
   per-user time for one absolute timeout after its latest write, since every cookie such an entry
-  stops started before it was written, so by then the cookie has passed its absolute timeout; the
+  stops started before it was written, so by then the cookie has passed its absolute timeout. The
   two lifetimes are this practice's choice. Read the store's eviction policy when you deploy, and
   alert a person (section 3, "Logging") when the store reports an eviction or a restart of the
   store that holds those entries. With the session's state in the cookie, the entries the store
-  lost cannot be rebuilt, so the person decides either to replace the cookie key by the leaked-key
+  lost cannot be rebuilt. So the person decides either to replace the cookie key by the leaked-key
   plan ("Keys and secrets" above), which signs every user out, or to accept that a logged-out
   cookie may work until its absolute timeout, and writes the decision down ("Write it down"
-  above); the decision is this practice's choice.
+  above). The decision is this practice's choice.
 
 ### Logout
 
@@ -1159,11 +1196,11 @@ flight, and the session's state is on the server. They run in the order given.
   ask for the session to end on the server [8], [42],
   [67].
 - **BFF: with the session's state on the server, end a session with a write that a request still
-  running cannot undo: record the end where a session's save never writes it, such as the list of
-  ended sessions, which every request then checks, or delete the session in a store whose save is
-  one atomic step that fails when the record is gone (an update, never a read followed by a
-  write),** because a request still running when the session ends saves the copy it loaded and so
-  writes the session back. CVE-2025-32441 let parallel requests restore a deleted session in
+  running cannot undo,** because a request still running when the session ends saves the copy it
+  loaded and so writes the session back. Record the end where a session's save never writes it,
+  such as the list of ended sessions, which every request then checks, or delete the session in a
+  store whose save is one atomic step that fails when the record is gone (an update, never a read
+  followed by a write). CVE-2025-32441 let parallel requests restore a deleted session in
   Rack's session middleware [68]. Its advisory names a store that refuses data for a
   session ended after the request began, and the rack-session fix makes the save refuse a session
   that is gone [68], [69]. Django ticket
@@ -1171,7 +1208,7 @@ flight, and the session's state is on the server. They run in the order given.
   Django's database store, whose save is an update, does not [70].
 - **BFF: with the session's state in the cookie, write a random session id into the cookie at
   login, and copy it unchanged into every cookie the BFF re-issues for that session,** so a later
-  logout can name the session it ends, whichever copy of the cookie comes back; the rule is this
+  logout can name the session it ends, whichever copy of the cookie comes back. The rule is this
   practice's choice, after ASVS 5.0 requirement 7.4.1, which names a list of terminated tokens
   [42].
 - **BFF: with the session's state in the cookie, at logout add the cookie's session id to a list
@@ -1183,13 +1220,13 @@ flight, and the session's state is on the server. They run in the order given.
   counts revocation as enough on its own [1]; the list is this practice's addition.
 - **BFF: with the session's state in the cookie, on every request reject a cookie whose session id
   or provider `sid` is on the list of ended sessions, or whose start time is earlier than its
-  user's per-user time (set by the back-channel logout rules below and by the rule on a disabled
-  or deleted account, in "Re-authentication" below),** so a copy of the cookie stops
-  working as soon as its session ends. ASVS 5.0 requirement 7.4.1 asks to verify that, when a
-  session ends, "the application disallows any further use of the session" [42].
+  user's per-user time,** so a copy of the cookie stops working as soon as its session ends. The
+  back-channel logout rules below set the per-user time, and so does the rule on a disabled or
+  deleted account, in "Re-authentication" below. ASVS 5.0 requirement 7.4.1 asks to verify that,
+  when a session ends, "the application disallows any further use of the session" [42].
 - **BFF: with the session's state in the cookie, keep the access token's lifetime short, and write
   it down,** because revocation on its own leaves a copy of the cookie working until the access
-  token in it expires: a provider without access-token revocation leaves the token valid (RFC 7009
+  token in it expires. A provider without access-token revocation leaves the token valid (RFC 7009
   section 5), and a resource server that checks a self-contained token by itself accepts it even
   after the provider revokes it (RFC 7009 section 3) [71]. OWASP Top 10:2025 A01 asks for
   short-lived stateless tokens [67].
@@ -1206,10 +1243,10 @@ flight, and the session's state is on the server. They run in the order given.
 - **BFF: when destroying the session or adding its id to the list of ended sessions fails at
   logout, log it at `ERROR` ([logging.md](../../python/logging/logging.md) section 4), still revoke
   the tokens when the request could read them, answer `503` and keep the cookie,** so the page can
-  try again on the same session, and until it does, the session cannot get new access tokens (RFC
-  10017 section 5.2.1); the rule is this practice's choice, after ASVS 5.0 requirement 7.4.1,
+  try again on the same session. Until it does, the session cannot get new access tokens (RFC
+  10017 section 5.2.1) [1]. The rule is this practice's choice, after ASVS 5.0 requirement 7.4.1,
   which asks that a logout end every further use of the session, and 16.5.3, which asks to prevent
-  fail-open conditions [1], [42], [56].
+  fail-open conditions [42], [56].
 - **BFF: answer the logout request with success also when no session exists,** so a second tab
   that signs out after the first is not told that sign-out failed; the rule is this practice's
   choice.
@@ -1218,8 +1255,8 @@ flight, and the session's state is on the server. They run in the order given.
   review can see when a session ended. OWASP's Session Management cheat sheet says "it is
   recommended to record session related events, such as the creation, renewal, and destruction of
   session IDs, as well as details about its usage within login and logout operations"
-  [8]. A revoke that failed leaves its token alive until its own expiry, so the line shows it, and
-  a line of its own logs it at `WARNING` ([logging.md](../../python/logging/logging.md) section 4)
+  [8]. A revoke that failed leaves its token alive until its own expiry, so the line shows it. A
+  line of its own logs it at `WARNING` ([logging.md](../../python/logging/logging.md) section 4)
   with the provider's error code, as ASVS 5.0 requirement 16.3.4 asks the application to log
   "unexpected errors and security control failures" [56].
   [logging.md](../../python/logging/logging.md) section 10 keeps the raw session id out of the line.
@@ -1265,14 +1302,14 @@ flight, and the session's state is on the server. They run in the order given.
   section 4.1 warns that requiring the type breaks providers that do not set it, so check what
   yours sends and write the choice down [57].
 - **BFF: with the session's state in the cookie, end the session that a back-channel logout names
-  by adding its `sid` to the list of ended sessions, and for a logout token with no `sid`, set a
-  time per user, the latest `iat` of such a token, before which no cookie of that user counts,
-  and never replace it with an earlier time: write it with one atomic act of the store that keeps
-  the greater of the stored and the new time, never a read and then a write; keep each such entry
-  as long as the rule on stores that never evict these entries, in "Timeouts and refresh" above,
-  says,** since the cookie carries the provider's `sid`, when the ID token has one ("A new
-  session id at login" above), the every-request check above rejects both, and every session the
-  entry ends started before the token was issued.
+  by adding its `sid` to the list of ended sessions.** For a logout token with no `sid`, set a time
+  per user, the latest `iat` of such a token, before which no cookie of that user counts. Never
+  replace it with an earlier time: write it with one atomic act of the store that keeps the
+  greater of the stored and the new time, never a read and then a write. Keep each such entry as
+  long as the rule on stores that never evict these entries, in "Timeouts and refresh" above,
+  says. The cookie carries the provider's `sid`, when the ID token has one ("A new session id at
+  login" above), and the every-request check above rejects both. Every session the entry ends
+  started before the token was issued.
   Back-Channel Logout 1.0 makes the check that no token with the same `jti` was received recently
   optional (section 2.6), and lets the provider send a logout request again after a failure
   (section 2.5), so a per-user time set at the write would also end the sessions a user opened
@@ -1286,12 +1323,12 @@ flight, and the session's state is on the server. They run in the order given.
   `jti` check is optional, so without the limit a re-sent token would also end the sessions the
   user opened after the first logout [57].
 - **BFF: with the session's state on the server, after a back-channel logout ends a session, revoke
-  its refresh token at the provider, unless the token was issued with `offline_access`, log a
-  revoke that fails at `WARNING` ([logging.md](../../python/logging/logging.md) section 4) with the
-  provider's error code, and do not retry it,** since Back-Channel Logout 1.0 section 2.7 says that
-  "Refresh tokens issued without the "offline_access" property to a session being logged out
-  SHOULD be revoked" [57]. Not retrying follows the logout rule above. With the session's state in
-  the cookie, the BFF cannot revoke it (section 5).
+  its refresh token at the provider, unless the token was issued with `offline_access`,** since
+  Back-Channel Logout 1.0 section 2.7 says that "Refresh tokens issued without the
+  "offline_access" property to a session being logged out SHOULD be revoked" [57]. Log a revoke
+  that fails at `WARNING` ([logging.md](../../python/logging/logging.md) section 4) with the
+  provider's error code, and do not retry it. Not retrying follows the logout rule above. With the
+  session's state in the cookie, the BFF cannot revoke it (section 5).
 - **BFF: answer a back-channel logout with `200` also when no session matches, and with `400` when
   the logout token fails validation,** since section 2.7 of the same specification counts a user
   who is already logged out as a logout that succeeded, and section 2.6 asks for `400` when a
@@ -1302,20 +1339,21 @@ flight, and the session's state is on the server. They run in the order given.
 - **BFF: before the BFF's first release to users, sign in, end that session at the provider, and
   check that the BFF's session ends; repeat it when the BFF's host name, its firewall or its
   registration at the provider changes,** since a wrong registered URI or a firewall leaves the
-  BFF with no logout token at all, so no log line and no alert shows it (section 5); the rule is
+  BFF with no logout token at all. So no log line and no alert shows it (section 5). The rule is
   this practice's choice.
-- **BFF: when the session that a valid logout token names cannot be ended, such as when the session
-  store cannot be written, log it at `ERROR` with the token's `iss`, `sub` and a short hash of its
-  `sid` ([logging.md](../../python/logging/logging.md) sections 4 and 10), and answer `400`,**
-  since section 2.8 of the same specification asks for `400` when the logout failed, not the `503`
-  of the store-outage rule above [57]. A session the store no longer holds counts as ended; only a
-  store error leaves a session that cannot be ended. Section 5 names what this leaves open.
+- **BFF: when the session that a valid logout token names cannot be ended, log it at `ERROR` with
+  the token's `iss`, `sub` and a short hash of its `sid`
+  ([logging.md](../../python/logging/logging.md) sections 4 and 10), and answer `400`,** since
+  section 2.8 of the same specification asks for `400` when the logout failed, not the `503` of the
+  store-outage rule above [57]. A session store that cannot be written is one such case. A session
+  the store no longer holds counts as ended; only a store error leaves a session that cannot be
+  ended. Section 5 names what this leaves open.
 - **BFF: prefer back-channel to front-channel logout,** because front-channel logout loads the BFF
   in a frame on the provider's page, where the `SameSite=Strict` session cookie is not sent (RFC
   6265bis draft, section 4.1.2.7) and where a browser that blocks third-party content can keep the
-  frame from the session's state (Front-Channel Logout 1.0 section 4.1); its request also carries no
-  signature, while a back-channel logout token is signed (Back-Channel Logout 1.0 section 4)
-  [2], [75], [57].
+  frame from the session's state (Front-Channel Logout 1.0 section 4.1) [2], [75]. Its request also
+  carries no signature, while a back-channel logout token is signed (Back-Channel Logout 1.0
+  section 4) [75], [57].
 - **BFF: write these logout choices down, in the decision log ("Write it down", above, says
   where),** since ASVS 5.0 requirement 7.1.3 asks how federated sessions end to be documented
   [42].
@@ -1340,20 +1378,20 @@ flight, and the session's state is on the server. They run in the order given.
 
 The step-up rules below, down to the `403` rule that asks the page for re-authentication, and the
 `Page:` re-authentication rules in [security.md](../../react/security/security.md) section 6, serve
-ASVS 5.0 requirement 7.5.1, a Level 2 requirement: a team at Level 1 may skip them, and so may a
-team whose identity provider holds the email, the phone, the second factor and the recovery data
-and asks for re-authentication itself; write the choice down ("Write it down" above says where)
-[42]. The rules after them are outside that skip: ending a user's other sessions (7.4.3)
+ASVS 5.0 requirement 7.5.1, a Level 2 requirement [42]. A team at Level 1 may skip them, and so
+may a team whose identity provider holds the email, the phone, the second factor and the recovery
+data and asks for re-authentication itself. Write the choice down ("Write it down" above says
+where). The rules after them are outside that skip: ending a user's other sessions (7.4.3)
 holds at Level 2 and above, and ending every session of a disabled or deleted account (7.4.2)
 holds at every level [42].
 
 - **BFF: ask for re-authentication before a guarded request: a request that changes something the
   team lists as needing re-authentication, such as the email address, the phone number, the second
-  factor or the recovery data,** since ASVS 5.0 requirement 7.5.1 asks for full re-authentication
-  before a change to "sensitive account attributes which may affect authentication such as email
-  address, phone number, MFA configuration, or other information used in account recovery", so a
-  stolen session cannot take over the account [42]. The rules below say how, by who logs the user
-  in.
+  factor or the recovery data,** so a stolen session cannot take over the account. ASVS 5.0
+  requirement 7.5.1 asks for full re-authentication before a change to "sensitive account
+  attributes which may affect authentication such as email address, phone number, MFA
+  configuration, or other information used in account recovery" [42]. The rules below say how, by
+  who logs the user in.
 - **BFF, with an identity provider: re-authenticate the user at the provider, and never ask for
   the provider's password,** since RFC 9700 section 2.4 forbids the password grant, the only way
   the BFF could check it [16]. Start a login with `max_age=0`, which OpenID Connect Core
@@ -1362,20 +1400,20 @@ holds at every level [42].
 - **BFF, with an identity provider: answer a guarded request that the session's re-authentication
   does not cover (the window rule below) with the `403` and `reauth_required` below, and keep
   nothing of the request,** since the page starts the step-up by a navigation to the BFF's login
-  endpoint, the start RFC 10017 section 6.1.2.1 describes, and sends the request again once the
-  user is back, as RFC 9470 section 2 has the client repeat its request [1],
-  [80]. The rule is this practice's choice.
+  endpoint, the start RFC 10017 section 6.1.2.1 describes [1]. The page sends the request again
+  once the user is back, as RFC 9470 section 2 has the client repeat its request [80]. The rule is
+  this practice's choice.
 - **BFF, with an identity provider: treat a login start that carries a live session and the
   step-up flag, the query parameter `step_up=1`, as a step-up, and send the user to the provider
   with `max_age=0`, and with the challenge's `acr_values` when the step-up answers an RFC 9470
-  challenge,** so every login-cookie rule above holds for it unchanged; a login start without a
+  challenge,** so every login-cookie rule above holds for it unchanged. A login start without a
   live session is a first login, whatever its flag says. The rule and the parameter's name are this
   practice's choice.
 - **BFF, with an identity provider: name in the `acrValues` field of the `403`'s body only those of
   a relayed challenge's `acr_values` that are on the list the team writes down, as a string that
-  holds the space-separated values, and at a step-up's login start accept the query parameter
-  `acr_values` only when each of its space-separated values is on that list,** so the page can
-  pass the value on and cannot pick one the resource servers never ask for; the rule and the
+  holds the space-separated values.** At a step-up's login start, accept the query parameter
+  `acr_values` only when each of its space-separated values is on that list. The page can then
+  pass the value on and cannot pick one the resource servers never ask for. The rule and the
   parameter's name are this practice's choice. RFC 9470 section 4 has a client that receives the
   challenge use its `acr_values` in the authorization request it builds [80]. A challenge none of
   whose values is on the list gets the answer of the relay rule in section 3, "Forwarding tokens".
@@ -1415,20 +1453,20 @@ the rule below keeps one change per re-authentication.
 
 - **BFF, with an identity provider: at a step-up's login start, record with the attempt, in its
   protected record ("The login cookie" above), the id of the session the request carries, with
-  that session's `iss`, `sub` and `sid`, and that the attempt is a step-up, and, with the
-  session's state in the cookie, also that session's start time and last-use time,** since the
-  callback is a cross-site navigation that carries no `Strict` session cookie, and its checks
-  below need that session. The rule, the two recorded times included, is this practice's choice.
+  that session's `iss`, `sub` and `sid`, and that the attempt is a step-up,** since the callback
+  is a cross-site navigation that carries no `Strict` session cookie. Its checks below need that
+  session. With the session's state in the cookie, also record that session's start time and
+  last-use time. The rule, the two recorded times included, is this practice's choice.
 - **BFF, with an identity provider: at a step-up's callback, accept the re-authentication only
   when the new ID token's `iss` and `sub` equal those recorded with the attempt and its
   `auth_time` is later than the attempt's start time minus a skew allowance in seconds that the
-  team writes down,** because `iss` and `sub` together are
-  the only claims a client can rely on to name the same user (OpenID Connect Core 1.0 section
-  5.7), so a thief who holds the cookie cannot pass the step-up by signing in to their own
-  account, and a provider session that answers without asking the user does not count (OpenID
-  Connect Core 1.0 section 3.1.3.7; NIST SP 800-63B-4 section 5.2 makes the relying party the
-  judge) [27], [41]. OpenID Connect Core 1.0 section 2 gives `auth_time` as "the number of seconds
-  from 1970-01-01T00:00:00Z as measured in UTC", on the provider's clock, and for the ID token's
+  team writes down.** `iss` and `sub` together are the only claims a client can rely on to name the
+  same user (OpenID Connect Core 1.0 section 5.7) [27]. So a thief who holds the cookie cannot pass
+  the step-up by signing in to their own account. A provider session that answers without asking
+  the user does not count (OpenID Connect Core 1.0 section 3.1.3.7; NIST SP 800-63B-4 section 5.2
+  makes the relying party the judge) [27], [41]. OpenID Connect Core 1.0 section 2 gives
+  `auth_time` as "the number of seconds from 1970-01-01T00:00:00Z as measured in UTC", on the
+  provider's clock, and for the ID token's
   `exp` lets implementers "provide for some small leeway, usually no more than a few minutes, to
   account for clock skew" [27]. Keep the BFF's clock synchronised, keep the allowance to seconds,
   since minutes would let a provider session that answered without asking the user pass the
@@ -1460,7 +1498,7 @@ the rule below keeps one change per re-authentication.
      session's state in the cookie, and from the store with the state on the server. When the
      recorded session is no longer live, because the store no longer holds it, its id is
      on the list of ended sessions, it started before its user's per-user time, or its timeouts
-     have passed, issue no new session and answer `failed`, so a step-up never brings back a
+     have passed, issue no new session and answer `failed`. So a step-up never brings back a
      session that a logout, a back-channel logout or a disabled account ended while the user was
      at the provider. Otherwise end it: destroy it, or add its id to the list of ended sessions.
      When that fails, log it at `ERROR` ([logging.md](../../python/logging/logging.md) section 4),
@@ -1491,8 +1529,8 @@ the rule below keeps one change per re-authentication.
 - **BFF, with an identity provider: answer a step-up's callback whose login cookie matches the
   `state` with a `303` to one fixed route of the page, carrying in its query parameter `outcome`
   one of three fixed codes, never a value taken from the request,** so the page that loads after
-  the navigation can ask the user to send the change again, or say why it cannot; the rule and the
-  parameter's name are this practice's choice. Each code has one meaning:
+  the navigation can ask the user to send the change again. It can also say why it cannot. The
+  rule and the parameter's name are this practice's choice. Each code has one meaning:
   - `reauthenticated`: the new session holds a fresh re-authentication (step 4 above);
   - `refused`: a check failed (step 1);
   - `failed`: the provider answered with an error (the rule above), the code exchange or the ID
@@ -1504,24 +1542,24 @@ the rule below keeps one change per re-authentication.
 - **BFF, with an identity provider: let a guarded change through only while the session's
   re-authentication time is younger than a window the team writes down, long enough for the user
   to finish the change, and consume that time before you apply the change,** since ASVS 5.0
-  requirement 7.5.1 asks for full re-authentication before the change, and OWASP's Transaction
+  requirement 7.5.1 asks for full re-authentication before the change [42]. OWASP's Transaction
   Authorization cheat sheet, section 1.5, warns that a credential asked for once lets the user
-  "authorize any transaction during the entire session" [42],
-  [82]. A first login sets no re-authentication time, and a session without one is outside the
-  window, so the first guarded change after sign-in asks for a step-up: the first login sends no
-  `max_age=0`, so the provider may answer it from its own session without asking the user, and
-  such an answer does not count (the rule on accepting a step-up at its callback, above).
-  Consume it in one atomic act: with the session's state on the server, a compare-and-clear
-  of the re-authentication time in the session store, never on the session object the request
-  loaded; with the session's state in the cookie, a set-if-absent of the pair of the session id
-  and the re-authentication time in the store that holds the list of ended sessions, kept there
-  until the window ends. Apply the change only when that write succeeds; when it cannot be
-  written, answer `503` and apply nothing. Two parallel requests that read the time first and
-  clear it after would both pass, and with the state in the cookie every copy of the cookie still
-  in flight carries the time. ASVS 5.0 requirement 15.4.2 (Level 3) asks that a check on a
-  resource's state and "the actions that depend on them are performed as a single atomic operation
-  to prevent time-of-check to time-of-use (TOCTOU) race conditions" [145]. A script on the page can
-  still use the window (RFC 10017 section 6.1.4.1); the single use limits it to one change [1].
+  "authorize any transaction during the entire session" [82]. A first login sets no
+  re-authentication time, and a session without one is outside the window, so the first guarded
+  change after sign-in asks for a step-up. The first login sends no `max_age=0`, so the provider
+  may answer it from its own session without asking the user, and such an answer does not count
+  (the rule on accepting a step-up at its callback, above). Consume it in one atomic act: with the
+  session's state on the server, a compare-and-clear of the re-authentication time in the session
+  store, never on the session object the request loaded. With the session's state in the cookie,
+  the act is a set-if-absent of the pair of the session id and the re-authentication time in the
+  store that holds the list of ended sessions, kept there until the window ends. Apply the change
+  only when that write succeeds; when it cannot be written, answer `503` and apply nothing. Two
+  parallel requests that read the time first and clear it after would both pass, and with the
+  state in the cookie every copy of the cookie still in flight carries the time. ASVS 5.0
+  requirement 15.4.2 (Level 3) asks that a check on a resource's state and "the actions that depend
+  on them are performed as a single atomic operation to prevent time-of-check to time-of-use
+  (TOCTOU) race conditions" [145]. A script on the page can still use the window (RFC 10017 section
+  6.1.4.1); the single use limits it to one change [1].
   The window, the single use and the atomic consume are this practice's choice; a team that lets
   several changes through one window, as GitHub's sudo mode does for two hours, writes that down
   [83].
@@ -1547,8 +1585,8 @@ it lets through whichever guarded change comes first.
   enforce MFA" [8].
 - **BFF, with a first-party login: take the answer only with the guarded request it is for, and
   keep no change between the two requests,** so an answer authorises only the change it comes
-  with, never every change of the session, and the page sends that request again with the answer;
-  the rule is this practice's choice, after OWASP's Transaction Authorization cheat sheet, section
+  with, never every change of the session. The page sends that request again with the answer.
+  The rule is this practice's choice, after OWASP's Transaction Authorization cheat sheet, section
   1.5, which warns that credentials asked for once let the user "authorize any transaction during
   the entire session" [82]. That section also asks for
   authorization credentials unique to each transaction, which a password typed again is not
@@ -1574,10 +1612,10 @@ it lets through whichever guarded change comes first.
   itself stays outside this practice (sections 1 and 5).
 - **BFF, with a first-party login: count every answer to a step-up per session with one atomic
   increment in the session store, never in the session object the request loaded and saves back
-  at its end; compare an answer only while its raised count is below a small number the team
-  writes down ("Write it down" above), and when the count reaches it, end the session and log it
-  without comparing the answer,** so a thief who holds a stolen session cannot guess the password
-  through the step-up, not even with answers sent in parallel. ASVS 5.0 requirement 6.3.1 asks for
+  at its end,** so a thief who holds a stolen session cannot guess the password through the
+  step-up, not even with answers sent in parallel. Compare an answer only while its raised count is
+  below a small number the team writes down ("Write it down" above). When the count reaches it,
+  end the session and log it without comparing the answer. ASVS 5.0 requirement 6.3.1 asks for
   controls against password brute force, and OWASP's Transaction Authorization cheat sheet,
   section 2.4, asks for a limit where such answers are checked [85],
   [82]. A framework that saves the loaded session at the end of
@@ -1640,11 +1678,12 @@ because ASVS is the standard and the cheat sheet is guidance below it.
   a recovery included, offer to end every other session of the user** (ASVS 5.0 requirement
   7.4.3), so a session stolen before the change stops working [42]. The rules below say
   how, by who logs the user in.
-- **BFF, with the session's state on the server: index each session by its user, the ID token's
-  `iss` and `sub` or the first-party user id, and by the provider's `sid`; write the index with
-  the session, and fail the login, or the step-up's move to a new session id, when the index
-  cannot be written,** so a back-channel logout, the end of a user's other sessions and the end of
-  a disabled account find every session they name in one lookup, not a scan of every session.
+- **BFF, with the session's state on the server: index each session by its user and by the
+  provider's `sid`,** so a back-channel logout, the end of a user's other sessions and the end of
+  a disabled account find every session they name in one lookup, not a scan of every session. Its
+  user is the ID token's `iss` and `sub`, or the first-party user id. Write the index with the
+  session, and fail the login, or the step-up's move to a new session id, when the index cannot be
+  written.
   Back-Channel Logout 1.0 section 2.4 asks, for a logout token with no `sid`, that "all sessions
   at the RP for the End-User identified by the "iss" and "sub" Claims be logged out"
   [57]. A store read only by session id cannot find them: Spring Session's docs
@@ -1654,8 +1693,8 @@ because ASVS is the standard and the cheat sheet is guidance below it.
   requirement 16.5.3, which asks to prevent fail-open conditions [56]; the index is this
   practice's choice. Remove a session's entries from the index when the session ends, or give them
   the expiry of its record, and let a lookup skip and remove an entry whose session the store no
-  longer holds, so the index does not grow without bound and a back-channel logout or the end of
-  other sessions does not fail on a session that already ended; the clean-up is this practice's
+  longer holds. So the index does not grow without bound, and a back-channel logout or the end of
+  other sessions does not fail on a session that already ended. The clean-up is this practice's
   choice.
 - **BFF, with an identity provider: leave the offer, and the end of the other sessions, to the
   provider, which owns the change of the factor, and end each session its back-channel logout
@@ -1673,17 +1712,16 @@ because ASVS is the standard and the cheat sheet is guidance below it.
   A reply that says the other sessions ended while one still works is the fail-open condition
   ASVS 5.0 requirement 16.5.3 asks to prevent [56]. A session the store no longer holds counts as
   destroyed; only a store error is a failed destroy.
-- **BFF: when an account is disabled or deleted, end every session of the user yourself: with the
-  session's state on the server, destroy each session of the user, as the logout rules above
-  destroy one; with the session's state in the cookie, set that user's per-user time to now,
+- **BFF: when an account is disabled or deleted, end every session of the user yourself,** so a
+  disabled or deleted account keeps no session that still works (ASVS 5.0 requirement 7.4.2) [42].
+  With the session's state on the server, destroy each session of the user, as the logout rules
+  above destroy one. With the session's state in the cookie, set that user's per-user time to now,
   unless it is already later, with one atomic act of the store that keeps the greater of the
-  stored and the new time, never a read and then a write ("Logout" above),** so a disabled or
-  deleted account keeps no session that still works (ASVS 5.0 requirement 7.4.2) [42]. Where the
-  provider disables the account,
-  its back-channel logout ends the sessions as the back-channel rules above say. When ending them
-  fails, log it at `ERROR` ([logging.md](../../python/logging/logging.md) section 4), return the
-  error to the caller that disabled the account, and alert a person (section 3, "Logging"); the
-  failure path is this practice's choice.
+  stored and the new time, never a read and then a write ("Logout" above). Where the provider
+  disables the account, its back-channel logout ends the sessions as the back-channel rules above
+  say. When ending them fails, log it at `ERROR` ([logging.md](../../python/logging/logging.md)
+  section 4), return the error to the caller that disabled the account, and alert a person
+  (section 3, "Logging"); the failure path is this practice's choice.
 
 ### Forwarding to resource servers
 
@@ -1719,9 +1757,10 @@ before forwarding, and the answers to a resource server's `401`, are in section 
   and forwards it to the actual resource server" [1].
 - **BFF: build the answer to the page from an allowlist of the resource server's response headers:
   drop `Set-Cookie` and every `Access-Control-*` header, and set section 3's response headers and
-  the CORS headers yourself,** so a resource server, one another party runs or one an attacker
-  controls, cannot plant a cookie under the session or login cookie's name, push the `Cookie`
-  header past the server's size limit, or send CORS headers that contradict the API's own policy.
+  the CORS headers yourself.** A resource server, one another party runs or one an attacker
+  controls, then cannot plant a cookie under the session or login cookie's name. It also cannot
+  push the `Cookie` header past the server's size limit, or send CORS headers that contradict the
+  API's own policy.
   A relayed `Set-Cookie` meets every condition of the `__Host-Http-` prefix, which tells the
   server only that "the cookie was set using a Set-Cookie header" with `Secure`, `HttpOnly`,
   `Path=/` and no `Domain` (the layered-cookies draft, section 4.1.3.4) [3]. The rule is this
@@ -1729,8 +1768,8 @@ before forwarding, and the answers to a resource server's `401`, are in section 
 - **BFF: when it forwards to more than one resource server, attach to each the access token issued
   for that server, asked for with a resource indicator where the provider supports one,** since
   RFC 9700 section 2.3 asks that access tokens be restricted to one resource server, or to a small
-  set where that is not feasible, and ASVS 5.0 requirement 10.3.1 has a resource server refuse a
-  token meant for another [16], [74]. RFC 9700 section 4.10.2 names resource
+  set where that is not feasible [16]. ASVS 5.0 requirement 10.3.1 has a resource server refuse a
+  token meant for another [74]. RFC 9700 section 4.10.2 names resource
   indicators, specified in RFC 8707, as a way to get one token per resource server [16].
   With the session's state in the cookie, each extra token counts toward the cookie's 4096 bytes
   (the cookie-size rule in "The session's life, from login to logout" above).
@@ -1835,11 +1874,11 @@ since that name requires `HttpOnly`. That cost is this practice's reading.
 - **BFF: keep other applications and user content off the site the BFF shares with the page where
   you can, and when a subdomain's service is retired, remove its DNS record before you delete the
   resource it points to,** since `SameSite` "is adequate if the BFF is never considered to be same
-  site with any other applications", and "a subdomain-takeover attack" against a sibling makes
-  CSRF against the BFF possible again (RFC 10017 section 6.1.3.3.1); deleting the resource first
-  leaves "an immediate window for takeover" (OWASP's Subdomain Takeover Prevention cheat sheet)
-  [1], [89]. The rules on sibling subdomains in
-  sections 2 and 3 stay for a site where this cannot hold.
+  site with any other applications" (RFC 10017 section 6.1.3.3.1) [1]. The same section names "a
+  subdomain-takeover attack" against a sibling, which makes CSRF against the BFF possible again
+  [1]. Deleting the resource first leaves "an immediate window for takeover" (OWASP's Subdomain
+  Takeover Prevention cheat sheet) [89]. The rules on sibling subdomains in sections 2 and 3 stay
+  for a site where this cannot hold.
 - **The server applies the Fetch Metadata check to every request to an API route, reads
   included,** since the custom header holds only while the CORS policy stays tight (item 3 of
   OWASP's list above) [10]. OWASP's list checks
@@ -1851,7 +1890,7 @@ since that name requires `HttpOnly`. That cost is this practice's reading.
 - **As part of the Fetch Metadata check, when `Sec-Fetch-Site` is absent, the server checks
   `Origin`: it rejects a request whose `Origin` names an origin outside the one setting of allowed
   origins ("What the server does"), and sends a request with neither header on to the
-  custom-header check,** since some old browsers send no `Sec-Fetch-*` headers, and OWASP's CSRF
+  custom-header check,** since some old browsers send no `Sec-Fetch-*` headers. OWASP's CSRF
   cheat sheet calls this fallback "a mandatory requirement" for any Fetch Metadata implementation
   [10].
 - **The server requires the custom header, `X-Requested-With` with any value that is not empty, on
@@ -1871,10 +1910,10 @@ since that name requires `HttpOnly`. That cost is this practice's reading.
   [24].
 - **API: when you add the Fetch Metadata check or the custom-header check to an API that already
   has users, run it in a log-only mode first, until a date you write down ("Write it down" in
-  section 2 says where); fix each legitimate caller the log shows, or exempt it when it is one of
-  the endpoints the table below names, and enforce the check on that date,** so a tab still on
-  the previous bundle or a client nobody listed is not refused from the first deploy, and the
-  check does not stay log-only, where it refuses nothing. web.dev gives these three steps for a
+  section 2 says where),** so a tab still on the previous bundle or a client nobody listed is not
+  refused from the first deploy. Fix each legitimate caller the log shows, or exempt it when it is
+  one of the endpoints the table below names. Enforce the check on that date, so it does not stay
+  log-only, where it refuses nothing. web.dev gives these three steps for a
   Resource Isolation Policy, OWASP's CSRF cheat sheet says "Start in 'log only' mode", and
   [security.md](../../react/security/security.md) section 5 uses the same order for a new policy
   [24], [10]. The written date is this
@@ -1882,8 +1921,8 @@ since that name requires `HttpOnly`. That cost is this practice's reading.
 - **API: in the log-only stage, also log the `User-Agent` of each request that arrives without
   `Sec-Fetch-Site`, and before you enforce, fix whatever strips the header when a current browser
   shows up in that log,** since a proxy, gateway or load balancer that removes `Origin` or the
-  `Sec-Fetch-*` headers switches the Fetch Metadata check off silently, because a request with
-  neither header goes on to the custom-header check. OWASP's CSRF cheat sheet says that
+  `Sec-Fetch-*` headers switches the Fetch Metadata check off silently. A request with neither
+  header goes on to the custom-header check. OWASP's CSRF cheat sheet says that
   intermediaries "may remove or modify `Origin` and `Sec-*` headers", calls such header stripping
   "problematic, but common", and asks to "Track which user agents include `Sec-Fetch-*`"
   [10].
@@ -1976,11 +2015,11 @@ into the page's memory; a file the page shows goes through the API client and a 
 ([security.md](../../react/security/security.md) section 7, "What the React code does").
 
 - **Match each exemption only as its row in the table says, never by a request mode such as
-  `Sec-Fetch-Mode: navigate` on its own, by a missing header or by a path prefix; add a route the
-  page loads without `fetch` only as a last resort, as a row like the download link's: one route
-  template, for a `GET` that changes nothing,** since a broader exemption lets a sibling
-  subdomain's form through with the user's cookie, and every route in the table takes the cookie
-  without the custom header. A request mode may narrow a row, as it does for the download link,
+  `Sec-Fetch-Mode: navigate` on its own, by a missing header or by a path prefix,** since a broader
+  exemption lets a sibling subdomain's form through with the user's cookie. Every route in the
+  table takes the cookie without the custom header. Add a route the page loads without `fetch`
+  only as a last resort, as a row like the download link's: one route template, for a `GET` that
+  changes nothing. A request mode may narrow a row, as it does for the download link,
   but never matches on its own. The rule is this practice's choice. It departs from step 3.1 of
   OWASP's Fetch Metadata policy, which allows every simple top-level `GET` navigation so that
   other sites can link to the site: here the pages other sites link to are the page's own files,
@@ -2005,16 +2044,16 @@ into the page's memory; a file the page shows goes through the API client and a 
   refetch the provider's keys at most once per interval the team writes down,** so a flood of
   tokens with made-up key ids cannot make the BFF call the provider on each one; the rule is this
   practice's choice. When the interval refuses a refetch, answer `400` and log it at `WARNING`
-  ([logging.md](../../python/logging/logging.md) section 4) with the token's `iss` and the key id,
-  since such a refusal comes from a flood of made-up key ids, or, during one, from a genuine
-  logout token signed with a key the provider began to use after the last refetch, which OpenID
-  Connect Core 1.0 section 10.1.1 allows: "The signer can begin using a new key at its discretion"
-  [27]. Such a logout is then dropped. When a refetch fails, answer
+  ([logging.md](../../python/logging/logging.md) section 4) with the token's `iss` and the key id.
+  Such a refusal comes from a flood of made-up key ids, or, during one, from a genuine logout token
+  signed with a key the provider began to use after the last refetch. OpenID Connect Core 1.0
+  section 10.1.1 allows that: "The signer can begin using a new key at its discretion" [27]. Such
+  a logout is then dropped. When a refetch fails, answer
   `400`, log it at `ERROR` with the token's `iss` and the key id, and count it in the alert on a
   back-channel logout that could not end its session ("Logging" below).
-- **Never change the user's data or session on a `GET`; the login start, which starts a login
+- **Never change the user's data or session on a `GET`.** The login start, which starts a login
   attempt, and the login callback, which creates the session or, after a step-up, replaces it,
-  are the only exceptions, each guarded as its row in the exemption table says.** OWASP notes that
+  are the only exceptions, each guarded as its row in the exemption table says. OWASP notes that
   `SameSite=Lax` does not cover a state change made with `GET`, since the cookie still goes with a
   top-level `GET` from another site [10].
 - **When the session cookie is `SameSite=Strict`, keep the Fetch Metadata and custom-header checks
@@ -2039,7 +2078,7 @@ into the page's memory; a file the page shows goes through the API client and a 
   ([security.md](../../react/security/security.md) section 8), and the framework's runtime sends
   it, not the one API client.
 - **For them, keep the framework's own `Origin` check on where it has one, at a version that runs
-  it on every unsafe method,** since a framework's own check can be missing or partial: Next.js
+  it on every unsafe method,** since a framework's own check can be missing or partial. Next.js
   lets a request with no `Origin` through with a warning, and React Router's Framework Mode had no
   such check before 7.12.0 (CVE-2026-22030) and skipped `PUT`, `PATCH` and `DELETE` until 7.15.1
   (CVE-2026-53663) [97], [100], [101], [102].
@@ -2066,14 +2105,14 @@ Where the BFF may forward a request, with which methods and headers, is section 
   apply a `POST` twice [103], [61]. The single retry and the `502` are this
   practice's choice.
 - **BFF: when a resource server answers `401` with the error `insufficient_user_authentication`, do
-  not refresh; answer the page `403` with `reauth_required`, and when the challenge carries
-  `acr_values`, name only those of its values that are on the list the `acr_values` rule of
-  section 2, "Re-authentication", asks the team to write down, in the `403`'s field that rule
-  names, so that the step-up the page then starts asks for them and passes the login start's check
-  on each value, with the `max_age=0` the step-up rules of section 2 ask for, which also meets any
-  `max_age` the challenge names,** since RFC 9470 uses that challenge to say that the user's
-  authentication does not meet the resource server's needs, which a refreshed token does not
-  change (section 2, "Re-authentication") [80]. One listed value is enough, since the resource
+  not refresh; answer the page `403` with `reauth_required`,** since RFC 9470 uses that challenge
+  to say that the user's authentication does not meet the resource server's needs, which a
+  refreshed token does not change (section 2, "Re-authentication") [80]. When the challenge
+  carries `acr_values`, name only those of its values that are on the list the `acr_values` rule
+  of section 2, "Re-authentication", asks the team to write down, in the `403`'s field that rule
+  names. So the step-up the page then starts asks for them and passes the login start's check on
+  each value, with the `max_age=0` the step-up rules of section 2 ask for, which also meets any
+  `max_age` the challenge names. One listed value is enough, since the resource
   server "requires one of these values" (RFC 9470 section 3) [80]. When the challenge's
   `acr_values` names no value on that list, answer the page `502`, log it at `ERROR`
   ([logging.md](../../python/logging/logging.md) section 4) and alert a person ("Logging" below),
@@ -2093,9 +2132,9 @@ subsection and its section 4 rows.
   cheat sheet; the WebSockets standard; RFC 6455 section 10.2) [104],
   [105], [106].
 - **BFF: tie each WebSocket connection to its session on the server, and close it when the
-  session ends or gets a new id:** at logout, at the idle and absolute timeouts, when a
+  session ends or gets a new id:** at logout, at the idle and absolute timeouts, and when a
   back-channel logout or one of the refresh rules ends the session (section 2, "Logout" and
-  "Timeouts and refresh"), and when a step-up issues a new session id (section 2,
+  "Timeouts and refresh"). Close it too when a step-up issues a new session id (section 2,
   "Re-authentication"). The cookie is checked only at the handshake, so an open connection would
   keep sending the user's data after the session ended. A socket opened under the old id, perhaps
   by whoever planted or stole it, would outlive the renewal meant to end that id. OWASP's
@@ -2127,7 +2166,7 @@ subsection and its section 4 rows.
   the page checks the session and reconnects with the current cookie. When the re-check cannot read
   the session store or the list of ended sessions, close the socket with a code other than the
   session-ended one, so the page checks the session and meets the `503` of the store-outage rule
-  (section 2, "Timeouts and refresh") instead of signing the user out, and log it at `ERROR`
+  (section 2, "Timeouts and refresh") instead of signing the user out. Log it at `ERROR`
   ([logging.md](../../python/logging/logging.md) section 4) once per interval. The interval and
   the outage close are this practice's choice.
 - **BFF: with more than one instance, send each session end and each new session id to every
@@ -2140,10 +2179,10 @@ subsection and its section 4 rows.
   also runs "a background task every minute" that cleans up expired sessions
   [109]. The channel is this practice's choice.
 - **BFF: count neither the WebSocket handshake nor the socket's keep-alive messages as activity
-  on the idle clock, as section 2 does for the session check; count only the messages the user's
-  actions send,** so a page that reconnects a dropped socket, or a socket that pings on a timer,
-  does not keep an idle session alive (the polling rule in
-  [security.md](../../react/security/security.md) section 6). OWASP's Session Management cheat
+  on the idle clock; count only the messages the user's actions send,** so a page that reconnects
+  a dropped socket, or a socket that pings on a timer, does not keep an idle session alive (the
+  polling rule in [security.md](../../react/security/security.md) section 6). Section 2 does the
+  same for the session check. OWASP's Session Management cheat
   sheet measures idle time from the last HTTP request, which a handshake is
   [8]. This practice reads it as the user's last action, as Spring
   Session does for messages ("Only messages sent from a user keep the session alive")
@@ -2235,7 +2274,7 @@ subsection and its section 4 rows.
 - **BFF: before the BFF's first release to users, when you set up every alert this file asks for,
   those in section 2 included, write the person or channel that receives security advisories and
   alerts into the decision log ("Write it down" in section 2 says where),** so the recipient is
-  known even after people change roles; the rule is this practice's choice. How the recipient
+  known even after people change roles. The rule is this practice's choice. How the recipient
   handles an alert is [sla.md](../../any-language/project-management/sla.md) section 3.
 - **BFF: send every alert this file asks for, those in section 2 included, to that recipient,** so
   every alert has a recipient who acts on it, also in a client-rendered application that never
@@ -2255,14 +2294,14 @@ subsection and its section 4 rows.
   asks that "application administrators are able to terminate active sessions for an individual
   user or for all users" [42]. The command, its role and its log line are this practice's choice.
 - **BFF: log at `INFO` ([logging.md](../../python/logging/logging.md) section 4) each request that
-  a check rejects (the custom header, Fetch Metadata, `Origin`, the cookie name, a path format, a
-  WebSocket's `Origin`) and each failed sign-in or re-authentication, with the check's name, the
-  route and the `Origin` and `Sec-Fetch-Site` values,** so a CSRF probe, a planted cookie or an
-  origin set up wrong leaves a trace. Each is an expected client error, which logging.md section
-  4 keeps out of `WARNING`; the alert on the rejection rate below is what calls a person. OWASP's
-  Logging cheat sheet asks to log authentication, access-control, session and input-validation
-  failures, and ASVS 5.0 requirement 16.3.3 asks to log attempts to get past a security control
-  [120], [56]. What never goes into a log is
+  a check rejects and each failed sign-in or re-authentication, with the check's name, the route
+  and the `Origin` and `Sec-Fetch-Site` values,** so a CSRF probe, a planted cookie or an origin
+  set up wrong leaves a trace. The checks are the custom header, Fetch Metadata, `Origin`, the
+  cookie name, a path format and a WebSocket's `Origin`. Each is an expected client error, which
+  logging.md section 4 keeps out of `WARNING`; the alert on the rejection rate below is what calls
+  a person. OWASP's Logging cheat sheet asks to log authentication, access-control, session and
+  input-validation failures, and ASVS 5.0 requirement 16.3.3 asks to log attempts to get past a
+  security control [120], [56]. What never goes into a log is
   [logging.md](../../python/logging/logging.md) section 10.
 - **BFF: cut each value that a rejected request supplies (the `Origin`, a cookie name, a path) to
   a fixed length before you log it,** so a probe cannot flood the log. OWASP's Logging cheat
@@ -2287,17 +2326,18 @@ subsection and its section 4 rows.
   and asks to log "connection establishment and termination (with user identity, IP, and
   origin)" [104].
 - **BFF: alert a person when the rejections of one check pass a rate the team writes down
-  ("Write it down" in section 2 says where), the unknown-key reason of a cookie that cannot be
-  read (section 2, "Keys and secrets") among them,** since OWASP Top 10:2025 A09 says that without
-  alerting a team can hardly respond quickly and effectively to an incident [121].
+  ("Write it down" in section 2 says where),** since OWASP Top 10:2025 A09 says that without
+  alerting a team can hardly respond quickly and effectively to an incident [121]. The unknown-key
+  reason of a cookie that cannot be read (section 2, "Keys and secrets") counts among those
+  rejections.
   The rule is this practice's choice. On an alert for the unknown-key reason, the first check is to
   compare each instance's logged key ids with the store's list: reload an instance that lacks an
   id, and read a burst of ids the store never held as a probe.
 - **BFF: alert a person when the key that protects new cookies is older than its written rotation
-  period plus a margin the team writes down, and, with an identity provider, when the client
-  credential passes its written rotation date or comes within that margin of its expiry at the
-  provider,** so a rotation job that stopped shows before the key reaches the limits of its mode
-  (section 2, "Keys and secrets"), and a credential is replaced before every refresh fails.
+  period plus a margin the team writes down,** so a rotation job that stopped shows before the key
+  reaches the limits of its mode (section 2, "Keys and secrets"). With an identity provider, also
+  alert when the client credential passes its written rotation date or comes within that margin of
+  its expiry at the provider, so a credential is replaced before every refresh fails.
   OWASP's Key Management cheat sheet lists "The monitoring of the re-keying operations" in its
   compromise-recovery plan [54]; the alerts on an old key and on the credential's dates are this
   practice's choice.
@@ -2313,31 +2353,30 @@ subsection and its section 4 rows.
 - **BFF, with an identity provider: alert a person on every back-channel logout that could not
   end its session (section 2, "Logout"), or whose logout token named a key the BFF could not
   refetch because the refetch failed (section 3, "Fetch Metadata and exemptions"),** since
-  Back-Channel Logout 1.0 leaves
-  sending the logout request again to the provider (section 2.5) and names nothing the provider
-  does after the BFF's `400` (section 2.8), so the session may stay live until its timeouts [57].
+  Back-Channel Logout 1.0 leaves sending the logout request again to the provider (section 2.5)
+  [57]. It names nothing the provider does after the BFF's `400` (section 2.8), so the session may
+  stay live until its timeouts [57].
   The rule is this practice's choice.
 - **BFF, with an identity provider: alert a person when valid back-channel logout tokens that
   match no session pass a rate the team writes down,** since a BFF whose stored `sid` never
-  matches leaves live every session the provider ended, and section 2, "Logout", logs each such
-  token at `INFO`, the level for what nobody will look at
-  ([logging.md](../../python/logging/logging.md) section 4); the rule is this practice's choice.
+  matches leaves live every session the provider ended. Section 2, "Logout", logs each such token
+  at `INFO`, the level for what nobody will look at ([logging.md](../../python/logging/logging.md)
+  section 4). The rule is this practice's choice.
 - **BFF, with an identity provider: alert a person when the share of token revokes that fail at
   logout passes a rate the team writes down ("Write it down" in section 2 says where),** since a
   failed revoke is not retried (section 2, "Logout"), so a wrong revocation endpoint would leave
-  every refresh token alive with no other sign; the rule is this practice's choice.
+  every refresh token alive with no other sign. The rule is this practice's choice.
 - **BFF, with an identity provider: alert a person each time a resource server's step-up challenge
   names no `acr_values` value on the team's list (section 3, "Forwarding tokens"),** since the
   step-up the page would start cannot meet the challenge, so the user cannot make the change; the
   rule is this practice's choice.
 - **BFF: alert a person when the `ERROR` lines this file asks for pass a rate the team writes down
-  ("Write it down" in section 2 says where), at least the lines for a session store or a list of
+  ("Write it down" in section 2 says where),** since [logging.md](../../python/logging/logging.md)
+  section 4 keeps `ERROR` for an operation that failed for good and needs a person to act. Only an
+  alert calls that person. The alert covers at least the lines for a session store or a list of
   ended sessions that cannot be read, for refreshes that fail with `502`, for a refresh lock that
-  fails, for a key reload that fails, for a failed code exchange and for a session cookie refused
-  for its size,** since
-  [logging.md](../../python/logging/logging.md) section 4 keeps `ERROR` for an operation that
-  failed for good and needs a person to act, and only an alert calls that person; the rule is this
-  practice's choice.
+  fails, for an instance that passes its stale-list limit, for a failed code exchange and for a
+  session cookie refused for its size. The rule is this practice's choice.
 
 ### CORS
 
@@ -2363,9 +2402,9 @@ The API's CORS response headers:
 | `Access-Control-Expose-Headers` | only the response headers the page reads, often none | each listed header becomes readable by scripts on the allowed origin (MDN) [126] |
 
 - **API: with more than one allowed origin, compare the request's `Origin` byte for byte with each
-  entry of the list, written as the browser sends it (scheme, host and port, no trailing slash),
-  and copy it back only on a match; never match by suffix, prefix, substring or regular
-  expression.** ASVS 5.0 requirement 3.4.2 asks that `Access-Control-Allow-Origin` be "a fixed
+  entry of the list, and copy it back only on a match; never match by suffix, prefix, substring or
+  regular expression.** Write each entry as the browser sends it (scheme, host and port, no
+  trailing slash). ASVS 5.0 requirement 3.4.2 asks that `Access-Control-Allow-Origin` be "a fixed
   value by the application, or if the Origin HTTP request header field value is used, it is
   validated against an allowlist of trusted origins" [127]. The browser sends an origin
   with no trailing slash, so a list entry written with one never matches (the Fetch standard)
@@ -2387,8 +2426,8 @@ The API's CORS response headers:
 - **API: answer the preflight with `204` and the CORS headers, without the session and without the
   custom-header check; the preflight handler changes nothing.** A preflight `OPTIONS` request
   never carries the cookie, and it names the custom header in `Access-Control-Request-Headers`
-  instead of sending it (the Fetch standard), so an `OPTIONS` route behind the session check or
-  the header check fails every request it should allow [93]. The
+  instead of sending it (the Fetch standard) [93]. So an `OPTIONS` route behind the session check
+  or the header check fails every request it should allow. The
   browser accepts a preflight answer only with a `2xx` status (the Fetch standard), so a `401`,
   `404` or `405` fails it too [93]. Spring Security's docs name the
   same failure: "the pre-flight request does not contain any cookies" [133].
@@ -2453,7 +2492,7 @@ Access-Control-Allow-Credentials: true
 ```
 
 It fixes the one problem: the answer names `https://app.example.com` whatever origin asked, and
-the API sends that one origin on every response (the header table above), so the browser lets no
+the API sends that one origin on every response (the header table above). So the browser lets no
 page on a sibling subdomain, such as `evil.example.com`, read an answer sent with the user's
 cookie, even where no other check stops the request, as in a browser that sends no Fetch
 Metadata [93]. Why the other lines hold is in the same table.
@@ -2488,10 +2527,10 @@ reports in dotnet/aspnetcore issue 53048 that ASP.NET Core keeps its login cooki
 callback that carries an error [20]. RFC 10017 section 6.1.4.1 notes that "security
 vulnerabilities in the BFF can have a significant impact on the application" [1]. Each
 row below turns one problem into a question with a yes or no answer, and links the rule that says
-what a yes must do. It also names the part of the BFF the question is about, and what a no means:
-`wrap` when a hook or a check outside that part can hold the rule, and `replace` when the rule sits
-in the part's core, such as cookie protection and its key format, the store's atomic save, the
-cookie parser or the router's path handling.
+what a yes must do. It also names the part of the BFF the question is about, and what a no means.
+A no means `wrap` when a hook or a check outside that part can hold the rule, and `replace` when
+the rule sits in the part's core, such as cookie protection and its key format, the store's atomic
+save, the cookie parser or the router's path handling.
 
 | Problem | Part | Ask of the library or framework | A no means | The rule it checks |
 |---|---|---|---|---|
@@ -2547,11 +2586,13 @@ cookie parser or the router's path handling.
 | the provider signs the user in again without asking | OpenID Connect client | With an identity provider, where the timeouts must make the user sign in again, can it send `max_age` on a chosen login, and check `auth_time` at the callback? | replace | [section 2, "Timeouts and refresh"](#timeouts-and-refresh) |
 | one wrong setting signs every user out | OpenID Connect client | With an identity provider, does it give you the token endpoint's error code, so you can end the session on `invalid_grant` and keep it on a setup error or an outage? | replace | [section 2, "Timeouts and refresh"](#timeouts-and-refresh) |
 | a refresh answer without a refresh token | OpenID Connect client | With an identity provider, does it keep the old refresh token when a refresh answer carries none? | wrap | [section 2, "Timeouts and refresh"](#timeouts-and-refresh) |
-| parallel refreshes count as reuse | OpenID Connect client | When the provider rotates the BFF's refresh tokens, has no reuse window that covers the requests in flight, and the session's state is on the server, can it run one refresh per session at a time across instances, with a timeout on the token call and an expiry on its lock, and let only the lock's holder release it? | wrap | [section 2, "Timeouts and refresh"](#timeouts-and-refresh), rules "hold that one refresh with a lock" and "give the call to the token endpoint" |
-| a waiting request refreshes with a rotated refresh token | OpenID Connect client | When the provider rotates the BFF's refresh tokens, has no reuse window that covers the requests in flight, and the session's state is on the server, does it read the session again after it takes the lock, and store the new tokens before it releases the lock? | wrap | [section 2, "Timeouts and refresh"](#timeouts-and-refresh), rules "after taking the lock, read the session's tokens again" and "store the new tokens before you release the lock" |
-| an abandoned request leaves a rotated refresh token stored | OpenID Connect client | When the provider rotates the BFF's refresh tokens, has no reuse window that covers the requests in flight, and the session's state is on the server, does it run the token call and the store of its answer to their timeout when the browser abandons the request? | wrap | [section 2, "Timeouts and refresh"](#timeouts-and-refresh), rule "store the new tokens before you release the lock" |
+| parallel refreshes count as reuse | OpenID Connect client | When the provider rotates the BFF's refresh tokens, has no reuse window that covers the requests in flight, and the session's state is on the server, can it run one refresh per session at a time across instances, with a timeout on the token call and an expiry on its lock, and let only the lock's holder release it? Test it: send parallel requests with an expired access token, against a stub token endpoint that rotates refresh tokens and counts the calls, and expect one refresh call and every request served. | wrap | [section 2, "Timeouts and refresh"](#timeouts-and-refresh), rules "hold that one refresh with a lock" and "give the call to the token endpoint" |
+| a waiting request refreshes with a rotated refresh token | OpenID Connect client | When the provider rotates the BFF's refresh tokens, has no reuse window that covers the requests in flight, and the session's state is on the server, does it read the session again after it takes the lock, and store the new tokens before it releases the lock? Test it: send parallel requests with an expired access token, against a stub token endpoint that rotates refresh tokens and counts the calls, and expect a request that waited to use the new refresh token. | wrap | [section 2, "Timeouts and refresh"](#timeouts-and-refresh), rules "after taking the lock, read the session's tokens again" and "store the new tokens before you release the lock" |
+| an abandoned request leaves a rotated refresh token stored | OpenID Connect client | When the provider rotates the BFF's refresh tokens, has no reuse window that covers the requests in flight, and the session's state is on the server, does it run the token call and the store of its answer to their timeout when the browser abandons the request? Test it: send parallel requests with an expired access token, against a stub token endpoint that rotates refresh tokens and counts the calls, abandon the request whose refresh runs, and expect the stored refresh token to stay usable. | wrap | [section 2, "Timeouts and refresh"](#timeouts-and-refresh), rule "store the new tokens before you release the lock" |
 | an outage lets a copied cookie through | session store | When the session store or the list of ended sessions cannot be read, does it fail with an error, rather than sign the user out or accept the cookie? Test it: make the store unreachable, send a request with a live cookie, and expect `503`. | replace | [section 2, "Timeouts and refresh"](#timeouts-and-refresh) |
 | a timed-out session keeps its tokens at rest | session store | With the session's state on the server, does its store delete a session's record when a timeout ends the session? | wrap | [section 2, "Timeouts and refresh"](#timeouts-and-refresh) |
+| an evicted or lost entry lets a logged-out cookie work again | session store | Can it keep the list of ended sessions, the per-user times, the single-use marks and the refresh locks until their own expiry, never evicting them, and keep them through a restart? A yes may come from a setting: name the setting. Test it: write an entry, restart the store, read it; and read the store's eviction setting. | replace | [section 2, "Timeouts and refresh"](#timeouts-and-refresh), rule "keep the list of ended sessions" |
+| the session records a leaked key encrypted cannot be found | session store | With the tokens encrypted in session records, can it list the records that start with a given key id? | replace | [section 2, "Keys and secrets"](#keys-and-secrets), rule "when you suspect that a cookie key leaked" |
 | a logout that only deletes the cookie | session store | With the session's state on the server, does logout delete the session on the server? | wrap | [section 2, "Logout"](#logout) |
 | a second tab is told that its sign-out failed | HTTP server | Does logout answer with success also when no session exists? | wrap | [section 2, "Logout"](#logout), rule "answer the logout request with success" |
 | a request still running restores the session | session store | With the session's state on the server, does the store refuse to save a session that ended after the request loaded it? Test it: start a slow request, log out while it runs, then let it finish; this shows only the failure of a save at the end of the request. For a store whose save checks first and writes after, read its save code and accept only one atomic update that fails when the record is gone, or a test that holds the logout between the check and the write: Django ticket 37249 says the slow-request flow "was tested and is not sufficient" to restore a session in its cache and file stores, which a logout between the check and the write does restore [70]. | replace | [section 2, "Logout"](#logout) |
@@ -2624,8 +2665,10 @@ test against the version you pick, never from its docs. A row with several parts
 when every part is, and a no names the part that failed; a row you could not check counts as a
 no. Rerun every row that has a test against the version you pick, and again each time the library
 is updated: keep those tests in the BFF's own test suite, so CI runs them on each library update.
-The logout race's test shows only a save at the end of the request, so its row also
-asks for the store's save code.
+A row answered from the library's code is read again at each library update, and its answer notes
+the file and the function it was read from. That reading again, and the tests on the three rows
+on a refresh race, are this practice's choice. The logout race's test shows only a save at the
+end of the request, so its row also asks for the store's save code.
 
 ## 5. Where the rules stop holding
 
@@ -2644,14 +2687,14 @@ asks for the store's save code.
   that end (section 2, "Logout"). A renewal timeout would end a copy sooner; section 2, "Timeouts
   and refresh", says why this practice does not take it. OWASP's Session Management cheat sheet
   calls it "highly recommended to bind the session ID to other user or client properties, such as
-  the client IP address, User-Agent, or client-based digital certificate", but its same section
+  the client IP address, User-Agent, or client-based digital certificate" [8]. But its same section
   says these properties "cannot be used by web applications to trustingly defend against session
   attacks", since an attacker on the same network or behind the same proxy shares the IP address
   and can copy the User-Agent [8]. This practice does not take the binding as a control for that
   reason.
 - **With the session's state in the cookie and a provider that rotates refresh tokens, a refresh
   whose answer never reaches the browser,** such as one for a cancelled query or a dropped
-  connection, loses its `Set-Cookie`: the browser keeps the old refresh token, and when its next
+  connection, loses its `Set-Cookie`. The browser keeps the old refresh token. When its next
   request comes after the provider's reuse window, the provider counts it as reuse, revokes the
   active refresh token and the user is signed out (section 2, "Timeouts and refresh"; RFC 9700
   section 4.14.2) [16]. A request still in flight with the old cookie has the same effect when it
@@ -2660,14 +2703,14 @@ asks for the store's save code.
 - **A cookie key that leaked gives its holder what the cookies it protected hold, after the key is
   replaced.** With the session's state in the cookie, whoever held the leaked key and a copy of a
   cookie keeps the access token in it, valid at its resource servers until it expires, which the
-  short access-token lifetime bounds (section 2, "Logout"), and the refresh token only while the
-  client credential is unchanged, since RFC 6749 section 10.4 binds a refresh token to its client
-  [15]. With the session's state on the server, the key protects only login cookies, which hold no
-  OAuth token. The record of a login or a step-up started from a live session holds that session's
-  id, and with the state on the server that id is the session: whoever holds the key and a copy of
-  such a cookie, or of a `state` that carries the record, can use that session until it ends. The
-  callback ends it, so only an attempt that never reached its callback leaves it live, and the five
-  steps above do not end it.
+  short access-token lifetime bounds (section 2, "Logout"). They keep the refresh token only while
+  the client credential is unchanged, since RFC 6749 section 10.4 binds a refresh token to its
+  client [15]. With the session's state on the server, the key protects only login cookies, which
+  hold no OAuth token. The record of a login or a step-up started from a live session holds that
+  session's id, and with the state on the server that id is the session: whoever holds the key and
+  a copy of such a cookie, or of a `state` that carries the record, can use that session until it
+  ends. The callback ends it, so only an attempt that never reached its callback leaves it live,
+  and the five steps above do not end it.
 - **Whoever reads the session store and also holds the key that encrypts its tokens** reads every
   user's tokens: the access tokens work at their resource servers until they expire, and the
   refresh tokens only with the client credential, and only until the leaked-key plan revokes them
@@ -2675,11 +2718,15 @@ asks for the store's save code.
 - **Whoever can write the key store can plant a key that every instance accepts within one reload
   interval;** the limit on who writes the store and the alert on a write by another identity are
   the controls (section 2, "Keys and secrets").
+- **Where the platform gives no list of instances, or no log line per instance, the rotation job
+  cannot check that every instance loaded a new key before its start time passes;** the start
+  margin of the rotation's step 1 and the stale-list limit are then the only controls (section 2,
+  "Keys and secrets").
 - **A back-channel logout that the BFF cannot carry out,** because its session store cannot be
   written, can leave the session live until its timeouts; only the `ERROR` line of section 2 and
   its alert (section 3, "Logging") show it. A genuine logout token that the BFF refuses during a
   flood, because the interval refused the refetch of the provider's keys (section 3, "Fetch
-  Metadata and exemptions"), is dropped too, since Back-Channel Logout 1.0 section 2.5 has the
+  Metadata and exemptions"), is dropped too. Back-Channel Logout 1.0 section 2.5 has the
   provider send a logout request again only after an error it may recover from, such as a network
   outage: "In all other cases, the OP SHOULD NOT retransmit" [57]. Only its `WARNING` line shows
   it, and the session lives until its timeouts.
@@ -2759,11 +2806,11 @@ asks for the store's save code.
 - **Four Level 2 session requirements of ASVS 5.0** are left to a team that works at that level
   ([security.md](../../react/security/security.md) section 17). The session rules of section 2
   cover the Level 1 requirements of ASVS 5.0 chapter V7 and the Level 2 requirements they cite
-  [42]. They leave out the part of 7.4.5 in which an administrator ends the sessions of all users;
-  7.5.2, users see and end their own sessions; 7.6.1, the application's and the provider's
-  sessions end as documented, with the user signed in again where needed, beyond the choice
-  section 2 asks to write down; and 7.6.2, a new session starts only with the user's consent or
-  an explicit act [42].
+  [42]. They leave out the part of 7.4.5 in which an administrator ends the sessions of all users,
+  and 7.5.2, users see and end their own sessions [42]. They also leave out 7.6.1, the
+  application's and the provider's sessions end as documented, with the user signed in again
+  where needed, beyond the choice section 2 asks to write down; and 7.6.2, a new session starts
+  only with the user's consent or an explicit act [42].
 
 ## 6. Review checklist
 
@@ -2947,3 +2994,4 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [151] Envoy Project — Envoy documentation, Panic threshold — https://raw.githubusercontent.com/envoyproxy/envoy/main/docs/root/intro/arch_overview/upstream/load_balancing/panic_threshold.rst
 - [152] Redis — Distributed Locks with Redis — https://raw.githubusercontent.com/redis/docs/main/content/develop/clients/patterns/distributed-locks.md
 - [153] expressjs — express-session source, `index.js`, v1.19.0 — https://raw.githubusercontent.com/expressjs/session/v1.19.0/index.js
+- [154] Microsoft — ASP.NET Core source, `KeyManagementOptions.cs` — https://raw.githubusercontent.com/dotnet/aspnetcore/main/src/DataProtection/DataProtection/src/KeyManagement/KeyManagementOptions.cs — checked 2026-10-18

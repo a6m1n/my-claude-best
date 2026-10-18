@@ -458,8 +458,10 @@ security" (section 6) [3]:
 | Token-mediating backend, section 6.2 | the backend gets the tokens and hands the access token to the browser | its security properties "lie somewhere between using a BFF and running" a browser-only application [3] |
 | Browser-based OAuth client, section 6.3 | the browser, as a public client | last in the order; all four attack scenarios of section 5.1 apply to it [3] |
 
-- **Choose the BFF for a business application, a sensitive one, or one that handles personal
-  data,** since that is the RFC's recommendation, and a billing screen is all three [3].
+- **Choose the pattern by
+  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 1, "Purpose and scope",** which says when an application needs a BFF and when a BFF is
+  more than it needs; a billing screen meets that section's conditions.
 - **Page: with a BFF, read, store and send no token,** so no token exists in JavaScript to steal:
   the page sends requests with `credentials: "include"`, and the browser adds the cookie (section
   7). Section 15 shows the BAD and the GOOD.
