@@ -392,8 +392,13 @@ injected inline script or event handler is blocked. The policy was checked only 
   collector fits only an application whose URLs hold nothing the user typed [83]. The receiver accepts
   the two formats browsers send: `application/csp-report` from `report-uri`, and
   `application/reports+json` with the type `csp-violation` from `report-to` [193], [194]. The
-  BFF's report intake takes them only when its schema has them. Before you read no reports as
-  nothing to fix, cause one violation on a test deploy and see its report arrive. Drop the reports
+  BFF's report intake takes them only when its schema has them. Each path the page sends reports
+  to, the error and web-vitals reports and, when the BFF's intake receives them, the CSP reports,
+  is one exact path of the report-intake row in the exemption table of
+  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
+  3, "Fetch Metadata and exemptions", which exempts one exact path per endpoint, and its method.
+  Before you read no reports as nothing to fix, cause one violation on a test deploy and see
+  its report arrive. Drop the reports
   whose source is a browser extension before you read them: at Dropbox, extensions that insert
   scripts into the page were the largest source of noise in CSP reports [195].
 - **When a policy starts as report-only, write down the date by which it is enforced, and add a
@@ -557,9 +562,9 @@ section 2, "The login cookie".
 
 ### Reading the `Cookie` header
 
-- **Page: on a `400` whose JSON body carries that fixed code of
-  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
-  2, such as `cookie_conflict`, tell the user to clear this site's data in the browser,** since a
+- **Page: on a `400` whose JSON body's `code` is `cookie_conflict`
+  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
+  2), tell the user to clear this site's data in the browser,** since a
   cookie that a sibling subdomain planted fails every request until it expires or the user removes
   it; the rule is this practice's choice.
 
@@ -612,7 +617,7 @@ section 2, "A new session id at login".
   once more, and show a failed write's error,** since a request answered `401` "has not been
   applied" (RFC 9110 section 15.5.2), so the write did not happen [202]. A second `401` for the
   same read shows the error as for any failed request. The rule is this practice's choice.
-- **Page: where the query client is made, tell it not to retry a `401`, nor a `403` or a `400`
+- **Page: where the query client is made, tell it not to retry a `401` or any `403`, nor a `400`
   whose body carries a fixed code,** since these answers say what the page must do, and a retry
   only sends a guarded request again, while `useQuery` retries a failed query three times by
   default in the browser (TanStack Query docs, read 2026-10-16) [68], [70]. For a `403`, RFC 9110
@@ -681,12 +686,14 @@ section 2, "A new session id at login".
 - **Page, with an identity provider: on a `403` whose body carries `reauth_required`, or when the
   user presses that control (the rule above), open the BFF's login endpoint by a top-level
   navigation, with the step-up flag `step_up=1` and, when the `403` carried `acrValues`, that value
-  as the query parameter `acr_values`, encoded by `URLSearchParams`.** The screen shows the form in
-  place of the control only when the outcome route put the user back with `reauthenticated`, which
-  the outcome route passes to it as router state that the screen reads once and clears. On any
-  other arrival, a reload, Back from the provider, a `refused`, a `failed` and a restore from the
-  back/forward cache included, it shows the control and starts nothing by itself, so Back leaves
-  the user on the screen and the control is how the user tries again. The browser reaches the
+  as the query parameter `acr_values`, encoded by `URLSearchParams`.** On a screen that takes the
+  second way, it shows the form in place of the control only when the outcome route put the user
+  back with `reauthenticated`, which the outcome route passes to it as router state that the
+  screen reads once and clears. On any other arrival, a reload, Back from the provider, a
+  `refused`, a `failed` and a restore from the back/forward cache included, it shows the control
+  and starts nothing by itself, so Back leaves the user on the screen and the control is how the
+  user tries again. A screen that takes the first way shows its form on every arrival, and gets
+  what the user typed back only from the outcome route. The browser reaches the
   login endpoint by a navigation, so the BFF can
   answer with the redirect that takes the browser to the authorization server (RFC 10017 section
   6.1.2.1) [3]. `URLSearchParams` encodes every
@@ -827,9 +834,10 @@ Node 20's URL parser, 2026-10-15).
   3, "What the server does"); the rule is this practice's choice.
 - **Page: when a WebSocket that the page did not close closes with any other code, ask the API
   through the API client whether the session is still live before each reconnect. On a `401`
-  from that check, run the sign-out path (section 6); count every reconnect as an attempt, whatever
-  the check answered, and start the count again only once a socket has stayed open for a time the
-  team writes down.** A handshake the server refuses
+  from that check, or a `200` for a user other than the one the page loaded, run the sign-out path
+  (section 6); count every reconnect as an attempt, whatever the check answered, and start the
+  count again only once a socket has stayed open for a time the team writes down.** A handshake the
+  server refuses
   reaches the page only as a close with code 1006, the code for a connection closed with no close
   frame, so the `401` rule of section 6 cannot fire for a socket (MDN's `CloseEvent.code` page; the
   WHATWG WebSockets Standard) [84], [85]. The rule is this practice's choice.
@@ -1014,7 +1022,7 @@ for this table did not cover it):
 |---|---|---|
 | dependency install scripts | blocked unless `allowScripts` in the root `package.json` approves them; `strict-allow-scripts=true` turns the warning into a failed install. npm 11 still runs them: set `ignore-scripts=true` there, which also stops the repository's own `prepare` and every pre- and post-script, so the team installs its git hooks with a setup command [130], [131], [132]; name that command in the repository's README as the first step after cloning; the CI secret scan of section 14 does not depend on it | blocked; `strictDepBuilds` (default `true`) fails the install on an unreviewed build script; reviewed packages go in `allowBuilds`, which replaced `onlyBuiltDependencies` in pnpm 11; never `dangerouslyAllowAllBuilds` [133], [134] |
 | release cooldown | `min-release-age` in days, off by default in npm 12 as well (the setting exists since npm 11.10.0, 2026-02-11; npm 10 has none); `min-release-age-exclude` (since 11.17.0) exempts packages [130], [135], [136] | `minimumReleaseAge` in minutes, default 1440 (one day) since pnpm 11; `minimumReleaseAgeExclude` exempts packages [137] |
-| git and tarball sources | `allow-git` and `allow-remote` default to `none` [131] | `blockExoticSubdeps` (default `true`): only direct dependencies may come from git or a tarball URL [137] |
+| git and tarball sources; where these controls stop a dependency of a dependency, the "fix a transitive dependency" row below is the way through [140], [137] | `allow-git` and `allow-remote` default to `none` [131] | `blockExoticSubdeps` (default `true`): only direct dependencies may come from git or a tarball URL [137] |
 | provenance | `npm audit signatures` checks registry signatures and provenance attestations [138] | `trustPolicy: no-downgrade` fails when a version's trust level is lower than that of earlier versions [137] |
 | install exactly the lockfile | `npm ci` fails when the lockfile and `package.json` disagree, and writes neither [139] | commit `pnpm-lock.yaml` (pnpm's supply-chain page) [134] |
 | fix a transitive dependency | `overrides` in the root `package.json` [140] | `overrides` in `pnpm-workspace.yaml` [137] |
@@ -1045,18 +1053,24 @@ updates only, never to security updates (read 2026-10-01) [101], [102],
   the fix was in [143]. In pnpm, exempt the patched version as `name@x.y.z`, never the
   bare name, since an entry by name exempts every version of the package; exact versions are
   allowed since pnpm 10.19.0 [137]. A version that fails `trustPolicy: no-downgrade` does not pass
-  with age or with `minimumReleaseAgeExclude`: once someone has checked why its provenance dropped,
-  list it in `trustPolicyExclude` as `name@x.y.z`, with the same removal task [137]. npm's
+  with age or with `minimumReleaseAgeExclude`, since pnpm compares it with every version published
+  before it, however old it is, unless `trustPolicyIgnoreAfter` is set [137]. Once someone has
+  checked why its provenance dropped, list it in `trustPolicyExclude` as `name@x.y.z`, and remove
+  the entry in the change that moves the lockfile off that version; on pnpm 12.4.0 or later,
+  `trustPolicyExcludePrune: true` removes it on that install [137]. The prune does nothing in a
+  workspace with `sharedWorkspaceLockfile: false`, where the entry is removed by hand once no
+  project's lockfile holds that version [137]. npm's
   `min-release-age-exclude` matches package names only
   [130], so with npm the author of the change adds a task to the team's tracker, dated for when
   the version is older than the cooldown and owned by that author, to remove the entry. The path
-  names who may add an entry, and the entry comes out once the version is older than the cooldown;
-  both are this practice's choice. npm has `min-release-age-exclude` since 11.17.0; an older npm has no
-  per-package exemption [135]. With pnpm, a bot's security update to a version younger than the cooldown
-  fails its install until that exemption is in the same pull request, since pnpm checks every
-  lockfile entry against `minimumReleaseAge` on install [207]. Set the bot's own version-update
-  cooldown to at least the package manager's, since Dependabot does not read pnpm's
-  `minimumReleaseAge` [208].
+  names who may add an entry, and a cooldown entry comes out once the version is older than the
+  cooldown; both are this practice's choice. npm has `min-release-age-exclude` since 11.17.0; an
+  older npm has no per-package exemption [135]. With pnpm, a bot's security update to a version
+  younger than the cooldown fails its install until a person adds that version's
+  `minimumReleaseAgeExclude` entry to the same pull request, and its `trustPolicyExclude` entry too
+  when its provenance dropped, since pnpm checks every lockfile entry against `minimumReleaseAge`
+  and `trustPolicy` on install [207], [137]. Set the bot's own version-update cooldown to at least
+  the package manager's, since Dependabot does not read pnpm's `minimumReleaseAge` [208].
   Check: when you set a cooldown, ask: if a critical fix ships today, which line do we change? If
   no line next to the setting answers, the path is missing.
 - **Allow a dependency's build script only after someone has read it,** by adding that package to
@@ -1341,11 +1355,15 @@ default [173], [174]. They were not compared here.
   before the next deploy, since each is a weakness in what the deployed site sends; the bar is this
   practice's choice.
 - **Run the supply-chain and secret checks in CI:** `npm audit signatures`, OSV-Scanner and the
-  secret scanner (sections 9 and 10) [138]. OSV-Scanner fails on any finding, so record an
-  advisory the application does not reach in `osv-scanner.toml` as an `[[IgnoredVulns]]` entry
-  with a `reason` and an `ignoreUntil` date, and add a task, dated before `ignoreUntil` and owned
-  by whoever wrote the entry, to check again whether the application reaches it: the job stays
-  required, and the exception expires [196], [197].
+  secret scanner (sections 9 and 10) [138]. In CI, run `gitleaks git --log-opts="<base>..HEAD"`
+  over the pull request's commits, where `<base>` is the pull request's target branch, and
+  `gitleaks dir dist/ --config .gitleaks.toml` over the build, since `git` scans the
+  commits' patches through `git log -p` and `dir` scans the folder it is given [116]. OSV-Scanner
+  fails on any finding, so record an advisory the application does not reach in
+  `osv-scanner.toml` as an `[[IgnoredVulns]]` entry with a `reason` and an `ignoreUntil` date, and
+  add a task, dated before `ignoreUntil` and owned by whoever wrote the entry, to check again
+  whether the application reaches it: the job stays required, and the exception expires [196],
+  [197].
 ## 15. Common mistakes
 
 Each pair shows one problem and its fix. The BAD is written by hand: the same file or lines as
@@ -1680,12 +1698,12 @@ it is fixed or the author shows why it does not apply; that bar is the practice'
 | 2. What the browser can protect | Does the server check this request on its own? | a permission enforced only by hiding a button or a route |
 | 3. XSS | Can a value from outside reach HTML, a URL, a props object, a style or code? | a URL from data with no scheme allowlist; outside data spread as props; a renderer's `urlTransform` overridden [13] |
 | 4. Sanitising | Is the HTML sanitised in the sink's own render? | a second `dangerouslySetInnerHTML`; a sanitised string changed or joined after cleaning |
-| 5. Headers | Does the built page run under a policy with no `'unsafe-inline'` in `script-src`? | `'unsafe-inline'` or `data:` in `script-src`; a policy only in `<meta>`; a nonce in a cached response; a report-only policy with no named receiver or no written end date, or still report-only after that date; a log-only check past its written end; a header change whose pull request has no CSP Evaluator result, or, where the host has a preview deploy, no HTTP Observatory result |
+| 5. Headers | Does the built page run under a policy with no `'unsafe-inline'` in `script-src`? | `'unsafe-inline'` or `data:` in `script-src`; a policy only in `<meta>`; a nonce in a cached response; a report-only policy with no named receiver or no written end date, or still report-only after that date; a header change whose pull request has no CSP Evaluator result, or, where the host has a preview deploy, no HTTP Observatory result |
 | 6a. Sessions, page | Can script read anything that grants access? | a token or session id in `localStorage`, `sessionStorage` or a cookie set by script; a cookie the page sets without `Secure`, a written `SameSite` or a `__Host-` or `__Secure-` prefix; `refetchInterval` on data that needs the session |
 | 7a. CSRF and CORS, page | Does each request to an API route carry the CSRF defence, and does the page fix CORS errors and build API paths as section 7 says? | `mode: "no-cors"` or a public proxy in the page; a value from outside put into an API path unchecked; a request to an API route, other than the exempt ones in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3, made outside the one API client or without the custom header, or without `credentials: "include"` when the API is on another origin; a blob made with the response's own type, or an SVG blob |
 | 8. Server-side React | Does each Server Function check the user and the record itself? | authorisation only in middleware; a secret written in server code |
 | 9. Secrets | Would you publish every `VITE_` value on the login page? | a key, a token or a password behind a public prefix; production source maps published |
-| 10. Supply chain | Does every install obey the cooldown and the script block, with a named emergency path? | a new dependency nobody checked on the registry; an action pinned by tag; fork code in `pull_request_target`; a cooldown exclusion past its removal date; an `[[IgnoredVulns]]` entry with no `reason` or no `ignoreUntil` |
+| 10. Supply chain | Does every install obey the cooldown and the script block, with a named emergency path? | a new dependency nobody checked on the registry; an action pinned by tag; fork code in `pull_request_target`; a cooldown exclusion past its removal date; a trust exclusion for a version no lockfile of the workspace holds; an `[[IgnoredVulns]]` entry with no `reason` or no `ignoreUntil` |
 | 11. Dev server | Does the dev server answer only localhost? | `allowedHosts: true`; `cors: true`; `host` open on a network you do not trust |
 | 12. Edges | Does each `message` listener check one exact origin? | `postMessage(…, "*")`; a sandbox with both `allow-scripts` and `allow-same-origin`; a redirect to a raw `?next=` |
 | 13. Data exposure | Can a URL, a log line or a replay carry a credential, and does a failed screen show a message of its own, not the error's text? | a token in a query string; replay masking turned off; paste blocked; the error's own text on a failed screen |
@@ -1777,7 +1795,7 @@ is named.
 | A06 Insecure Design [178] | a check in the page helps the user and protects nothing; the design puts every control on the server, and the session in a BFF; OWASP asks to model the threats of critical flows such as sign-in and access control (the threat-modelling step above) [184] | 2, 6 |
 | A07 Authentication Failures [178] | mostly the server's: the OAuth flow, a new session id at login, timeouts, logout and re-authentication; the browser side holds no token and handles a `401` as section 6, "Timeouts and refresh", says; a first-party login's password storage, throttling and sign-in error messages are outside this practice ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 5) | 6; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
 | A08 Software or Data Integrity Failures [178] | scripts from other origins, Subresource Integrity, and state the server writes into the page; an object from outside spread as props (section 3); the session's state in a signed and encrypted cookie ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2); the arguments of a Server Function (section 8) | 3, 6, 8, 10, 12; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
-| A09 Security Logging and Alerting Failures [178] | mostly the server's: it logs security events, and alerts a person when the rejections of one check pass their written rate and on every step-up from another account; the browser side keeps credentials out of its own reports [188] | 6, 7, 13; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) sections 2, 3 |
+| A09 Security Logging and Alerting Failures [178] | mostly the server's: it logs security events and alerts a person on them ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3, "Logging"); the browser side keeps credentials out of its own reports [188] | 6, 7, 13; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) sections 2, 3 |
 | A10 Mishandling of Exceptional Conditions [178] | mostly the server's: it fails closed; the browser side shows a message of its own on a failed screen, never the error's text | 6, 13; [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 2 |
 
 Two more OWASP sources sound like they belong here, and neither is mapped (both read 2026-10-15).
@@ -1928,7 +1946,7 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [137] pnpm — Settings: dependency resolution — https://pnpm.io/settings/dependency-resolution — checked 2026-10-18
 - [138] npm — npm-audit, v11 — https://docs.npmjs.com/cli/v11/commands/npm-audit — checked 2026-10-01
 - [139] npm — npm-ci, v12 — https://docs.npmjs.com/cli/v12/commands/npm-ci — checked 2026-10-01
-- [140] npm — package.json, v11 — https://docs.npmjs.com/cli/v11/configuring-npm/package-json#overrides — checked 2026-10-01
+- [140] npm — package.json, v11 — https://docs.npmjs.com/cli/v11/configuring-npm/package-json#overrides — checked 2026-10-18
 - [141] Yarn — Configuration options (.yarnrc.yml) — https://yarnpkg.com/configuration/yarnrc
 - [142] Bun — bunfig.toml — https://bun.com/docs/runtime/bunfig
 - [143] Tadashi Shigeoka — How pnpm's minimumReleaseAgeExclude Helped with Emergency Security Updates (CodeNote.net, 2025; case) — https://codenote.net/en/posts/pnpm-minimumreleaseageexclude-for-emergency-vulnerability-fixes/

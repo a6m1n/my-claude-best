@@ -686,7 +686,9 @@ strict-allow-scripts=true
 # The next two are npm 12's defaults, written out so the policy shows in review.
 # Refuses git dependencies: a cooldown cannot see a commit (security.md section 10).
 allow-git=none
-# Refuses tarball URLs, which skip the registry and its checks (security.md section 10).
+# Refuses tarball URLs, which skip the registry and its checks. Where this line or allow-git
+# stops a dependency of a dependency, give it a registry version in package.json's overrides
+# (security.md section 10).
 allow-remote=none
 # A version is installed only once it is 7 days old (CISA's advice after the axios compromise).
 # Emergency path, for a critical advisory only, approved by a second person in the pull request:
@@ -709,7 +711,9 @@ exemption, so the emergency path works from 11.17.0 on.
 ignore-scripts=true
 # Refuses git dependencies: a cooldown cannot see a commit (security.md section 10).
 allow-git=none
-# Refuses tarball URLs, which skip the registry and its checks (security.md section 10).
+# Refuses tarball URLs, which skip the registry and its checks. Where this line or allow-git
+# stops a dependency of a dependency, give it a registry version in package.json's overrides
+# (security.md section 10).
 allow-remote=none
 # A version is installed only once it is 7 days old (CISA's advice after the axios compromise).
 # Emergency path, for a critical advisory only, approved by a second person in the pull request:
@@ -734,9 +738,13 @@ minimumReleaseAge: 10080 # minutes
 # The next two are pnpm defaults, written out so the policy shows in review.
 # An unreviewed dependency build script fails the install (security.md section 10).
 strictDepBuilds: true
-# Only direct dependencies may come from git or a tarball URL (security.md section 10).
+# Only direct dependencies may come from git or a tarball URL; a dependency of a dependency it
+# stops gets a registry version through overrides in this file (security.md section 10).
 blockExoticSubdeps: true
-# Fails when a version has weaker provenance than earlier ones (security.md section 10).
+# Fails when a version has weaker provenance than earlier ones, and age never lifts it. For a
+# version that fails it, a patched one included, a second person in the pull request checks why
+# its provenance dropped and adds it to trustPolicyExclude as name@x.y.z; the change that moves
+# the lockfile off that version removes the entry (security.md section 10).
 trustPolicy: no-downgrade
 # Denied by name, so strictDepBuilds does not fail the install on them; the checks passed
 # with every install script ignored (pnpm's build settings page; security.md section 10 for
@@ -750,8 +758,9 @@ Why it is good:
 
 - **The controls live in the repository,** so a person, CI and an agent install under the same
   rules.
-- **The emergency path is written next to the cooldown,** with who approves it and when the entry
-  comes out; the React2Shell patch was blocked by a one-day cooldown that had no such line.
+- **The emergency path is written next to the cooldown and the trust policy,** with who approves
+  it and when the entry comes out; the React2Shell patch was blocked by a one-day cooldown that had
+  no such line.
 - **Each line says what it does,** so nobody deletes a default as noise. The defaults of npm 12
   (`allow-git`, `allow-remote`) and of pnpm 11 (`strictDepBuilds`, `blockExoticSubdeps`) are
   written out too, so the policy shows in review.

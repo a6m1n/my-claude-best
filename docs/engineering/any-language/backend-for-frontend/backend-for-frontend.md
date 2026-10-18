@@ -2097,14 +2097,14 @@ Where the server has the framework's own CSRF check, that check runs too, with i
 | the login start, a top-level `GET` | one exact path and the method `GET` | it changes neither the user's data nor the session; it starts a login attempt, which the login-cookie rules of section 2 bound |
 | the login callback, which also completes a step-up | one exact path and its method | `state`, the nonce and the PKCE verifier bound to the login cookie (section 2) [16]; for a step-up, also the checks of section 2's step-up callback |
 | the back-channel logout endpoint | one exact path and its method | validating the signed logout token, as the logout-token rule of section 2, "Logout", says; a cap on its size and its rate, and on refetching the provider's keys (the rules on the back-channel logout endpoint below) |
-| the report intake, a separate endpoint that takes anonymous reports | one exact path and its method | it reads no session, so a report carries no session to forge; the rule on reports below |
+| the report intake: one endpoint per report kind (web vitals, errors, CSP reports), each taking anonymous reports | one exact path per endpoint, and its method | it reads no session, so a report carries no session to forge; the rule on reports below |
 | the WebSocket handshake, a `GET` on its one path | one exact path and the method `GET` | the exact `Origin` check below |
 | a file the page opens by navigation (a download link) | one route template (a fixed path with the record id as one encoded segment) and the method `GET`; when the request carries Fetch Metadata, also `Sec-Fetch-Mode: navigate` and a `Sec-Fetch-Dest` other than `object` or `embed`, the navigation test of web.dev's Resource Isolation Policy [24] | it changes nothing, and its answer goes to the user's own window, where no other site can read it (OWASP's CSRF cheat sheet: keep `GET` free of state changes) [10] |
 | the CORS preflight | the method `OPTIONS` on any API path | it carries no cookie and no custom header, and changes nothing [93] |
 | the readiness check the load balancer calls | one exact path and the method `GET` | it reads no session, and answers only ready or not ready, with no key id; serve it on an internal listener where you can |
 
-A report the application sends about itself (web vitals, errors) goes to the report intake without
-a cookie, through the `report` method of the API client; an endpoint that did read the session
+A report the application sends about itself (web vitals, errors) goes to its kind's intake path
+without a cookie, through the `report` method of the API client; an endpoint that did read the session
 would need the client's `request` method. Every other request to an API route without the header
 is rejected. In a client-rendered application served as static files, the routes that serve the
 page's own files (the HTML and its scripts) read no session, so neither check applies to them.
