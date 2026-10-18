@@ -108,6 +108,20 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   (`images.md` section 10), no secret value is written into `compose.yaml` (`compose.md`
   section 4), and an agent container that runs without approvals mounts no host credential and
   reaches the network only through the proxy (`agent-containers.md` sections 3 to 5).
+- Before you write or change a workflow under `.github/workflows/`, the required status checks of
+  `main`, a deploy job, a cloud role a pipeline assumes, or a secret a pipeline reads, read
+  `docs/engineering/any-language/ci-cd/README.md` and the file it routes to for that work, and
+  `docs/engineering/any-language/ci-cd/ci-example.md` when you write a CI workflow,
+  `docs/engineering/any-language/ci-cd/deploy-example.md` when you write a deploy workflow,
+  `docs/engineering/any-language/ci-cd/security-example.md` when you set up the security checks. The
+  check: every workflow the change adds or edits starts with `permissions: {}` and pins every action
+  to a full commit SHA (`pipeline-security.md` sections 3 and 4), so
+  `grep -rhn "uses:" .github/workflows/ | grep -vE "@[0-9a-f]{40}|uses: \./"` prints nothing;
+  every job it adds that runs on a runner (`runs-on`) sets `timeout-minutes` and names its runner
+  by version (`pipeline.md` sections 8 and 9); no workflow whose check is required has a `paths:`
+  or `branches:` filter on its `pull_request` or `merge_group` trigger (`pipeline.md` section 6);
+  no value from outside sits inside a `run:` script as `${{ }}` (`pipeline-security.md` section 5);
+  and no deploy job reads a stored cloud key (`delivery.md` section 5).
 - Before you create a React application, or add a module, a route, a query, a mutation or a
   dependency to one, read `docs/engineering/react/architecture/architecture.md`, and
   `docs/engineering/react/architecture/layout-example.md` when you lay out an application or add a

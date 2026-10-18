@@ -37,7 +37,8 @@ flowchart LR
    hook, the CI job that runs them, or a comment that silences one, read
    `docs/engineering/python/static-checks/static-checks.md`." Without it an agent never opens the file.
 3. Copy the three files from `setup-example.md`, keep in `extend-select` only the rules of the
-   practices you took, and make the CI job a required status check for `main`. When you took
+   practices you took, and make the CI job a required status check for `main`, directly or through
+   the gate job of [ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 6. When you took
    python/language but not readability or file-structure, still keep the settings whose comment
    names readability or file-structure: [python.md](../language/python.md) section 6 sends PEP 8's
    rules to those two practices, and these settings are their checks. Drop them only if you replaced

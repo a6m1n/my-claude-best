@@ -91,8 +91,9 @@ The terms of the next section are what a reader needs to know before the rules.
    module's case set from its real traces ([evals.md](evals.md) sections 3 and 4).
 4. The practice links [python/testing/](../testing/README.md),
    [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md),
-   [logging.md](../logging/logging.md), [file-structure.md](../../any-language/file-structure/file-structure.md) and
-   [git.md](../../any-language/git/git.md) for the rules they own. Copy those folders too, or replace each link with
+   [logging.md](../logging/logging.md), [file-structure.md](../../any-language/file-structure/file-structure.md),
+   [git.md](../../any-language/git/git.md) and [ci-cd](../../any-language/ci-cd/README.md) (the eval
+   workflow's pins, runner, timeout and permissions) for the rules they own. Copy those folders too, or replace each link with
    your own rule for that topic.
 5. Re-check the lines that name a moving target: the library versions and behaviours in
    [tools.md](tools.md) and the examples, the vendor facts in [production.md](production.md), and the

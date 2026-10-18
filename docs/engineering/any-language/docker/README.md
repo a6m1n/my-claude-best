@@ -71,8 +71,10 @@ the only way out that [agent-containers.md](agent-containers.md) section 5 leave
    [git.md](../git/git.md) section 8 (one working tree per session),
    [static-checks.md](../../python/static-checks/static-checks.md) sections 3 (one pinned version
    per tool), 5 (CI is the gate: a check is on or off) and 6 (a suppression names the rule and the
-   reason), and [python/testing/libraries.md](../../python/testing/libraries.md) section 2 (testcontainers).
-   Copy those practices too, or point each link at the rule your project follows instead.
+   reason), [python/testing/libraries.md](../../python/testing/libraries.md) section 2 (testcontainers),
+   and [ci-cd](../ci-cd/README.md) (actions pinned in every workflow, timeouts, the gate job, and
+   the image job split in a monorepo). Copy those practices too, or point each link at the rule
+   your project follows instead.
 4. In a repository that already has a Dockerfile, apply the rules to new and changed files first,
    as [refactoring.md](../refactoring/refactoring.md) section 2 describes. The build context and
    build secrets (images.md sections 2 and 5) are about secrets in published images: move those
@@ -87,8 +89,11 @@ the only way out that [agent-containers.md](agent-containers.md) section 5 leave
 
 ## The points to adapt
 
-The shape stays: every input pinned and moved by a bot, nothing secret in a layer, one non-root
-process, a health check where its runtime reads it, an agent that holds nothing it must not leak.
+The shape stays: every input pinned, with Renovate moving the image and action pins and a named
+owner moving by hand what Renovate does not, such as a scanner's `version:` input
+([ci-cd/pipeline-security.md](../ci-cd/pipeline-security.md) section 4); nothing secret in a
+layer; one non-root process; a health check where its runtime reads it; an agent that holds
+nothing it must not leak.
 Within that shape, these are your choices; each rules file names the options and their costs.
 
 - Whether the team needs a dev container at all (dev-containers.md section 3).

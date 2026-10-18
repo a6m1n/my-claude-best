@@ -116,8 +116,10 @@ prek both read it, and prek runs it faster; CPython, FastAPI, Airflow and ruff s
 - **One CI job runs every check on every pull request**, from a clean checkout: `uv sync --locked`,
   then the hook file on all files. `pre-commit run --all-files --show-diff-on-failure` fails when a
   hook finds a problem or would change a file.
-- **The job is a required status check** for `main` in the branch ruleset, so a failing check blocks
-  the merge ([git.md](../../any-language/git/git.md) section 5 owns how a pull request lands).
+- **The job is a required status check** for `main` in the branch ruleset, directly or through the
+  gate job of [ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 6, so a failing
+  check blocks the merge ([git.md](../../any-language/git/git.md) section 5 owns how a pull request
+  lands).
 - **A check is on or off, never "warning only".** A warning nobody has to fix is noise after a
   week. A rule the team does not want to fix everywhere yet is turned on the way
   [refactoring.md](../../any-language/refactoring/refactoring.md) sections 4 and 10 say.

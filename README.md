@@ -45,6 +45,7 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 - [python/testing](docs/engineering/python/testing/) — which code earns a test, and how a pytest suite is laid out and written.
 - [python/evals](docs/engineering/python/evals/) — how to check what a language model does in an application, with real calls on real cases.
 - [any-language/docker](docs/engineering/any-language/docker/) — one application's image from the build context to the registry, running it with Compose, and a container an AI coding agent works in.
+- [any-language/ci-cd](docs/engineering/any-language/ci-cd/) — CI and CD on GitHub Actions: what a job holds, which event starts it, the stages and the one required check, an artifact built once and deployed to production on a person's decision, and a pipeline that keeps its secrets out of the repository.
 - [react/architecture](docs/engineering/react/architecture/) — the format of a React application, its tree, where state and server data live, and the library for each job.
 - [react/components](docs/engineering/react/components/) — how one component and one hook are written, and the common mistakes.
 - [react/design](docs/engineering/react/design/) — how a screen looks and behaves, accessibility, and designing with Claude Code.

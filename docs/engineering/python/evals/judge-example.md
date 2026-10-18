@@ -678,7 +678,10 @@ jobs:
   judge-unsupported-promise:
     # Nightly only: the workflow's pull-request paths are the triage call's.
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # a version label, as in the triage job
+    timeout-minutes: 60  # about 200 labels, each a model call
+    permissions:
+      contents: read  # the workflow grants nothing by default
     steps:
       # Every label against the last scheduled run (judges.md section 6).
       - run: uv run --locked python -m evals.chat.experiment_judge_unsupported_promise --drift

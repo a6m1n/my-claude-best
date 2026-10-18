@@ -337,14 +337,10 @@ Whatever the choice:
   `attestations: write` [96]. Check out with `persist-credentials: false`, so the checkout leaves
   no token for later steps to read [97]. Prefer OIDC to long-lived registry keys where the registry
   supports it [98].
-- **In this job, pin every action to a full commit SHA [126], with its version in a comment.** Attackers
-  moved existing tags to malicious commits in tj-actions (March 2025), reviewdog (March 2025) and
-  Trivy's own `trivy-action` (March 2026, 76 of its 77 tags) [99], [100], [101]. This job holds
-  write access to the registry, and the signing identity where the job signs, so a moved tag here
-  publishes an attacker's image under your name. A release marked "Immutable" on GitHub is not
-  enough: the badge showed on poisoned `trivy-action` tags [102], [101]. The rule covers the job
-  that pushes images; other workflows follow their own practice. Renovate updates SHA pins
-  together with the version comment [103], [127].
+- **In this job, pin every action to a full commit SHA [126], with its version in a comment.** This
+  job holds write access to the registry, so a moved tag here publishes an attacker's image under
+  your name; the rule itself, its incidents and the bot that moves the pins are
+  [ci-cd/pipeline-security.md](../ci-cd/pipeline-security.md) section 4's.
 - **Give each image its own cache scope, and keep cache writes away from untrusted code.** Two
   images that share a `scope` overwrite each other's cache [104]. A workflow that runs code from a
   fork must not write the cache the release build reads (section 5) [105].
@@ -521,11 +517,7 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [96] GitHub — actions/attest README, v4.2.2 — https://github.com/actions/attest/blob/v4.2.2/README.md
 - [97] GitHub — actions/checkout README, v7.0.1 — https://github.com/actions/checkout/blob/v7.0.1/README.md
 - [98] GitHub — OpenID Connect (security hardening for GitHub Actions) — https://docs.github.com/en/actions/concepts/security/openid-connect
-- [99] GitHub Advisory Database — GHSA-mrrh-fwg8-r2c3, tj-actions/changed-files (CVE-2025-30066) — https://github.com/advisories/GHSA-mrrh-fwg8-r2c3
-- [100] Rami McCarthy — New GitHub Action supply chain attack: reviewdog/action-setup (Wiz blog, 2025; case) — https://www.wiz.io/blog/new-github-action-supply-chain-attack-reviewdog-action-setup
 - [101] Aqua Security — GHSA-69fq-xp46-6x23, Trivy supply chain compromise (CVE-2026-33634) — https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23
-- [102] Aqua Security — Trivy Supply Chain Attack: What You Need to Know (Aqua blog, 2026; case) — https://www.aquasec.com/blog/trivy-supply-chain-attack-what-you-need-to-know/
-- [103] Renovate — github-actions manager, digest pinning and updating, 44.164.10 — https://github.com/renovatebot/renovate/blob/44.164.10/lib/modules/manager/github-actions/readme.md
 - [104] Docker — GitHub Actions cache backend — https://docs.docker.com/build/cache/backends/gha/
 - [105] Docker — Cache management with GitHub Actions — https://docs.docker.com/build/ci/github-actions/cache/
 - [106] Docker — Docker Hub usage and limits: pulls — https://docs.docker.com/docker-hub/usage/pulls/
@@ -549,7 +541,6 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [124] Docker — Rootless mode: UID/GID mapping — https://docs.docker.com/engine/security/rootless/uid-gid-mapping/
 - [125] GitHub — Dockerfile support for GitHub Actions, `USER` — https://docs.github.com/en/actions/reference/workflows-and-actions/dockerfile-support#user
 - [126] GitHub — Secure use reference (GitHub Docs) — https://docs.github.com/en/actions/reference/security/secure-use
-- [127] Renovate — github-actions manager, extract.ts (the replacement template), 44.164.10 — https://github.com/renovatebot/renovate/blob/44.164.10/lib/modules/manager/github-actions/extract.ts
 - [128] Traefik Labs — Traefik docs: Docker provider — https://github.com/traefik/traefik/blob/master/docs/content/reference/install-configuration/providers/docker.md
 - [129] Bridgecrew — Checkov check CKV_DOCKER_2, HealthcheckExists — https://github.com/bridgecrewio/checkov/blob/main/checkov/dockerfile/checks/HealthcheckExists.py
 - [130] Aqua Security — trivy-checks DS-0026, no_healthcheck_instruction — https://github.com/aquasecurity/trivy-checks/blob/main/checks/docker/no_healthcheck_instruction.rego

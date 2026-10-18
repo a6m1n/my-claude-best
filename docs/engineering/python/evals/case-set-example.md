@@ -585,17 +585,26 @@ on:
   schedule:
     - cron: "0 3 * * *"
 
-permissions:
-  contents: read
+permissions: {}  # nothing by default; each job asks for what it uses
+
+concurrency:
+  # A new push to a pull request cancels its older run, and its model calls; the nightly run is never
+  # cancelled (ci-cd/pipeline.md section 8).
+  group: evals-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   triage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # a version label: the OS changes only when this line does (ci-cd/pipeline.md section 9)
+    timeout-minutes: 30  # the case set's model calls, with room; a hung call stops here
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      # Pinned to the release's commit, the release in the comment (ci-cd/pipeline-security.md section 4).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          persist-credentials: false  # the job holds a paid key: the token does not stay in .git/config
-      - uses: astral-sh/setup-uv@v10.2.0
+          persist-credentials: false  # the job holds a paid key: the token is not left on the runner
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
       - run: uv sync --locked
       - run: uv run --locked python -m evals.triage.experiment_triage
         env:
@@ -627,7 +636,8 @@ request's code.
 the real secrets; this snippet leaves them out.
 The checkout, the uv setup and the read-only token are those of
 [python/static-checks/setup-example.md](../static-checks/setup-example.md): the job holds a paid key, so
-the token does not stay in `.git/config`.
+the checkout's token is not left on the runner. A pull request from a fork gets no secrets, so this
+job cannot run there ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4).
 
 ## The contract of single cases
 
