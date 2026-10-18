@@ -53,8 +53,9 @@ login to logout, CSRF and CORS, is the
    date its section 6 asks for. Run the install once under the new settings before the change
    lands. pnpm re-checks every lockfile entry against `minimumReleaseAge` and `trustPolicy`, so an
    entry younger than the cooldown, or with weaker provenance than an earlier version, fails it.
-   Land the setting once those entries are older than the cooldown, or exempt each one as
-   security.md section 10's emergency path says, with its removal task.
+   Land the cooldown once those entries are older than it, or exempt each one as security.md
+   section 10's emergency path says, which also names the exemption for an entry that fails
+   `trustPolicy`, with its removal task.
 4. Use section 17's first work step as the security part of your review template: read the rules
    of every section the change touches, and check the red flags of section 17's checklist.
 5. The practice links the

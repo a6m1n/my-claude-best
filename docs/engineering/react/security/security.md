@@ -583,9 +583,8 @@ The flow, in order, with the page's own acts in bold:
 
 - **Page: when the session check answers `401` on a route that needs no session, show the
   signed-out state instead of running the sign-out path, and check for this case before the `401`
-  rule below,** since a visitor on a public page has no session to end, and the sign-out path
-  would show them the signed-out screen, whose control starts a login; the rule is this practice's
-  choice.
+  rule below,** since there the sign-out path's signed-out screen would replace the public page the
+  visitor opened; the rule is this practice's choice.
 
 The BFF's rules on a new session id at login are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
@@ -713,8 +712,8 @@ section 2, "A new session id at login".
   ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
   section 2, "Re-authentication"). The screen's own session check decides whether the session is
   still live, and a `401` there runs the sign-out path. A missing or unknown `outcome` counts as
-  `failed`, and with no kept entry the route shows the outcome its parameter names; with no kept
-  entry there is nothing to restore. The rule is this practice's choice.
+  `failed`, and with no kept entry the route shows the outcome its parameter names and restores
+  nothing. The rule is this practice's choice.
 
 The BFF's rules on forwarding requests to resource servers are in
 [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
@@ -821,7 +820,7 @@ Node 20's URL parser, 2026-10-15).
 - **When the page opens a WebSocket, add the socket's `wss://` origin, such as
   `wss://api.example.com`, to `connect-src` in the page's policy (section 5),** since a source
   written with `https://` does not match a `wss://` URL, so the reference policy would block the
-  socket (CSP Level 3, "scheme-part matching", read 2026-10-16) [83].
+  socket (CSP Level 3, "scheme-part matching", read 2026-10-18) [83].
 - **Page: when the server closes a WebSocket with its session-ended code, run the sign-out path,**
   since that code is the server's word that the session ended (the WebSocket rules in
   [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section
@@ -1045,12 +1044,15 @@ updates only, never to security updates (read 2026-10-01) [101], [102],
   that exempts one package; in the practitioner's account the team emptied the setting again once
   the fix was in [143]. In pnpm, exempt the patched version as `name@x.y.z`, never the
   bare name, since an entry by name exempts every version of the package; exact versions are
-  allowed since pnpm 10.19.0 [137]. npm's `min-release-age-exclude` matches package names only
+  allowed since pnpm 10.19.0 [137]. A version that fails `trustPolicy: no-downgrade` does not pass
+  with age or with `minimumReleaseAgeExclude`: once someone has checked why its provenance dropped,
+  list it in `trustPolicyExclude` as `name@x.y.z`, with the same removal task [137]. npm's
+  `min-release-age-exclude` matches package names only
   [130], so with npm the author of the change adds a task to the team's tracker, dated for when
   the version is older than the cooldown and owned by that author, to remove the entry. The path
   names who may add an entry, and the entry comes out once the version is older than the cooldown;
   both are this practice's choice. npm has `min-release-age-exclude` since 11.17.0; an older npm has no
-  per-package exemption [135]. A bot's security update to a version younger than the cooldown
+  per-package exemption [135]. With pnpm, a bot's security update to a version younger than the cooldown
   fails its install until that exemption is in the same pull request, since pnpm checks every
   lockfile entry against `minimumReleaseAge` on install [207]. Set the bot's own version-update
   cooldown to at least the package manager's, since Dependabot does not read pnpm's
@@ -1678,7 +1680,7 @@ it is fixed or the author shows why it does not apply; that bar is the practice'
 | 2. What the browser can protect | Does the server check this request on its own? | a permission enforced only by hiding a button or a route |
 | 3. XSS | Can a value from outside reach HTML, a URL, a props object, a style or code? | a URL from data with no scheme allowlist; outside data spread as props; a renderer's `urlTransform` overridden [13] |
 | 4. Sanitising | Is the HTML sanitised in the sink's own render? | a second `dangerouslySetInnerHTML`; a sanitised string changed or joined after cleaning |
-| 5. Headers | Does the built page run under a policy with no `'unsafe-inline'` in `script-src`? | `'unsafe-inline'` or `data:` in `script-src`; a policy only in `<meta>`; a nonce in a cached response; a report-only policy with no named receiver or no written end date, or still report-only after that date; a log-only check past its written end; a header change with no CSP Evaluator and HTTP Observatory result in its pull request |
+| 5. Headers | Does the built page run under a policy with no `'unsafe-inline'` in `script-src`? | `'unsafe-inline'` or `data:` in `script-src`; a policy only in `<meta>`; a nonce in a cached response; a report-only policy with no named receiver or no written end date, or still report-only after that date; a log-only check past its written end; a header change whose pull request has no CSP Evaluator result, or, where the host has a preview deploy, no HTTP Observatory result |
 | 6a. Sessions, page | Can script read anything that grants access? | a token or session id in `localStorage`, `sessionStorage` or a cookie set by script; a cookie the page sets without `Secure`, a written `SameSite` or a `__Host-` or `__Secure-` prefix; `refetchInterval` on data that needs the session |
 | 7a. CSRF and CORS, page | Does each request to an API route carry the CSRF defence, and does the page fix CORS errors and build API paths as section 7 says? | `mode: "no-cors"` or a public proxy in the page; a value from outside put into an API path unchecked; a request to an API route, other than the exempt ones in [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md) section 3, made outside the one API client or without the custom header, or without `credentials: "include"` when the API is on another origin; a blob made with the response's own type, or an SVG blob |
 | 8. Server-side React | Does each Server Function check the user and the record itself? | authorisation only in middleware; a secret written in server code |
@@ -1923,7 +1925,7 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [134] pnpm — Mitigating supply chain attacks — https://pnpm.io/supply-chain-security — checked 2026-10-01
 - [135] npm — Changelog, v11 — https://docs.npmjs.com/cli/v11/using-npm/changelog — checked 2026-10-01
 - [136] npm — Config, v10 — https://docs.npmjs.com/cli/v10/using-npm/config — checked 2026-10-01
-- [137] pnpm — Settings: dependency resolution — https://pnpm.io/settings/dependency-resolution — checked 2026-10-01
+- [137] pnpm — Settings: dependency resolution — https://pnpm.io/settings/dependency-resolution — checked 2026-10-18
 - [138] npm — npm-audit, v11 — https://docs.npmjs.com/cli/v11/commands/npm-audit — checked 2026-10-01
 - [139] npm — npm-ci, v12 — https://docs.npmjs.com/cli/v12/commands/npm-ci — checked 2026-10-01
 - [140] npm — package.json, v11 — https://docs.npmjs.com/cli/v11/configuring-npm/package-json#overrides — checked 2026-10-01
