@@ -42,14 +42,13 @@ each request before the BFF serves it.
 
 Use a BFF when the application signs users in with OpenID Connect or OAuth, calls APIs with the
 user's access token, and is a business application, a sensitive one or one that handles personal
-data: RFC 10017 section 6.1.4.3 strongly recommends the BFF for these [1]. The choice
-between the BFF and the RFC's two other patterns is
-[security.md](../../react/security/security.md) section 6. The BFF has a cost that lasts as long
-as the application runs. RFC 10017 section 6.1.4.3: "The architecture of a BFF is significantly
-more complicated than a browser-only application. It requires deploying and operating a
-server-side BFF component" [1]. Since every call to a resource server goes through it,
-this proxy behaviour "can add a significant burden on the server-side components", as the same
-section says [1].
+data: RFC 10017 section 6.1.4.3 strongly recommends the BFF for these [1].
+[security.md](../../react/security/security.md) section 6 compares the BFF with the RFC's two
+other patterns. The BFF has a cost that lasts as long as the application runs. RFC 10017
+section 6.1.4.3: "The architecture of a BFF is significantly more complicated than a
+browser-only application. It requires deploying and operating a server-side BFF component" [1].
+Since every call to a resource server goes through it, this proxy behaviour "can add a
+significant burden on the server-side components", as the same section says [1].
 
 A BFF is more than the application needs when its page calls only the API of its own server, on
 the same site, and the server calls no other API with the user's token. RFC 10017 section 7.1
@@ -677,8 +676,12 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   configuration chooses, and that "The default panic threshold is 50%" [151]. The rule is this
   practice's choice.
 - **BFF: when an instance starts and finds no key whose start time has passed, or cannot read the
-  key store, have it serve none of the routes that read or set a cookie, report not ready and log
-  at `ERROR`,** since it holds no key to read or protect a cookie with. An instance never
+  key store, have it serve none of the routes that read or set a cookie and report not ready,**
+  since it holds no key to read or protect a cookie with. When it finds no key whose start time
+  has passed, it logs that at `ERROR` ([logging.md](../../python/logging/logging.md) section 4).
+  When it cannot read the key store, it logs each failed read at `WARNING`
+  ([logging.md](../../python/logging/logging.md) section 4), since it reads again at each reload,
+  and logs at `ERROR` once the stale-list limit has passed since it started. An instance never
   generates a key itself, since every instance must hold the same set of keys (the rule above).
   The start without a key is this practice's choice.
 - **BFF: rotate a cookie key in three steps,** since an instance that protects with a key the
@@ -702,10 +705,11 @@ cookies, these rules are checks on it; write code only for a rule it does not me
      above); a line it cannot find counts as not loaded. When an instance has not logged the new
      key id, or when a run finds that the check's window passed with no check logged, the job
      moves the start time later by the same margin at once, only while the start time has not
-     passed, and checks again the same way, and the team finds out why. A run that needs to move the start time but cannot write the store logs it at
-     `WARNING` ([logging.md](../../python/logging/logging.md) section 4) and tries again on its
-     next run; a run that finds the check's window passed with the move still unwritten logs it at
-     `ERROR` ([logging.md](../../python/logging/logging.md) section 4).
+     passed, and checks again the same way, and the team finds out why. A run that needs to move
+     the start time but cannot write the store logs it at `WARNING`
+     ([logging.md](../../python/logging/logging.md) section 4) and tries again on its next run; a
+     run that finds the check's window passed with the move still unwritten logs it at `ERROR`
+     ([logging.md](../../python/logging/logging.md) section 4).
   2. The start time passes, and every instance protects new cookies with the new key; this step
      needs no act.
   3. The job removes the old key only when the new key's start time, plus one reload interval,
@@ -736,11 +740,15 @@ cookies, these rules are checks on it; write code only for a rule it does not me
   gives no list of instances, or no log line per instance, the job cannot run the check of step 1.
   It then logs at `INFO` ([logging.md](../../python/logging/logging.md) section 4) on each run that
   no check ran. The start margin of step 1 and the stale-list limit are then the only controls,
-  and the team writes that down ("Write it down" above). The checks in steps 1 and 3, the job as
-  their actor, the instances the load balancer lists as registered and in use as their set, and
-  the log store as their channel are this practice's choice. So are the margin with the key-store
-  outage in it, the check's window, the retry of a move the store refused, and what a run does
-  where the platform gives no list of instances or no log line per instance.
+  and the team writes that down ("Write it down" above). On such a platform, step 3 removes the
+  old key on its time condition alone, and step 5 of the client-credential rule below removes the
+  old credential once the stale-list limit plus one reload interval has passed since its step 4.
+  By then every instance has reloaded or reports not ready (the rule on an instance that cannot
+  read the key store, above). The checks in steps 1 and 3, the job as their actor, the instances
+  the load balancer lists as registered and in use as their set, and the log store as their
+  channel are this practice's choice. So are the margin with the key-store outage in it, the
+  check's window, the retry of a move the store refused, and what a run does where the platform
+  gives no list of instances or no log line per instance.
 - **BFF: before the BFF's first release to users, write down how long each cookie key protects new
   cookies and when the client credential is rotated ("Write it down" above),** so the job rotates
   by a period chosen for the threat model and the key's limits, not by a default. ASVS 5.0
@@ -809,10 +817,11 @@ cookies, these rules are checks on it; write code only for a rule it does not me
      keep "current", and log it at `ERROR`
      ([logging.md](../../python/logging/logging.md) section 4).
   4. Have the job mark "next" as "current", and let every instance reload.
-  5. When every instance the load balancer lists at that moment has logged, in the line of the
-     reload rule above, an entry list whose "current" is the new credential, named by an id and
-     never by the secret, have the job remove the old one at the provider, through its management
-     API with the credential of step 1.
+  5. When every instance the load balancer lists at that moment as registered and in use, counted
+     as in step 1 of the cookie-key rotation, has logged an entry list whose "current" is the new
+     credential, have the job remove the old one at the provider, through its management API with
+     the credential of step 1. Each instance logs that list in the line of the reload rule above,
+     which names each entry by an id, never by the secret.
 
   To switch back before step 5, mark the old entry "current" again. Where the provider allows only
   one, write down the outage the switch causes ("Write it down" above). A credential the BFF does
@@ -874,6 +883,7 @@ cookies, these rules are checks on it; write code only for a rule it does not me
      leaked credential working until their last step. When the credential for the provider's
      management API sat there too, replace it as well, since it can add client credentials at the
      provider; the person or role the rule on who reads and writes the store names replaces it.
+     Replace it first, so the client credential's replacement runs with the new one.
   5. Check each instance by its own address, not through the load balancer. For a key that
      protects login cookies, send each instance's login callback a login cookie the leaked key
      protected, with its matching `state`, and expect the error page of a failed callback. For the
@@ -2721,7 +2731,10 @@ end of the request, so its row also asks for the store's save code.
 - **Where the platform gives no list of instances, or no log line per instance, the rotation job
   cannot check that every instance loaded a new key before its start time passes;** the start
   margin of the rotation's step 1 and the stale-list limit are then the only controls (section 2,
-  "Keys and secrets").
+  "Keys and secrets"). There, step 3 of the rotation removes the old key on its time condition
+  alone, and step 5 of the client-credential rotation removes the old credential once the
+  stale-list limit plus one reload interval has passed since its step 4. By then every instance
+  has reloaded or reports not ready; both removals on time are this practice's choice.
 - **A back-channel logout that the BFF cannot carry out,** because its session store cannot be
   written, can leave the session live until its timeouts; only the `ERROR` line of section 2 and
   its alert (section 3, "Logging") show it. A genuine logout token that the BFF refuses during a
