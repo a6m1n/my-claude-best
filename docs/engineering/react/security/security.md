@@ -1495,7 +1495,8 @@ cut; the whole file is in [security-example.md](security-example.md)
 section 2.
 
 ```ts
-// Vite inlines every VITE_ value into the bundle, so this schema holds public settings only.
+// Vite inlines each VITE_ value this file reads into the bundle, so this schema holds public
+// settings only.
 // A secret never goes here: anyone can read it in the browser (security.md section 9).
 const publicEnvSchema = z.object({
   ...

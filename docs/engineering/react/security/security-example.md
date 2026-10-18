@@ -23,8 +23,12 @@ The code here is quoted from a reference application. The application is not in 
 example files of the `react/` practices quote its code, and the checks named below were run on it
 on 2026-10-01 and 2026-10-02. Section 1's error handling, the body schema `errorBodySchema`, the
 fields of `ApiError` and `readErrorBody`, is not in the application yet; the same checks passed on
-2026-10-17 on a copy of the application with section 1's file in place. Section 2's parse line,
-which reads the setting by its full name, is not in the application yet and has not been checked.
+2026-10-17 on a copy of the application with section 1's file in place. The `.catch(undefined)` on
+the two fields of `errorBodySchema` came after those checks: on 2026-10-19 the schema, `ApiError`
+and `readErrorBody` were type-checked alone under the application's TypeScript settings and run
+with zod 4.6.5 against nine error bodies; the application's own checks were not run again.
+Section 2's parse line, which reads the setting by its full name, is not in the application yet
+and has not been checked.
 
 What was verified, and what was not. The application in sections 1 to 7 of this file was
 type-checked, linted, unit-tested and built with Vite 8.3. Nothing was run in a browser: the
@@ -85,13 +89,15 @@ import { z } from "zod";
 // step-up with an identity provider, the `acr_values` of a resource server's challenge
 // (security.md section 6).
 const errorBodySchema = z.object({
-  code: z.string(),
+  // Each field is caught on its own, so a field of the wrong type is dropped alone and a
+  // malformed `acrValues` never hides a valid code (security.md section 7).
+  code: z.string().optional().catch(undefined),
   // A plain string, passed on as it came: the BFF accepts only the values on the list the team
   // wrote down (backend-for-frontend.md section 2). Nullish, since a BFF may write an absent value
   // as `null`, as the logout answer writes `logoutUrl` (backend-for-frontend.md section 2).
   // Only the step-up with an identity provider reads it (security.md section 6); a team that skips
   // that step-up leaves it out here, in `ApiError`, in `readErrorBody` and in `request`.
-  acrValues: z.string().nullish(),
+  acrValues: z.string().nullish().catch(undefined),
 });
 
 type ErrorBody = z.infer<typeof errorBodySchema>;
@@ -115,9 +121,8 @@ async function readErrorBody(response: Response): Promise<ErrorBody | undefined>
   try {
     return errorBodySchema.parse(await response.json());
   } catch {
-    // A body that is not JSON, such as a gateway's HTML page, or JSON with no string `code` or
-    // with an `acrValues` that is neither a string nor `null`, gives no code and no `acrValues`,
-    // so a failed response never throws a second error (security.md section 7).
+    // A body that is not a JSON object, such as a gateway's HTML page, gives no code and no
+    // `acrValues`, so a failed response never throws a second error (security.md section 7).
     return undefined;
   }
 }
@@ -214,13 +219,14 @@ Why it is good:
   any `acrValues`** (security.md section 7), so the page's rules for `cookie_conflict`,
   `reauth_required` and `reauth_failed` (security.md section 6) can read the code, and the step-up
   with an identity provider can pass the `acrValues` on to the BFF's login endpoint. The body is
-  read once, from the response the client already has; a `null` `acrValues` counts as none, and a
-  body that is not JSON, or JSON with no string `code` or with an `acrValues` that is neither a
-  string nor `null`, gives no code and no `acrValues` and throws no second error, and the message
-  still names the path and the status.
-- **The comments sit at the six lines a reader would likely delete or change**, `credentials` and
-  the custom header in `request`, `keepalive` and `credentials: "omit"` in `report`, the `catch`
-  in `readErrorBody`, and the plain, nullish string of `acrValues` in the body schema, and
+  read once, from the response the client already has; a `null` `acrValues` counts as none; a field
+  of the wrong type is dropped on its own, so a malformed `acrValues` never hides a valid code; and
+  a body that is not a JSON object gives no code and no `acrValues` and throws no second error. The
+  message still names the path and the status.
+- **The comments sit at the seven lines a reader would likely delete or change**, `credentials`
+  and the custom header in `request`, `keepalive` and `credentials: "omit"` in `report`, the
+  `catch` in `readErrorBody`, the `.catch(undefined)` on the body schema's two fields, and the
+  plain, nullish string of `acrValues` in the body schema, and
   say why ([readability.md](../../any-language/readability/readability.md) section 4). The failed
   response ends the method in a guard
   ([readability.md](../../any-language/readability/readability.md) section 3), and blank lines
@@ -241,7 +247,8 @@ Why it is good:
 ```ts
 import { z } from "zod";
 
-// Vite inlines every VITE_ value into the bundle, so this schema holds public settings only.
+// Vite inlines each VITE_ value this file reads into the bundle, so this schema holds public
+// settings only.
 // A secret never goes here: anyone can read it in the browser (security.md section 9).
 const publicEnvSchema = z.object({
   // An origin with no path: request paths start at the root, and `new URL("/invoices", base)`
@@ -535,8 +542,9 @@ Why it is good:
   # security.md section 5, the named report receiver and the written end date: the reference
   # application has no report receiver and no tracker. The cost: a violation shows only in the
   # browser console of whoever visits a deploy that serves this file. A live application names a
-  # receiver and writes an end date before it deploys this header, and enforces on the end date
-  # written in the decision log (security.md section 5).
+  # receiver and adds it to this header with `report-to`, writes the end date in the decision
+  # log, adds a task for that date with an owner to the team's tracker, fixes what the reports
+  # show, and enforces by that date (security.md sections 4 and 5).
   Content-Security-Policy-Report-Only: require-trusted-types-for 'script'
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   X-Content-Type-Options: nosniff
@@ -595,7 +603,9 @@ The two security comments in the file give their reason at the line:
   in the browser console of whoever visits a deploy that serves this file, preview or production,
   because the header names no `report-to` endpoint; the team sees its own visits, on its preview
   deploys. A live application adds a report endpoint, the way the main policy's report-only phase
-  below does, and enforces on the end date written in the decision log (security.md section 5).
+  below does, writes the end date into the decision log, adds a task for that date with an owner
+  to the team's tracker, fixes what the reports show, and enforces by that date (security.md
+  sections 4 and 5).
   DOMPurify returns a `TrustedHTML` where the browser has Trusted Types, so the one sink of
   section 4 of this file passes the report-only check (security.md section 4, "Make the policy
   sanitise"); this was type-checked and not run in a browser.
@@ -606,11 +616,14 @@ section 5 owns, and the comment on `/index.html` gives its reason at the line.
 What it leaves out, on purpose or for a later step:
 
 - **The report-only phase.** A live application sends this policy as
-  `Content-Security-Policy-Report-Only`, with a report endpoint, before it enforces it. The example
-  shows the main policy in its enforced form; only the Trusted Types header is report-only.
+  `Content-Security-Policy-Report-Only`, with a report endpoint, before it enforces it, and with
+  an end date written into the decision log and a task for that date, with an owner, in the
+  team's tracker (security.md section 5). The example shows the main policy in its enforced form;
+  only the Trusted Types header is report-only.
 - **Enforced Trusted Types.** They run in report-only mode now. A live application adds a report
-  endpoint and enforces on the end date written in the decision log (security.md section 5); until
-  then a violation shows only in the console (security.md section 4).
+  endpoint, writes the end date into the decision log, adds a task for that date with an owner to
+  the team's tracker, fixes what the reports show, and enforces by that date (security.md sections
+  4 and 5); until then a violation shows only in the console (security.md section 4).
 - **`preload` in `Strict-Transport-Security`,** and the `X-Frame-Options`, CORP, COEP and
   `X-XSS-Protection` headers; the table in security.md section 5 says what each would add.
 
