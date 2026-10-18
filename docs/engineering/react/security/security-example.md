@@ -23,7 +23,8 @@ The code here is quoted from a reference application. The application is not in 
 example files of the `react/` practices quote its code, and the checks named below were run on it
 on 2026-10-01 and 2026-10-02. Section 1's error handling, the body schema `errorBodySchema`, the
 fields of `ApiError` and `readErrorBody`, is not in the application yet; the same checks passed on
-2026-10-17 on a copy of the application with section 1's file in place.
+2026-10-17 on a copy of the application with section 1's file in place. Section 2's parse line,
+which reads the setting by its full name, is not in the application yet and has not been checked.
 
 What was verified, and what was not. The application in sections 1 to 7 of this file was
 type-checked, linted, unit-tested and built with Vite 8.3. Nothing was run in a browser: the
@@ -250,7 +251,8 @@ const publicEnvSchema = z.object({
   }),
 });
 
-const publicEnv = publicEnvSchema.parse(import.meta.env);
+// Read by name: a read of the whole import.meta.env ships every VITE_ variable (security.md section 9).
+const publicEnv = publicEnvSchema.parse({ VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL });
 
 export const config = {
   apiBaseUrl: publicEnv.VITE_API_BASE_URL,
@@ -270,7 +272,9 @@ dist
 Why it is good:
 
 - **The schema lists public names only, and its comment says why at the line where a reader
-  would add a key** (security.md section 9). A secret has no place to land, and the one place
+  would add a key** (security.md section 9). Each setting is read by its full name, so the bundle
+  gets only the values the schema lists, where a read of the whole `import.meta.env` would ship
+  every `VITE_` variable the build loaded; the comment at the parse line says so. The one place
   that reads `import.meta.env` is this file. Only `src/main.tsx` reads these settings and passes
   the values on, as [architecture.md](../architecture/architecture.md) sections 3 and 8 and
   [readability.md](../../any-language/readability/readability.md) section 6 ask; an import rule
@@ -284,9 +288,9 @@ Why it is good:
   [file-structure.md](../../any-language/file-structure/file-structure.md) section 9).
 - **No source maps are published.** The Vite config sets no `build.sourcemap`, and the default is
   off (read 2026-10-17); the build output in the verification lists no `.map` file.
-- **What it does not stop:** someone adding a secret to the schema with a `VITE_` prefix. No tool
-  reports it; the question in security.md section 9, asked before a variable is added, is the
-  guard.
+- **What it does not stop:** someone adding a secret with a `VITE_` prefix to the schema and its
+  named read. No tool reports it; the question in security.md section 9, asked before a variable is
+  added, is the guard.
 
 ## 3. The link
 

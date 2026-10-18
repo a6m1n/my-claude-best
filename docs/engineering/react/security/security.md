@@ -660,10 +660,15 @@ section 2, "A new session id at login".
   ended the local session, and the report tells the team that a provider session stayed live; the
   rule is this practice's choice.
 - **Page: while the page's own logout call is in flight, start no sign-out path on a session-ended
-  close or a `401`; the logout handler runs it after the answer, and opens the provider's logout
-  URL from the mutation's own options; when the answer carries that URL, the URL takes the place
-  of the signed-out screen.** The BFF ends the session and closes the user's sockets during the
-  logout request, so a sign-out path started then would drop the provider logout. Give the logout
+  close or a `401`; the logout handler runs it after the answer and, when the answer carries the
+  provider's logout URL, opens that URL from the mutation's own options after the sign-out path has
+  run.** The BFF ends the session and closes the user's sockets during the
+  logout request, so a sign-out path started then would drop the provider logout. Running the
+  sign-out path first makes the signed-out screen, which holds no session data, the page the
+  browser keeps in its back/forward cache. web.dev's bfcache article (Walton and Pollard, 2023)
+  warns that when a user "signs out of a site on a public computer and the next user clicks the
+  back button", a page restored from that cache "could potentially expose private data" [215].
+  Give the logout
   call a time limit the team writes down; when it runs out, the call counts as any other failure
   (the rule above), so the hold ends.
   Callbacks passed to `mutate` do not run once the component unmounts
@@ -714,7 +719,11 @@ section 2, "A new session id at login".
   re-authentication prompt and send the guarded request again with the answer in its JSON body
   field `reauthAnswer`, and on a `403` whose body carries `reauth_failed`, show the prompt
   again,** so the change the BFF guards can go
-  through; leave a `401` to the sign-out path. The rule is this practice's choice.
+  through; leave a `401` to the sign-out path. The prompt asks for every factor the user's sign-in
+  asks, the password and the second factor where the account has one, since the BFF asks again
+  for every one of them
+  ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  section 2, "Re-authentication"). The rule is this practice's choice.
 - **Page, with an identity provider: on the step-up's outcome route, read what was kept in
   `sessionStorage` and delete it before the route's session check, show the outcome that its query
   parameter `outcome` names (`reauthenticated`, `refused` or `failed`), and put the user back on
@@ -956,10 +965,16 @@ The server's CSRF rules for Server Functions and a framework's route actions, an
   the GOOD.
   Check: before you add a `VITE_` or `NEXT_PUBLIC_` variable, ask whether you would print its value
   on the login page. If not, it is a secret.
-- **List the public settings in one schema, so a secret has no place to land.** The rule is this
-  practice's choice. Where the
+- **List the public settings in one schema, read each one by its full name, such as
+  `import.meta.env.VITE_API_BASE_URL`, and pass those named values to the schema, so a secret has
+  no place to land.** Vite replaces a named read with that one value, but replaces a read of the
+  whole `import.meta.env` object with every key of its env, so that read puts every `VITE_`
+  variable into the bundle, listed in the schema or not [216]. Vite's docs say "Variables prefixed
+  with `VITE_` will be exposed in client-side source code after Vite bundling" [107]. The one
+  schema is this practice's choice. Where the
   settings file sits and how the application reads it is
   [architecture.md](../architecture/architecture.md) section 3.
+  Check: after a build, `grep -rhoE 'VITE_[A-Z0-9_]+' dist/` prints only names the schema lists.
 - **Keep files with real values out of git.** Vite's docs say `*.local` env files stay out of
   git, and the Next.js template ignores `.env*`; commit an example file with every name and no
   real value ([file-structure.md](../../any-language/file-structure/file-structure.md) section 9)
@@ -1264,7 +1279,19 @@ iframes, redirects and service workers:
   `?next=` value used as it is sends the user to any site from a link that shows your domain
   (OWASP's Unvalidated Redirects cheat sheet) [159]. With a BFF, its callback does this
   ([backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-  section 2, "The login cookie").
+  section 2, "The login cookie"). To accept a local path, parse the value with
+  `new URL(value, location.origin)`, use it only when its `origin` equals `location.origin` and its
+  `pathname` does not start with `//`, and navigate to its `pathname`, `search` and `hash`. A test
+  for a leading `/` is not enough: it passes `//evil.example` and `/\evil.example`, which the URL
+  parser reads as the host `evil.example` (checked with Node 20's URL parser, 2026-10-18). A path
+  rebuilt from a URL that passed the origin test can still leave the site: `/.//evil.example` has
+  the application's origin and the pathname `//evil.example`, which resolves to the host
+  `evil.example` (checked with Node 20's URL parser, 2026-10-18); OWASP says to "redirect using the
+  validated URL rather than transforming it afterward" [159]. OWASP's cheat sheet asks for a
+  helper that "rejects non-local destinations", and in its section on validating URLs says "Do not
+  use raw prefix or suffix matching" [159].
+  Check: unit tests refuse `//evil.example`, `/\evil.example`, `/.//evil.example` and
+  `https://evil.example` as a return path.
 - **Register a service worker only from your own origin and over HTTPS** (OWASP's HTML5 Security
   cheat sheet), since the worker sits between the page and the network for every request in its
   scope [157].
@@ -1482,7 +1509,9 @@ export const config = {
 ```
 
 It fixes the one problem: the secret's two lines are gone, and the schema lists public names
-only. The comment that says why sits where a reader would add a key, so the next one does not.
+only. The BAD's build already shipped the key, so also delete the variable from every `.env*` file
+and from the build environment, and revoke the key at the provider (section 9, "When a secret
+leaks"). The comment that says why sits where a reader would add a key, so the next one does not.
 The provider's key stays on the server; the screen posts the payment to the application's own
 API, which holds the key and calls the provider (section 9).
 
@@ -1712,7 +1741,7 @@ it is fixed or the author shows why it does not apply; that bar is the practice'
 | 9. Secrets | Would you publish every `VITE_` value on the login page? | a key, a token or a password behind a public prefix; production source maps published |
 | 10. Supply chain | Does every install obey the cooldown and the script block, with a named emergency path? | a new dependency nobody checked on the registry; an action pinned by tag; fork code in `pull_request_target`; a cooldown exclusion past its removal date; a trust exclusion for a version no lockfile of the workspace holds; an `[[IgnoredVulns]]` entry with no `reason` or no `ignoreUntil` |
 | 11. Dev server | Does the dev server answer only localhost? | `allowedHosts: true`; `cors: true`; `host` open on a network you do not trust |
-| 12. Edges | Does each `message` listener check one exact origin? | `postMessage(…, "*")`; a sandbox with both `allow-scripts` and `allow-same-origin`; a redirect to a raw `?next=` |
+| 12. Edges | Does each `message` listener check one exact origin? | `postMessage(…, "*")`; a sandbox with both `allow-scripts` and `allow-same-origin`; a redirect to a raw `?next=`; a return path accepted by a prefix test |
 | 13. Data exposure | Can a URL, a log line or a replay carry a credential, and does a failed screen show a message of its own, not the error's text? | a token in a query string; replay masking turned off; paste blocked; the error's own text on a failed screen |
 | 14. Automation | Are the sink rules on, as errors? | a suppression with no reason |
 
@@ -2028,3 +2057,5 @@ Checked 2026-10-17 unless a line ends with — checked <YYYY-MM-DD>.
 - [212] MDN Web Docs (Mozilla) — Cache — https://developer.mozilla.org/en-US/docs/Web/API/Cache — checked 2026-10-18
 - [213] MDN Web Docs (Mozilla) — CacheStorage — https://developer.mozilla.org/en-US/docs/Web/API/CacheStorage — checked 2026-10-18
 - [214] npm — package-lock.json, v11 — https://docs.npmjs.com/cli/v11/configuring-npm/package-lock-json — checked 2026-10-18
+- [215] Philip Walton and Barry Pollard — Back/forward cache (web.dev, 2023; opinion) — https://web.dev/articles/bfcache — checked 2026-10-18
+- [216] Vite — define plugin source, packages/vite/src/node/plugins/define.ts — https://github.com/vitejs/vite/blob/df7503cc499e0b49e45701e3be7546918ee9d322/packages/vite/src/node/plugins/define.ts — checked 2026-10-18
