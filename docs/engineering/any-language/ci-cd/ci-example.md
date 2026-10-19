@@ -22,15 +22,17 @@ The repository, cut to the files this example touches:
 │   └── CODEOWNERS              # security-example.md
 ├── .pre-commit-config.yaml     # the hook file, at the root because pre-commit runs from there
 ├── backend/                    # one Python application, laid out as file-structure.md section 9 says
-│   ├── pyproject.toml          # dev tools and [tool.uv] required-version, as static-checks setup-example.md section 1
+│   ├── pyproject.toml          # dev tools, [tool.uv] required-version (static-checks setup-example.md section 1), [tool.alembic]
 │   ├── uv.lock
 │   ├── .python-version
 │   ├── Dockerfile              # dockerfile-example.md, with backend/ as the build context
 │   ├── .dockerignore
+│   ├── migrations/             # Alembic's env.py, which builds the application's Settings, and one file per schema change
 │   ├── src/acme/api/
 │   └── tests/{unit,integration}/
 └── frontend/                   # one React application, laid out as layout-example.md says
-    ├── package.json            # "packageManager" names pnpm; scripts typecheck, lint, test, build
+    ├── package.json            # "packageManager" names pnpm; scripts typecheck, lint, test, build; size-limit as a dev dependency
+    ├── .size-limit.json        # the budget's paths and value, as react/performance/performance.md section 3 sets them
     ├── pnpm-lock.yaml
     ├── pnpm-workspace.yaml     # the install settings of react/security/security-example.md
     └── .node-version
@@ -42,7 +44,10 @@ what every project shares, `.github/` and the hook file, sits at the root.
 Every action is pinned to the full commit SHA of the release in the comment beside it, read with
 `git ls-remote https://github.com/<owner>/<repo> 'refs/tags/<release>*'` on 2026-10-18 (for an
 annotated tag, the SHA on the line that ends in `^{}`). Renovate moves the SHA and the comment
-together ([pipeline-security.md](pipeline-security.md) section 4). Nothing moves two other pins:
+together ([pipeline-security.md](pipeline-security.md) section 4). The Postgres service image of
+`backend-integration` is pinned to the index digest that Docker Hub's registry returned for
+`postgres:18-trixie` on 2026-10-18, and Renovate moves that digest too, because its GitHub Actions
+manager reads the images under `services:` [11]. Nothing moves two other pins:
 the gitleaks release the `frontend` job downloads, with its checksum from that release's checksums
 file [10], and Trivy's `version:` in the `image` job. The pipeline owners of `CODEOWNERS` move
 them by hand, with the same pins in [security-example.md](security-example.md) and
@@ -165,6 +170,28 @@ jobs:
     env:
       # Forks and Dependabot get no secrets; the login below is then skipped (pipeline.md section 4).
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+    services:
+      # The empty scratch database of the migration check (pipeline.md section 5).
+      postgres:
+        # By digest, like every image the pipeline pulls (images.md section 4).
+        image: postgres:18-trixie@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+        credentials:
+          # With no token, as on a fork, the runner skips the login and pulls anonymously.
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        env:
+          POSTGRES_DB: acme
+          POSTGRES_USER: acme
+          # Not a secret: the database lives for this job only and holds no data.
+          POSTGRES_PASSWORD: scratch
+        # -h asks over TCP: on first start the image runs a temporary server on the socket only (compose.md section 3).
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U acme -d acme"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
     defaults:
       run:
         working-directory: backend
@@ -183,6 +210,19 @@ jobs:
           working-directory: backend
           enable-cache: true
       - run: uv sync --locked
+      - name: Migrations apply to an empty database and match the models
+        env:
+          # The application's own settings: env.py builds Settings, which reads them (python.md section 5).
+          ACME_DATABASE_HOST: localhost
+          ACME_DATABASE_NAME: acme
+          ACME_DATABASE_USER: acme
+          ACME_DATABASE_PASSWORD: scratch
+          ACME_PAYMENTS_API_KEY: unused  # Settings has no default for it; no migration calls the provider
+        run: |
+          # Fails on a broken migration, and on a second head when two branches each added one (pipeline.md section 5).
+          uv run --locked alembic upgrade head
+          # Fails when a model changed and no migration says so; a rename or an unnamed constraint escapes it.
+          uv run --locked alembic check
       # A hung test fails after two minutes, not at the job's timeout (running-tests.md section 9).
       - run: uv run --locked pytest tests/integration --timeout=120
 
@@ -210,6 +250,9 @@ jobs:
       - run: pnpm run lint
       - run: pnpm run test
       - run: pnpm run build
+      # Fails the job when the bundle passes its budget; the rule and the value are
+      # react/performance/performance.md section 3's, in .size-limit.json.
+      - run: pnpm exec size-limit
       # Most front-end credentials show only in the built bundle (react/security/security.md section 9).
       - name: gitleaks over the built bundle
         run: |
@@ -315,6 +358,10 @@ jobs:
 | `working-directory: backend` and `--project backend` | setup-uv reads the uv version and the Python version from the folder it is given [3]; `--project` runs uv on the backend from the repository root, where pre-commit works |
 | `uv sync --locked` | installs exactly `uv.lock`, and fails when it is stale ([pipeline.md](pipeline.md) section 9) |
 | `pytest tests/unit`, then `pytest tests/integration --timeout=120` in a job of its own | the two suites of [python/testing/README.md](../../python/testing/README.md), step 4 of "How to adopt" |
+| `services: postgres`, pinned by digest, with `credentials` | the empty scratch database of the migration check, which the steps reach at `localhost` through the mapped port [12]; pinned by digest like every image ([images.md](../docker/images.md) section 4). The runner logs in to the registry only when both the username and the password are set, and otherwise pulls without a login [13], so the run of a fork's pull request still starts. The health check asks over TCP, for the reason [compose.md](../docker/compose.md) section 3 gives for this image |
+| `POSTGRES_PASSWORD: scratch` and the `ACME_` variables of the migration step | the database lives for one job and holds no data, so its password protects nothing; real secrets follow [pipeline-security.md](pipeline-security.md) section 6. The step sets only the variables the application's settings class reads, and `env.py` builds that class ([python.md](../../python/language/python.md) section 5). The class has no default for `ACME_PAYMENTS_API_KEY`, so the step gives it a value no migration uses |
+| `alembic upgrade head`, then `alembic check` | the migration check of [pipeline.md](pipeline.md) section 5: the first fails on a broken migration and on two heads [14], the second when a model changed and no migration covers it [15]. With another migration tool, use its own commands for the same two steps |
+| `pnpm exec size-limit`, after the build | the size gate of [performance.md](../../react/performance/performance.md) section 3: size-limit "throws an error if the cost exceeds the limit" [16]. The budget's paths and value live in `.size-limit.json`, which this example leaves out because that practice sets them. `size-limit` and its `@size-limit/file` plugin, 14.2.0 on 2026-10-18, are dev dependencies installed from the lockfile, so they follow the install rules of [security.md](../../react/security/security.md) section 10 |
 | `pnpm/setup` with `install: false`, then `pnpm install --frozen-lockfile` | pnpm's own action installs pnpm from `packageManager` and Node from `.node-version`, and caches the store [4]; the install is a step of its own so the lockfile flag is in the workflow. pnpm turns `--frozen-lockfile` on in CI by default, and with it an install fails when the lockfile needs an update [7] |
 | `typecheck`, `lint`, `test`, `build` | the four scripts of [layout-example.md](../../react/architecture/layout-example.md). A departure from stage 1 of [pipeline.md](pipeline.md) section 5, which checks the format too: those scripts hold no formatter, the departure [layout-example.md](../../react/architecture/layout-example.md) section 1 declares. The cost: the frontend's code is not checked for format; where the application has Prettier ([libraries.md](../../react/architecture/libraries.md) section 5), add its check as a fifth script and step |
 | gitleaks over `dist`, after the build | a bundle can hold a secret the source never showed, so the scan reads the build output ([security.md](../../react/security/security.md) section 9); the download is checked against the release's checksum, as in [security-example.md](security-example.md) |
@@ -330,7 +377,11 @@ The check jobs of stages 1 to 5 of [pipeline.md](pipeline.md) section 5 run side
 
 It is good because a pull request runs every check the release runs and publishes nothing; a
 change to one side runs that side's jobs and still reports one green check; and `main` runs all
-of it again before [deploy-example.md](deploy-example.md) builds anything.
+of it again before [deploy-example.md](deploy-example.md) builds anything. The migration check and
+the size gate fail the pull request that causes their problem, a model change with no migration or
+a bundle over its budget, while each rule and its value stay with the practice that owns them; the
+scratch database is pinned like every other image, and its password says at the line why it is no
+secret.
 
 In the repository settings, `ci-ok` is the required status check for `main`, with "Require
 branches to be up to date before merging" on ([ruleset-example.md](../git/ruleset-example.md)).
@@ -412,3 +463,9 @@ Checked 2026-10-18 unless a line ends with — checked <YYYY-MM-DD>.
 - [8] GitHub — Reuse workflows: passing inputs and secrets — https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows
 - [9] GitHub — Contexts reference: Context availability — https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability
 - [10] Zachary Rice — gitleaks, checksums file of release v8.30.1 — https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_checksums.txt
+- [11] Renovate — `github-actions` manager, `extract.ts` (images under `container:` and `services:`), 44.167.5 — https://github.com/renovatebot/renovate/blob/44.167.5/lib/modules/manager/github-actions/extract.ts
+- [12] GitHub — Creating PostgreSQL service containers: running jobs directly on the runner machine — https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers
+- [13] GitHub — actions/runner, `src/Runner.Worker/ContainerOperationProvider.cs` (`ContainerRegistryLogin`), v2.338.0 — https://github.com/actions/runner/blob/v2.338.0/src/Runner.Worker/ContainerOperationProvider.cs
+- [14] SQLAlchemy — Alembic: Working with Branches, 1.20.0 — https://github.com/sqlalchemy/alembic/blob/rel_1_20_0/docs/build/branches.rst
+- [15] SQLAlchemy — Alembic: Auto Generating Migrations (`alembic check`), 1.20.0 — https://github.com/sqlalchemy/alembic/blob/rel_1_20_0/docs/build/autogenerate.rst
+- [16] Andrey Sitnik — size-limit, README, 14.2.0 — https://github.com/ai/size-limit/blob/14.2.0/README.md

@@ -7,7 +7,9 @@ merge queue, on `main` before a deploy and once a week, and the `deploy.yml` of
 files, the dependencies of both lockfiles, the code, and the commits of a pull request for
 secrets. The image scan stays in the image job of [ci-example.md](ci-example.md), as
 [images.md](../docker/images.md) section 10 asks; the deploy workflow scans the pushed digest
-again ([deploy-example.md](deploy-example.md) section 2).
+again ([deploy-example.md](deploy-example.md) section 2) and runs ZAP's baseline scan against
+staging. The infrastructure scan of [pipeline-security.md](pipeline-security.md) section 7 is not
+shown, because this example holds no infrastructure folder.
 
 Actions are pinned as in [ci-example.md](ci-example.md). The three tools that have no official
 action are downloaded from their own releases and checked against the SHA-256 checksum the
@@ -181,6 +183,9 @@ reason = "The vulnerable function is in the CLI part of the package, which the A
 # The pipeline holds the keys to production: its owners review every change to it (pipeline-security.md section 8).
 /.github/ @acme-corp/platform
 /backend/deploy/ @acme-corp/platform
+# The infrastructure code of delivery.md section 9, where the repository holds it: a changed module
+# source or lock file chooses the code the next plan runs (pipeline-security.md section 5).
+/infra/ @acme-corp/platform
 # The files that tell a scanner what to skip: a pull request could otherwise switch off its own scan.
 # No leading /, so each matches at any depth: a scanner also reads them from the folder it runs in.
 osv-scanner.toml @acme-corp/platform
@@ -190,6 +195,7 @@ trivy.yaml @acme-corp/platform
 .gitleaks.toml @acme-corp/platform
 .gitleaksignore @acme-corp/platform
 zizmor.yml @acme-corp/platform
+.zap-rules.tsv @acme-corp/platform
 ```
 
 The pre-commit hook that stops a secret before it leaves a developer's machine, added to the
@@ -210,13 +216,16 @@ root hook file of [ci-example.md](ci-example.md) section 3:
 |---|---|
 | `ignoreUntil`, `reason` | a waiver with a reason and an end date, reviewed like code; after the date the finding fails the job again ([images.md](../docker/images.md) section 10 asks the same of the image scanner) [4] |
 | `/.github/`, `/backend/deploy/` and the scanners' config and ignore files in `CODEOWNERS` | a change to a workflow, to a deploy file or to a file that tells a scanner what to skip asks for the pipeline owners' review [7]; where two or more people review, the ruleset's code-owner review makes that review required ([pipeline-security.md](pipeline-security.md) section 8) |
+| `/infra/` | the infrastructure folder and the lock file inside it: a plan on a pull request runs the modules and providers they name, with the plan role's credentials ([pipeline-security.md](pipeline-security.md) section 5). Keep the line only where the repository holds its infrastructure code, as [delivery.md](delivery.md) section 9 lays it out |
+| `.zap-rules.tsv` | the rules file of ZAP's baseline scan, which sets each rule to `IGNORE`, `WARN` or `FAIL` ([pipeline-security.md](pipeline-security.md) section 7), so a pull request could mark a finding `IGNORE`; the `dast-staging` job of [deploy-example.md](deploy-example.md) reads it from the root after the staging deploy |
 | the scanners' files with no leading `/` | `CODEOWNERS` follows most gitignore rules, so a pattern with a leading `/` matches at the root only, and one without it matches at any depth [16]. gitleaks also reads `.gitleaksignore` from the folder it runs in and from the folder it scans, and `.gitleaks.toml` from the folder it scans [17]; Trivy reads `trivy.yaml` from the folder it runs in [18]. The bundle scan of [ci-example.md](ci-example.md) runs in `frontend/` and scans `dist/`, so a root-only pattern would miss a file there |
 | the `gitleaks` hook | the first of the three nets of [pipeline-security.md](pipeline-security.md) section 6. Its `rev:` is a second pin of gitleaks next to the CI downloads, a departure from [static-checks.md](../../python/static-checks/static-checks.md) section 3 that the comment at the line declares |
 
 It is good because each file closes one gap: the waiver file keeps every skipped finding visible
 with its reason and its end date; `CODEOWNERS` puts the pipeline owners on every change that could
-weaken the pipeline, the scanners' own ignore files included; and the hook stops a secret before
-it reaches a commit, with its second pin named where a reader copies it.
+weaken the pipeline, the scanners' own ignore files and the infrastructure code a plan runs
+included; and the hook stops a secret before it reaches a commit, with its second pin named where
+a reader copies it.
 
 ## 4. Sources
 

@@ -77,12 +77,20 @@ Notes on the rows:
   item is finished for the developer but not yet for the user, and the board should show that. A
   team with no staging environment drops Pre-prod, because no Jira template has such a status and
   an unused one only adds complexity. A team that drops Pre-prod moves an item from Code Review to
-  Done when it is merged and deployed to production.
+  Done when it is merged and deployed to production. A team on continuous deployment
+  ([release.md](release.md) section 3) drops Pre-prod too: its pipeline checks a change in staging
+  and then deploys it to production with no person in between: the version tag a job creates after
+  staging starts the production run ([delivery.md](../ci-cd/delivery.md) section 2), so nobody
+  checks the item there by hand. Check the acceptance criteria before the merge instead, or merge
+  the change behind a feature flag that is off and check it in production before the flag is
+  turned on.
 - **A merged item that moves back or is canceled.** Once an item has moved from Code Review to
   Pre-prod, its change is on main. Before the next production deploy, turn the change off with its
   feature flag, or revert it on main with a pull request under the same key; the trap in reverting
-  a merge is in [git.md](../git/git.md) section 5. The fix for a failed staging check is a new
-  branch and pull request with the same key ([tickets.md](tickets.md) section 4). The reason:
+  a merge is in [git.md](../git/git.md) section 5. Under continuous deployment the merge deploys,
+  so turn the change off with its flag, or merge the revert, at once. The fix for a failed staging
+  check is a new branch and pull request with the same key ([tickets.md](tickets.md) section 4).
+  The reason:
   otherwise the change ships with the next release although its item is not Done. The go or no-go
   checklist carries the line for it ([release.md](release.md) section 3).
 - **Done.** It means deployed to production with the Definition of Done met. The Definition of Done

@@ -49,7 +49,12 @@ The rule is this practice's own, built on two sources:
   and signing off on launches determined to be 'safe'", using a checklist that gives "action items
   and pointers to more information". It also warns that "it's hard to design a process that is
   simultaneously lightweight and thorough", so keep the checklist short.
-- Jira has no such gate: the release dialog asks only to "Choose what to do with any unresolved work
+- Jira's own gate comes too late to be this one. A version has a Driver, "responsible for
+  coordinating the release from start to finish", and may have Approvers who approve or decline it;
+  "Releases can still be released without an approval, unless the 'Require approvals' checkbox is
+  selected" (Atlassian). That approval gates the Release button on the release page, and the
+  Released state it sets comes after the production deploy (section 1), so it cannot gate
+  production. Beyond it, the release dialog asks only to "Choose what to do with any unresolved work
   items, and enter a release date", and the release page warns about done work items with open pull
   requests or unreviewed code (Atlassian).
 
@@ -100,7 +105,106 @@ changes, but sometimes it will be necessary to implement the change with less te
 constraints." A rollback, Atlassian's third case, is not a release here: it follows the rollback plan
 ([rollback-plan.md](rollback-plan.md) section 2).
 
+**Continuous deployment: the decider decides once.** Under continuous deployment the pipeline
+deploys every change that passes its checks. Atlassian's definition: "every change that passes all
+stages of your production pipeline is released to your customers. There's no human intervention,
+and only a failed test will prevent a new change to be deployed to production." The go or no-go
+decider then makes one standing decision instead of one per release: they approve the pull request
+that turns continuous deployment on, and every later change to its gates (the workflow files, the
+rulesets, the required checks and the environments). That approval replaces the go line of each
+release, so one person still owns the risk of shipping, as the owner of the automatic path. How
+the pipeline does it is in [delivery.md](../ci-cd/delivery.md) section 2.
+
+The rule is this practice's own: no standard says that a pipeline may replace the named decider.
+It rests on these sources:
+
+- DORA found that change approval works best as peer review during development, "supplemented by
+  automation to detect, prevent, and correct bad changes early"; its 2019 report holds that
+  "approving each individual change is impossible in practice in the continuous paradigm".
+- At Google, some teams "deploy every build that passes all tests", a model the SRE book calls
+  "Push on Green" (2016), and the Launch Coordination Engineers cited above may "implement automatic
+  approvals for common cases".
+- PMI's Disciplined Agile says that "advanced teams are now automatically deploying into production
+  as well because they've developed a sufficiently sophisticated automated validation strategy".
+- Atlassian puts it under the normal change, not the standard change: organizations with an
+  automated CI/CD pipeline "often automate most of the steps of the change control process", and a
+  low-risk change can be approved "via automated checks and peer review".
+
+Under continuous deployment the pipeline carries each line of the checklist:
+
+| Criterion | How continuous deployment carries it |
+|---|---|
+| The Definition of Done | Each pull request merges only with the required checks green and the approval of someone other than its author |
+| No unresolved work item, no warning | Checked when the batch version is released, after its items run in production (below) |
+| main holds no change outside the version | A change that is not ready does not merge, or merges behind a flag that is off, because every merge ships |
+| The change ran in staging | The pipeline deploys each commit to staging and runs its checks before it creates the version tag |
+| The rollback plan | One standard plan for the pipeline ([rollback-plan.md](rollback-plan.md) sections 1 and 5) |
+| The way to users | Fixed in the pipeline for every release (section 6) |
+
+The table is good because each line of the checklist keeps one owner: a check the pipeline runs on
+every change, or a step a person takes once.
+
+Four decisions stay with people under continuous deployment:
+
+1. **A change the rollback cannot undo** ([rollback-plan.md](rollback-plan.md) section 4), **or one
+   its author or reviewer judges high risk**, merges only with the go or no-go decider's approval on
+   its pull request, given when it should ship, because under continuous deployment the merge is
+   what deploys. DORA advises to "flag high risk changes early on so that they can be subjected to
+   additional scrutiny". Sadalage and Fowler hold that "Destructive changes need a bit more care",
+   and Bezos that one-way doors "must be made methodically, carefully, slowly". In the case of TSB's
+   migration of April 2018, the PRA found that afterwards it was "essentially impossible to roll
+   back" (Final Notice, paragraph 1.29), and its go-live followed a "go/no go decision" (paragraph 3.58).
+2. **Turning a feature on for users** is the release, and Atlassian calls a release "a business
+   decision". The flag row of section 6 says how.
+3. **Timing and freezes** are the decider's call. Google's example error budget policy, once the
+   error budget is spent, halts "all changes and releases other than P0 issues or security fixes"
+   until the service is back within its SLO. At Amazon, Liguori writes, pipelines start deploys only inside set time windows, because
+   on-call engineers "take longer to engage at night, on office holidays, and on weekends", and
+   Orosz reports that on Amazon's Restricted days "all deployment pipelines have automatic
+   deployment blockers in place". How the decider stops the pipeline is in
+   [delivery.md](../ci-cd/delivery.md) section 2.
+4. **Incidents.** The emergency path above and the rollback decider of
+   [rollback-plan.md](rollback-plan.md) section 2 stay as they are.
+
+**Jira versions under continuous deployment** (this practice's own rule: Atlassian states no
+version pattern for continuous deployment). Every deploy is then a release, so section 1's one
+version per release becomes one version per cadence: group the work into one version per sprint,
+or per another cadence the team picks, since versions are "points-in-time" and "You can create as
+many as you think is necessary" (Atlassian). Release the version after its items run in production, keeping
+the order of section 1; Atlassian's release steps ask to verify that "work items have been deployed
+to the correct environment". Write the standing decision in each version's description: the
+decider, the date and the pull request that turned continuous deployment on. The version tags and
+Jira's Deployments record each deploy: Jira's releases feature "will show deployment information
+for all the work items in your version" (Atlassian).
+
+**When to use continuous deployment, and when not.** Use it when continuous delivery already runs
+and its checks find problems before users do. Fowler: "In order to do Continuous Deployment you
+must be doing Continuous Delivery". Atlassian advises a team with an existing product to "start with
+continuous integration and continuous delivery", and DORA to "start with continuous delivery, even
+if you never intend to start using continuous deployment". What it saves was measured for other
+approvals, not for one named decider. DORA's 2019 survey found that approval by an outside body, a
+change advisory board or a senior manager, has "a negative impact on software delivery performance"
+(correlational). The FCA's review of 23 firms found that "firms that deployed smaller, more frequent
+releases had higher change success rates" and that change advisory boards "approved over 90% of the
+major changes they reviewed". PMI notes that slow release windows "become bottlenecks". No study
+found for this practice measures a single named decider as a bottleneck. Do not use it:
+
+- for firmware or mobile apps: DORA says continuous deployment "works well for web services, but
+  can't be applied to software such as firmware or mobile apps";
+- when the team cannot find problems before its users do: Majors holds that moving fast with
+  confidence means "you can generally find problems in your new code before your customers do", and
+  that a team without it needs workarounds such as deploy freezes;
+- in a team of one, because nobody else can approve the merge;
+- in a regulated scope that asks for an independent approver ([delivery.md](../ci-cd/delivery.md)
+  section 13).
+
+The simpler way is continuous delivery with the named decider, as the rest of this section
+describes.
+
 Check: before you press Release in Jira, find the go or no-go line in the version's description.
+Under continuous deployment, find the standing decision there instead, and confirm that every
+change to a gate since that decision carries the decider's approval; for a setting, confirm that the
+audit log names the decider or the backup.
 
 ## 4. Version numbers
 
@@ -126,8 +230,10 @@ together with their colleagues changes at least daily", and continuous delivery 
 software "in such a way that the software can be released to production at any time". DORA says
 the same of delivery, and adds that it "is commonly conflated with continuous deployment, but they
 are separate practices": continuous deployment puts every change into production automatically
-(Fowler). Whether every change also deploys by itself is the team's choice; a release that waits
-for a date still needs main ready to ship.
+(Fowler). Whether every change also deploys by itself is the team's choice, which Atlassian also
+leaves "up to you and your team"; section 3 says what continuous deployment carries, and
+[delivery.md](../ci-cd/delivery.md) section 2 how. A release that waits for a date still needs main
+ready to ship.
 
 PMI's Lexicon defines continuous delivery as "The practice of delivering feature increments
 immediately to customers", which is closer to continuous deployment. This practice uses Fowler's and
@@ -183,3 +289,14 @@ work item.
 - Knight Capital Group, [Form 10-Q for the quarter ended 2012-06-30](https://www.sec.gov/Archives/edgar/data/0001060749/000119312512346917/d361681d10q.htm), filed with the SEC, 2012: the loss.
 - Securities and Exchange Commission, [In the Matter of Knight Capital Americas LLC, Release No. 34-70694](https://www.sec.gov/files/litigation/admin/2013/34-70694.pdf), 2013-10-16: the repurposed flag and the eight servers.
 - Atlassian: ["Set up your deployment integration"](https://support.atlassian.com/jira-cloud-administration/docs/set-up-your-deployment-integration/); ["Link GitHub workflows and deployments to Jira"](https://support.atlassian.com/jira-cloud-administration/docs/link-github-workflows-and-deployments-to-jira-issues/) (environment types); ["Release a version"](https://support.atlassian.com/jira-software-cloud/docs/release-a-version-in-your-classic-project/); ["Check the release status of a version"](https://support.atlassian.com/jira-software-cloud/docs/check-the-release-status-of-a-version/); ["Manage versions"](https://support.atlassian.com/jira-cloud-administration/docs/manage-versions/); ["Integrate with feature flags"](https://support.atlassian.com/jira-cloud-administration/docs/integrate-with-feature-flags/); ["What are changes?"](https://support.atlassian.com/jira-service-management-cloud/docs/what-are-changes/) (emergency changes). All undated, read 2026-10-06.
+- DORA, ["Streamlining change approval"](https://dora.dev/capabilities/streamlining-change-approval/), last updated 2025-10-30: peer review supplemented by automation, flagging high-risk changes; and [Accelerate State of DevOps 2019](https://services.google.com/fh/files/misc/state-of-devops-2019.pdf), 2019, survey research: approval by an outside body, and approving each change in the continuous paradigm. Read 2026-10-19.
+- Google, ["Release engineering"](https://sre.google/sre-book/release-engineering/), SRE book, 2016: "Push on Green"; and ["Example error budget policy"](https://sre.google/workbook/error-budget-policy/), SRE workbook, 2018. Read 2026-10-19.
+- PMI, Disciplined Agile: ["Continuous Deployment (CD)"](https://www.pmi.org/disciplined-agile/agile/continuousdeployment), February 2022; and ["Release Management Strategies for DevOps"](https://www.pmi.org/disciplined-agile/process/release-management/devops-strategies), undated. Read on 2026-10-19 in the Wayback Machine copies of 2025-06-21 and 2026-04-06, because the live pages do not load outside a browser.
+- Sadalage and Fowler, ["Evolutionary database design"](https://martinfowler.com/articles/evodb.html), 2003, revised 2016-05: destructive changes.
+- Jeff Bezos, [2015 Letter to Shareholders](https://s2.q4cdn.com/299287126/files/doc_financials/annual/2015-Letter-to-Shareholders.PDF), Amazon, 2016: one-way doors.
+- Prudential Regulation Authority, [Final Notice to TSB Bank plc](https://www.bankofengland.co.uk/-/media/boe/files/prudential-regulation/regulatory-action/final-notice-from-pra-to-tsb-bank.pdf), 2022-12-20: paragraph 1.29, the migration that could not be rolled back, and paragraph 3.58, the go/no go decision.
+- Clare Liguori, ["Automating safe, hands-off deployments"](https://builder.aws.com/content/3ErTKQOTKc5NIw031UePBPxTQ6I/automating-safe-hands-off-deployments), Amazon Builders' Library, 2020-06-18: deployment time windows.
+- Gergely Orosz, ["Code Deployment Freezes: Part 1"](https://newsletter.pragmaticengineer.com/p/code-freezes), The Pragmatic Engineer, 2023-01-03: Amazon's Restricted days, in the free part of the post.
+- Financial Conduct Authority, ["Implementing technology change"](https://www.fca.org.uk/publications/multi-firm-reviews/implementing-technology-change), 2021-02-05: a review of 23 firms and their changes in 2019.
+- Charity Majors, ["On Friday Deploys: Sometimes that Puppy Needs Murdering"](https://charity.wtf/p/on-friday-deploys-sometimes-that), 2025-12-24.
+- Atlassian: ["Create a version"](https://support.atlassian.com/jira-software-cloud/docs/create-a-version-in-a-classic-project/) (Driver, Approvers); ["Use the release page to check the progress of a version"](https://support.atlassian.com/jira-software-cloud/docs/use-the-release-page-to-check-the-progress-of-a-version/) ("Require approvals"); ["Integrate your deployments with Jira"](https://support.atlassian.com/jira-cloud-administration/docs/integrate-your-deployments-with-jira/); ["Learn versions with Jira"](https://www.atlassian.com/agile/tutorials/versions); ["Change management"](https://www.atlassian.com/itsm/change-management), 2025-12-03; ["Software deployment"](https://www.atlassian.com/agile/software-development/software-deployment); Sten Pittet, ["Continuous integration vs. delivery vs. deployment"](https://www.atlassian.com/continuous-delivery/principles/continuous-integration-vs-delivery-vs-deployment); Sarah Goff-Dupont, ["Super-powered continuous delivery with Git"](https://www.atlassian.com/continuous-delivery/principles/git-and-continuous-delivery); and, from the line above, "What are changes?" re-read for normal changes with a CI/CD pipeline, "Release a version" for its checks before release, and "Manage versions" for "points-in-time". Undated unless a date is given, read 2026-10-19.

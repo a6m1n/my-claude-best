@@ -21,13 +21,16 @@ CloudFront distribution per environment, whose `/api/*` behaviour goes to the se
 balancer with caching off, and whose default behaviour goes to the site bucket, with a minimum TTL
 of 0 so `index.html` is never served stale ([delivery.md](delivery.md) sections 3 and 6). The
 CloudFront and load balancer setup is not shown; section 5 gives the order of the first setup.
-The end-to-end tests that run against staging after its deploy ([delivery.md](delivery.md)
-section 7) are left out of this example.
+To keep these resources as code, with a plan on each pull request and an apply on `main`, see
+[delivery.md](delivery.md) section 9. The end-to-end tests that run against staging after its
+deploy ([delivery.md](delivery.md) section 7) are left out of this example.
 
 Actions are pinned as in [ci-example.md](ci-example.md), to the commit `git ls-remote` printed on
-2026-10-18 for the release in each comment. Trivy's `version:` in `publish-api` has no mover in
-Renovate's config: the pipeline owners move it by hand, with the same pin in ci-example.md's
-`image` job, when Trivy's release notes name a security fix and at each quarterly review.
+2026-10-18 for the release in each comment, and on 2026-10-19 for `actions/setup-node`. Trivy's
+`version:` in `publish-api` has no mover in Renovate's config: the pipeline owners move it by hand,
+with the same pin in ci-example.md's `image` job, when Trivy's release notes name a security fix
+and at each quarterly review. The same holds for two pins in `run:` steps, read on 2026-10-19: the
+ZAP image digest in `dast-staging` and the CSP Evaluator tarball's checksum in `headers-staging`.
 
 **Navigation**
 
@@ -191,6 +194,90 @@ jobs:
       contents: read
       id-token: write
 
+  dast-staging:
+    # A passive scan of the version staging now runs; it sends no attacks (pipeline-security.md section 7).
+    # A job of its own, so the scanner never runs next to the deploy role.
+    needs: staging
+    # Whenever staging succeeded, also on a manual run, where the jobs before staging were skipped.
+    if: ${{ !cancelled() && needs.staging.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read  # the rules file
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: ZAP baseline scan
+        env:
+          TARGET: ${{ needs.staging.outputs.base-url }}
+        run: |
+          # ZAP runs as its own user and writes its report to /zap/wrk, so it gets a folder it can write.
+          mkdir zap && cp .zap-rules.tsv zap/rules.tsv && chmod a+w zap
+          # By digest: the stable tag is rebuilt every month (images.md section 4). This is 2.17.0.
+          # -I: a WARN rule only reports; a rule set to FAIL in rules.tsv fails the job.
+          docker run --rm -v "$PWD/zap:/zap/wrk/:rw" \
+            ghcr.io/zaproxy/zaproxy@sha256:5ccfff9a411743ab2615136a2edd7416bec9ce41572fa94e935df38c14adb2b6 \
+            zap-baseline.py -t "$TARGET" -c rules.tsv -I -r report.html
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        if: ${{ !cancelled() }}  # the report is wanted most when the scan failed
+        with:
+          name: zap-report
+          path: zap/report.html
+          retention-days: 14  # long enough to read a failed scan; every reader of the repository can download it
+
+  headers-staging:
+    # The header scans react/security/security.md section 14 asks for, on the version staging now runs.
+    needs: staging
+    if: ${{ !cancelled() && needs.staging.result == 'success' }}  # as in dast-staging
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read  # frontend/.node-version
+    env:
+      BASE_URL: ${{ needs.staging.outputs.base-url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version-file: frontend/.node-version  # the Node the application pins (pipeline.md section 9)
+          package-manager-cache: false  # this job installs nothing
+      - name: CSP Evaluator over the policy staging sends
+        run: |
+          # One tarball pinned by its checksum, as ci-example.md pins gitleaks: no package manager runs,
+          # so no install script can run. A departure from security.md section 10 (see the table).
+          curl -sSfL -o csp_evaluator.tgz https://registry.npmjs.org/csp_evaluator/-/csp_evaluator-1.1.8.tgz
+          echo "2b4f2a30ed67a39908708c05ba559accbad0b5a6c0fa29f1761a641a342fd904  csp_evaluator.tgz" | sha256sum --check
+          mkdir csp_evaluator && tar -xzf csp_evaluator.tgz -C csp_evaluator --strip-components=1
+          POLICY=$(curl -sSfI "$BASE_URL/" | tr -d '\r' | sed -n 's/^content-security-policy: //Ip')
+          export POLICY
+          # Fails on a HIGH or SYNTAX finding, the two most severe levels; the others are printed only.
+          node -e '
+            const { CspParser } = require("./csp_evaluator/dist/parser.js");
+            const { CspEvaluator } = require("./csp_evaluator/dist/evaluator.js");
+            const { Severity } = require("./csp_evaluator/dist/finding.js");
+            if (!process.env.POLICY) { console.error("No Content-Security-Policy header"); process.exit(1); }
+            const findings = new CspEvaluator(new CspParser(process.env.POLICY).csp).evaluate();
+            for (const f of findings) console.log(`${Severity[f.severity]} ${f.directive}: ${f.description}`);
+            process.exit(findings.some((f) => f.severity <= Severity.SYNTAX) ? 1 : 0);
+          '
+      - name: HTTP Observatory over staging
+        run: |
+          host=${BASE_URL#https://}
+          host=${host%%/*}
+          # MDN's public API scans from outside, so staging must answer from the internet. It scans a
+          # host once a minute; a second request inside that minute gets the earlier result.
+          result=$(curl -sS --fail-with-body -X POST "https://observatory-api.mdn.mozilla.net/api/v2/scan?host=$host")
+          echo "$result" | jq '{grade, score, tests_failed, details_url}'
+          grade=$(echo "$result" | jq -r '.grade')
+          # The bar this example sets; write down your own (pipeline-security.md section 7).
+          case "$grade" in
+            A+|A) ;;
+            *) echo "::error::HTTP Observatory grade $grade is below A."; exit 1 ;;
+          esac
+
   tag-is-on-main:
     # Proves only that the tagged commit is on main; that it ran in staging is the decider's check
     # (release.md section 3).
@@ -240,6 +327,32 @@ jobs:
       - run: |
           echo "Run this workflow from the release tag: production takes only a version tag." >&2
           exit 1
+
+  notify-failure:
+    # The last job: tells the team's channel when a job of this run failed or was cancelled
+    # (delivery.md section 7).
+    # Not production-needs-a-tag: the person who started that run sees its error on the page they are on.
+    needs: [ci, publish-api, publish-web, staging, dast-staging, headers-staging, tag-is-on-main, security, production]
+    # A job that hits its timeout-minutes is cancelled, not failed, so failure() alone misses it;
+    # always(), not !cancelled(), so a run a person cancels is reported too (pipeline.md section 10).
+    if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Post to the team's channel
+        env:
+          WEBHOOK_URL: ${{ secrets.DEPLOY_ALERT_WEBHOOK_URL }}  # the URL itself is the credential
+          REF: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "::warning::The secret DEPLOY_ALERT_WEBHOOK_URL is not set, so no channel was told."
+            exit 0
+          fi
+          # jq writes the JSON, so a ref name cannot break out of the text (pipeline-security.md section 5).
+          jq -n --arg text "The deploy run for $REF failed: $RUN_URL" '{text: $text}' \
+            | curl -sS --fail-with-body -X POST -H 'Content-type: application/json' --data @- "$WEBHOOK_URL"
 ```
 
 ## 2. What deploy.yml does
@@ -248,7 +361,7 @@ jobs:
 |---|---|
 | `push` to `main`, `push` of `v*` tags, `workflow_dispatch` | a merge deploys to staging; a version tag deploys to production; a manual run on an earlier tag deploys that version again ([delivery.md](delivery.md) sections 2 and 7) |
 | `workflow_dispatch` with the input `environment` | "Run workflow" on a tag redeploys that version where the person chooses: `staging` rehearses the way back, `production` takes it ([delivery.md](delivery.md) section 7). The run uses `deploy.yml` and `deploy-to.yml` as they were at that tag, so a later fix to the deploy steps does not reach it. Where `production` has no required reviewers, anyone with write access can start such a run and put any earlier version in production ([delivery.md](delivery.md) section 7) |
-| `ci` with `uses: ./.github/workflows/ci.yml` | every check of [ci-example.md](ci-example.md) runs on the merged code, the security jobs included, and the jobs after it start only when all of it is green. `workflow_call` with `needs` keeps the order in one run, where `workflow_run` would start whatever the result ([delivery.md](delivery.md) section 11) |
+| `ci` with `uses: ./.github/workflows/ci.yml` | every check of [ci-example.md](ci-example.md) runs on the merged code, the security jobs included, and the jobs after it start only when all of it is green. `workflow_call` with `needs` keeps the order in one run, where `workflow_run` would start whatever the result ([delivery.md](delivery.md) section 14) |
 | `secrets: DOCKERHUB_TOKEN` on the call | a called workflow gets only the secrets its caller passes [9]; passing the one secret CI uses by name, not `secrets: inherit`, keeps every other secret out of CI ([pipeline.md](pipeline.md) section 3) |
 | the permissions on the call | a called workflow's jobs can keep or lower the caller's permissions, never raise them ([pipeline.md](pipeline.md) section 4), so the call grants what the jobs of `ci.yml` and `security.yml` ask for: `pull-requests: read` for `changes`, `security-events: write` and `actions: read` for the security jobs |
 | `publish-api` | pushes the image to ECR by digest, with no tag, with an SBOM and provenance ([images.md](../docker/images.md) section 9), and tags that digest `sha-<commit>` only after the scan passes. A departure from [images.md](../docker/images.md) section 10, which puts lint, build, test, scan and push in one job: here `ci.yml`'s image job builds, tests and scans the image as a check, and this job builds it again from the same cache, pushes it, scans the pushed digest and then tags it, because only the job on `main` should hold the AWS role ([pipeline-security.md](pipeline-security.md) section 3). The cost: two builds per merge, and the image tests of `ci.yml` ran on the first build, not on the pushed bytes; [docker/ci-example.md](../docker/ci-example.md) says why the two builds differ. A second departure, from [images.md](../docker/images.md) section 8: the image gets no version tag, because the version lives on the git tag, created after this build; the cost is that the registry shows only commit tags. It logs in to Docker Hub before the build, as section 10 asks |
@@ -260,28 +373,62 @@ jobs:
 | the two cache headers | Vite puts a hash in the names of the files in `assets/`, so they are cached for a year; it copies the files of `public/` "as-is" [10], so they and `index.html` get `no-cache`. A deploy copies the objects with their headers ([delivery.md](delivery.md) section 6) |
 | `staging` and `production` with `uses: ./.github/workflows/deploy-to.yml` | one set of deploy steps for every environment, called with different inputs ([delivery.md](delivery.md) section 6) |
 | `migrate:` on the two calls, and the `migrate` input | a push migrates. "Run workflow" migrates only when the person turns `migrate` on: on for a retry of the newest release or a run on `main`, whose code may need a migration the database does not have yet; off for a redeploy of an earlier version, because the database already holds the newer schema, which the older code still reads ([delivery.md](delivery.md) section 7) |
+| `dast-staging` and `headers-staging`, after `staging` | the scans that need a running site, on the version staging now runs ([delivery.md](delivery.md) section 7). Each is a job of its own with only `contents: read`, so no scanner runs next to the deploy role ([pipeline-security.md](pipeline-security.md) section 7). They run after every staging deploy, a rehearsal of the way back included, and only when it succeeded. A failure turns the run red and `notify-failure` tells the team; it does not undo the deploy, because production comes from a version tag in another run |
+| `needs.staging.outputs.base-url` | the staging address is an output of `deploy-to.yml`, mapped from its job's output [9], so it is the value of the environment just deployed (section 4). The scans need no copy of the value and name no environment, because naming one creates a deployment record ([delivery.md](delivery.md) section 4) |
+| `zap-baseline.py` with `-c rules.tsv -I` | ZAP's baseline scan spiders the site for a minute, "doesn't perform any actual 'attacks'", and is "intended to be ideal to run in a CI/CD environment, even against production sites" [25]. Every alert is a WARN unless the rules file sets it to FAIL or IGNORE; `-I` keeps a WARN from failing the job, and the exit code is 1 when a FAIL rule matches, 3 on any other failure [25]. The rules file sets to FAIL the passive rules for the headers [security.md](../../react/security/security.md) section 5 asks for [29], [30], [31], [32] |
+| the ZAP image by digest, and `chmod a+w zap` | the `stable` tag "is also regenerated monthly" [26], so the digest is what keeps the scan the same between two runs ([images.md](../docker/images.md) section 4); `--rm` leaves no container behind. ZAP reads the rules file and writes the report in the folder mounted at `/zap/wrk` [26], and runs as its own user, so the folder must be writable for it; ZAP's own action does the same `chmod a+w` [28] |
+| `upload-artifact` with `if: ${{ !cancelled() }}` and `retention-days: 14` | the report is kept when the scan failed, when it is read most; GitHub's docs advise `!cancelled()` over `always()` for a step that must run after a failure [37]. Artifacts are kept 90 days unless `retention-days` is shorter [40]; two weeks covers reading a failed scan. Anyone with read access can download the report, so it holds only what any visitor of staging can see ([pipeline-security.md](pipeline-security.md) section 9) |
+| the CSP Evaluator step | runs Google's CSP Evaluator over the policy staging sends, as [security.md](../../react/security/security.md) section 14 asks; Google offers it "only for the convenience of developers" with "no guarantees" [34]. The policy of this example: a finding of the two most severe levels, `HIGH` and `SYNTAX`, fails the job, and a missing header fails it too. The SHA-256 in the step was computed on 2026-10-19 from the tarball whose sha512 matches the registry's `integrity` entry for 1.1.8 [35]. A departure from [security.md](../../react/security/security.md) section 10, which installs packages through the lockfile: one package with no dependencies and no install script, pinned by checksum, keeps the frontend's whole install out of a job that only reads a header. The cost: Renovate does not move it, so the pipeline owners do, by hand |
+| `actions/setup-node` with `node-version-file` | the Node version comes from the file the application pins, as [pipeline.md](pipeline.md) section 9 asks; `package-manager-cache: false`, which the action's README recommends where caching is not needed [36] |
+| the HTTP Observatory step | MDN's HTTP Observatory checks the headers the deployed site sends, through its JSON API "For integration in CI pipelines"; the API scans a host once a minute and returns the earlier result inside that minute [33]. It scans from MDN's side, so staging must answer from the internet; a staging site only your network reaches needs the scanner's command-line tool instead [33]. The bar, grade A or better, is this example's written policy ([pipeline-security.md](pipeline-security.md) section 7); `jq` comes with the runner image [41] |
 | `tag-is-on-main` | a tag on a commit that is not on `main` fails here. The job proves only that; that the commit ran in staging is the decider's check ([release.md](../project-management/release.md) section 3) |
 | `security` on a tag push | the security jobs run again on the tagged commit, and `production` needs them, so a new advisory against the workflows or the lockfiles stops the release; CodeQL's job stays green on an alert, so it records alerts here and stops nothing; the image itself was scanned when it was pushed, and is not scanned again here ([pipeline-security.md](pipeline-security.md) section 7). A redeploy of an earlier version skips them, so the way back is not held up by such an advisory |
 | `github.sha` as `commit` | on a tag push and on a manual run from a tag, it is the tagged commit; `deploy-to.yml` finds that commit's image and bundle, so nothing is built for production |
 | `production-needs-a-tag` | "Run workflow" from a branch with `production` chosen fails here with "Run this workflow from the release tag". Without it, every job of that run is skipped and the run looks green, so the person may think the rollback ran |
+| `notify-failure`, the last job, with `always()` and the results of the jobs it needs | a job that reaches its `timeout-minutes` is one GitHub "automatically cancels" [18], and a job's result in the `needs` context is one of `success`, `failure`, `cancelled` or `skipped` [38], so the job runs when any job it needs ended `failure` or `cancelled`: `failure()`, which "returns true if any ancestor job fails" [37], would miss a deploy that timed out. `always()` keeps the default `success()` check from skipping the job [37]. One job at the end covers a red CI, a failed publish, a failed or timed-out deploy and a red scan ([delivery.md](delivery.md) section 7). It sits in this workflow, not in a `workflow_run` workflow, which would start whatever the result and with secrets ([delivery.md](delivery.md) section 7) |
+| `DEPLOY_ALERT_WEBHOOK_URL` as a repository secret, read through `env:` | a chat's incoming webhook takes a JSON body with a `text` field, and Slack warns: "Your webhook URL contains a secret" [39]. The job names no environment, so the URL is a repository secret ([pipeline-security.md](pipeline-security.md) section 6). Without it the job writes a warning on the run and posts nothing, so a missing secret shows instead of failing in silence |
+| `jq -n --arg` | the ref name and the run's address go into the JSON as data; pasted into the string, a tag name with a quote in it would break the body ([pipeline-security.md](pipeline-security.md) section 5) |
 
 Which jobs run on which event:
 
 | Event | Jobs that run | Jobs skipped |
 |---|---|---|
-| push to `main` | `ci` (the security jobs included), `publish-api`, `publish-web`, `staging` | `tag-is-on-main`, `security`, `production`, `production-needs-a-tag` |
-| push of a `v*` tag | `tag-is-on-main`, `security`, `production` | `ci`, `publish-api`, `publish-web`, `staging`, `production-needs-a-tag` |
-| "Run workflow" on a `v*` tag, `production` chosen | `tag-is-on-main`, `production`, which migrates only with `migrate` on | `ci`, `publish-api`, `publish-web`, `security`, `staging`, `production-needs-a-tag` |
-| "Run workflow" on a `v*` tag, `staging` chosen | `tag-is-on-main`, `staging`, which migrates only with `migrate` on | `ci`, `publish-api`, `publish-web`, `security`, `production`, `production-needs-a-tag` |
-| "Run workflow" on `main`, `staging` chosen | `staging`, for `main`'s last commit, which migrates only with `migrate` on | every other job |
+| push to `main` | `ci` (the security jobs included), `publish-api`, `publish-web`, `staging`, `dast-staging`, `headers-staging` | `tag-is-on-main`, `security`, `production`, `production-needs-a-tag` |
+| push of a `v*` tag | `tag-is-on-main`, `security`, `production` | `ci`, `publish-api`, `publish-web`, `staging`, `dast-staging`, `headers-staging`, `production-needs-a-tag` |
+| "Run workflow" on a `v*` tag, `production` chosen | `tag-is-on-main`, `production`, which migrates only with `migrate` on | `ci`, `publish-api`, `publish-web`, `security`, `staging`, `dast-staging`, `headers-staging`, `production-needs-a-tag` |
+| "Run workflow" on a `v*` tag, `staging` chosen | `tag-is-on-main`, `staging`, which migrates only with `migrate` on, then `dast-staging` and `headers-staging` | `ci`, `publish-api`, `publish-web`, `security`, `production`, `production-needs-a-tag` |
+| "Run workflow" on `main`, `staging` chosen | `staging`, for `main`'s last commit, which migrates only with `migrate` on, then `dast-staging` and `headers-staging` | every other job |
 | "Run workflow" on `main`, `production` chosen | `production-needs-a-tag`, which fails with "Run this workflow from the release tag": production takes only a version tag | every other job |
+
+`notify-failure` is in none of the rows: on any event it runs only when a job it needs has failed
+or was cancelled, and it is skipped otherwise.
+
+`.zap-rules.tsv`, the rules file `dast-staging` reads, at the root next to `.trivyignore`, where
+[file-structure.md](../file-structure/file-structure.md) section 9 puts a scanner's config. It
+decides what fails the scan, so list it in `CODEOWNERS` with the other scanner files
+([pipeline-security.md](pipeline-security.md) section 8). ZAP reads three fields per line,
+separated by tabs, and refuses a line with fewer [27]; a rule the file does not name stays a WARN:
+
+```text
+# zap-baseline rules: FAIL fails the job; every rule not listed here stays a WARN.
+# The headers react/security/security.md section 5 asks for. Fields are separated by tabs.
+10020	FAIL	(Anti-clickjacking Header)
+10021	FAIL	(X-Content-Type-Options Header Missing)
+10035	FAIL	(Strict-Transport-Security Header)
+10038	FAIL	(Content Security Policy (CSP) Header Not Set)
+```
+
+It is good because a missing header that the security practice asks for fails the scan by name,
+while the other alerts stay visible as warnings and stop nothing.
 
 It is good because production runs the image and the bundle published once from a commit on
 `main`, found by that commit, and only an image whose pushed digest passed the scan
 ([delivery.md](delivery.md) section 3); no job holds a stored cloud key; and the person who
 decides the release starts the production deploy by creating
 the version tag that names it, after checking that the commit ran in staging
-([release.md](../project-management/release.md) section 3).
+([release.md](../project-management/release.md) section 3). The scans after the staging deploy
+check the version that runs, in jobs that hold no cloud role, and one last job tells the team's
+channel when any part of the run fails or times out, so nobody has to watch the run to learn it.
 
 ## 3. deploy-to.yml: the same steps for every environment
 
@@ -302,6 +449,10 @@ on:
       migrate:
         type: boolean
         default: true  # false for a manual run with migrate off, such as a redeploy of an earlier version (delivery.md section 7)
+    outputs:
+      base-url:
+        description: The address the environment answers on, for the checks after the deploy
+        value: ${{ jobs.deploy.outputs.base-url }}
 
 permissions: {}
 
@@ -312,6 +463,8 @@ jobs:
     environment:
       name: ${{ inputs.environment }}
       url: ${{ vars.BASE_URL }}
+    outputs:
+      base-url: ${{ vars.BASE_URL }}  # the environment's own value, so the checks scan the environment just deployed
     concurrency:
       group: deploy-${{ inputs.environment }}
       cancel-in-progress: false  # a deploy cut off halfway leaves the service on two versions
@@ -501,7 +654,8 @@ jobs:
 | Part | Why |
 |---|---|
 | `environment: name: ${{ inputs.environment }}` | the job gets that environment's variables, passes its rules first, creates a deployment record, and its OIDC token carries `environment:<name>` in `sub` ([delivery.md](delivery.md) sections 4 and 5) |
-| `concurrency` with `cancel-in-progress: false` | one deploy at a time per environment, and never one cut off halfway ([delivery.md](delivery.md) section 4). The group keeps GitHub's default: one run waits, and a newer request cancels the one that waits [18]. So while a rollback waits behind a running deploy, start no other run for that environment; [delivery.md](delivery.md) section 11 says why the job does not set `queue: max` |
+| `concurrency` with `cancel-in-progress: false` | one deploy at a time per environment, and never one cut off halfway ([delivery.md](delivery.md) section 4). The group keeps GitHub's default: one run waits, and a newer request cancels the one that waits [18]. So while a rollback waits behind a running deploy, start no other run for that environment; [delivery.md](delivery.md) section 14 says why the job does not set `queue: max` |
+| `outputs: base-url`, on the job and on `workflow_call` | a reusable workflow hands a value to its caller only through a job output it maps to a workflow output [9], and a job output may read `vars` [38]. The value is the environment's own `BASE_URL`, so `dast-staging` and `headers-staging` scan the environment this job deployed |
 | `Check the variables this job reads`, the first step | a variable that is not set reads as an empty string [20], so a missing one would fail later with an error that does not name it, or not at all: with `ECS_SERVICE` empty, the deploy action registers the task definition, updates no service and ends green [19], and the API stays on the old version. The step prints each missing name as an error [21] and stops the job before anything changes. It checks every variable the job reads, so a manual run with `migrate` on cannot find `TASK_SUBNETS` empty later |
 | `checkout` at `inputs.commit` | the task definition comes from the version being deployed, so a rollback also rolls back its settings |
 | `describe-images` by `sha-<commit>`, then `head-object` on the bundle's `index.html` | finds the digest of the image built from that commit, which carries the tag only when its scan passed (section 2), and proves its bundle is stored; a commit with no scanned image or no bundle fails the job here, before anything changes |
@@ -573,6 +727,9 @@ Repository variables: `AWS_REGION`, `AWS_PUBLISH_API_ROLE_ARN`, `AWS_PUBLISH_WEB
 `DOCKERHUB_USERNAME` (the Docker Hub login in `publish-api` reads it; the login is skipped when the
 `DOCKERHUB_TOKEN` secret is absent). None of them is a secret; a role ARN lets nobody in without
 the trust policy of section 6.
+
+Repository secret: `DEPLOY_ALERT_WEBHOOK_URL`, the incoming webhook of the channel the team reads,
+which `notify-failure` posts to. Without it the job warns on the run and posts nothing.
 
 The release tags are protected by a tag ruleset that lets only the go or no-go decider of
 [release.md](../project-management/release.md) section 3 and their backup create a `v*` tag, and
@@ -702,7 +859,7 @@ Checked 2026-10-18 unless a line ends with — checked <YYYY-MM-DD>.
 - [6] AWS — IAM User Guide: Create a role for OpenID Connect federation — https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-idp_oidc.html
 - [7] AWS — Amazon ECR User Guide: IAM permissions for pushing an image — https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-push-iam.html
 - [8] AWS — Amazon ECS Developer Guide: Pass Secrets Manager secrets through environment variables — https://docs.aws.amazon.com/AmazonECS/latest/developerguide/secrets-envvar-secrets-manager.html
-- [9] GitHub — Reuse workflows: passing inputs and secrets — https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows
+- [9] GitHub — Reuse workflows: passing inputs and secrets, using outputs — https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows — checked 2026-10-19
 - [10] Vite — Static Asset Handling: the public directory, Vite 8 — https://vite.dev/guide/assets#the-public-directory
 - [11] AWS — AWS CLI Command Reference: ecs run-task, version 2 — https://docs.aws.amazon.com/cli/latest/reference/ecs/run-task.html
 - [12] AWS — Amazon ECR API Reference: GetDownloadUrlForLayer — https://docs.aws.amazon.com/AmazonECR/latest/APIReference/API_GetDownloadUrlForLayer.html
@@ -711,10 +868,27 @@ Checked 2026-10-18 unless a line ends with — checked <YYYY-MM-DD>.
 - [15] AWS — Amazon ECR User Guide: Retagging an image in Amazon ECR — https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-retag.html
 - [16] AWS — Amazon ECR API Reference: PutImage — https://docs.aws.amazon.com/AmazonECR/latest/APIReference/API_PutImage.html
 - [17] AWS — Amazon ECR API Reference: BatchGetImage — https://docs.aws.amazon.com/AmazonECR/latest/APIReference/API_BatchGetImage.html
-- [18] GitHub — Workflow syntax for GitHub Actions: `concurrency` — https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+- [18] GitHub — Workflow syntax for GitHub Actions: `concurrency` and `jobs.<job_id>.timeout-minutes` — https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax — checked 2026-10-19
 - [19] AWS — amazon-ecs-deploy-task-definition, `index.js` (the service check, an empty `service`, `desired-count`), v2.6.4 — https://github.com/aws-actions/amazon-ecs-deploy-task-definition/blob/v2.6.4/index.js
 - [20] GitHub — Store information in variables: an unset variable reads as an empty string — https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-variables
 - [21] GitHub — Workflow commands for GitHub Actions: setting an error message — https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands
 - [22] GitHub — Immutable subject claims for GitHub Actions OIDC tokens (changelog, 2026-04-23) — https://github.blog/changelog/2026-04-23-immutable-subject-claims-for-github-actions-oidc-tokens/
 - [23] GitHub — OpenID Connect reference: the immutable subject claim format — https://docs.github.com/en/actions/reference/security/oidc
 - [24] AWS — AWS CLI Command Reference: s3 sync, version 2 — https://docs.aws.amazon.com/cli/latest/reference/s3/sync.html
+- [25] ZAP — ZAP - Baseline Scan (options, exit values, configuration file) — https://www.zaproxy.org/docs/docker/baseline-scan/ — checked 2026-10-19
+- [26] ZAP — ZAP Docker User Guide (the stable image, mounting `/zap/wrk`) — https://www.zaproxy.org/docs/docker/about/ — checked 2026-10-19
+- [27] ZAP — `docker/zap_common.py` (`load_config`: three tab-separated fields per line) — https://github.com/zaproxy/zaproxy/blob/main/docker/zap_common.py — checked 2026-10-19
+- [28] ZAP — action-baseline, `index.js` (`chmod a+w` on the mounted folder) — https://github.com/zaproxy/action-baseline/blob/master/index.js — checked 2026-10-19
+- [29] ZAP — Alert 10020, Anti-clickjacking Header (passive) — https://www.zaproxy.org/docs/alerts/10020/ — checked 2026-10-19
+- [30] ZAP — Alert 10021, X-Content-Type-Options Header Missing (passive) — https://www.zaproxy.org/docs/alerts/10021/ — checked 2026-10-19
+- [31] ZAP — Alert 10035, Strict-Transport-Security Header (passive) — https://www.zaproxy.org/docs/alerts/10035/ — checked 2026-10-19
+- [32] ZAP — Alert 10038, Content Security Policy (CSP) Header Not Set (passive) — https://www.zaproxy.org/docs/alerts/10038/ — checked 2026-10-19
+- [33] MDN — mdn-http-observatory, README (the command-line tool and the JSON API) — https://github.com/mdn/mdn-http-observatory/blob/main/README.md — checked 2026-10-19
+- [34] Google — csp-evaluator, README — https://github.com/google/csp-evaluator — checked 2026-10-19
+- [35] npm — registry entry of `csp_evaluator` (version 1.1.8, its tarball and `integrity`) — https://registry.npmjs.org/csp_evaluator — checked 2026-10-19
+- [36] GitHub — actions/setup-node, README, v7.1.0 — https://github.com/actions/setup-node/blob/v7.1.0/README.md — checked 2026-10-19
+- [37] GitHub — Evaluate expressions in workflows and actions: status check functions — https://docs.github.com/en/actions/reference/workflows-and-actions/expressions — checked 2026-10-19
+- [38] GitHub — Contexts reference: context availability (`jobs.<job_id>.outputs`) and the `needs` context — https://docs.github.com/en/actions/reference/workflows-and-actions/contexts — checked 2026-10-19
+- [39] Slack — Sending messages using incoming webhooks — https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks — checked 2026-10-19
+- [40] GitHub — actions/upload-artifact, README, v7.0.2 — https://github.com/actions/upload-artifact/blob/v7.0.2/README.md — checked 2026-10-19
+- [41] GitHub — actions/runner-images, Ubuntu 24.04 image readme (installed `jq`) — https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md — checked 2026-10-19

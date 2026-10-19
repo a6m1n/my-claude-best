@@ -34,7 +34,9 @@ projects that use CI "release twice as often as those that" do not [1].
 One rule holds the rest together: **every change reaches `main` only through checks that run
 from a clean runner, the same way every time, and one red check stops it.** The sections below
 say which checks, on which event, in which order, and how to keep them fast enough that people
-wait for them and honest enough that people trust them.
+wait for them and honest enough that people trust them. When the project has no tests yet, the
+team is one person, or a few maintainers take changes from people they do not know, read
+section 12 first: it says which parts then do not fit.
 
 What this file leaves to other practices: what each check checks (Python's static checks are
 [static-checks.md](../../python/static-checks/static-checks.md), Python's test suites are
@@ -98,14 +100,15 @@ exactly such credentials. That is why they are separate jobs with separate permi
 | the commands of its one purpose | a step that a person has to do by hand |
 | a `permissions:` block that lists only what it uses ([pipeline-security.md](pipeline-security.md) section 3) | `continue-on-error: true` on a check that guards `main` (section 10) |
 | `timeout-minutes:`, on a job that runs on a runner (section 8) | a loop that reruns a failing test or check until it passes (section 10) |
-| an upload of what a later job or a person needs: an artifact, a report, a line in the job summary | a file another job left behind on "its" runner |
+| an upload of what a later job or a person needs: an artifact, a report, a line in the job summary, within the personal-data and retention rules of [pipeline-security.md](pipeline-security.md) section 9 | a file another job left behind on "its" runner |
 
 ## 4. Triggers: what starts a workflow
 
 **Start every check automatically on the event that needs it, and keep manual runs for decisions
 a person makes.** A check that someone has to remember to start is the check that is skipped on
 the day it matters, and a deploy to production that starts by itself takes the decision away from
-the person [release.md](../project-management/release.md) section 3 gives it to.
+the person [release.md](../project-management/release.md) section 3 gives it to, unless that person
+made the standing decision of continuous deployment ([delivery.md](delivery.md) section 2).
 
 | Event | Fires when | Use it for | Watch for |
 |---|---|---|---|
@@ -113,14 +116,27 @@ the person [release.md](../project-management/release.md) section 3 gives it to.
 | `pull_request` | a pull request is opened, gets a new push, or is reopened; the run checks the merge of the branch into its base [6] | every check that guards `main` | a pull request from a fork, and one from Dependabot, gets no secrets and a read-only token [6]: a check that needs a secret, such as an eval that calls a paid model, cannot run there, so keep secrets out of the checks that guard `main`. The one exception is a read-only token that only lifts a rate limit, such as Docker Hub's, whose step is skipped when the secret is absent ([ci-example.md](ci-example.md)) |
 | `merge_group` | a pull request enters a merge queue [6] | the same checks, on the queued merge (section 6) | without it, a required check is never reported to the queue and the merge fails [6] |
 | `push` to `main` | a commit lands on `main` | the checks again on the merged code, then the build of the release artifact ([delivery.md](delivery.md) section 3) | a workflow that only runs here finds a problem after the merge, not before it |
-| `push` of a tag such as `v1.4.2` | someone creates a tag that matches the pattern | the deploy of that version to production ([delivery.md](delivery.md) section 4) | `paths` filters are not evaluated for tag pushes [4] |
+| `push` of a tag such as `v1.4.2` | a person, or under continuous deployment the tag job, creates a tag that matches the pattern | the deploy of that version to production ([delivery.md](delivery.md) section 4) | `paths` filters are not evaluated for tag pushes [4] |
 | `workflow_dispatch` | a person with write access presses "Run workflow" or calls the API [7]; the file must be on the default branch [6] | a decision: redeploy a released version, roll back ([delivery.md](delivery.md) section 7) | its inputs are text a person typed: pass them to a script through `env`, never with `${{ }}` inside it ([pipeline-security.md](pipeline-security.md) section 5) |
-| `schedule` | a cron time, in UTC, on the default branch only [6] | a rescan with a fresh vulnerability database ([pipeline-security.md](pipeline-security.md) section 7), a full run of a monorepo whose pull requests run only part of it | a scheduled run can start late or be dropped under load, and in a public repository it turns itself off after 60 days without activity [6]: name the person who watches it |
+| `schedule` | a cron time, in UTC, on the default branch only [6] | a rescan with a fresh vulnerability database ([pipeline-security.md](pipeline-security.md) section 7), a full run of a monorepo whose pull requests run only part of it | a scheduled run can start late or be dropped under load, and in a public repository it turns itself off after 60 days without activity [6]: name the person who watches it (section 10) |
 | `workflow_call` | another workflow calls this one | reuse: the deploy workflow calls CI first, so no deploy skips a check | a called workflow can keep or lower the caller's permissions, never raise them [8] |
 | `pull_request_target`, `workflow_run` | they run with the base repository's token and its secrets [9] | jobs that never run the pull request's code, such as adding a label | checking out or running the pull request's code there ([pipeline-security.md](pipeline-security.md) section 5) |
 
 A push to a branch that has no pull request starts no workflow in this practice, so the pull
 request is the first CI run.
+
+**Run a job that needs a paid key, such as an eval that calls a model, outside the gate: started
+by hand with `workflow_dispatch`, or by a maintainer, with its key in a GitHub environment of its
+own.** On a pull request from a fork, "With the exception of `GITHUB_TOKEN`, secrets are not
+passed to the runner" [40], so such a job inside the gate would be red for every outside
+contributor. An environment secret reaches a job only after the environment's rules pass
+([delivery.md](delivery.md) section 4), so the key stays away from the checks that run a pull
+request's code, and the person who starts the run reads the diff first. Never move the job to
+`pull_request_target` to reach the key ([pipeline-security.md](pipeline-security.md) section 5),
+and in a private repository leave "Send secrets to workflows from pull requests" off: it "Makes
+all secrets available to the pull request" from a fork [41]. When and how an eval runs before a
+merge, and the spend limit on its key, are [evals.md](../../python/evals/evals.md) section 8's
+rules. This practice found no case where this is too much.
 
 ## 5. Stages and when they run
 
@@ -140,17 +156,39 @@ request is the first CI run.
   the pull request what the release will see, and an artifact exists only for code that passed.
   Fowler makes the same point about the build on the mainline: "Only once this integration build
   is green can the developer consider the integration to be complete" [10].
+- **When another practice asks CI to run its check, put the check in the stage of its cost and link
+  the owner's rule.** This file decides where and when a check runs; what it checks, and the value
+  it fails on, stay with the practice that owns them, so a change to the rule is made in one place.
+  The table names each owner. This practice found no case where this is too much.
+- **Before a merge, apply every migration to an empty scratch database, then compare the result
+  with the code's models.** A migration that fails, or a model change with no migration, then shows
+  on the pull request and not in the staging deploy. With Alembic the two steps are
+  `alembic upgrade head` and `alembic check`, which "returns an error code plus a message if it is
+  detected that new operations would be rendered into a new revision" and "can be worked into CI
+  systems" [43]. `upgrade head` also fails when two branches each added a migration on the same
+  parent, because then "Multiple head revisions are present for given argument 'head'" [44]. With
+  another tool, use its own commands for the same two steps. Know what the check misses:
+  `alembic check` compares the way autogenerate does, so "limitations in autogenerate detection are
+  the same" [43]; a renamed table or column shows as a drop and an add, and an unnamed constraint
+  is not seen [43]. An empty database also says nothing about the rows a migration changes: DORA
+  asks you to "test every schema change against a production-like data set (with any personal or
+  confidential information scrubbed, of course)" [42]. Staging is where that happens, since its
+  deploy runs the migration first ([delivery.md](delivery.md) section 6), on synthetic data
+  ([pipeline-security.md](pipeline-security.md) section 9). An application with no database, or
+  none whose schema migrations manage, has nothing to check; this practice found no other case
+  where the check is too much.
 
 | Stage | What runs | Whose rules decide what it checks | Job in the example | Pull request, merge queue | `main` | Version tag | Schedule |
 |---|---|---|---|---|---|---|---|
 | 1. Static checks | format, lint, types, import contracts, file hygiene, the workflow linters | [static-checks.md](../../python/static-checks/static-checks.md) section 5 (Python); [libraries.md](../../react/architecture/libraries.md) sections 3 and 4 (React); [pipeline-security.md](pipeline-security.md) section 7 (workflows) | `checks`, `frontend`, and the `workflows` job of `security.yml` | yes | yes | the workflow linters only, with stage 5 | yes, weekly |
 | 2. Unit tests | the tests that need nothing outside the process | [layout.md](../../python/testing/layout.md) section 2 (Python); [libraries.md](../../react/architecture/libraries.md) section 6 (React) | `backend-unit`, `frontend` | yes | yes | no | yes, weekly |
-| 3. Build | the image, built, tested and scanned; the frontend bundle | [images.md](../docker/images.md) section 10 | `image`, `frontend` | yes, nothing pushed | yes | no | yes, weekly, nothing pushed |
-| 4. Integration tests | the tests that need a database, a container or the network, in a job of their own | [running-tests.md](../../python/testing/running-tests.md) section 9 | `backend-integration` | yes | yes | no | yes, weekly |
-| 5. Security checks | dependencies, code; secrets: pull request only | [pipeline-security.md](pipeline-security.md) section 7 | `security`, which calls `security.yml` | yes | yes | yes, before production | yes, weekly |
+| 3. Build | the image, built, tested and scanned; the frontend bundle and its size budget | [images.md](../docker/images.md) section 10 (image); [performance.md](../../react/performance/performance.md) section 3 (the budget and its value) | `image`, `frontend` | yes, nothing pushed | yes | no | yes, weekly, nothing pushed |
+| 4. Integration tests | the tests that need a database, a container or the network, in a job of their own; the migration check | [running-tests.md](../../python/testing/running-tests.md) section 9; the migration bullet above | `backend-integration` | yes | yes | no | yes, weekly |
+| 5. Security checks | dependencies, code, infrastructure code; secrets: pull request only | [pipeline-security.md](pipeline-security.md) section 7; the frontend's supply-chain checks, [security.md](../../react/security/security.md) section 14 | `security`, which calls `security.yml` | yes | yes | yes, before production | yes, weekly |
 | 6. Publish | the image pushed by digest, the bundle stored | [delivery.md](delivery.md) section 3 | `publish-api`, `publish-web` | no | yes | no | no |
-| 7. Staging | migrate, deploy, smoke test; end-to-end tests, which the example does not show | [delivery.md](delivery.md) sections 5, 6 and 7 | `staging` | no | yes | no | no |
+| 7. Staging | migrate, deploy, smoke test; after the deploy, the passive scan of the running site and the header scans; end-to-end tests with axe, which the example does not show | [delivery.md](delivery.md) sections 5, 6 and 7; [pipeline-security.md](pipeline-security.md) section 7 (the passive scan); [security.md](../../react/security/security.md) section 14 (headers); [accessibility.md](../../react/design/accessibility.md) section 10 (axe) | `staging`, `dast-staging`, `headers-staging` | no | yes | no | no |
 | 8. Production | the same artifact deployed, smoke test | [delivery.md](delivery.md) section 4 | `tag-is-on-main`, `production` | no | no | yes | no |
+| Outside the gate | a job that needs a paid key, such as an eval that calls a model | [evals.md](../../python/evals/evals.md) section 8; section 4 above (the key) | not shown | started by hand or by a maintainer | no | no | as [evals.md](../../python/evals/evals.md) section 8 asks |
 
 ## 6. One required check: the gate job
 
@@ -273,6 +311,21 @@ one when the projects import each other, not for two folders that share nothing 
   calls. The default is 360 minutes [4], so a hung job holds a runner for six hours. In a sample of 382 workflows from
   public repositories, Abrokwah and Ghaleb found that "96.3% of workflows define no
   timeout-minutes bound on their jobs" (a preprint) [30].
+- **Know what the runs cost in a private repository, and set a budget with alerts.** GitHub
+  Actions is free for public repositories on standard GitHub-hosted runners and for self-hosted
+  runners; a private repository gets 2,000 minutes a month on GitHub Free and 3,000 on Pro or
+  Team, then pays per minute, USD 0.006 for a Linux 2-core runner [45]. Artifacts share one storage
+  allowance with GitHub Packages, 500 MB on Free, 1 GB on Pro and 2 GB on Team, then USD 0.25 per
+  GB a month, and the cache has its own 10 GB per repository [45]; short retention keeps the
+  artifacts small ([pipeline-security.md](pipeline-security.md) section 9). A budget alerts at 75%,
+  90% and 100%, and with "Stop usage when budget limit is reached" on, "additional usage is
+  blocked" [46], CI included, so turn that on only where a stopped pipeline costs less than the
+  bill. The images the pipeline pushes cost storage too, USD 0.10 per GB a month on Amazon ECR in
+  AWS's own pricing example [47]. An ECR lifecycle policy expires old images "within 24 hours"
+  after they meet its rule, so write it to keep every image a rollback may redeploy
+  ([rollback-plan.md](../project-management/rollback-plan.md) section 2), and run its preview
+  first, as AWS asks [48]. A public repository on standard GitHub-hosted runners pays GitHub
+  nothing for Actions [45], so there only the registry's part of this bullet applies.
 
 ## 9. Reproducible runs: lockfiles and pinned tools
 
@@ -313,6 +366,25 @@ one when the projects import each other, not for two folders that share nothing 
   [running-tests.md](../../python/testing/running-tests.md) section 9.
 - **Never set `continue-on-error: true` on a job the gate needs.** It "Prevents a workflow run from
   failing when a job fails" [4], so the failure stops guarding `main`.
+- **Make sure each failure reaches a person.** Each person who answers for the pipeline turns on
+  GitHub's notifications for workflow runs, with "Only notify for failed workflows", on GitHub or by
+  email [49]. These notifications reach only the person who started the run: GitHub sends one
+  "when any workflow runs that you've triggered have completed" [56]. A run that the tag job's
+  GitHub App starts by pushing a tag was triggered by no person, as this practice reads it, so under
+  continuous deployment the failure notice job below is required ([delivery.md](delivery.md)
+  section 2). "Notifications for scheduled workflows are sent to the user who last modified the
+  cron syntax in the workflow file" [6], so the person named for a schedule (section 4) is the one
+  whose notifications must be on, whoever edited the line last. When a team channel should hear
+  about a failure on `main` or in a deploy, add a last job to the same workflow that needs the
+  others and runs when one of them failed or was cancelled:
+  `if: ${{ always() && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}`.
+  `failure()` alone is true when "any ancestor job fails" [50], but a job that reaches its
+  `timeout-minutes` is one GitHub "automatically cancels" [4], and a job's result is one of
+  `success`, `failure`, `cancelled` or `skipped` [57], so `failure()` misses a job that timed out.
+  Do not use a second workflow on `workflow_run`: it starts "regardless of the conclusion of the
+  previous workflow", and it "is able to access secrets and write tokens, even if the previous
+  workflow was not" [6]. For one person under continuous delivery, GitHub's own notification is
+  enough, and the notify job is the part that is too much (this practice's reasoning).
 
 ## 11. Common mistakes
 
@@ -340,6 +412,30 @@ one when the projects import each other, not for two folders that share nothing 
   ([pipeline-security.md](pipeline-security.md) section 5).
 - **Another CI system**: the rules hold; the names of events, jobs and the required check differ
   (section 13).
+- **A project where continuous integration does not fit.** Fowler holds that in "a classical
+  open-source project, where there is one or two maintainers and many contributors", "Continuous
+  Integration isn't plausible", though raising how often work is integrated still helps; that
+  setting is where the pull-request workflow came from [10]. The checks of this file on each pull
+  request still hold there; integrating into the mainline every day is the part that does not.
+  CI also needs tests first: "Instituting Continuous Integration without self-testing code won't
+  work" [10], so a project with no tests writes them before it builds a pipeline.
+- **A small team whose whole suite runs fast on its own machines.** At 37signals, the checks for
+  HEY took "about 5m30s" on remote runners and less than half that on a developer's machine, so the
+  company moved CI back to developer machines; David Heinemeier Hansson calls a remote CI setup "a
+  substantial complication" [51]. Its `gh-signoff` tool posts the local run's result as a commit status that a
+  ruleset can require [52]. That is one company's case, with a fast suite and a trusted team. The
+  deploy still runs from the pipeline, with short-lived credentials and no cloud key on a laptop
+  ([delivery.md](delivery.md) section 5); that part is this practice's reasoning.
+- **One person.** "Pull request authors cannot approve their own pull requests" [53], and OpenSSF
+  Scorecard's code-review check says that requiring reviews "is infeasible for some projects, such
+  as those with only one active participant", and counts no review by a bot, AI included [54]. So
+  one person keeps the pull request and the `ci-ok` gate and requires no approval, as
+  [ruleset-example.md](../git/ruleset-example.md) sets it; that file also owns which plans have
+  rulesets. When a second reviewer is there only some of the time, keep the approval rule and give
+  the owner a bypass "For pull requests only": the owner still opens a pull request, "creating a
+  clear trail of their changes in the pull request and audit log", and may then merge it [55]. A
+  personal account keeps a security log, not an organization's audit log
+  ([pipeline-security.md](pipeline-security.md) section 12).
 
 ## 13. Alternatives considered
 
@@ -359,7 +455,7 @@ Checked 2026-10-18 unless a line ends with — checked <YYYY-MM-DD>.
 - [1] Michael Hilton et al. — Usage, Costs, and Benefits of Continuous Integration in Open-Source Projects (ASE, 2016; research) — https://mir.cs.illinois.edu/marinov/publications/HiltonETAL16ContinuousIntegration.pdf
 - [2] GitHub — Understanding GitHub Actions — https://docs.github.com/en/actions/get-started/understand-github-actions
 - [3] OWASP — Top 10 CI/CD Security Risks, CICD-SEC-5: Insufficient PBAC, v1.0 — https://owasp.org/www-project-top-10-ci-cd-security-risks/CICD-SEC-05-Insufficient-PBAC
-- [4] GitHub — Workflow syntax for GitHub Actions — https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax
+- [4] GitHub — Workflow syntax for GitHub Actions — https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax — checked 2026-10-19
 - [5] GitHub — Workflow artifacts — https://docs.github.com/en/actions/concepts/workflows-and-actions/workflow-artifacts
 - [6] GitHub — Events that trigger workflows — https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows
 - [7] GitHub — Manually running a workflow — https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow
@@ -390,3 +486,21 @@ Checked 2026-10-18 unless a line ends with — checked <YYYY-MM-DD>.
 - [33] DORA — Capabilities: Test automation — https://dora.dev/capabilities/test-automation/
 - [34] Wenhao Ge and Chen Zhang — Understanding and Detecting Flaky Builds in GitHub Actions (arXiv, 2026; research) — https://arxiv.org/abs/2602.02307
 - [39] pnpm — pnpm install (`--frozen-lockfile`) — https://pnpm.io/cli/install
+- [40] GitHub — Using secrets in GitHub Actions — https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets
+- [41] GitHub — Managing GitHub Actions settings for a repository — https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository
+- [42] DORA — Capabilities: Database change management — https://dora.dev/capabilities/database-change-management/
+- [43] SQLAlchemy — Alembic: Auto Generating Migrations (`alembic check`, what autogenerate cannot detect), 1.20.0 — https://github.com/sqlalchemy/alembic/blob/rel_1_20_0/docs/build/autogenerate.rst
+- [44] SQLAlchemy — Alembic: Working with Branches, 1.20.0 — https://github.com/sqlalchemy/alembic/blob/rel_1_20_0/docs/build/branches.rst
+- [45] GitHub — GitHub Actions billing — https://docs.github.com/en/billing/concepts/product-billing/github-actions
+- [46] GitHub — Setting up budgets to control spending on metered products — https://docs.github.com/en/billing/how-tos/set-up-budgets
+- [47] AWS — Amazon ECR pricing — https://aws.amazon.com/ecr/pricing/
+- [48] AWS — Amazon ECR User Guide: Automate the cleanup of images by using lifecycle policies — https://docs.aws.amazon.com/AmazonECR/latest/userguide/LifecyclePolicies.html
+- [49] GitHub — Managing GitHub Actions notifications — https://docs.github.com/en/subscriptions-and-notifications/how-tos/managing-github-actions-notifications
+- [50] GitHub — Evaluate expressions in workflows and actions (`failure`) — https://docs.github.com/en/actions/reference/workflows-and-actions/expressions
+- [51] David Heinemeier Hansson — We're moving continuous integration back to developer machines (world.hey.com, 2024; case) — https://world.hey.com/dhh/we-re-moving-continuous-integration-back-to-developer-machines-3ac6c611
+- [52] Basecamp — gh-signoff, README, v0.4.1 — https://github.com/basecamp/gh-signoff/blob/v0.4.1/README.md
+- [53] GitHub — Approving a pull request with required reviews — https://docs.github.com/en/pull-requests/how-tos/review-pull-requests/approving-a-pull-request-with-required-reviews
+- [54] OpenSSF — Scorecard checks: Code-Review, v5.6.0 — https://github.com/ossf/scorecard/blob/v5.6.0/docs/checks.md#code-review
+- [55] GitHub — Creating rulesets for a repository — https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository
+- [56] GitHub — Notifications for workflow runs (`notifications-for-workflow-runs.md`) — https://github.com/github/docs/blob/dae83f7d28f3b8e10015bd6b6d8b72267cedceca/content/actions/concepts/workflows-and-actions/notifications-for-workflow-runs.md — checked 2026-10-19
+- [57] GitHub — Contexts reference: the `needs` context (`contexts.md`) — https://github.com/github/docs/blob/dae83f7d28f3b8e10015bd6b6d8b72267cedceca/content/actions/reference/workflows-and-actions/contexts.md — checked 2026-10-19

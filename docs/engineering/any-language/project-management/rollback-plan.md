@@ -20,13 +20,17 @@ Write a rollback plan for every release that changes production, before you depl
 change request carries "ways to roll back the change" in the planning step. The reason: during an
 incident there is no time to design the way back.
 
+Under continuous deployment one standard plan covers every release: the pipeline's own way back,
+with the trigger, the decider and the time of section 2, kept next to the deploy workflow
+([release.md](release.md) section 3).
+
 ## 2. What it holds
 
 | Part | What to write | Source |
 |---|---|---|
 | Trigger | A measured deviation, such as the canary's error rate too far from the control, or an alert or a SEV 1 or 2 tied to the release, so nobody argues whether to roll back | Google SRE |
 | Decider | One named person on call for the release, and one named backup, who decides when the decider does not answer within 15 minutes of being paged | This practice |
-| Steps | Redeploy the previous version, or turn the feature flag off; the way back of each way to release is in [release.md](release.md) section 6 | Fowler (ops toggles) |
+| Steps | Redeploy the previous version, or turn the feature flag off; the way back of each way to release is in [release.md](release.md) section 6; under continuous deployment, stop the tag job first ([delivery.md](../ci-cd/delivery.md) section 2) | Fowler (ops toggles) |
 | Data | What happens to data written since the release (section 4) | Fowler, Sadalage |
 | Time | The time from the alert to "restored" ([sla.md](sla.md) section 4), which holds the trigger window, the wait for the decider, the rollback itself and the restored window, fits inside the restore target, so a rollback by the plan does not itself miss the SLA | [sla.md](sla.md) |
 | Who is told | The people the plan names, so those who depend on the release hear of the rollback from the team, not from users | This practice |
@@ -62,7 +66,9 @@ incident, as an emergency release ([release.md](release.md) section 3).
 
 Also this practice's own: after a rollback the change is still on main, so keep its feature flag off
 in every environment, or revert it on main, before the next deploy (the revert trap is in
-[git.md](../git/git.md) section 5). The fix is an ordinary work item linked to the incident, with its
+[git.md](../git/git.md) section 5). Under continuous deployment every merge deploys, so stop the tag
+job first ([delivery.md](../ci-cd/delivery.md) section 2) and make the revert or the flag change the
+next merge. The fix is an ordinary work item linked to the incident, with its
 own branch and pull request ([tickets.md](tickets.md) section 4), the team's Definition of Done, and
 a new Fix version (section 6), so it passes the same checks as any other change.
 
@@ -93,6 +99,12 @@ Run the rollback in a test environment before the release. Google: "you only kno
 recover your recent state if you actually do so". Atlassian's own 2022 outage review says:
 "Soft-delete actions must have a tested rollback plan". A plan that was never run has an unknown
 time, and the time is what the SLA needs.
+
+Under continuous deployment there is no release to rehearse before, so rehearse the standard plan
+whenever the pipeline or the deploy target changes, and keep each change safe to roll back. Amazon
+checks, through upgrade-downgrade testing, "that a software change is safe to roll forward and
+backward" (Pokkunuri), and Atlassian holds that "A continuous deployment pipeline must be able to
+undo a deployment".
 
 ## 6. In Jira
 
@@ -152,3 +164,9 @@ time, and the time is what the SLA needs.
   (the fields of a version) and ["Create release
   notes"](https://support.atlassian.com/jira-cloud-administration/docs/create-release-notes/) (the
   Related work section of a version), undated, read 2026-10-06.
+- Sandeep Pokkunuri, ["Ensuring rollback safety during
+  deployments"](https://builder.aws.com/content/3F04j2yRAAMBuPSPs50xwXZqg01/ensuring-rollback-safety-during-deployments),
+  Amazon Builders' Library, 2019-12-05, read 2026-10-19.
+- Sten Pittet, ["What is continuous
+  deployment?"](https://www.atlassian.com/continuous-delivery/software-testing/continuous-deployment),
+  Atlassian, undated, read 2026-10-19.
