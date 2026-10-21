@@ -66,7 +66,7 @@ on:
         type: boolean
         default: false  # the way back: the database already holds the newer schema (delivery.md section 7)
 
-permissions: {}
+permissions: {}  # nothing by default; each job asks for what it uses (pipeline-security.md section 3)
 
 jobs:
   ci:
@@ -84,9 +84,11 @@ jobs:
       actions: read
 
   publish-api:
+    # A departure from images.md section 10, one job from lint to push: only the job on main holds
+    # the AWS role. The cost: two builds per merge, and ci.yml's image tests ran on the first build.
     needs: ci
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    runs-on: ubuntu-24.04  # a version label, never ubuntu-latest: the OS changes only when this line does (pipeline.md section 9)
+    timeout-minutes: 20  # a hung job stops here, not at GitHub's 360 minutes (pipeline.md section 8)
     permissions:
       contents: read
       id-token: write  # OIDC login to AWS (delivery.md section 5)
@@ -94,9 +96,10 @@ jobs:
       # Without the secret the login below is skipped, and the base image is pulled anonymously.
       DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
+      # Every action by full commit SHA, the release in the comment: a tag can be moved (pipeline-security.md section 4).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: false  # the token is not left on the runner for the steps after this one (pipeline-security.md section 3)
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6.3.0
         with:
           role-to-assume: ${{ vars.AWS_PUBLISH_API_ROLE_ARN }}  # may push and tag images; nothing in S3, deploys nothing
@@ -247,7 +250,8 @@ jobs:
       - name: CSP Evaluator over the policy staging sends
         run: |
           # One tarball pinned by its checksum, as ci-example.md pins gitleaks: no package manager runs,
-          # so no install script can run. A departure from security.md section 10 (see the table).
+          # so no install script can run. A departure from security.md section 10, which installs from the
+          # lockfile: the job only reads a header. The cost: Renovate does not move it; the pipeline owners do.
           curl -sSfL -o csp_evaluator.tgz https://registry.npmjs.org/csp_evaluator/-/csp_evaluator-1.1.8.tgz
           echo "2b4f2a30ed67a39908708c05ba559accbad0b5a6c0fa29f1761a641a342fd904  csp_evaluator.tgz" | sha256sum --check
           mkdir csp_evaluator && tar -xzf csp_evaluator.tgz -C csp_evaluator --strip-components=1
@@ -454,11 +458,11 @@ on:
         description: The address the environment answers on, for the checks after the deploy
         value: ${{ jobs.deploy.outputs.base-url }}
 
-permissions: {}
+permissions: {}  # nothing by default; each job asks for what it uses (pipeline-security.md section 3)
 
 jobs:
   deploy:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04  # a version label, never ubuntu-latest: the OS changes only when this line does (pipeline.md section 9)
     timeout-minutes: 40  # the migration wait (about 10 minutes) and the service wait (15), with room for the other steps
     environment:
       name: ${{ inputs.environment }}
@@ -505,10 +509,11 @@ jobs:
           done
           exit "$missing"
 
+      # Every action by full commit SHA, the release in the comment: a tag can be moved (pipeline-security.md section 4).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           ref: ${{ inputs.commit }}  # the task definition of the version being deployed
-          persist-credentials: false
+          persist-credentials: false  # the token is not left on the runner for the steps after this one (pipeline-security.md section 3)
 
       - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd  # v6.3.0
         with:

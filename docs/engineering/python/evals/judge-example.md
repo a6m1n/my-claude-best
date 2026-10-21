@@ -678,7 +678,7 @@ jobs:
   judge-unsupported-promise:
     # Nightly only: the workflow's pull-request paths are the triage call's.
     if: github.event_name == 'schedule'
-    runs-on: ubuntu-24.04  # a version label, as in the triage job
+    runs-on: ubuntu-24.04  # a version label, never ubuntu-latest (ci-cd/pipeline.md section 9)
     timeout-minutes: 60  # about 200 labels, each a model call
     permissions:
       contents: read  # the workflow grants nothing by default

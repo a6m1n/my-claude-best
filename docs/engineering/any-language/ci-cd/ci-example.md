@@ -6,8 +6,8 @@ deploy workflow of [deploy-example.md](deploy-example.md) calls the same workflo
 before it builds anything. It calls the security jobs of [security-example.md](security-example.md),
 so its one gate needs them. This example scopes pull requests by path, the case of
 [pipeline.md](pipeline.md) section 7 where a full run no longer fits the feedback budget; for a
-repository whose full run fits, delete the `changes` job and the `if:` lines that read it, and
-keep `ci-ok`.
+repository whose full run fits, delete the `changes` job, the `if:` lines that read it and each
+`needs: changes`, and keep `ci-ok` with `changes` taken out of its `needs`.
 
 The repository, cut to the files this example touches:
 
@@ -95,7 +95,8 @@ jobs:
   changes:
     # The scoped form, for a monorepo whose full run no longer fits the feedback budget (pipeline.md
     # section 7): pull requests run only the projects they change; the queue, main and the weekly
-    # run run all of it. While a full run fits, delete this job and the if: lines that read it.
+    # run run all of it. While a full run fits, delete this job, the if: lines that read it and
+    # each needs: changes, and take changes out of ci-ok's needs.
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -123,11 +124,12 @@ jobs:
 
   checks:
     # The hook file on every file, on every run (static-checks.md section 5).
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04  # a version label, never ubuntu-latest: the OS changes only when this line does (pipeline.md section 9)
+    timeout-minutes: 15  # a hung job stops here, not at GitHub's 360 minutes (pipeline.md section 8)
     permissions:
       contents: read
     steps:
+      # Every action by full commit SHA, the release in the comment: a tag can be moved (pipeline-security.md section 4).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false  # the token is not left on the runner for the steps after this one
@@ -264,7 +266,7 @@ jobs:
           ./gitleaks dir dist --redact --ignore-gitleaks-allow --verbose
       # The bundle is built once; deploy.yml promotes these bytes (delivery.md section 3).
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
-        if: github.event_name == 'push'
+        if: github.event_name == 'push'  # in a call from deploy.yml, github.event_name is the caller's: push on main
         with:
           name: web-dist
           path: frontend/dist
@@ -352,7 +354,7 @@ jobs:
 | `DOCKERHUB_TOKEN` in the job's `env`, and the login's `if: env.DOCKERHUB_TOKEN != ''` | a pull request from a fork or from Dependabot gets no secrets, so the login is skipped, the pulls are anonymous and the check still runs ([pipeline.md](pipeline.md) section 4). A step's `if:` may read `env` but never `secrets` [9] |
 | `permissions: {}`, then one block per job | each job gets only what its steps use ([pipeline-security.md](pipeline-security.md) section 3) |
 | `concurrency` | a new push cancels the pull request's older run; a call from `deploy.yml` gets its own group (`github.run_id`) and is never cancelled ([pipeline.md](pipeline.md) section 8) |
-| `changes` on pull requests only | the scoped form, for a monorepo whose full run no longer fits the feedback budget ([pipeline.md](pipeline.md) section 7); while a full run fits, delete it and the `if:` lines that read it. One output per side; `dorny/paths-filter` reads the changed files through the API, so the job needs no checkout and only `pull-requests: read` [1]. A change to a workflow or to the hook file runs both sides, and a change to the root `.trivyignore` runs the backend, whose `image` job reads it ([pipeline.md](pipeline.md) section 7) |
+| `changes` on pull requests only | the scoped form, for a monorepo whose full run no longer fits the feedback budget ([pipeline.md](pipeline.md) section 7); while a full run fits, delete it, the `if:` lines that read it and each `needs: changes`, and take `changes` out of `ci-ok`'s `needs`. One output per side; `dorny/paths-filter` reads the changed files through the API, so the job needs no checkout and only `pull-requests: read` [1]. A change to a workflow or to the hook file runs both sides, and a change to the root `.trivyignore` runs the backend, whose `image` job reads it ([pipeline.md](pipeline.md) section 7) |
 | `checks` with no condition | the hook file on every file of every run, as [static-checks.md](../../python/static-checks/static-checks.md) section 5 asks; section 3 below shows the root hook file |
 | `!cancelled() && (… != 'pull_request' \|\| …)` | on the queue, on `main` and on the weekly run, `changes` is skipped and every side runs; on a pull request a side runs only when its files changed. `!cancelled()` is what lets a job run after a skipped `needs` [2] |
 | `working-directory: backend` and `--project backend` | setup-uv reads the uv version and the Python version from the folder it is given [3]; `--project` runs uv on the backend from the repository root, where pre-commit works |

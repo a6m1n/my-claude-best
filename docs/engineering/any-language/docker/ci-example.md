@@ -41,7 +41,8 @@ on:
     branches: [main]
     tags: ["v*"]
   # Weekly as well: the scan reads a fresh vulnerability database, so a new finding in an
-  # unchanged image fails the job.
+  # unchanged image fails the job. Name who reads a failed run: GitHub notifies only whoever
+  # last edited this cron line (ci-cd/pipeline.md section 10).
   schedule:
     - cron: "0 5 * * 1"
 
@@ -55,7 +56,7 @@ concurrency:
 
 jobs:
   image:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-24.04  # a version label, never ubuntu-latest: the OS changes only when this line does (ci-cd/pipeline.md section 9)
     timeout-minutes: 30  # a hung build or scan stops here, not after the default 360 minutes
     permissions:
       contents: read

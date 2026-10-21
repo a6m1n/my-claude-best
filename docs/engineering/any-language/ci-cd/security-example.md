@@ -43,15 +43,16 @@ permissions: {}  # read-only jobs and no secrets; only CodeQL writes, to upload 
 
 jobs:
   workflows:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04  # a version label, never ubuntu-latest: the OS changes only when this line does (pipeline.md section 9)
+    timeout-minutes: 10  # a hung job stops here, not at GitHub's 360 minutes (pipeline.md section 8)
     permissions:
       contents: read
       actions: read  # zizmor-action's README asks for it on a private repository
     steps:
+      # Every action by full commit SHA, the release in the comment: a tag can be moved (pipeline-security.md section 4).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          persist-credentials: false
+          persist-credentials: false  # the token is not left on the runner for the steps after this one (pipeline-security.md section 3)
       - name: actionlint
         run: |
           curl -sSfL -o actionlint.tar.gz \

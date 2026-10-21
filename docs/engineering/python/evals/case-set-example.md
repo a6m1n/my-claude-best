@@ -582,6 +582,8 @@ on:
       - "evals/triage/**"
   # Nightly too: catches a change on the vendor's side that no pull request made
   # (evals.md section 8).
+  # Name who reads a failed run: GitHub notifies only whoever last edited this
+  # cron line (ci-cd/pipeline.md section 10).
   schedule:
     - cron: "0 3 * * *"
 
@@ -608,6 +610,10 @@ jobs:
       - run: uv sync --locked
       - run: uv run --locked python -m evals.triage.experiment_triage
         env:
+          # A departure from ci-cd/pipeline.md section 4, which keeps a paid key in an
+          # environment of its own: this eval runs on the pull requests evals.md section 8
+          # names, with no reviewer's wait. The cost: any branch author can read these keys,
+          # and a fork's pull request starts the job and fails; the model key has a spend limit.
           # A key of its own, in a project with a monthly spend limit (evals.md section 8).
           ACME_ACME_AI_API_KEY: ${{ secrets.EVALS_ACME_AI_API_KEY }}
           # An evals-only Langfuse project: its keys read every trace in it, and this
@@ -626,7 +632,7 @@ triage module (its prompt, its response schema, its model), the one client, the 
 case set. So does every night: the schedule catches a change on the vendor's side that no pull
 request made ([evals.md](evals.md) section 8). A `RegressionError` ends the module with an error,
 so the job fails; a run that passes prints its report in the job's log. The key belongs to a
-project with a spend limit, because nobody watches the nightly run. The Langfuse keys belong to a
+project with a spend limit, because nobody is present while the nightly run spends. The Langfuse keys belong to a
 project of their own, because a project's keys read every trace in it, and this job runs the pull
 request's code.
 `Settings` reads each field from `ACME_` plus the field's name in upper case
@@ -637,7 +643,7 @@ the real secrets; this snippet leaves them out.
 The checkout, the uv setup and the read-only token are those of
 [python/static-checks/setup-example.md](../static-checks/setup-example.md): the job holds a paid key, so
 the checkout's token is not left on the runner. A pull request from a fork gets no secrets, so this
-job cannot run there ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4).
+job starts there and fails ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4).
 
 ## The contract of single cases
 

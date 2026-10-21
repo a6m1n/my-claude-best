@@ -618,15 +618,16 @@ job, which calls `ci.yml` on `main`, must then grant `id-token: write` on that c
 "The `GITHUB_TOKEN` permissions passed from the caller workflow can be only downgraded (not
 elevated) by the called workflow" [140]. The workflow around the plan job starts with
 `permissions: {}`, as in [ci-example.md](ci-example.md); the `changes` job gets an `infra` output
-for `infra/**` ([pipeline.md](pipeline.md) section 7), and `ci-ok` needs this job
+for `infra/**` and the shared files of [ci-example.md](ci-example.md)'s filter (`*shared`), as
+[pipeline.md](pipeline.md) section 7 asks, and `ci-ok` needs this job
 ([pipeline.md](pipeline.md) section 6):
 
 ```yaml
   infra-plan:
     needs: changes
     if: github.event_name == 'pull_request' && needs.changes.outputs.infra == 'true'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    runs-on: ubuntu-24.04  # a version label, never ubuntu-latest: the OS changes only when this line does (pipeline.md section 9)
+    timeout-minutes: 15  # a hung job stops here, not at GitHub's 360 minutes (pipeline.md section 8)
     permissions:
       contents: read
       id-token: write  # the read-only plan role (table below)
@@ -634,6 +635,7 @@ for `infra/**` ([pipeline.md](pipeline.md) section 7), and `ci-ok` needs this jo
       run:
         working-directory: infra/envs/staging  # production's plan: the same steps, its own folder and plan role
     steps:
+      # Every action by full commit SHA, the release in the comment: a tag can be moved (pipeline-security.md section 4).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false  # the token is not left on the runner for the steps after this one
@@ -647,7 +649,7 @@ for `infra/**` ([pipeline.md](pipeline.md) section 7), and `ci-ok` needs this jo
         with:
           role-to-assume: ${{ vars.AWS_INFRA_PLAN_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
-      # A download checked against the release's checksum, as ci-example.md does for gitleaks.
+      # Checked against the release's SHA256SUMS: a replaced or broken download fails here, before it runs with the plan role.
       - name: Install Terraform 1.16.6
         run: |
           curl -sSfL -o "$RUNNER_TEMP/terraform.zip" \
@@ -655,7 +657,9 @@ for `infra/**` ([pipeline.md](pipeline.md) section 7), and `ci-ok` needs this jo
           echo "38034b38d03096399a7a1264a14561a8029b2b496fd1f169452656e53968f1b7  $RUNNER_TEMP/terraform.zip" | sha256sum --check
           unzip -q "$RUNNER_TEMP/terraform.zip" terraform -d "$RUNNER_TEMP/bin"
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-      - run: terraform init -input=false
+      # -lockfile=readonly: a provider the lock file does not record fails init here, before the
+      # plan runs it (pipeline.md section 9).
+      - run: terraform init -input=false -lockfile=readonly
       # -lock=false: the read-only role cannot write the lock file, and this plan changes nothing.
       - run: terraform plan -input=false -lock=false
 ```
@@ -665,8 +669,8 @@ The apply to staging, a job of `deploy.yml`, cut the same way:
 ```yaml
   infra-staging:
     needs: ci
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    runs-on: ubuntu-24.04  # a version label, never ubuntu-latest: the OS changes only when this line does (pipeline.md section 9)
+    timeout-minutes: 30  # a hung job stops here, not at GitHub's 360 minutes (pipeline.md section 8)
     # An environment only this job names, limited to main: the deploy job's sub cannot get this role.
     environment: infra-staging
     concurrency:
@@ -680,7 +684,9 @@ The apply to staging, a job of `deploy.yml`, cut the same way:
         working-directory: infra/envs/staging
     steps:
       # ... the checkout, the login with vars.AWS_INFRA_APPLY_ROLE_ARN, and the Terraform install of infra-plan
-      - run: terraform init -input=false
+      # -lockfile=readonly: a provider the lock file does not record fails init here, before the
+      # plan runs it (pipeline.md section 9).
+      - run: terraform init -input=false -lockfile=readonly
       # Plan and apply in one job: the plan file holds sensitive values, so it never leaves this runner.
       - run: terraform plan -input=false -out=tfplan
       - run: terraform apply -input=false tfplan  # the saved plan, as the log above shows it, with no prompt
