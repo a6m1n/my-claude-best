@@ -40,8 +40,9 @@ edges are the imports the lint rejects.
   direction, a screen composed in its route, where state lives, reading and writing server data,
   routing and URL state, forms, errors and loading, TypeScript settings, the server-rendered case,
   the common mistakes with their fixes, where the rules stop holding, a review checklist and the
-  sources. Read it before you choose an application's format, add a folder, a module or a route, or
-  write a query, a mutation, a form or an error screen.
+  sources. Read it before you choose an application's format, add a folder, a module or a route,
+  write a query, a mutation, a form or an error screen, or change the project's TypeScript or lint
+  configuration.
 - [layout-example.md](layout-example.md) — the billing screens of `Acme Corp` as one worked layout:
   the tree, the first day of a new application, the configuration that makes the rules checkable, the startup file, the routes, one
   module's reads and writes, and what the checks caught. Read it when you start a React
@@ -54,8 +55,9 @@ edges are the imports the lint rejects.
 
 1. Copy this folder into your repository at `docs/engineering/react/architecture/`.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you choose a React application's
-   format, add a folder, a module or a route, or write a query, a mutation, a form or an error
-   screen, read `docs/engineering/react/architecture/architecture.md`; before you add a dependency,
+   format, add a folder, a module or a route, write a query, a mutation, a form or an error
+   screen, or change the project's TypeScript or lint configuration, read
+   `docs/engineering/react/architecture/architecture.md`; before you add a dependency,
    read `libraries.md` in the same folder." Without it an agent never opens the files.
 3. The practice's tree has the shape of `any-language/file-structure` and links it for every rule
    that practice owns. It also links `any-language/readability`, `any-language/refactoring`, `python/testing` (its
@@ -67,11 +69,11 @@ edges are the imports the lint rejects.
    `src/main.tsx`, the file-name rule and Oxlint's barrel rule. Old code that breaks them reaches
    the practice the way [refactoring.md](../../any-language/refactoring/refactoring.md) section 4
    says, not by a rewrite.
-5. Re-check the lines that name a moving target, all read between 2026-10-01 and 2026-10-03. Do it
+5. Re-check the lines that name a moving target, all read between 2026-10-01 and 2026-10-16. Do it
    on the day you adopt the folder, when a trigger of [libraries.md](libraries.md) section 12 fires,
    and again by 2027-04-01, six months after the reading; after that date, distrust every dated line
    until it is read again. The command
-   `grep -rnE '2026-10-0[1-3]' docs/engineering/react/architecture/` lists the lines.
+   `grep -rnE '2026-10-(0[1-3]|16)' docs/engineering/react/architecture/` lists the lines.
    [libraries.md](libraries.md), under when to re-check it, lists the triggers for the libraries.
    On the day you adopt the folder, file one tracked issue per dated or upstream trigger of
    [libraries.md](libraries.md) section 12, with its date or its issue link, so a trigger that

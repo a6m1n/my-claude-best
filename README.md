@@ -50,6 +50,7 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 - [react/components](docs/engineering/react/components/) — how one component and one hook are written, and the common mistakes.
 - [react/design](docs/engineering/react/design/) — how a screen looks and behaves, accessibility, and designing with Claude Code.
 - [react/security](docs/engineering/react/security/) — what the browser side of an application must and must not do.
+- [any-language/backend-for-frontend](docs/engineering/any-language/backend-for-frontend/) — the server that holds a browser application's session: its cookies, the session's life from login to logout, CSRF and CORS.
 - [react/performance](docs/engineering/react/performance/) — what fast means, how to measure it, and what to fix first, with SEO in brief.
 
 More parts are about Claude Code itself:

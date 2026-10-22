@@ -36,9 +36,9 @@ an agent builds, a concrete spec, a way to see the result and a reviewer other t
 1. Copy this folder into your repository at `docs/engineering/react/design/`.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you design or restyle a screen of a
    React application, add a control, a form or a route to one, or ask an agent to build a screen,
-   read `docs/engineering/react/design/README.md` and the file it routes to for that work. The
-   check: the closing summary names the files you read." Without it an agent never opens the
-   folder. How to write such a line is
+   or review such a change, read `docs/engineering/react/design/README.md` and the file it routes
+   to for that work. The check: the closing summary names the files you read." Without it an
+   agent never opens the folder. How to write such a line is
    [claude-md.md](../../../claude-code/claude-md.md#how-to-write-a-line-an-agent-can-follow).
 3. Use the review checklist that closes each rules file as the design part of your review
    template, so a reviewer asks the same questions every time.
@@ -54,11 +54,11 @@ an agent builds, a concrete spec, a way to see the result and a reviewer other t
    - when the project moves to a new Claude model, read that model's prompting guide for a design
      section and update the table in section 2 of the same file;
    - six months after the date a line was read, re-read it. Each such line, or the header of its
-     table, carries the date 2026-10-01 or 2026-10-02; `grep -rnE '2026-10-0[12]' docs/engineering/react/design/`
-     lists them, and the date alone is the pattern, so a date wrapped onto the next line after the
-     word "read" is still found. The six months is this practice's choice, from how fast the tools
-     above changed. Distrust every such line after 2027-04-01, six months after the reading, until
-     you have read it again.
+     table, carries the date 2026-10-01, 2026-10-02 or 2026-10-16;
+     `grep -rnE '2026-10-(0[12]|16)' docs/engineering/react/design/` lists them, and the date alone
+     is the pattern, so a date wrapped onto the next line after the word "read" is still found. The
+     six months is this practice's choice, from how fast the tools above changed. Distrust every
+     such line after 2027-04-01, six months after the first reading, until you have read it again.
 
 ## The points to adapt
 

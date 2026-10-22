@@ -217,9 +217,9 @@ screen looks.
 
 | Tool | What it does | Status and gates (read 2026-10-01) | Trust |
 |---|---|---|---|
-| Claude Design (claude.ai/design) | Designs and clickable prototypes on a canvas. It uses the organisation's design system, can attach a codebase with `/design-sync`, and hands the result to Claude Code ("Send to local coding agent") | Beta; launched on 2026-04-17 as a research preview. Pro, Max, Team and Enterprise plans; on Enterprise an admin turns it on. Counts against normal usage limits; no version history yet | Anthropic's own product |
+| Claude Design (claude.ai/design) | Designs and clickable prototypes on a canvas. It uses the organisation's design system, can attach a codebase with `/design-sync`, and hands the result to Claude Code ("Send to local coding agent") | On by default on Free, Pro, Max, Team and Enterprise (Enterprise since 2026-10-15). Launched 2026-04-17 as a research preview. Counts against normal usage limits; no version history yet; the standalone site at claude.ai/design closes on 2026-12-14, and its design systems can move to Claude (read 2026-10-16) | Anthropic's own product |
 | The `/design` canvas in Claude Code | `/design <brief>` drafts artboards on one canvas and publishes it as a Claude Design artifact; artboards export as PNG or PDF | Claude Code v2.1.265 or later, signed in with `/login`, on the Anthropic API (not Bedrock, Vertex or Foundry). Pro, Max, Team and Enterprise; on Enterprise an Owner turns on the Design template | Anthropic's own |
-| Figma's remote MCP server (`https://mcp.figma.com/mcp`) | Reads a design: its context, its variables and a screenshot (`get_design_context`, `get_variable_defs`, `get_screenshot`). Code to canvas (`generate_figma_design`) turns a running page into editable Figma frames. Code Connect maps Figma components to the components in your code | Figma recommends the remote server over its desktop one. It works on every seat, but View and Collab seats get single-digit calls a month, so real use needs a Dev or Full seat. Writing to the canvas is free during its beta and will become a paid, usage-based feature. Code to canvas was announced on 2026-02-17 | Use Figma's own server: a community Figma MCP server had a command-injection flaw reachable through prompt injection (CVE-2025-53967, fixed in 0.6.3). Code Connect's gain comes from Figma's own test: median code quality rose from 2 to 3 out of 4, with 29.5% fewer tokens, over 27 tasks |
+| Figma's remote MCP server (`https://mcp.figma.com/mcp`) | Reads a design: its context, its variables and a screenshot (`get_design_context`, `get_variable_defs`, `get_screenshot`). Code to canvas (`generate_figma_design`) turns a running page into editable Figma frames. Code Connect maps Figma components to the components in your code | Figma recommends the remote server over its desktop one. It works on every seat, but View and Collab seats get up to 20 calls a month, so real use needs a Dev or Full seat; writing to the canvas outside your drafts needs a Full seat and is free during its beta, then usage-based (read 2026-10-16). Code to canvas was announced on 2026-02-17 | Use Figma's own server: a community Figma MCP server had a command-injection flaw reachable through prompt injection (CVE-2025-53967, fixed in 0.6.3). Code Connect's gain comes from Figma's own test: median code quality rose from 2 to 3 out of 4, with 29.5% fewer tokens, over 27 tasks |
 
 ### Seeing the result
 
@@ -228,7 +228,7 @@ screen looks.
 | The Playwright agent CLI (`@playwright/cli`) with its skill | Opens a page, types and clicks; after each command it returns a snapshot, the page's accessibility tree with a reference for each control; `screenshot` captures what is on screen. `playwright-cli install --skills` writes its skill to `.claude/skills/playwright-cli`, and the skill covers request mocking too | The docs install it with `npm install -g @playwright/cli@latest`, a global install. The pages carry no dates | Microsoft's own. Preferred over the Playwright MCP server for a coding agent: Playwright's docs point coding agents such as Claude Code to the CLI, rate the MCP server's token cost higher because its tool schemas and snapshots stay in the context, and keep MCP for long exploratory loops. Use the snapshot to check structure and the screenshot to check the look; the docs call the snapshot the more reliable default |
 | Chrome DevTools MCP (`npx -y chrome-devtools-mcp@latest`) | Screenshots, snapshots, the console, performance traces and Lighthouse. It also ships a CLI that works without MCP | Needs a current LTS Node and a current stable Chrome | The Chrome DevTools team's own. It collects usage statistics by default, and the agent can read any data in the browser it drives; [performance.md](../performance/performance.md) section 3 gives the note in full |
 | Claude in Chrome | Claude Code drives your Chrome: `claude --chrome`, or `/chrome`. Its docs name design verification as a use: build a screen from a Figma mock, then open it in the browser and check that it matches | Chrome extension v1.0.36 or later; a direct Anthropic plan (Pro, Max, Team, Enterprise) signed in with `/login`. Not with API keys, Bedrock, Vertex or Foundry, and not in WSL. Turning it on by default adds context cost | Anthropic's own |
-| `/run` and `/verify` | Skills bundled with Claude Code. `/run` starts the app and drives it to show a change working. `/verify` builds and runs the app to confirm that a change does what it should, rather than relying on tests or type checks. Both work out how to start the app from the project type, the README or `package.json`; `/verify` saves its recipe in `.claude/skills/verify/SKILL.md` | `/verify` needs Claude Code v2.1.200 or later. A search result says Claude stopped running `/verify` on its own after v2.1.215, so you invoke it; re-check on the skills page | Anthropic's own. Its best-practices page: "Run /verify yourself after Claude's check passes." |
+| `/run` and `/verify` | Skills bundled with Claude Code. `/run` starts the app and drives it to show a change working. `/verify` builds and runs the app to confirm that a change does what it should, rather than relying on tests or type checks. Both work out how to start the app from the project type, the README or `package.json`; `/verify` saves its recipe in `.claude/skills/verify/SKILL.md` | `/verify` runs only when you invoke it (since v2.1.215). Once `/verify` records its recipe at the repo root, that skill replaces the bundled one, and from v2.1.286 Claude runs it before each commit except docs-only or test-only changes (skills page and changelog, read 2026-10-16) | Anthropic's own. Its best-practices page: "Run /verify yourself after Claude's check passes." |
 | A baseline screenshot test | Playwright Test's `toHaveScreenshot()` saves reference images on the first run and compares every later run with them; `npx playwright test --update-snapshots` replaces them. Vitest's browser mode has `toMatchScreenshot` for the same job. Which test runner a project uses is [libraries.md](../architecture/libraries.md) section 6 | Playwright's page carries no date; Vitest's page (v5.0.3) calls the feature stable | A comparison of pixels, not a model's opinion, so it gives the same answer every time. Rendering differs by operating system, browser version, settings and hardware, so make and compare the images on one setup, such as the CI image. The first run records whatever the screen shows: review the reference images like code |
 
 ### The component inventory
@@ -260,17 +260,19 @@ in section 2 supports.
   Hacker News commenters report Claude Code calling a visibly broken screen "working". Claude
   Code's docs describe the subagent: a reviewer in a fresh context "sees only the diff and the
   criteria you give it", and a verification subagent "has a fresh model try to refute the result, so
-  the agent doing the work isn't the one grading it". The bundled `/code-review` skill is one such
-  reviewer.
+  the agent doing the work isn't the one grading it". The bundled `/code-review` skill (v2.1.218 or
+  later, read 2026-10-16) is a fresh-context reviewer for correctness bugs, not for the design; the design reviewer
+  is the subagent the brief starts, with the checklist and the screenshots.
 - **Give the reviewer a written checklist, and tell it to report only what fails the checklist or
   the brief.** The best-practices page warns that "a reviewer prompted to find gaps will usually
   report some, even when the work is sound". The gain in section 2's study came from a structured
   critic; refining with no critic gained 1.5%.
 - **Ask for the reviewer in the brief, not in a standing line of `CLAUDE.md`.** The Opus 5 guide
-  says to remove standing instructions such as "use a subagent to verify", because that model
-  verifies its own work without being told to; that is a vendor's statement about its model. The
-  Sonnet 5.5 guide gives its line, not to start reviewer subagents unless the user asked for a
-  review, for the `xhigh` and `max` effort levels, to save cost.
+  (read 2026-10-16) says to remove standing instructions such as "use a subagent to verify",
+  because that model verifies its own work without being told to; that is a vendor's statement
+  about its model. The Sonnet 5.5 guide (read 2026-10-16) gives its line, not to start reviewer
+  subagents unless the user asked for a review, for the `xhigh` and `max` effort levels, to save
+  cost.
   Claude Code's best-practices page and the Fable 5 guide recommend a fresh-context reviewer. This
   practice reads them together: the Opus 5 and Sonnet 5.5 guides remove a review baked into every
   prompt, one for a model that checks itself and one to save cost at two effort levels; Claude
@@ -298,9 +300,11 @@ the screen did, it has not been reviewed.
 
 - **It runs with your rights.** Claude Code's docs: "A Claude Code plugin you install can execute
   arbitrary code on your machine with your user privileges." A plugin can carry hooks (shell
-  commands), MCP servers, a `bin/` folder added to the shell's path, and skills that enter the
-  context as instructions. Hooks and MCP servers run outside the sandbox, and permission rules cover
-  only Claude's own tool calls.
+  commands), monitors (background shell commands that Claude Code starts on its own), a mod
+  (JavaScript that runs inside Claude Code with your permissions), MCP and LSP servers, a `bin/`
+  folder added to the shell's path, and skills that enter the context as instructions. Hooks,
+  monitors, MCP and LSP servers, and the processes a mod starts run outside the sandbox, and
+  permission rules cover only Claude's own tool calls.
 - **It can change after you read it.** Auto-update is on by default for Anthropic's official
   marketplaces (except `knowledge-work-plugins` and `first-party-plugins`) and off for community and
   third-party ones (read 2026-10-01). An update can change files you already reviewed.
@@ -310,10 +314,17 @@ the screen did, it has not been reviewed.
 - **For a design tool, prefer the owner's own version** when one exists, such as Figma's own MCP
   server, so a flaw in a community copy does not reach your machine (section 5 names one).
 
-To review a plugin before you accept it, read its hooks, MCP servers and skills on the install
-screen. Install it at project scope, so the team shares one reviewed set. Where auto-update is on,
-turn it off, or read the plugin again after each update. Packages that a plugin or a registry
-brings are dependencies, and their rules are [security.md](../security/security.md) section 10.
+To review a plugin before you accept it, read the install screen for what the plugin adds, then
+read the files that run code in its source (`hooks/hooks.json`, `.mcp.json`, `bin/`, monitors, any
+mod), and clone it and run `claude --plugin-dir <dir> plugin details <name>` to list what it
+contains; the install screen shows that a hook exists, not what it runs (read 2026-10-16). Install
+it at project scope, so the team enables the same plugins. Each teammate's install still fetches
+the marketplace's current version, so read the plugin again when someone installs it later. To
+turn auto-update off for the team, set `autoUpdate: false` on the marketplace's
+`extraKnownMarketplaces` entry in `.claude/settings.json`. Without that entry the `/plugin` toggle
+changes only your own machine; with it, the toggle also writes `autoUpdate` into that entry, so
+review that change like any edit to the file (read 2026-10-16). Packages that a plugin or a registry brings are dependencies, and their rules are
+[security.md](../security/security.md) section 10.
 
 ## 8. Common mistakes
 
@@ -521,12 +532,14 @@ The tools (section 5):
 
 22. Claude Code plugins: https://code.claude.com/docs/en/plugins/install and
     https://code.claude.com/docs/en/plugins/anthropic-marketplaces (marketplaces, scopes,
-    auto-update)
+    auto-update); https://code.claude.com/docs/en/plugins/loading (read 2026-10-16), for the
+    refresh before a later install and the settings entry's `autoUpdate` over the toggle
 23. The `frontend-design` plugin:
     https://github.com/anthropics/claude-plugins-official/tree/main/plugins/frontend-design; the
     `design` plugin: https://github.com/anthropics/knowledge-work-plugins/tree/main/design
 24. Claude Design: https://www.anthropic.com/news/claude-design-anthropic-labs (2026-04-17) and
-    https://support.claude.com/en/articles/14604416-get-started-with-claude-design (beta, plans)
+    https://support.claude.com/en/articles/14604416-get-started-with-claude-design (plans, on by
+    default)
 25. Figma's MCP server: https://developers.figma.com/docs/figma-mcp-server/,
     https://help.figma.com/hc/en-us/articles/32132100833559-Guide-to-the-Figma-MCP-server,
     https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/,
@@ -539,7 +552,8 @@ The tools (section 5):
 27. Chrome DevTools MCP: https://github.com/ChromeDevTools/chrome-devtools-mcp; Claude in Chrome:
     https://code.claude.com/docs/en/chrome
 28. Claude Code skills, `/run` and `/verify`, the place to look:
-    https://code.claude.com/docs/en/skills
+    https://code.claude.com/docs/en/skills; the version of each change, Claude Code's changelog:
+    https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md (read 2026-10-16)
 29. Baseline screenshots, the place to look: https://playwright.dev/docs/test-snapshots and
     https://vitest.dev/guide/browser/visual-regression-testing
 30. Storybook's AI pages, the place to look: https://storybook.js.org/docs/ai/mcp/overview,

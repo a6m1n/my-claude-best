@@ -561,7 +561,10 @@ export function ScreenPending() {
 ```
 
 `src/routes/-screen-error.tsx`, the router's error screen (it imports the router, so it sits with
-the routes and not in `core/ui/`; the `-` keeps it out of the route tree):
+the routes and not in `core/ui/`; the `-` keeps it out of the route tree). It shows every failed
+load the same way, a `401`, a `403` `reauth_required` and a `400` `cookie_conflict` included,
+since the page's answers to those three are left out ([security.md](../security/security.md)
+section 6; [security-example.md](../security/security-example.md) section 9):
 
 ```tsx
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";

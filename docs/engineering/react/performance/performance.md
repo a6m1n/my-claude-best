@@ -84,8 +84,11 @@ What the public data set does not see:
   own (section 3).
 - **Route changes inside a single-page application.** A route change loads no document, so LCP
   covers the first screen of a visit only (DebugBear, 2025). Chrome measures these "soft
-  navigations" from version 151, on by default since 2026-07-28, but how CrUX will report them is
-  "still to be determined" (Chrome for Developers, updated 2026-09-02; read 2026-10-01).
+  navigations" from version 151, on by default since 2026-07-28 (Chrome for Developers, updated
+  2026-09-02, read 2026-10-16), and since October 2026 CrUX
+  publishes them as experimental metrics, to leave experimental in May 2027; most tools still
+  report the vitals without them (web.dev, "vitals-spa-faq", updated 2026-10-13, read
+  2026-10-16).
 - **Browsers other than Chrome.** CrUX is Chrome only.
 - **Users who left.** "Lost users do not show up in usage-based statistics" (Alex Russell,
   2025-11-24): a route that drove people away looks better in field data than it was.
@@ -105,16 +108,20 @@ origins good, against 77% for INP and 81% for CLS.
   1.5 KB more than the plain one (web-vitals README, read 2026-10-01). The example sends one
   field of it, `target`, the element the value comes from; the full attribution object is not
   sent, so a part-by-part split of a failing metric needs more fields added to the report.
-- **Pass `reportSoftNavs: true`**, so each route change is measured as a navigation of its own;
-  without it only the first screen of a visit is measured. It needs `web-vitals` 6 or newer and
-  works in Chromium 151 and newer; other browsers measure the first screen only (read
-  2026-10-01). Read the path of each report from `metric.navigationURL`, not from the current URL,
-  because INP and CLS are reported after the fact, when the user may be on the next screen
-  (web-vitals).
+- **Pass `reportSoftNavs: true`**, so each route change is measured as a navigation of its own.
+  Without it, LCP covers the first screen only, and INP and CLS cover the whole visit but are
+  filed under its first URL; browsers other than Chromium 151+ always report that way (web.dev,
+  "vitals-spa-faq", updated 2026-10-13, read 2026-10-16). Read INP and CLS per route only from
+  Chromium 151+ visits (the request's User-Agent tells them apart). The option needs `web-vitals`
+  6 or newer (read 2026-10-01). Read the path of each report from `metric.navigationURL`, not from
+  the current URL, because INP and CLS are reported after the fact, when the user may be on the
+  next screen (web-vitals).
 - **Read each metric at the 75th percentile, per route and per device class**, the way the
-  thresholds are set: an average hides the slowest quarter of visits. The example's report
-  carries `viewportWidthPx`, and the backend groups visits into device classes by that width; the
-  report holds no other device field.
+  thresholds are set: an average hides the slowest quarter of visits. Send `metric.id` with each
+  value and keep the last value per id before you take the percentile, because CLS and INP can be
+  reported more than once in one page load (web-vitals README, read 2026-10-16). The example's
+  report carries `viewportWidthPx`, and the backend groups visits into device classes by that
+  width; the report holds no other device field.
 - **When an interaction waits for the network, also report the time from the interaction to its
   result.** INP stops at the next paint, so a spinner drawn at once passes INP while the user
   still waits (web.dev).
@@ -136,9 +143,9 @@ sections 2 and 8; the facts here were read on 2026-10-01.
 | Chrome DevTools, Performance panel | a trace of one load or one interaction: long tasks, layout, paint. Since the October 2026 DevTools release (Chrome 153 and 154), its Insights cover soft navigations | throttling "is relative to your computer's capabilities": press Calibrate under Capture settings, CPU, to get low-tier and mid-tier presets for your machine instead of a fixed 4x |
 | React Performance Tracks (React 19.2 and newer) | Scheduler and Components tracks inside that trace, so React's work sits next to the browser's | everything shows in a development build; in a profiling build only the Scheduler track and `<Profiler>` subtrees; nothing in production |
 | `<Profiler>` | the render time of one tree, from code | off in the production build by default. Josh Comeau warns that its milliseconds are not "trustworthy" as absolute time: compare two runs, and confirm in a production build on slow hardware |
-| Lighthouse | a lab run by hand or in CI: LCP, CLS, TBT | no INP in navigation mode; timespan mode and user flows (since Lighthouse 9.6) report it. Version 13 replaced sixteen audits with insights and removed `offscreen-images`, `preload-fonts` and `uses-rel-preload`, so a check that read those audits no longer runs (release notes and a search snippet of the Chrome blog) |
+| Lighthouse | a lab run by hand or in CI: LCP, CLS, TBT | no INP in navigation mode; timespan mode and user flows (since Lighthouse 9.6) report it. Version 13 replaced 23 audits with 16 insights, among them `lcp-lazy-loaded` and `prioritize-lcp-image` (now `lcp-discovery-insight`), and removed 8 more, among them `offscreen-images`, `preload-fonts` and `uses-rel-preload`, so a check that read any of those audit IDs no longer runs (Chrome for Developers, "Lighthouse 13", 2025-10-10, read 2026-10-16) |
 | A bundle analyser: rollup-plugin-visualizer, vite-bundle-analyzer, Sonda | what a chunk holds and why a dependency is in it | rollup-plugin-visualizer lists Rolldown, Vite 8's bundler, as a supported peer; Sonda reads source maps |
-| Chrome DevTools MCP | lets a coding agent record a trace (`performance_start_trace`) and read it, with CrUX data merged in | it collects usage statistics by default, and the agent can read any data in that browser. Run it in a browser profile that holds nothing private (this practice's choice; the owner only warns) |
+| Chrome DevTools MCP | lets a coding agent record a trace (`performance_start_trace`) and read it, with CrUX data merged in | it collects usage statistics by default, and may send each trace's URL to Google's CrUX API unless started with `--no-performance-crux`; use that flag for an application behind a login (read 2026-10-16). The agent can read any data in that browser. Run it in a browser profile that holds nothing private (this practice's choice; the owner only warns) |
 | size-limit | a CI gate on the size, and the run time, of the built files; `--why` explains a growth | |
 | Lighthouse CI | a CI gate on lab scores | whether it is still maintained was not confirmed |
 
@@ -196,9 +203,9 @@ Where to look first, once you know which metric fails (web.dev, October 2024):
 
 React re-renders are often the small share: developers "tend to overestimate how expensive
 re-renders are" (Josh Comeau). They are not always small: in one practitioner's test, one
-interaction took 130 ms, 90 ms with the compiler, and close to 0 ms after a fix by hand
-(section 6). Work on React's rendering when the trace of a failing interaction shows React's
-render inside the long task.
+interaction's blocking time went from 130 ms to 90 ms with the compiler, and to zero after a fix
+by hand, which more than halved its INP (section 6). Work on React's rendering when the trace of
+a failing interaction shows React's render inside the long task.
 
 Check: a pull request that claims a performance gain names the metric it fixes, with its
 percentile, its source and its date, and says when the field value after release will be read.
@@ -275,8 +282,9 @@ Whether to host fonts yourself or load them from a font service: web.dev finds t
 - **Serve from a CDN**, so the first byte comes from a server close to the user (web.dev).
 
 How much this moves LCP, in one practitioner's synthetic demo: a CDN cut LCP from 960 ms to
-640 ms for a client far from the server, and cache headers cut a repeat visit's LCP from 1.2 s
-to 650 ms (Nadia Makarevich, 2025-01-21). The other headers a static host sends are
+640 ms for a client far from the server, and a year-long `max-age` removed a 300 ms
+revalidation wait from a repeat visit and brought its LCP back to about 650 ms (Nadia Makarevich,
+2025-01-21). The other headers a static host sends are
 [security.md](../security/security.md) section 5.
 
 ### Resource hints
@@ -296,7 +304,7 @@ on by default in Vite 8), so the application's own code needs no hint by hand.
 **Never listen to the `unload` event; use `pagehide`, and on `pageshow` with `event.persisted`
 refresh what may be stale.** The back/forward cache makes back and forward instant, and web.dev
 calls this its most important rule: "never use the `unload` event. Ever!" Chrome is moving to
-deprecate the event (web.dev, updated 2026-07-02).
+deprecate the event (web.dev, updated 2026-07-02, read 2026-10-16).
 
 ### Code splitting
 
@@ -336,8 +344,9 @@ deprecate the event (web.dev, updated 2026-07-02).
   `build.rolldownOptions.output.codeSplitting.groups`; `build.rollupOptions` is a deprecated alias
   and `advancedChunks` is the old name (read 2026-10-01).
 - **Prefer libraries that ship ES modules.** Tree shaking "relies on the static structure of
-  ES2015 module syntax" (webpack docs); in one practitioner's application, replacing a CommonJS
-  build of a utility library cut the bundle from 878 kB to 813 kB (size only).
+  ES2015 module syntax" (webpack docs); in one practitioner's application, named imports from a
+  CommonJS utility library removed nothing, and per-method imports (`lodash/trim`) cut the bundle
+  from 878 kB to 813 kB (size only).
 
 ### Data: waterfalls and prefetch
 
@@ -346,18 +355,15 @@ own request and sits in a split chunk adds one more: first the chunk, then the r
 Query, "Request waterfalls"). Where server data lives, and how the router and the query cache are
 wired, is [architecture.md](../architecture/architecture.md) sections 6 and 8.
 
-- **Start a screen's data in its route loader**, so the request runs while the route's code
-  downloads and never waits for a component to render.
-- **Prefetch on intent at the router level**: when a link is hovered or focused, the router runs
-  the target's loader, so the data is on its way before the click (TanStack Query,
-  "Prefetching").
-- **Call `queryClient.query()` in a loader.** TanStack Query's guide calls `prefetchQuery` and
-  `ensureQueryData` "now deprecated", to be removed in the next major version (read 2026-10-01).
+The rules that remove these waterfalls are architecture.md's: the route loader that starts a
+screen's data with `queryClient.query()`, and one `staleTime` for the whole cache, in section 8;
+the preload on intent in section 10. What they do for speed: the request runs while the route's
+chunk downloads, so the screen's LCP loses a round trip; a link that is hovered or focused starts
+its loader, so the data is on its way before the click; and a screen opened again within the
+`staleTime` renders from the cache.
+
 - **Start a screen's queries together.** Several `useSuspenseQuery` calls in one component run
   one after the other; use `useSuspenseQueries`, or start all of them in the loader.
-- **Set a global `staleTime` above zero.** The default, 0, marks every result stale at once, so
-  each mount, window focus and reconnect asks the server again (TanStack Query, "Important
-  defaults"). How stale a screen may be is a product decision; the example uses one minute.
 
 ## 6. Runtime
 
@@ -482,16 +488,17 @@ This section holds when a route is server-rendered or prerendered by a framework
 - **When you move a route to server rendering, measure the time until it answers input as well as
   LCP, on that route.** In one practitioner's lab test (6x CPU slowdown, Slow 4G, one chat-style
   application), every server-rendered variant cut LCP from 4.1 s to between 1.28 s and 2.16 s,
-  and left a gap of about 2.4 to 2.5 s in which the page was visible and did not answer input
-  (Nadia Makarevich, 2025). LCP rewards that gap, and INP catches it only when a user acts during
-  it.
+  and left a gap of 1.3 to 2.5 s on a first visit (2.4 to 2.5 s outside the two Next.js Pages
+  Router variants) in which the page was visible and did not answer input; with its JavaScript
+  cached, 50 to 250 ms (Nadia Makarevich, 2025). LCP rewards that gap, and INP catches it only
+  when a user acts during it.
 
 ## 8. SEO, in brief
 
 A route that must be found, previewed or cited reaches readers that are not browsers. Google
 renders JavaScript for a page that returns status 200, after a queue, and may skip a page that
-returns another status; other crawlers and link-preview bots mostly read the HTML the server
-sends.
+returns another status; it also warns that "not all bots can run JavaScript"
+(Google, read 2026-10-16).
 
 - **Prerender or server-render every page that must rank or be previewed**, so its text, title
   and meta tags are in the HTML the server sends (Google; react.dev `prerender`).
@@ -509,8 +516,8 @@ sends.
   not a recommended solution".
 
 Core Web Vitals are not a flat ranking factor. Google says they align with "what our core ranking
-systems seek to reward", next to other page-experience signals. Fix them for users. A product
-behind a login needs none of this section.
+systems seek to reward", next to other page-experience signals (read 2026-10-16). Fix them for
+users. A product behind a login needs none of this section.
 
 ## 9. Common mistakes
 
@@ -762,8 +769,9 @@ tell whether the change fixed a failing metric or one that already passed.
 *Checked in this session*
 
 - Field, before: INP on `/invoices` at the 75th percentile on mobile was 380 ms over the 28 days
-  to 2026-09-28 (web-vitals, our own backend, 41,200 interactions). The attribution put most of
-  it in processing, on the status filter.
+  to 2026-09-28 (web-vitals, our own backend, Chromium 151+ visits only, the last value per
+  `metric.id`, 41,200 visits). The attribution put most of it in processing, on the status
+  filter.
 - Lab: a trace of one filter change at the calibrated low-tier CPU showed a 240 ms task, most of
   it the render of `InvoiceList`. With the status filter's update moved into `startTransition`,
   the longest task in the same trace is 70 ms.
@@ -771,7 +779,7 @@ tell whether the change fixed a failing metric or one that already passed.
 *For the reviewer*
 
 - On 2026-10-29, read INP on `/invoices` at the 75th percentile on mobile over the 28 days after
-  the release. Expected: 200 ms or less.
+  the release with the same filter. Expected: 200 ms or less.
 ```
 
 The fix is the measurement: the same change, now tied to the field metric that failed, its
@@ -832,7 +840,11 @@ it has one.
    (2025-12): CrUX is Chrome only; LCP covers the first navigation only.
 6. Chrome for Developers,
    [Soft navigations](https://developer.chrome.com/docs/web-platform/soft-navigations) (updated
-   2026-09-02): on by default from Chrome 151; CrUX reporting not yet decided.
+   2026-09-02): on by default from Chrome 151; CrUX reporting not yet decided as of that update
+   (web.dev, below, reports experimental CrUX metrics from October 2026). web.dev,
+   [How SPA architectures affect Core Web Vitals](https://web.dev/articles/vitals-spa-faq)
+   (updated 2026-10-13, read 2026-10-16): without soft navigations, every measurement is filed
+   under the URL that loaded the page.
 7. Alex Russell,
    [The Performance Inequality Gap, 2026](https://infrequently.org/2025/11/performance-inequality-gap-2026/)
    (2025-11-24): lost users missing from RUM; the modelled budgets and the 75th-percentile device.
@@ -845,7 +857,8 @@ it has one.
 
 9. [web-vitals](https://github.com/GoogleChrome/web-vitals) README and its
    [registry entry](https://registry.npmjs.org/web-vitals/latest): the attribution build, its
-   size, `reportSoftNavs`, the Chromium floor.
+   size, `reportSoftNavs`, the Chromium floor; `id` to dedupe a metric reported more than once
+   (read 2026-10-16).
 10. Chrome for Developers,
     [Long Animation Frames](https://developer.chrome.com/docs/web-platform/long-animation-frames)
     (2024-10-14): the API and its browser support.
@@ -861,8 +874,9 @@ it has one.
     [New in DevTools, October 2026](https://developer.chrome.com/blog/new-in-devtools-october-2026):
     CPU calibration; soft-navigation Insights.
 14. [Lighthouse releases](https://github.com/GoogleChrome/lighthouse/releases); the Chrome blog
-    post [Lighthouse 13](https://developer.chrome.com/blog/lighthouse-13-0) is the place to look
-    for the removed audits, read here through a search snippet only. Chrome for Developers,
+    post [Lighthouse 13](https://developer.chrome.com/blog/lighthouse-13-0)
+    (2025-10-10, read 2026-10-16): the audits replaced by insights and the audits removed.
+    Chrome for Developers,
     [INP tool support](https://developer.chrome.com/blog/inp-tools-2022) (2022-05-17, read
     2026-10-02): INP in Lighthouse's timespan mode, and in user flows from Lighthouse 9.6.
 15. The registry entries of
@@ -870,7 +884,8 @@ it has one.
     [vite-bundle-analyzer](https://registry.npmjs.org/vite-bundle-analyzer/latest), and
     [Sonda](https://sonda.dev/): the bundle analysers.
 16. [Chrome DevTools MCP](https://github.com/ChromeDevTools/chrome-devtools-mcp): trace tools for
-    an agent, its usage statistics and its data-access warning.
+    an agent, its usage statistics and its data-access warning; trace URLs sent to CrUX and
+    `--no-performance-crux` (read 2026-10-16).
 17. [size-limit](https://github.com/ai/size-limit) and
     [Lighthouse CI](https://github.com/GoogleChrome/lighthouse-ci): the CI gates.
 18. Nadia Makarevich,
@@ -914,7 +929,8 @@ it has one.
     and [Content delivery networks](https://web.dev/articles/content-delivery-networks).
 28. web.dev, [preconnect and dns-prefetch](https://web.dev/articles/preconnect-and-dns-prefetch)
     and [Preload critical assets](https://web.dev/articles/preload-critical-assets).
-29. web.dev, [Back/forward cache](https://web.dev/articles/bfcache) (updated 2026-07-02).
+29. web.dev, [Back/forward cache](https://web.dev/articles/bfcache)
+    (updated 2026-07-02, read 2026-10-16).
 30. react.dev, [`lazy`](https://react.dev/reference/react/lazy) and
     [`<Suspense>`](https://react.dev/reference/react/Suspense).
 31. TanStack Router,
@@ -976,11 +992,11 @@ it has one.
 
 45. Google Search Central,
     [JavaScript SEO basics](https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics)
-    (2026-03-04),
+    (2026-03-04, read 2026-10-16: "not all bots can run JavaScript"),
     [Dynamic rendering](https://developers.google.com/search/docs/crawling-indexing/javascript/dynamic-rendering)
     (2025-12-10),
     [Crawlable links](https://developers.google.com/search/docs/crawling-indexing/links-crawlable)
     and [Core Web Vitals](https://developers.google.com/search/docs/appearance/core-web-vitals)
-    (2025-12-10).
+    (2025-12-10, read 2026-10-16).
 46. react.dev, [`<title>`](https://react.dev/reference/react-dom/components/title): one title at
     a time.
