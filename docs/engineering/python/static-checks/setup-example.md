@@ -95,7 +95,7 @@ init_typed = true
 
 | Part | What it does |
 |---|---|
-| `requires-python = "==3.13.*"` | the one minor the service runs, the same as `.python-version`. uv refuses an interpreter outside it on a laptop, in CI and in the image build, and ruff takes its target version from it, so no `target-version` is set ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 9, [static-checks.md](static-checks.md) section 3). A library supports a range instead and keeps a floor only |
+| `requires-python = "==3.13.*"` | the one minor the service runs, the same as `.python-version` ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 9; a library keeps a floor, section 12). ruff takes its target version from it, so no `target-version` is set ([static-checks.md](static-checks.md) section 3) |
 | `[dependency-groups] dev` | every checking tool is a dev dependency; `uv lock` pins the exact versions in `uv.lock`, the one pin (section 3) |
 | `[tool.uv] required-version` | the lowest uv the project accepts: an older local uv stops with a clear error, and `setup-uv` reads it and installs the newest uv that matches. It is a floor, not a pin, so CI's uv moves with each uv release |
 | `extend-select` | turns on each rule a practice relies on, with the section it serves. ruff's default set leaves out most PEP 8 checks; `extend-select` adds to that set and keeps it. A rule the default set holds is listed too, `I001` and `SIM115` included, for the reason [static-checks.md](static-checks.md) section 2 gives |
@@ -105,13 +105,18 @@ init_typed = true
 | `convention = "pep257"` | the `D` rules PEP 257 asks for, and none of the rules of the other conventions that contradict it |
 | `property-decorators = ["pytest.fixture", "pytest_asyncio.fixture"]` | `D401` skips the summary of a function under either decorator, as it does for a `@property`, so a fixture's summary may name what it gives; every other `D` rule still checks its docstring. [readability.md](../../any-language/readability/readability.md) section 4 says why |
 | `ban-relative-imports` | the setting `TID252` needs to fail on every relative import |
-| no `python_version` | mypy checks against the interpreter that runs it, and `uv run --locked` runs it on the pinned 3.13, so the hook, CI and the editor check against the Python the service runs. A copy of the version here would be one more line a version bump could miss ([static-checks.md](static-checks.md) section 3); a library sets it to the oldest version it supports |
+| no `python_version` | mypy checks against the interpreter that runs it, and `uv run --locked` runs it on the pinned 3.13, so the hook and CI, the gate, check against the Python the service runs; an editor checks against the interpreter it is pointed at, so point it at the project's `.venv`. A copy of the version here would be one more line a version bump could miss ([static-checks.md](static-checks.md) section 3); a library sets it to the oldest version it supports |
 | `strict = true` | the strict mode [static-checks.md](static-checks.md) section 2 asks for; it includes `warn_unused_ignores` |
 | `enable_error_code` | two checks outside `--strict`: a bare `# type: ignore`, and a `match` that misses a member |
 | `plugins = ["pydantic.mypy"]` | lets mypy read pydantic models the way pydantic builds them, so a settings class whose fields have no default type-checks when `main()` builds it with no arguments ([python.md](../language/python.md) section 5); only in a repository that depends on pydantic, since mypy imports the plugin from it |
 | `files`, `mypy_path`, `explicit_package_bases` | what to check, and how to name the modules: the package under `src/`, and test files that share a name in different folders ([python/testing/layout.md](../testing/layout.md) section 6) without a clash; `tests/` must hold at least one `.py` file, or mypy stops with an error; `evals/` joins the list only in a repository that has one ([python/evals/evals.md](../evals/evals.md) section 4), for the same reason |
 | `[[tool.mypy.overrides]]` | the one untyped library, silenced by name; every other missing import still fails |
 | `[tool.pydantic-mypy]` | `init_typed` types the arguments of the `__init__` the plugin writes, so a wrong type passed to a model fails the check; `init_forbid_extra` stays off, because it rejects the aliases third-party models accept, such as `ChatOpenAI(model=...)` |
+
+It is good because the checkers read the Python version from the project instead of holding a copy
+of it: ruff from `requires-python`, mypy from the interpreter uv runs it on, so a version bump
+cannot leave a checker behind; and every rule a practice relies on is selected by name, next to the
+section it serves.
 
 ## 2. .pre-commit-config.yaml: the hooks
 
@@ -214,6 +219,7 @@ jobs:
 
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
+          # No python-version input: uv reads .python-version, and the input would override it (ci-cd/pipeline.md section 9).
           enable-cache: true
 
       - run: uv sync --locked
@@ -227,10 +233,14 @@ jobs:
 | each `uses:` pinned to a commit SHA, the release in a comment | a moved tag cannot change what runs; Renovate or Dependabot moves the pin and the comment together ([ci-cd/pipeline-security.md](../../any-language/ci-cd/pipeline-security.md) section 4) |
 | `ubuntu-24.04`, `timeout-minutes: 15` | the runner's OS changes only in a pull request, and a hung job stops in minutes ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) sections 8 and 9) |
 | `concurrency` | a new push to a pull request cancels its older run; a run on `main` gets its own group and is never cancelled ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 8) |
-| setup-uv with no `python-version` input | `uv sync` takes the Python from `.python-version`, so the job runs the service's 3.13; the input would set `UV_PYTHON` over the pin, and `requires-python` would then fail the job ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 9) |
+| setup-uv with no `python-version` input | `uv sync` takes the Python from `.python-version`, so the job runs the service's 3.13; the input would be a second copy of the minor: it sets `UV_PYTHON` over the pin, so on another minor `requires-python` fails the job, and the next minor move has one more file to change ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 9) |
 | `uv sync --locked` | installs the locked dev tools; fails when `uv.lock` does not match `pyproject.toml` |
 | `pre-commit run --all-files` | runs every hook of section 2 on the whole tree: hygiene, lint, format, types, import contracts |
 | `--show-diff-on-failure` | when a hook would change a file, the log shows the change, so the author sees what to fix |
+
+It is good because the job runs the same hook file as a developer's commit, with the locked tools on
+the pinned Python, reads the code and nothing more, and pins every action by commit, so its result
+is the result a developer gets.
 
 In the repository settings, the `checks` job is a required status check for `main`, so a red job
 blocks the merge.

@@ -79,7 +79,8 @@ or a test fixture, stays out of every image until someone adds a line for it. In
 # The Docker Official Image, slim, which its maintainers strive to republish at least monthly;
 # images.md section 4 weighs the others.
 # 3.13 is the one minor requires-python allows: on another minor the first uv sync stops the
-# build (images.md section 11), so change this tag only with requires-python and uv.lock.
+# build (images.md section 11), so it moves only with .python-version, requires-python and
+# uv.lock (ci-cd/pipeline.md section 9).
 ARG PYTHON_IMAGE=python:3.13-slim-trixie@sha256:...
 
 FROM ${PYTHON_IMAGE} AS builder
@@ -209,10 +210,14 @@ the `sha256:...` digests are placeholders until Renovate or the command above fi
   ],
   "packageRules": [
     {
-      "description": "Move the Python image and .python-version in one pull request",
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["python"],
-      "groupName": "Python"
+      "description": "One pull request for the Python minor: the image tags and .python-version; requires-python and uv.lock by hand when Renovate leaves them",
+      "matchDatasources": ["docker", "python-version"],
+      "matchPackageNames": ["/(?:^|/)python$/"],
+      "matchUpdateTypes": ["major", "minor"],
+      "groupName": "Python minor",
+      "prBodyNotes": [
+        "If uv sync fails here, set requires-python to the new minor and run uv lock in this branch. uv's hint to run uv python pin would undo this update. See ci-cd/pipeline.md section 9."
+      ]
     }
   ]
 }
@@ -224,14 +229,15 @@ the `sha256:...` digests are placeholders until Renovate or the command above fi
 | `docker:pinDigests` | pins every image Renovate reads in a Dockerfile to its digest [24] |
 | `helpers:pinGitHubActionDigests` | pins each action in a workflow to a commit SHA, as [ci-example.md](ci-example.md) shows [25] |
 | `customManagers:dockerfileVersions` | updates an `ARG` or `ENV` whose name ends in `_VERSION` when a `# renovate: datasource=… depName=…` comment sits on the line above it, as for Claude Code in [agent-container-example.md](agent-container-example.md) section 3 [26] |
-| the `packageRules` group | Renovate updates `.python-version` from the same Docker Hub `python` tags as the image [29], so this rule, built like Renovate's own `group:nodeJs` preset, which groups Node's image with Node's version file [30], puts both in one pull request. Without it the two updates come apart, and each fails the build on its own |
+| the `packageRules` group | moves the Python minor in one pull request, as [ci-cd/pipeline.md](../ci-cd/pipeline.md) section 9 asks: the `python` image tags, the agent image's in [agent-container-example.md](agent-container-example.md) too; `.python-version`, which the pyenv manager updates from the same Docker Hub tags [29]; and `requires-python`, which the pep621 manager reads as `python` from the `python-version` datasource [31], though whether it raises `"==3.13.*"` was not run (see below). `matchUpdateTypes` keeps digest refreshes out of the group, so a pending minor move never holds back the image rebuild [images.md](images.md) section 4 asks for [32]. The regular-expression name also catches the image behind a registry prefix, the way Renovate's own `group:nodeJs` does for Node [30] |
+| `prBodyNotes` | writes the next step into the pull request's description [32], so whoever finds the pull request red knows what to do. uv's own error asks for `uv python pin` [33], which would set `.python-version` back to the old minor and undo the update |
 
 It is good because each preset keeps one kind of pin moving with a pull request: image digests in
 the Dockerfile, action SHAs in the workflows, and `_VERSION` values under a `# renovate:`
-comment, and the group keeps the image's Python and the pin in one change. A move to a new
-Python minor still fails `uv sync` until someone raises `requires-python` and runs `uv lock` in
-that branch, because a new minor can change what the lock resolves [28]; that last step is a
-person's ([images.md](images.md) section 11).
+comment, and the group keeps the files of the Python minor in one change. Whether Renovate also
+raises `requires-python` and relocks `uv.lock` in that pull request was not run here; when it
+does not, the pull request fails `uv sync` until someone does both in that branch
+([ci-cd/pipeline.md](../ci-cd/pipeline.md) section 9).
 A pin of another kind, such as a scanner's `version:` input in a workflow or a tool a step
 downloads, gets no pull request and is moved by hand. Renovate pins no
 digest by default [23], and Docker warns that a digest pin means you update by hand, and that
@@ -239,7 +245,7 @@ digest by default [23], and Docker warns that a digest pin means you update by h
 
 The file does nothing until the Renovate app or a Renovate runner is enabled for the repository;
 the Dependency Dashboard issue, which `config:recommended` turns on, shows that it runs [22]. The
-`packageRules` group was not run against Renovate; it follows the shape of `group:nodeJs` [30].
+`packageRules` group was not run against Renovate; it follows the idea of `group:nodeJs` [30].
 
 ## 6. Sources
 
@@ -275,3 +281,6 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [28] Astral — uv: Python versions (`docs/concepts/python-versions.md`), commit 4954c25 — https://github.com/astral-sh/uv/blob/4954c25a16b246c1b88aef6c3798a76d675c5cd0/docs/concepts/python-versions.md
 - [29] Renovate — pyenv manager (`lib/modules/manager/pyenv/index.ts`), commit bd8f755 — https://github.com/renovatebot/renovate/blob/bd8f755bc1dd6f5f8ae8ff5ebd661835fcc15aa5/lib/modules/manager/pyenv/index.ts
 - [30] Renovate — Group presets (`lib/config/presets/internal/group.preset.ts`, `nodeJs`), commit bd8f755 — https://github.com/renovatebot/renovate/blob/bd8f755bc1dd6f5f8ae8ff5ebd661835fcc15aa5/lib/config/presets/internal/group.preset.ts
+- [31] Renovate — pep621 manager (`lib/modules/manager/pep621/extract.ts`), commit bd8f755 — https://github.com/renovatebot/renovate/blob/bd8f755bc1dd6f5f8ae8ff5ebd661835fcc15aa5/lib/modules/manager/pep621/extract.ts
+- [32] Renovate — Configuration options (`docs/usage/configuration-options.md`: `prBodyNotes`, `packageRules.matchUpdateTypes` and the update types), commit bd8f755 — https://github.com/renovatebot/renovate/blob/bd8f755bc1dd6f5f8ae8ff5ebd661835fcc15aa5/docs/usage/configuration-options.md
+- [33] Astral — uv: the `uv sync` tests (`crates/uv/tests/sync/sync.rs`, `sync_python_version`), commit 4954c25 — https://github.com/astral-sh/uv/blob/4954c25a16b246c1b88aef6c3798a76d675c5cd0/crates/uv/tests/sync/sync.rs

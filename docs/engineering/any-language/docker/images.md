@@ -378,10 +378,8 @@ Whatever the choice:
   section 9). uv uses the first interpreter that fits that range [151], and with downloads off it
   fails when no interpreter fits [152], so the first `uv sync` stops a build on an image of another
   minor. The check needs no extra step and no copy of `.python-version` in the build context. The
-  tag names the minor, and the digest fixes the patch (section 4). A minor move changes the tag,
-  `.python-version`, `requires-python` and `uv.lock` in one pull request, because a new minor can
-  change what the lock resolves [151]; [dockerfile-example.md](dockerfile-example.md) section 5
-  groups Renovate's updates of the first two.
+  tag names the minor, and the digest pins the patch (section 4). The tag moves with the pin, as
+  [ci-cd/pipeline.md](../ci-cd/pipeline.md) section 9 says.
 - **Copy only the virtual environment into the runtime stage, put its `bin` folder first on
   `PATH`, and run the project's entry point directly.** uv stays out of the runtime image, as in
   uv's own production example [109]. `uv run` forwards signals to its child (since uv 0.6.15), but

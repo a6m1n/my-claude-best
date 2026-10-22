@@ -47,10 +47,10 @@ to one named person.
   differ; what a job holds and
   what it does not; the triggers and when to use each, automatic or manual; the stages and when
   they run, the checks other practices ask for among them; the gate job as the one required check;
-  a monorepo that runs only what a change touches; speed and what CI costs, reproducible runs, a
-  red build, a flaky test and who is told; and when parts of it are too much, a one-person
-  repository included. Read it before you write or change a CI workflow or the required checks of
-  `main`.
+  a monorepo that runs only what a change touches; speed and what CI costs, reproducible runs and
+  the toolchain and Python version pins, a red build, a flaky test and who is told; and when parts
+  of it are too much, a one-person repository included. Read it before you write or change a CI
+  workflow, the required checks of `main` or a toolchain pin.
 - [delivery.md](delivery.md) — the CD rules: continuous delivery as the default pipeline, and
   continuous deployment as a job that creates the version tag after staging, building once and
   promoting the same artifact, environments and the production gate, OIDC instead of stored keys,
@@ -83,11 +83,12 @@ to one named person.
 
 1. Copy this folder into your repository at `docs/engineering/any-language/ci-cd/`.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you write or change a workflow under
-   `.github/workflows/`, a required status check, a deploy job, a cloud role a pipeline uses, or a
-   secret a pipeline reads, read `docs/engineering/any-language/ci-cd/README.md` and the file it
-   routes to for that work." Without it an agent never opens the folder. An agent that writes a
-   workflow checks, before it pins an action, that the action exists and belongs to its vendor,
-   and reads the SHA itself ([pipeline-security.md](pipeline-security.md) section 4).
+   `.github/workflows/`, a required status check, a deploy job, a cloud role a pipeline uses, a
+   secret a pipeline reads, or a toolchain pin (`.python-version`, `requires-python`, the Node
+   version file, `packageManager`), read `docs/engineering/any-language/ci-cd/README.md` and the
+   file it routes to for that work." Without it an agent never opens the folder. An agent that
+   writes a workflow checks, before it pins an action, that the action exists and belongs to its
+   vendor, and reads the SHA itself ([pipeline-security.md](pipeline-security.md) section 4).
 3. The rules and examples link the practices that own a neighbouring rule:
    [release.md](../project-management/release.md) and
    [rollback-plan.md](../project-management/rollback-plan.md) (the release decision, the

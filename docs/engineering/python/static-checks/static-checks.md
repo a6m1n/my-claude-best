@@ -85,16 +85,21 @@ CI runs these through the hook file (section 5), so each command is the same in 
   by `rev:` once, in the hook file. That is its one pin.
 - **The checks judge the code against the Python the project pins, and none of them holds its own
   copy of the version.** ruff takes its target from the lowest version `requires-python` allows.
-  With no version set, it checks version-related syntax against the newest Python, so code that
-  only a newer Python parses passes. So set `requires-python` as
-  [ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 9 says, and no ruff
-  `target-version`. The type checker checks against the interpreter it runs on, and
+  When neither `requires-python` nor `target-version` is set, ruff checks version-related syntax
+  against the newest Python, so it passes code that only a newer Python can parse. So set
+  `requires-python` as [ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 9 says,
+  and no ruff `target-version`. The type checker checks against the interpreter it runs on, and
   `uv run --locked` runs it on the project's pinned one, so set no mypy `python_version` and no
-  pyright `pythonVersion`. A project that supports a range of versions, such as a library, sets
-  them to the oldest one instead. Between them, ruff catches syntax the target lacks, such as
-  `match` before 3.10, and the type checker catches a standard-library name the target lacks, such
-  as `itertools.batched` before 3.12, because the stubs mark each name with the version that added
-  it. A copy of the version in the checker's config is one more place a version bump can miss.
+  pyright `pythonVersion`. A checker run outside `uv run`, such as an editor's, checks against its
+  own interpreter: point the editor at the project's `.venv`; CI is the gate either way. A project
+  that supports a range of versions, such as a library, sets mypy's and pyright's version to the
+  oldest one instead.
+  Between them, ruff catches syntax the target lacks, such as `match` before 3.10, and the type
+  checker catches a standard-library name the target lacks, such as `itertools.batched` before
+  3.12, because the stubs mark each name with the version that added it. A copy of the version in
+  the checker's config is one more place a version bump can miss. Check: in an application,
+  `grep -snE '^\s*"?(target-version|python_version|pythonVersion)\b' pyproject.toml mypy.ini setup.cfg pyrightconfig.json`
+  prints nothing.
 
 ## 4. Hooks before a commit: light, fast, cheap
 

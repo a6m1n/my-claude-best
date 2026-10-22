@@ -338,8 +338,8 @@ one when the projects import each other, not for two folders that share nothing 
 - **Pin the toolchain in files the repository holds, and let CI read them:** the Python version
   in `.python-version`, which uv reads in every job [58] (the next bullet), Node's version through
   setup-node's `node-version-file` [28], and the package manager through `packageManager` in
-  `package.json`. The developer's machine, CI and the image then run the same Python, Node and
-  package manager.
+  `package.json`. The developer's machine, CI and the image then run the same Python minor, Node
+  and package manager.
   uv itself gets a floor, not a pin: `[tool.uv] required-version`, as
   [setup-example.md](../../python/static-checks/setup-example.md) section 1 sets it, while the
   checking tools stay locked in `uv.lock` ([static-checks.md](../../python/static-checks/static-checks.md)
@@ -347,24 +347,46 @@ one when the projects import each other, not for two folders that share nothing 
   meets it, so CI's uv can be newer than a developer's or the image's.
 - **In a Python application, pin one minor version, and let uv refuse every other one.** Write
   the minor in `.python-version` (`3.13`) and the same minor in `requires-python`
-  (`"==3.13.*"`). uv takes the interpreter from `.python-version` [58] and stops when that
-  interpreter lies outside `requires-python` [59]. With a range of one minor it stops on any other
-  interpreter, so a developer's machine, a CI job or an image build on another minor fails
-  instead of running. Why: at one project, CI tested on 3.12 while the image ran 3.14, and "That
-  mismatch let v0.1.44.13 pass every check and crash-loop in production" [62].
-  - Pin the minor, not the patch. uv moves to a new patch release by itself but never across a
-    minor, "because changing minor versions can affect dependency resolution" [58], and Python's
-    rule for its patch releases is that "compatibility must not be broken at any point between
-    sibling micro releases", with rare exceptions [61]. The patch that ships is the one the
-    image's digest fixes ([images.md](../docker/images.md) section 4).
+  (`"==3.13.*"`). Where each environment and checker takes the minor from, and what happens on
+  another one:
+
+  | Where | Takes the minor from | On another minor |
+  |---|---|---|
+  | A laptop | `.python-version`, through `uv sync` and `uv run` [58] | uv downloads the pinned minor when it is missing [58] and rebuilds a `.venv` built on another minor [59]; a `.python-version` outside `requires-python` stops with an error [59] |
+  | A CI job | the same, through `uv sync --locked` | the same; `UV_PYTHON` or `--python` asking for another minor stops the job [59] |
+  | The image build | the image's Python, named by its tag; downloads are off | the first `uv sync` stops the build ([images.md](../docker/images.md) section 11) |
+  | ruff, mypy, pyright | `requires-python` (ruff); the interpreter `uv run` gives them (mypy, pyright) | they judge the code against that minor ([static-checks.md](../../python/static-checks/static-checks.md) section 3) |
+  | A command that skips the sync: `uv run --no-sync`, or a tool run from an activated `.venv` | the old `.venv` | uv only warns [64], and the tool runs the old minor; CI, which syncs from nothing, is the gate there |
+
+  Why: in the VIATOR OpenTripPlanner demonstrator, a public project on GitHub,
+  CI tested on 3.12 while the image ran 3.14, and "That mismatch let v0.1.44.13 pass every check
+  and crash-loop in production" [62].
+  - uv's refusal holds only while the range names one minor: a floor such as `>=3.13` lets uv
+    take any newer interpreter, the image build included [58]. Check:
+    `grep -nE '^requires-python = "==3\.[0-9]+\.\*"$' pyproject.toml` prints one line.
+  - Pin the minor, not the patch. A minor pin takes whichever patch of that minor a machine has:
+    uv picks the newest patch when it downloads one, and `uv python upgrade` moves a uv-managed
+    Python to a newer patch, but uv never moves across a minor, "because changing minor versions
+    can affect dependency resolution" [58]. Python's rule for its patch releases is that
+    "compatibility must not be broken at any point between sibling micro releases", with rare
+    exceptions [61]. The patch that ships is the one the image's digest pins
+    ([images.md](../docker/images.md) section 4). So laptops, CI and the image run the same minor
+    but can run different patches and builds of it, and only the checks that run inside the
+    image, such as the image job's, run on the patch that ships.
+  - Move to a new minor in one pull request that changes `.python-version`, `requires-python`,
+    `uv.lock` and every image tag that names the minor, because a new minor can change what the
+    lock resolves [58], and any of them moved alone fails the checks.
+    [dockerfile-example.md](../docker/dockerfile-example.md) section 5 has a Renovate rule that
+    opens that pull request with the image tags and `.python-version`; the note it writes into
+    that pull request's description (`prBodyNotes`) says what to finish by hand.
   - In CI, give setup-uv no `python-version` input. It sets `UV_PYTHON`, which "will override any
-    python version specifications in `pyproject.toml`, `.python-version`" [27]; with a range of
-    one minor the job then fails instead of testing another Python.
-  - The cap is for an application, which no one installs from a package index. A uv maintainer
-    holds that for such "unpublished packages" it would "be reasonable to use `==X.y.*`" [60]. A
-    library keeps a floor only (section 12).
-  - The image's side of the check is [images.md](../docker/images.md) section 11, and the static
-    checks' side is [static-checks.md](../../python/static-checks/static-checks.md) section 3.
+    python version specifications in `pyproject.toml`, `.python-version`" [27]: the input is a
+    second copy of the minor that a minor move must also change, and on another minor the range of
+    one minor fails the job instead of testing another Python.
+  - The range of one minor is for an application, which no one installs from a package index. A
+    uv maintainer wrote that for such "unpublished packages" it would "be reasonable to use
+    `==X.y.*`", and asked the rest of the uv team for their view [60]. A library keeps a floor only
+    (section 12).
 - **Name the runner image by its version, such as `ubuntu-24.04`, not by `ubuntu-latest`.**
   GitHub moves the `-latest` label to a new OS version over one to two months, and during that
   time "any workflow using the `-latest` label, may see changes in the OS version" [32]. A version
@@ -427,6 +449,11 @@ one when the projects import each other, not for two folders that share nothing 
   (section 9): `requires-python` declares "the minimum version of Python that you support" [63],
   with no upper bound, and CI runs the tests on each version of the range through a matrix that
   sets setup-uv's `python-version` input [26].
+- **A production that is not built from the image**, such as a platform that runs the app on its
+  own Python ([delivery.md](delivery.md) section 8): the platform's own setting picks the
+  interpreter, so set it to the pinned minor, and install with `uv sync --locked`, which refuses
+  an interpreter outside `requires-python` [59]; an exported requirements file carries no such
+  check.
 - **A small repository whose full run takes three minutes**: skip change detection (section 7);
   the gate job still pays, because it keeps the required checks to one name.
 - **A monorepo whose projects import each other**: path filters stop being safe, and a graph-aware
@@ -471,13 +498,19 @@ one when the projects import each other, not for two folders that share nothing 
   (section 7).
 - **Rerunning failed tests automatically.** Rejected for a test that does not call a real model:
   it hides the cause ([running-tests.md](../../python/testing/running-tests.md) section 9).
-- **Pinning the exact Python patch, such as `3.13.5`, in every file.** Not taken: uv does not
-  move a version requested to the patch to the next patch release [58], so each fix a patch
-  release carries [61] waits for a person, while the image's digest already fixes the patch that
-  ships (section 9).
+- **Pinning the exact Python patch, such as `3.13.5`, in every file.** Not taken: uv then needs
+  that exact patch on every laptop, runner and image, and does not move a version pinned to the
+  patch to a newer one [58], so each fix a later patch carries [61] waits until someone edits
+  every pin; the image's digest already pins the patch that ships under either pin (section 9).
 - **A separate check that compares the Python version files**, as a pre-commit hook or a CI
-  script. Not taken: with a range of one minor, uv already fails on each mismatch such a check
-  would find (section 9), so the check would be a second tool to keep.
+  script. Not taken: while the range names one minor (the Check in section 9), uv already fails
+  on each mismatch such a check would find (section 9), so the check would be a second tool to
+  keep.
+- **A floor-only `requires-python`, such as `>=3.13`, with `.python-version` as the only pin.**
+  The packaging guide advises it: "Think twice before applying an upper bound" [63]. Not taken
+  for an application: uv honours `.python-version` only where it can see it, and setup-uv's
+  `python-version` input or `UV_PYTHON` overrides it [27], while a range of one minor binds
+  wherever uv runs, the image build included (section 9); a library keeps the floor (section 12).
 
 ## 14. Sources
 
@@ -541,3 +574,4 @@ Checked 2026-10-18 unless a line ends with — checked <YYYY-MM-DD>.
 - [61] Python Software Foundation — Python Developer's Guide: Development cycle, Maintenance branches — https://devguide.python.org/developer-workflow/development-cycle/ — checked 2026-10-22
 - [62] TOP-PHE — CI must test on the image's Python (3.14) (GitHub, VIATOR-OpenTripPlanner-demonstrator issue #325, 2026; case) — https://github.com/TOP-PHE/VIATOR-OpenTripPlanner-demonstrator/issues/325 — checked 2026-10-22
 - [63] Python Packaging Authority — Writing your pyproject.toml: `requires-python` — https://packaging.python.org/en/latest/guides/writing-pyproject-toml/ — checked 2026-10-22
+- [64] Astral — uv: project environment selection (`crates/uv-environment-operations/src/lib.rs`, the `--no-sync` warning), commit 4954c25 — https://github.com/astral-sh/uv/blob/4954c25a16b246c1b88aef6c3798a76d675c5cd0/crates/uv-environment-operations/src/lib.rs
