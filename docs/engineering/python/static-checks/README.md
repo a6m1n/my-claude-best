@@ -24,7 +24,8 @@ flowchart LR
 ## What is here
 
 - [static-checks.md](static-checks.md) — the rules: which checks run, one pinned version per tool,
-  what a hook may hold, CI as the gate, and how a suppression is written. Read it before you add or
+  the Python version the checks judge the code against, what a hook may hold, CI as the gate, and
+  how a suppression is written. Read it before you add or
   change a static check, a hook, the CI job that runs them, or a comment that silences one.
 - [setup-example.md](setup-example.md) — `pyproject.toml`, `.pre-commit-config.yaml` and a CI
   workflow for a service, with each part explained. Read it when you set the checks up in a

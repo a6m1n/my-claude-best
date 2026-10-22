@@ -336,14 +336,35 @@ one when the projects import each other, not for two folders that share nothing 
   tests a set of packages nobody pinned, and a stale lockfile then shows as a red check, not as a
   surprise in production.
 - **Pin the toolchain in files the repository holds, and let CI read them:** the Python version
-  (setup-uv reads it from the project [26], [27]), Node's version through setup-node's
-  `node-version-file` [28], and the package manager through `packageManager` in `package.json`.
-  The developer's machine, CI and the image then run the same Python, Node and package manager.
+  in `.python-version`, which uv reads in every job [58] (the next bullet), Node's version through
+  setup-node's `node-version-file` [28], and the package manager through `packageManager` in
+  `package.json`. The developer's machine, CI and the image then run the same Python, Node and
+  package manager.
   uv itself gets a floor, not a pin: `[tool.uv] required-version`, as
   [setup-example.md](../../python/static-checks/setup-example.md) section 1 sets it, while the
   checking tools stay locked in `uv.lock` ([static-checks.md](../../python/static-checks/static-checks.md)
   section 3). setup-uv reads the floor from the project [26], [27] and installs the newest uv that
   meets it, so CI's uv can be newer than a developer's or the image's.
+- **In a Python application, pin one minor version, and let uv refuse every other one.** Write
+  the minor in `.python-version` (`3.13`) and the same minor in `requires-python`
+  (`"==3.13.*"`). uv takes the interpreter from `.python-version` [58] and stops when that
+  interpreter lies outside `requires-python` [59]. With a range of one minor it stops on any other
+  interpreter, so a developer's machine, a CI job or an image build on another minor fails
+  instead of running. Why: at one project, CI tested on 3.12 while the image ran 3.14, and "That
+  mismatch let v0.1.44.13 pass every check and crash-loop in production" [62].
+  - Pin the minor, not the patch. uv moves to a new patch release by itself but never across a
+    minor, "because changing minor versions can affect dependency resolution" [58], and Python's
+    rule for its patch releases is that "compatibility must not be broken at any point between
+    sibling micro releases", with rare exceptions [61]. The patch that ships is the one the
+    image's digest fixes ([images.md](../docker/images.md) section 4).
+  - In CI, give setup-uv no `python-version` input. It sets `UV_PYTHON`, which "will override any
+    python version specifications in `pyproject.toml`, `.python-version`" [27]; with a range of
+    one minor the job then fails instead of testing another Python.
+  - The cap is for an application, which no one installs from a package index. A uv maintainer
+    holds that for such "unpublished packages" it would "be reasonable to use `==X.y.*`" [60]. A
+    library keeps a floor only (section 12).
+  - The image's side of the check is [images.md](../docker/images.md) section 11, and the static
+    checks' side is [static-checks.md](../../python/static-checks/static-checks.md) section 3.
 - **Name the runner image by its version, such as `ubuntu-24.04`, not by `ubuntu-latest`.**
   GitHub moves the `-latest` label to a new OS version over one to two months, and during that
   time "any workflow using the `-latest` label, may see changes in the OS version" [32]. A version
@@ -402,7 +423,10 @@ one when the projects import each other, not for two folders that share nothing 
 ## 12. Where the rules stop holding
 
 - **A repository with nothing to deploy**, such as a library: sections 2 to 10 hold, and the
-  publish step pushes a package instead of deploying it.
+  publish step pushes a package instead of deploying it. Its Python pin is a range, not one minor
+  (section 9): `requires-python` declares "the minimum version of Python that you support" [63],
+  with no upper bound, and CI runs the tests on each version of the range through a matrix that
+  sets setup-uv's `python-version` input [26].
 - **A small repository whose full run takes three minutes**: skip change detection (section 7);
   the gate job still pays, because it keeps the required checks to one name.
 - **A monorepo whose projects import each other**: path filters stop being safe, and a graph-aware
@@ -447,6 +471,13 @@ one when the projects import each other, not for two folders that share nothing 
   (section 7).
 - **Rerunning failed tests automatically.** Rejected for a test that does not call a real model:
   it hides the cause ([running-tests.md](../../python/testing/running-tests.md) section 9).
+- **Pinning the exact Python patch, such as `3.13.5`, in every file.** Not taken: uv does not
+  move a version requested to the patch to the next patch release [58], so each fix a patch
+  release carries [61] waits for a person, while the image's digest already fixes the patch that
+  ships (section 9).
+- **A separate check that compares the Python version files**, as a pre-commit hook or a CI
+  script. Not taken: with a range of one minor, uv already fails on each mismatch such a check
+  would find (section 9), so the check would be a second tool to keep.
 
 ## 14. Sources
 
@@ -504,3 +535,9 @@ Checked 2026-10-18 unless a line ends with — checked <YYYY-MM-DD>.
 - [55] GitHub — Creating rulesets for a repository — https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/creating-rulesets-for-a-repository
 - [56] GitHub — Notifications for workflow runs (`notifications-for-workflow-runs.md`) — https://github.com/github/docs/blob/dae83f7d28f3b8e10015bd6b6d8b72267cedceca/content/actions/concepts/workflows-and-actions/notifications-for-workflow-runs.md — checked 2026-10-19
 - [57] GitHub — Contexts reference: the `needs` context (`contexts.md`) — https://github.com/github/docs/blob/dae83f7d28f3b8e10015bd6b6d8b72267cedceca/content/actions/reference/workflows-and-actions/contexts.md — checked 2026-10-19
+- [58] Astral — uv: Python versions (`docs/concepts/python-versions.md`), commit 4954c25 — https://github.com/astral-sh/uv/blob/4954c25a16b246c1b88aef6c3798a76d675c5cd0/docs/concepts/python-versions.md
+- [59] Astral — uv: the `uv sync` tests (`crates/uv/tests/sync/sync.rs`, `sync_python_version`), commit 4954c25 — https://github.com/astral-sh/uv/blob/4954c25a16b246c1b88aef6c3798a76d675c5cd0/crates/uv/tests/sync/sync.rs
+- [60] Zanie Blue — comment on "Best practices for `requires-python`" (GitHub, astral-sh/uv issue #7429, 2024; opinion) — https://github.com/astral-sh/uv/issues/7429#issuecomment-2354136592 — checked 2026-10-22
+- [61] Python Software Foundation — Python Developer's Guide: Development cycle, Maintenance branches — https://devguide.python.org/developer-workflow/development-cycle/ — checked 2026-10-22
+- [62] TOP-PHE — CI must test on the image's Python (3.14) (GitHub, VIATOR-OpenTripPlanner-demonstrator issue #325, 2026; case) — https://github.com/TOP-PHE/VIATOR-OpenTripPlanner-demonstrator/issues/325 — checked 2026-10-22
+- [63] Python Packaging Authority — Writing your pyproject.toml: `requires-python` — https://packaging.python.org/en/latest/guides/writing-pyproject-toml/ — checked 2026-10-22

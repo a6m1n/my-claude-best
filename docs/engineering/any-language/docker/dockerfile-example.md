@@ -31,7 +31,9 @@ acme-api = "acme.api.main:main"
 
 The rest of `pyproject.toml` is left out: the project table and its `[build-system]`, which uv
 needs to install the package, and the tool tables of
-[static-checks/setup-example.md](../../python/static-checks/setup-example.md) [3]. The project
+[static-checks/setup-example.md](../../python/static-checks/setup-example.md) [3]. Its
+`requires-python` is `"==3.13.*"` and `.python-version` holds `3.13`, the minor the image tag in
+section 3 names ([ci-cd/pipeline.md](../ci-cd/pipeline.md) section 9). The project
 depends on `psycopg[binary]`, which bundles libpq, so the runtime stage installs no system library
 ([images.md](images.md) section 11) [4]. This `pyproject.toml` names no `readme`. If yours does,
 add `!README.md` to `.dockerignore`, because the build reads it [5].
@@ -76,6 +78,8 @@ or a test fixture, stays out of every image until someone adds a line for it. In
 # path (images.md section 11). Renovate updates the tag and the digest together.
 # The Docker Official Image, slim, which its maintainers strive to republish at least monthly;
 # images.md section 4 weighs the others.
+# 3.13 is the one minor requires-python allows: on another minor the first uv sync stops the
+# build (images.md section 11), so change this tag only with requires-python and uv.lock.
 ARG PYTHON_IMAGE=python:3.13-slim-trixie@sha256:...
 
 FROM ${PYTHON_IMAGE} AS builder
@@ -128,7 +132,7 @@ CMD ["acme-api"]
 | `# syntax=docker/dockerfile:1.28.0@sha256:...` | a fixed frontend, by its version and its digest, so neither a new release nor a moved tag can change this build without a pull request [8] |
 | `# check=error=true` | the build checks fail the build instead of printing warnings; the build CI runs is the lint gate [9] |
 | `ARG PYTHON_IMAGE=…` and both `FROM ${PYTHON_IMAGE}` | one pin for the two stages; Renovate reads an `ARG` default, Dependabot would not [10], [11] |
-| `python:3.13-slim-trixie` | the Docker Official Image, which its maintainers strive to republish at least monthly ([images.md](images.md) section 4) [12]; names the Debian release, so the tag cannot move to the next one [13] |
+| `python:3.13-slim-trixie` | the Docker Official Image, which its maintainers strive to republish at least monthly ([images.md](images.md) section 4) [12]; names the Debian release, so the tag cannot move to the next one [13]; names the one minor `requires-python` allows, so an image on another minor fails the first `uv sync`, which uses an interpreter only when it fits that range ([images.md](images.md) section 11) [28] |
 | `COPY --from=ghcr.io/astral-sh/uv:0.13.1@…` | a pinned uv, copied into the builder only [14] |
 | `UV_LINK_MODE=copy`, `UV_PYTHON_DOWNLOADS=0` | uv copies files out of the cache mount instead of warning that it cannot link them, and uses the image's Python instead of downloading one [14] |
 | first `uv sync … --no-install-project` | the dependency layer, from the lock file through bind mounts; `--locked` stops the build when `uv.lock` does not match `pyproject.toml`; `--no-dev`, in both `uv sync` lines, keeps the development tools out of the runtime environment [15] |
@@ -154,6 +158,10 @@ docker build --tag acme-api:dev .
 printf 'FROM busybox:1.37@sha256:...\nCOPY . /ctx\nRUN find /ctx -type f\n' |
   docker build --no-cache --progress=plain -f - .
 
+# On an image of another Python minor the build stops at the first uv sync, because
+# requires-python allows 3.13 only (images.md section 11). A throwaway tag, never pushed.
+docker build --build-arg PYTHON_IMAGE=python:3.14-slim-trixie@sha256:... --tag acme-api:other-python .  # fails: no interpreter for ==3.13.*
+
 docker run --rm acme-api:dev id -u  # prints 10001
 docker run --rm acme-api:dev stat -c '%u' /app/.venv  # prints 0: root owns the venv (images.md section 6)
 # The package imports from the venv, and the entry point is on PATH.
@@ -176,11 +184,13 @@ docker rm acme-stop-check
 ```
 
 It is good because each line checks the image itself, not the Dockerfile: what the builder
-received, the user the process runs as, that the package and its entry point are installed, and
-that the process stops on SIGTERM.
+received, that an image of another Python cannot be built, the user the process runs as, that the
+package and its entry point are installed, and that the process stops on SIGTERM.
 
 What this example does not claim: it was not built when it was written, so the build itself, the
-context listing and the `docker run`, `docker stop` and `docker inspect` lines are untested here;
+context listing, the build on another Python minor and the `docker run`, `docker stop` and
+`docker inspect` lines are untested here; that last build's failure rests on how uv picks an
+interpreter [28], not on a run of this Dockerfile;
 the `sha256:...` digests are placeholders until Renovate or the command above fills them; uv
 0.13.1 and frontend 1.28.0 were the latest releases in October 2026 [20], [21].
 
@@ -196,6 +206,14 @@ the `sha256:...` digests are placeholders until Renovate or the command above fi
     "docker:pinDigests",
     "helpers:pinGitHubActionDigests",
     "customManagers:dockerfileVersions"
+  ],
+  "packageRules": [
+    {
+      "description": "Move the Python image and .python-version in one pull request",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["python"],
+      "groupName": "Python"
+    }
   ]
 }
 ```
@@ -206,16 +224,22 @@ the `sha256:...` digests are placeholders until Renovate or the command above fi
 | `docker:pinDigests` | pins every image Renovate reads in a Dockerfile to its digest [24] |
 | `helpers:pinGitHubActionDigests` | pins each action in a workflow to a commit SHA, as [ci-example.md](ci-example.md) shows [25] |
 | `customManagers:dockerfileVersions` | updates an `ARG` or `ENV` whose name ends in `_VERSION` when a `# renovate: datasource=… depName=…` comment sits on the line above it, as for Claude Code in [agent-container-example.md](agent-container-example.md) section 3 [26] |
+| the `packageRules` group | Renovate updates `.python-version` from the same Docker Hub `python` tags as the image [29], so this rule, built like Renovate's own `group:nodeJs` preset, which groups Node's image with Node's version file [30], puts both in one pull request. Without it the two updates come apart, and each fails the build on its own |
 
 It is good because each preset keeps one kind of pin moving with a pull request: image digests in
-the Dockerfile, action SHAs in the workflows, and `_VERSION` values under a `# renovate:` comment.
+the Dockerfile, action SHAs in the workflows, and `_VERSION` values under a `# renovate:`
+comment, and the group keeps the image's Python and the pin in one change. A move to a new
+Python minor still fails `uv sync` until someone raises `requires-python` and runs `uv lock` in
+that branch, because a new minor can change what the lock resolves [28]; that last step is a
+person's ([images.md](images.md) section 11).
 A pin of another kind, such as a scanner's `version:` input in a workflow or a tool a step
 downloads, gets no pull request and is moved by hand. Renovate pins no
 digest by default [23], and Docker warns that a digest pin means you update by hand, and that
 "you're opting out of automated security fixes" ([images.md](images.md) section 4) [27].
 
 The file does nothing until the Renovate app or a Renovate runner is enabled for the repository;
-the Dependency Dashboard issue, which `config:recommended` turns on, shows that it runs [22].
+the Dependency Dashboard issue, which `config:recommended` turns on, shows that it runs [22]. The
+`packageRules` group was not run against Renovate; it follows the shape of `group:nodeJs` [30].
 
 ## 6. Sources
 
@@ -248,3 +272,6 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [25] Renovate — Helper presets: `helpers:pinGitHubActionDigests` — https://docs.renovatebot.com/presets-helpers/#helperspingithubactiondigests
 - [26] Renovate — Custom managers presets: `customManagers:dockerfileVersions` — https://docs.renovatebot.com/presets-customManagers/#custommanagersdockerfileversions
 - [27] Docker — Building best practices — https://docs.docker.com/build/building/best-practices/
+- [28] Astral — uv: Python versions (`docs/concepts/python-versions.md`), commit 4954c25 — https://github.com/astral-sh/uv/blob/4954c25a16b246c1b88aef6c3798a76d675c5cd0/docs/concepts/python-versions.md
+- [29] Renovate — pyenv manager (`lib/modules/manager/pyenv/index.ts`), commit bd8f755 — https://github.com/renovatebot/renovate/blob/bd8f755bc1dd6f5f8ae8ff5ebd661835fcc15aa5/lib/modules/manager/pyenv/index.ts
+- [30] Renovate — Group presets (`lib/config/presets/internal/group.preset.ts`, `nodeJs`), commit bd8f755 — https://github.com/renovatebot/renovate/blob/bd8f755bc1dd6f5f8ae8ff5ebd661835fcc15aa5/lib/config/presets/internal/group.preset.ts
