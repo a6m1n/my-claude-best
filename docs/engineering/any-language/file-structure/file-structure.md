@@ -341,7 +341,10 @@ sit where [python/testing/layout.md](../../python/testing/layout.md) section 1 p
 ├── scripts/            # run by hand; the application never imports them
 ├── .github/workflows/
 ├── .env.example        # every setting, no real value
+├── .devcontainer/      # only when a dev container pays off (any-language/docker/dev-containers.md section 3) or an agent works in one (any-language/docker/agent-containers.md section 9)
+├── .dockerignore       # an allow-list of what the build reads (any-language/docker/images.md section 2)
 ├── Dockerfile
+├── compose.yaml        # the local stack (any-language/docker/compose.md)
 ├── pyproject.toml
 ├── <lockfile>
 ├── CLAUDE.md
@@ -358,8 +361,10 @@ sit where [python/testing/layout.md](../../python/testing/layout.md) section 1 p
   `uv sync` does that, and since uv 0.12 (July 2026) `uv init` lays out an application this way by
   default.
 - **The root holds only the files a tool or a person looks for there**: the build and lock files,
-  the container files, the CI config, the agent instruction file, `README.md`, `.env.example`, and the
-  top folders above. Never a `.env` with real values, never a loose script.
+  the container files (`Dockerfile`, `.dockerignore`, `compose.yaml`, `.devcontainer/`), the update
+  bot's and the scanner's config (`renovate.json`, `.trivyignore`), the CI config, the agent
+  instruction file, `README.md`, `.env.example`, and the top folders above. Never a `.env` with
+  real values, never a loose script.
 - **`scripts/` is for commands a person runs by hand**: seed data, a one-off upload. The application
   never imports from it; code both need lives in the package.
 - **`evals/` holds the case sets and the eval runs of the modules that call a language model**, one

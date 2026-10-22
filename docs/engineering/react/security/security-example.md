@@ -21,7 +21,14 @@ way it is. Names are placeholders. The tree is the one
 
 The code here is quoted from a reference application. The application is not in this folder: the
 example files of the `react/` practices quote its code, and the checks named below were run on it
-on 2026-10-01, 2026-10-02 and 2026-10-16.
+on 2026-10-01, 2026-10-02 and 2026-10-16. Section 1's error handling, the body schema
+`errorBodySchema`, the fields of `ApiError` and `readErrorBody`, is not in the application yet; the
+same checks passed on 2026-10-17 on a copy of the application with section 1's file in place. The
+`.catch(undefined)` on the two fields of `errorBodySchema` came after those checks: on 2026-10-19
+the schema, `ApiError` and `readErrorBody` were type-checked alone under the application's
+TypeScript settings and run with zod 4.6.5 against nine error bodies; the application's own checks
+were not run again. Section 2's parse line, which reads the setting by its full name, is not in the
+application yet and has not been checked.
 
 What was verified, and what was not. The application in sections 1 to 7 of this file was
 type-checked, linted, unit-tested and built with Vite 8.3. Nothing was run in a browser: the
@@ -76,13 +83,47 @@ security.md section 4 asks for one component and one lint suppression.
 `src/core/api-client.ts`
 
 ```ts
-import type { z } from "zod";
+import { z } from "zod";
+
+// The fixed code a failed response's JSON body carries, such as `reauth_required`, and, on a
+// step-up with an identity provider, the `acr_values` of a resource server's challenge
+// (security.md section 6).
+const errorBodySchema = z.object({
+  // Each field is caught on its own, so a field of the wrong type is dropped alone and a
+  // malformed `acrValues` never hides a valid code (security.md section 7).
+  code: z.string().optional().catch(undefined),
+  // A plain string, passed on as it came: the BFF accepts only the values on the list the team
+  // wrote down (backend-for-frontend.md section 2). Nullish, since a BFF may write an absent value
+  // as `null`, as the logout answer writes `logoutUrl` (backend-for-frontend.md section 2).
+  // Only the step-up with an identity provider reads it (security.md section 6); a team that skips
+  // that step-up leaves it out here, in `ApiError`, in `readErrorBody` and in `request`.
+  acrValues: z.string().nullish().catch(undefined),
+});
+
+type ErrorBody = z.infer<typeof errorBodySchema>;
 
 // Named, so an error report can tell a failed request from a bug in the application.
 export class ApiError extends Error {
-  constructor(message: string) {
+  readonly status: number;
+  readonly code?: string;
+  readonly acrValues?: string;
+
+  constructor(message: string, status: number, code?: string, acrValues?: string) {
     super(message);
     this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.acrValues = acrValues;
+  }
+}
+
+async function readErrorBody(response: Response): Promise<ErrorBody | undefined> {
+  try {
+    return errorBodySchema.parse(await response.json());
+  } catch {
+    // A body that is not a JSON object, such as a gateway's HTML page, gives no code and no
+    // `acrValues`, so a failed response never throws a second error (security.md section 7).
+    return undefined;
   }
 }
 
@@ -113,7 +154,8 @@ export class ApiClient {
         Accept: "application/json",
         "Content-Type": "application/json",
         // A custom header forces a CORS preflight, so another site cannot send this request from
-        // a plain form. The server rejects a request without it (security.md section 7).
+        // a plain form. The server rejects a request without it (backend-for-frontend.md
+        // section 3, "CSRF").
         "X-Requested-With": "billing-app",
       },
       body: request.body === undefined ? undefined : JSON.stringify(request.body),
@@ -121,7 +163,13 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new ApiError(`${path} answered ${String(response.status)}`);
+      const errorBody = await readErrorBody(response);
+      throw new ApiError(
+        `${path} answered ${String(response.status)}`,
+        response.status,
+        errorBody?.code,
+        errorBody?.acrValues ?? undefined,
+      );
     }
 
     // Parsed, never cast: the returned type is checked against the data that arrived
@@ -131,7 +179,8 @@ export class ApiClient {
 
   // Sends a small report about this visit, such as a web vital or an error, to the API's report
   // intake. No cookie and no custom header: the intake takes anonymous reports, so a forged one
-  // gains nothing, and no answer is read (security.md section 7).
+  // gains nothing, and no answer is read (backend-for-frontend.md section 3, "Fetch Metadata and
+  // exemptions").
   report(path: string, report: Record<string, unknown>): void {
     void fetch(new URL(path, this.#baseUrl), {
       method: "POST",
@@ -139,7 +188,7 @@ export class ApiClient {
       // The request outlives the page, so a report sent while the tab closes still arrives.
       keepalive: true,
       // No cookie: the intake takes anonymous reports, so a forged one gains nothing
-      // (security.md section 7).
+      // (backend-for-frontend.md section 3, "Fetch Metadata and exemptions").
       credentials: "omit",
     }).catch(() => {
       // A report that fails is dropped: an error raised here would itself need a report.
@@ -166,19 +215,30 @@ Why it is good:
   (section 5 of this file). `src/main.tsx` builds one `ApiClient` with the base URL and hands it
   on, so the class reads no setting
   ([readability.md](../../any-language/readability/readability.md) section 6).
-- **The comments sit at the four lines a reader would likely delete**, `credentials` and the
-  custom header in `request`, `keepalive` and `credentials: "omit"` in `report`, and say why
-  ([readability.md](../../any-language/readability/readability.md) section 4). The failed
+- **The error carries the response's status and, when the body parses as JSON, its fixed code and
+  any `acrValues`** (security.md section 7), so the page's rules for `cookie_conflict`,
+  `reauth_required` and `reauth_failed` (security.md section 6) can read the code, and the step-up
+  with an identity provider can pass the `acrValues` on to the BFF's login endpoint. The body is
+  read once, from the response the client already has; a `null` `acrValues` counts as none; a field
+  of the wrong type is dropped on its own, so a malformed `acrValues` never hides a valid code; and
+  a body that is not a JSON object gives no code and no `acrValues` and throws no second error. The
+  message still names the path and the status.
+- **The comments sit at the seven lines a reader would likely delete or change**, `credentials`
+  and the custom header in `request`, `keepalive` and `credentials: "omit"` in `report`, the
+  `catch` in `readErrorBody`, the `.catch(undefined)` on the body schema's two fields, and the
+  plain, nullish string of `acrValues` in the body schema, and
+  say why ([readability.md](../../any-language/readability/readability.md) section 4). The failed
   response ends the method in a guard
   ([readability.md](../../any-language/readability/readability.md) section 3), and blank lines
   split the request, the check and the parsing
   ([readability.md](../../any-language/readability/readability.md) section 5).
 - **A departure from [file-structure.md](../../any-language/file-structure/file-structure.md)
-  sections 3 and 4:** `ApiError` and the `ApiRequest` type sit in the same file as the class,
-  though a type that `core/` names and a class are different kinds of file. They exist only for
-  this one client: `ApiError` is what its request throws, and `ApiRequest` is the shape of
-  `request`'s argument. The cost: a second client class has no shared place for them, so they
-  move to their own `core/` files first.
+  sections 3 and 4:** `ApiError`, the schema of its body, the `ErrorBody` type and the `ApiRequest`
+  type sit in the same file as the class, though a type that `core/` names and a class are
+  different kinds of file. They exist only for this one client: `ApiError` is what its request
+  throws, the schema and `ErrorBody` read the code and the `acrValues` that error carries, and
+  `ApiRequest` is the shape of `request`'s argument. The cost: a second client class has no shared
+  place for them, so they move to their own `core/` files first.
 
 ## 2. The public settings
 
@@ -187,7 +247,8 @@ Why it is good:
 ```ts
 import { z } from "zod";
 
-// Vite inlines every VITE_ value into the bundle, so this schema holds public settings only.
+// Vite inlines each VITE_ value this file reads into the bundle, so this schema holds public
+// settings only.
 // A secret never goes here: anyone can read it in the browser (security.md section 9).
 const publicEnvSchema = z.object({
   // An origin with no path: request paths start at the root, and `new URL("/invoices", base)`
@@ -197,7 +258,8 @@ const publicEnvSchema = z.object({
   }),
 });
 
-const publicEnv = publicEnvSchema.parse(import.meta.env);
+// Read by name: a read of the whole import.meta.env ships every VITE_ variable (security.md section 9).
+const publicEnv = publicEnvSchema.parse({ VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL });
 
 export const config = {
   apiBaseUrl: publicEnv.VITE_API_BASE_URL,
@@ -217,7 +279,9 @@ dist
 Why it is good:
 
 - **The schema lists public names only, and its comment says why at the line where a reader
-  would add a key** (security.md section 9). A secret has no place to land, and the one place
+  would add a key** (security.md section 9). Each setting is read by its full name, so the bundle
+  gets only the values the schema lists, where a read of the whole `import.meta.env` would ship
+  every `VITE_` variable the build loaded; the comment at the parse line says so. The one place
   that reads `import.meta.env` is this file. Only `src/main.tsx` reads these settings and passes
   the values on, as [architecture.md](../architecture/architecture.md) sections 3 and 8 and
   [readability.md](../../any-language/readability/readability.md) section 6 ask; an import rule
@@ -230,10 +294,10 @@ Why it is good:
   (`VITE_API_BASE_URL=https://api.example.com` in the reference application;
   [file-structure.md](../../any-language/file-structure/file-structure.md) section 9).
 - **No source maps are published.** The Vite config sets no `build.sourcemap`, and the default is
-  off (read 2026-10-01); the build output in the verification lists no `.map` file.
-- **What it does not stop:** someone adding a secret to the schema with a `VITE_` prefix. No tool
-  reports it; the question in security.md section 9, asked before a variable is added, is the
-  guard.
+  off (read 2026-10-17); the build output in the verification lists no `.map` file.
+- **What it does not stop:** someone adding a secret with a `VITE_` prefix to the schema and its
+  named read. No tool reports it; the question in security.md section 9, asked before a variable is
+  added, is the guard.
 
 ## 3. The link
 
@@ -395,7 +459,8 @@ section 1 of this file quotes the whole file.
 
   // Sends a small report about this visit, such as a web vital or an error, to the API's report
   // intake. No cookie and no custom header: the intake takes anonymous reports, so a forged one
-  // gains nothing, and no answer is read (security.md section 7).
+  // gains nothing, and no answer is read (backend-for-frontend.md section 3, "Fetch Metadata and
+  // exemptions").
   report(path: string, report: Record<string, unknown>): void {
     void fetch(new URL(path, this.#baseUrl), {
       method: "POST",
@@ -403,7 +468,7 @@ section 1 of this file quotes the whole file.
       // The request outlives the page, so a report sent while the tab closes still arrives.
       keepalive: true,
       // No cookie: the intake takes anonymous reports, so a forged one gains nothing
-      // (security.md section 7).
+      // (backend-for-frontend.md section 3, "Fetch Metadata and exemptions").
       credentials: "omit",
     }).catch(() => {
       // A report that fails is dropped: an error raised here would itself need a report.
@@ -476,9 +541,13 @@ Why it is good:
   # No 'unsafe-inline' in script-src: the build puts no script into the page itself, so an
   # injected one stays blocked (security.md section 5).
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.example.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
-  # Trusted Types in report-only mode: with no report endpoint, a violation shows only in the
-  # browser console of whoever visits a deploy that serves this file; a live application adds a
-  # report endpoint and enforces once the reports stop (security.md section 4).
+  # Trusted Types in report-only mode (security.md section 4). A departure from two rules of
+  # security.md section 5, the named report receiver and the written end date: the reference
+  # application has no report receiver and no tracker. The cost: a violation shows only in the
+  # browser console of whoever visits a deploy that serves this file. A live application names a
+  # receiver and adds it to this header with `report-to`, writes the end date in the decision
+  # log, adds a task for that date with an owner to the team's tracker, fixes what the reports
+  # show, and enforces by that date (security.md sections 4 and 5).
   Content-Security-Policy-Report-Only: require-trusted-types-for 'script'
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   X-Content-Type-Options: nosniff
@@ -537,7 +606,9 @@ The two security comments in the file give their reason at the line:
   in the browser console of whoever visits a deploy that serves this file, preview or production,
   because the header names no `report-to` endpoint; the team sees its own visits, on its preview
   deploys. A live application adds a report endpoint, the way the main policy's report-only phase
-  below does, and enforces when the reports stop.
+  below does, writes the end date into the decision log, adds a task for that date with an owner
+  to the team's tracker, fixes what the reports show, and enforces by that date (security.md
+  sections 4 and 5).
   DOMPurify returns a `TrustedHTML` where the browser has Trusted Types, so the one sink of
   section 4 of this file passes the report-only check (security.md section 4, "Make the policy
   sanitise"); this was type-checked and not run in a browser.
@@ -548,17 +619,22 @@ section 5 owns, and the comment on `/index.html` gives its reason at the line.
 What it leaves out, on purpose or for a later step:
 
 - **The report-only phase.** A live application sends this policy as
-  `Content-Security-Policy-Report-Only`, with a report endpoint, before it enforces it. The example
-  shows the main policy in its enforced form; only the Trusted Types header is report-only.
+  `Content-Security-Policy-Report-Only`, with a report endpoint, before it enforces it, and with
+  an end date written into the decision log and a task for that date, with an owner, in the
+  team's tracker (security.md section 5). The example shows the main policy in its enforced form;
+  only the Trusted Types header is report-only.
 - **Enforced Trusted Types.** They run in report-only mode now. A live application adds a report
-  endpoint and enforces once its reports stop; until then a violation shows only in the console
-  (security.md section 4).
+  endpoint, writes the end date into the decision log, adds a task for that date with an owner to
+  the team's tracker, fixes what the reports show, and enforces by that date (security.md sections
+  4 and 5); until then a violation shows only in the console (security.md section 4).
 - **`preload` in `Strict-Transport-Security`,** and the `X-Frame-Options`, CORP, COEP and
   `X-XSS-Protection` headers; the table in security.md section 5 says what each would add.
 
 Limits: nothing was run in a browser, so no browser has enforced this policy against the running
-page. After the first deploy, run it through CSP Evaluator and the site through MDN's HTTP
-Observatory (security.md section 14). Vercel reads headers from `vercel.json`, not from this file.
+page. After the first deploy, run it through CSP Evaluator, which with its default option should
+report only the two findings that security.md section 14 names, the `'self'` one and the Trusted
+Types hint, and the site through MDN's HTTP Observatory (security.md section 14). Vercel reads
+headers from `vercel.json`, not from this file.
 
 ## 7. The lint rules
 
@@ -612,21 +688,14 @@ and `fsevents` (optional, macOS), and the strict settings below fail the install
 nobody reviewed. So the two are denied, not allowed: `false` under `allowBuilds` for pnpm, and
 for npm 12 a denial in `package.json`'s `allowScripts`, which `npm deny-scripts` writes. npm's
 page gives no value format for that entry, so it is not shown here (pnpm's build settings page
-and npm's v12 config page, read 2026-10-03).
+and npm's v12 config page, read 2026-10-17).
 
 The files below make the same controls part of the repository, one for each package manager:
 `.npmrc` for npm 12, `.npmrc` for npm 11.10.0 or later, and `pnpm-workspace.yaml` for pnpm 11; a
 repository takes the one it installs with, so every install obeys them (security.md section 10).
 They are written from the owners' docs (npm's config page and changelog, CISA's axios alert,
-pnpm's settings and supply-chain pages, read 2026-10-01) and were not run: the machine had npm
+pnpm's settings and supply-chain pages, read 2026-10-17) and were not run: the machine had npm
 10.8.
-
-`min-release-age` exists since npm 11.10.0 (2026-02-11) and `min-release-age-exclude` since
-11.17.0; npm before 11.10.0 has neither. There `--before=<date>` on the install command installs
-only versions that were available on or before that date (npm's config page, read 2026-10-02). It
-takes a fixed date that the person running the install has to choose each time, where
-`min-release-age` is a rolling window set once in the repository. The reference application was
-installed with the flag (npm 10.8, `--before=2026-09-24`).
 
 `.npmrc`, for npm 12:
 
@@ -637,12 +706,15 @@ strict-allow-scripts=true
 # The next two are npm 12's defaults, written out so the policy shows in review.
 # Refuses git dependencies: a cooldown cannot see a commit (security.md section 10).
 allow-git=none
-# Refuses tarball URLs, which skip the registry and its checks (security.md section 10).
+# Refuses tarball URLs, which skip the registry and its checks. Where this line or allow-git
+# stops a dependency of a dependency, give it a registry version in package.json's overrides
+# (security.md section 10).
 allow-remote=none
 # A version is installed only once it is 7 days old (CISA's advice after the axios compromise).
 # Emergency path, for a critical advisory only, approved by a second person in the pull request:
-# list the patched package in min-release-age-exclude; remove it when the version is 7 days old
-# (security.md section 10).
+# list the patched package in min-release-age-exclude, which matches names only, and add a
+# tracker task, dated for when the version is 7 days old and owned by the change's author, to
+# remove it (security.md section 10).
 min-release-age=7
 ```
 
@@ -652,16 +724,22 @@ sources, so the file turns them off. npm 11.10 to 11.16 has the cooldown but no 
 exemption, so the emergency path works from 11.17.0 on.
 
 ```ini
-# npm 11 runs dependency install scripts; this stops them (security.md section 10).
+# npm 11 runs dependency install scripts; this stops them (security.md section 10). It also
+# stops the repository's own `prepare` and every pre- and post-script, so the team installs its
+# git hooks with a setup command: name it in the repository's README as the first step after
+# cloning. The CI secret scan of security.md section 14 does not depend on it.
 ignore-scripts=true
 # Refuses git dependencies: a cooldown cannot see a commit (security.md section 10).
 allow-git=none
-# Refuses tarball URLs, which skip the registry and its checks (security.md section 10).
+# Refuses tarball URLs, which skip the registry and its checks. Where this line or allow-git
+# stops a dependency of a dependency, give it a registry version in package.json's overrides
+# (security.md section 10).
 allow-remote=none
 # A version is installed only once it is 7 days old (CISA's advice after the axios compromise).
 # Emergency path, for a critical advisory only, approved by a second person in the pull request:
-# list the patched package in min-release-age-exclude; remove it when the version is 7 days old
-# (security.md section 10).
+# list the patched package in min-release-age-exclude, which matches names only, and add a
+# tracker task, dated for when the version is 7 days old and owned by the change's author, to
+# remove it (security.md section 10).
 min-release-age=7
 ```
 
@@ -674,15 +752,19 @@ warning and ignores it, so on an older npm 11 the `allow-remote` line has no eff
 ```yaml
 # A version is installed only once it is 7 days old (CISA's advice after the axios compromise).
 # Emergency path, for a critical advisory only, approved by a second person in the pull request:
-# add the patched package to minimumReleaseAgeExclude; remove it when the version is 7 days old
-# (security.md section 10).
+# add the patched version to minimumReleaseAgeExclude as name@x.y.z, never the bare name, which
+# exempts every version; remove it when the version is 7 days old (security.md section 10).
 minimumReleaseAge: 10080 # minutes
 # The next two are pnpm defaults, written out so the policy shows in review.
 # An unreviewed dependency build script fails the install (security.md section 10).
 strictDepBuilds: true
-# Only direct dependencies may come from git or a tarball URL (security.md section 10).
+# Only direct dependencies may come from git or a tarball URL; a dependency of a dependency it
+# stops gets a registry version through overrides in this file (security.md section 10).
 blockExoticSubdeps: true
-# Fails when a version has weaker provenance than earlier ones (security.md section 10).
+# Fails when a version has weaker provenance than earlier ones, and age never lifts it. For a
+# version that fails it, a patched one included, a second person in the pull request checks why
+# its provenance dropped and adds it to trustPolicyExclude as name@x.y.z; the change that moves
+# the lockfile off that version removes the entry (security.md section 10).
 trustPolicy: no-downgrade
 # Denied by name, so strictDepBuilds does not fail the install on them; the checks passed
 # with every install script ignored (pnpm's build settings page; security.md section 10 for
@@ -696,8 +778,9 @@ Why it is good:
 
 - **The controls live in the repository,** so a person, CI and an agent install under the same
   rules.
-- **The emergency path is written next to the cooldown,** with who approves it and when the entry
-  comes out; the React2Shell patch was blocked by a one-day cooldown that had no such line.
+- **The emergency path is written next to the cooldown and the trust policy,** with who approves
+  it and when the entry comes out; the React2Shell patch was blocked by a one-day cooldown that had
+  no such line.
 - **Each line says what it does,** so nobody deletes a default as noise. The defaults of npm 12
   (`allow-git`, `allow-remote`) and of pnpm 11 (`strictDepBuilds`, `blockExoticSubdeps`) are
   written out too, so the policy shows in review.
@@ -708,8 +791,16 @@ Why it is good:
 ## 9. What the example leaves out
 
 - **The BFF:** it sets the `__Host-Http-` session cookie, rejects a request without the custom
-  header, checks CSRF and decides access. That is server code; security.md sections 6 and 7 list
-  what it must do.
+  header, checks CSRF and decides access. That is server code;
+  [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
+  sections 2 and 3 list what it must do, the exempt endpoints included.
+- **The reaction to a `401`:** the application has no sign-in screen, so the sign-out path
+  (security.md section 6, "Timeouts and refresh") is not shown, as
+  [architecture.md](../architecture/architecture.md) section 10 says for sign-out.
+- **The re-authentication path:** the page's reaction to a `403` whose body carries
+  `reauth_required` is not shown; security.md section 6, "Re-authentication", gives it. The
+  `ApiError` of section 1 of this file carries the status, the code and the `acrValues` that this
+  reaction reads.
 - **The CI workflow:** pinned actions, a read-only token, no fork code in `pull_request_target`
   (security.md section 10).
 - **Server-side React:** the application renders in the browser only, so section 8 of security.md

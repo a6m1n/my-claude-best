@@ -1,4 +1,4 @@
-# my-claude-best
+# <a href="claude-config/theme/README.md"><img src="claude-config/theme/img/clawd-icon.svg" height="48" align="absmiddle" alt="Clawd"></a> my-claude-best
 
 Engineering practices that people and AI coding agents both follow, plus a status line for Claude Code.
 
@@ -44,35 +44,38 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 - [any-language/prompt-engineering](docs/engineering/any-language/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
 - [python/testing](docs/engineering/python/testing/) — which code earns a test, and how a pytest suite is laid out and written.
 - [python/evals](docs/engineering/python/evals/) — how to check what a language model does in an application, with real calls on real cases.
+- [any-language/docker](docs/engineering/any-language/docker/) — one application's image from the build context to the registry, running it with Compose, and a container an AI coding agent works in.
 - [react/architecture](docs/engineering/react/architecture/) — the format of a React application, its tree, where state and server data live, and the library for each job.
 - [react/components](docs/engineering/react/components/) — how one component and one hook are written, and the common mistakes.
 - [react/design](docs/engineering/react/design/) — how a screen looks and behaves, accessibility, and designing with Claude Code.
 - [react/security](docs/engineering/react/security/) — what the browser side of an application must and must not do.
+- [any-language/backend-for-frontend](docs/engineering/any-language/backend-for-frontend/) — the server that holds a browser application's session: its cookies, the session's life from login to logout, CSRF and CORS.
 - [react/performance](docs/engineering/react/performance/) — what fast means, how to measure it, and what to fix first, with SEO in brief.
 
 More parts are about Claude Code itself:
 
 - [The status line](claude-config/statusline/) — context, usage limits, the prompt cache and each agent's progress, under the Claude Code prompt.
 - [Local project settings](claude-config/settings-local/) — a `settings.local.json` with the commands that run without a prompt, a hook that stops Claude from reading `.env` files, and a higher web search cap, each field explained.
+- [Eos and Nyx](claude-config/theme/README.md) — a light and a dark custom theme for Claude Code, and a hook that picks the one matching the macOS light or dark mode at each session start.
 - [The CLAUDE.md guide](docs/claude-code/claude-md.md) — what belongs in a `CLAUDE.md` and what does not.
 - [Two skills for a copied practice](skills/README.md) — copy a practice in, record why your copy differs, and merge new commits from this repository without losing your changes.
 - [The meta-thinking skill](skills/meta-thinking/) — before a large task starts, an independent agent asks you only what the code cannot answer and proposes one route, step by step.
 - [The pr skill](skills/pr/README.md) — writes the pull request for the current branch from one fixed template, and opens or updates it after your yes.
-- [The create-jira-ticket skill](skills/create-jira-ticket/) — turns short notes into one Jira ticket, shows every field before it writes, and creates the issue after your yes.
+- [The create-jira-ticket skill](skills/create-jira-ticket/) — turns short notes into a Jira ticket, or an epic with its stories, shows every field before it writes, and creates the issues after your yes.
 - [The commit skill](skills/commit/README.md) — drafts a commit message for your changes, shows it to you, and commits only after your yes.
 
 What it does not do:
 
 - It is not a standard. The practices are one author's choices: change or drop any rule in your copy.
 - It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself. The two sync skills in `skills/` bring in new commits only when you run them.
-- It has no examples in languages other than Python and TypeScript.
+- It has no examples in languages other than Python and TypeScript, apart from the configuration files they run with: YAML, TOML, Dockerfiles and the like.
 - It is not an official Anthropic project, and Anthropic does not endorse it.
 
 ## Why it is useful
 
 - The agent reads a practice only when the work needs it. Your `CLAUDE.md` holds one trigger line per practice, not the rules themselves, so it stays short.
 - Each rule is one act at one moment, such as "before you stage" or "when you add a log call", and a new or changed rule gives its reason. An agent can follow it, a reviewer can check that it did, and a reader can tell when it does not apply.
-- Every rule comes from public practice, never from what one codebase happens to do. Most practices end with the sources behind their rules.
+- Every rule comes from public practice, never from what one codebase happens to do. Most practices end with the sources behind their rules. A new practice starts from web research, marks each sentence that rests on a source with a numbered note, and says on the source's line whether it is research, a case or an opinion.
 - A good example follows every practice that governs what it shows, not only the one it illustrates. You, or your agent, will copy the example and not the rules around it, so each new practice reaches every example written after it. A line you might otherwise change or delete carries its reason in a comment, which comes along when you copy the code. A bad example names its problem and sits next to the fixed version.
 - You can change a copied practice for your project and still take later updates from this one. With Claude Code, two skills in `skills/` record why your copy differs and keep those changes when they merge new commits.
 - It works with any agent that reads `CLAUDE.md` or `AGENTS.md`, not only Claude Code.
@@ -163,7 +166,8 @@ my-claude-best/
 │   └── claude-code/       # guides on instructing Claude Code
 ├── claude-config/
 │   ├── statusline/        # the status line: the script, its install guide, its images
-│   └── settings-local/    # a project settings.local.json and its .env hook, field by field
+│   ├── settings-local/    # a project settings.local.json and its .env hook, field by field
+│   └── theme/             # Eos and Nyx: two themes, the copy Claude Code shows, the hook script, two pictures
 ├── skills/                # skills to read and copy into a .claude/skills/ folder
 ├── CLAUDE.local.md        # an example practices section for a project CLAUDE.md
 ├── CONTRIBUTING.md
@@ -195,7 +199,7 @@ The text and the code have different licenses. GitHub's sidebar lists both, but 
 | Part | License | File |
 | --- | --- | --- |
 | Text, documentation and images | Creative Commons Attribution 4.0 International (`CC-BY-4.0`) | [LICENSE](LICENSE) |
-| Code: the scripts in `claude-config/` and every fenced code block in the Markdown files | MIT License (`MIT`) | [LICENSE-CODE](LICENSE-CODE) |
+| Code: the scripts and the config files (`.json`) in `claude-config/` and every fenced code block in the Markdown files | MIT License (`MIT`) | [LICENSE-CODE](LICENSE-CODE) |
 
 Both are © 2026 The my-claude-best authors: the author and every collaborator whose commit is in the history.
 

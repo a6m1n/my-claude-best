@@ -92,6 +92,22 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   request's Verification holds the eval's result next to its baseline, every rate the eval reports
   is divided by the cases it asked for, and every judge that gates has its TPR and TNR on held-back
   labels.
+- Before you write or change a `Dockerfile`, a `.dockerignore`, a `compose.yaml`, the CI job that
+  builds or pushes an image, a dev container a person works in, or a container, a dev container or
+  a sandbox a coding agent works in, read `docs/engineering/any-language/docker/README.md` and the
+  file it routes to for that work, and
+  `docs/engineering/any-language/docker/dockerfile-example.md` when you write a service's first
+  Dockerfile, `docs/engineering/any-language/docker/compose-example.md` when you write a
+  `compose.yaml`, `docs/engineering/any-language/docker/ci-example.md` when you write or change the
+  job that builds and pushes an image,
+  `docs/engineering/any-language/docker/agent-container-example.md` when you set up a container for
+  an agent. The check: `.dockerignore` opens with `*` (`images.md` section 2), every `FROM` and
+  `COPY --from=<image>` the change adds is pinned by digest (`images.md` section 4), no credential
+  the build needs goes in through `ARG` or `ENV` (`images.md` section 5), the image sets a non-root
+  `USER` (`images.md` section 6), every action in the job that pushes is pinned to a full commit SHA
+  (`images.md` section 10), no secret value is written into `compose.yaml` (`compose.md`
+  section 4), and an agent container that runs without approvals mounts no host credential and
+  reaches the network only through the proxy (`agent-containers.md` sections 3 to 5).
 - Before you create a React application, add a module, a route, a query, a mutation or a
   dependency to one, or change its TypeScript or lint configuration, read
   `docs/engineering/react/architecture/architecture.md`, and
@@ -116,15 +132,28 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   of the manual accessibility pass were run (`accessibility.md` section 11), and someone other than
   the author of the screen answered its review checklist (`designing-with-claude-code.md` section
   6).
-- Before you render a value from outside as HTML or as a URL in a React application, spread an
-  object from outside as props, keep or send a credential in one, or add an environment variable, a
-  dependency, a third-party script, a response header or a CI step to one, or change the dev
-  server's settings, read `docs/engineering/react/security/security.md`, and
+- Before you put data from outside a React application on its page, spread an object from outside as
+  props, handle a session or a token in one, keep or send a credential, add an environment variable,
+  a dependency, a third-party script, a response header or a CI step to one, change the dev server's
+  settings, set up its query client, add polling, build the shell its screens share, write or
+  change a Server Function, a server-rendered route or middleware in one, or register a service
+  worker, read `docs/engineering/react/security/security.md`, and
   `docs/engineering/react/security/security-example.md` when you set these up in an application. The
   check: `grep -rln dangerouslySetInnerHTML src/` prints one file, the one that sanitises
   (`security.md` section 4), `grep -rnE 'localStorage|sessionStorage' src/` prints no line that
   holds a credential (`security.md` section 6), and no secret sits in a variable the bundler exposes
   (`security.md` section 9).
+- Before you build or change the server that holds a browser application's session (a Backend for
+  Frontend): its session or login cookie, a key that signs or encrypts them, how a session starts,
+  is refreshed, times out or ends, a re-authentication, its CSRF or CORS checks, a route, a
+  WebSocket or a file download on it, or the library or framework it is built on, read
+  `docs/engineering/any-language/backend-for-frontend/backend-for-frontend.md`. The check: every
+  session or login cookie the change sets is named with the `__Host-Http-` prefix and written with
+  `Secure`, `HttpOnly`, `Path=/` and a `SameSite` value, and no `Domain`
+  (`backend-for-frontend.md` section 2), no route it adds changes the user's data or session on a
+  `GET` other than the login start or the login callback, and every API route it adds rejects a
+  request without the custom header unless the exemption table lists it
+  (`backend-for-frontend.md` section 3).
 - Before you add an image, a font, a route, a data request or a dependency to the first load of a
   screen in a React application, or act on a report that such an application is slow, read
   `docs/engineering/react/performance/performance.md`, and
@@ -154,8 +183,9 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   meeting it plans names the decision it makes (`meetings.md` section 1), and every release it
   plans has one go or no-go decider (`release.md` section 3) and a rollback plan with a trigger,
   one decider and a time that fits the SLA (`rollback-plan.md` section 2).
-- Before you create or edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md`
-  first. The check: the closing summary names it.
+- Before you start the research for a new practice or for a new rules file in one, or create or
+  edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md` first. The check:
+  the closing summary names it.
 - When you write or change an example under `docs/engineering/` (as `docs/engineering/CLAUDE.md`
   defines one), read the rules on examples in `docs/engineering/CLAUDE.md` and work by them. When
   you brief a subagent to write or change one, quote that file's two bullets on GOOD examples and
