@@ -6,7 +6,12 @@ rules, the startup file, the routes and one module's reads and writes. Each part
 follows and why. Names are invented. The code was type-checked, linted, unit-tested and built;
 nothing was run in a browser. The code is quoted from a reference application that is not in this
 folder: the example files of the `react/` practices quote its code, and the checks named were run
-on it on 2026-10-01, 2026-10-02, 2026-10-03 and 2026-10-16.
+on it on 2026-10-01, 2026-10-02, 2026-10-03 and 2026-10-16. The `retry` option of
+`src/core/query-client.ts` is not in the application yet: on 2026-10-22 it was type-checked alone
+under the application's TypeScript settings and run on six failing queries, and no other check was
+run on it. The error guard of `ApiClient.request` and the read by name in `src/core/config.ts` are
+[security-example.md](../security/security-example.md)'s, sections 1 and 2, and its note says how
+far they were checked.
 
 **Navigation**
 
@@ -34,8 +39,8 @@ vitals is in [performance-example.md](../performance/performance-example.md).
 │   ├── route-tree.gen.ts                # written by the router plugin; never edited, never linted
 │   ├── core/                            # code no module owns
 │   │   ├── api-client.ts                # the ApiClient class: the one way to reach the API; parses every answer
-│   │   ├── config.ts                    # reads import.meta.env once, through a schema; only main.tsx imports it
-│   │   ├── query-client.ts              # the query cache and its one staleTime
+│   │   ├── config.ts                    # reads each VITE_ setting by its full name, through a schema; only main.tsx imports it
+│   │   ├── query-client.ts              # the query cache: its one staleTime and its retry rule
 │   │   ├── invoice.keys.ts              # the key root of every invoice read, for both modules
 │   │   ├── invoice.schema.ts            # the invoice both modules parse
 │   │   ├── money.format.ts              # cents as currency text
@@ -785,13 +790,37 @@ with the root, so an invalidation of `all` reaches every invoice by prefix
 ```ts
 import { QueryClient } from "@tanstack/react-query";
 
+import { ApiError } from "@/core/api-client.ts";
+
 // A screen opened again within a minute reads the cache instead of asking the server
 // (architecture.md section 8).
 const STALE_TIME_MS = 60_000;
+// Three retries for every other failure, TanStack Query's own default for a query a component
+// reads in the browser; a loader's `query()` takes this rule too (architecture.md section 8).
+const MAX_RETRIES = 3;
+
+// A 401, any 403 and a 400 with a fixed code tell the page what to do; a retry would only send
+// the guarded request again (security.md section 6).
+function asksThePageToAct(error: Error): boolean {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+
+  if (error.status === 401 || error.status === 403) {
+    return true;
+  }
+
+  return error.status === 400 && error.code !== undefined;
+}
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
-    defaultOptions: { queries: { staleTime: STALE_TIME_MS } },
+    defaultOptions: {
+      queries: {
+        staleTime: STALE_TIME_MS,
+        retry: (failureCount, error) => !asksThePageToAct(error) && failureCount < MAX_RETRIES,
+      },
+    },
   });
 }
 ```
@@ -799,7 +828,10 @@ export function createQueryClient(): QueryClient {
 Why it is good: one `staleTime` for the whole cache, set where the cache is made, with the reason
 for the value next to it ([architecture.md](architecture.md) section 8;
 [readability.md](../../any-language/readability/readability.md) section 4). The unit is in the
-name. `main.tsx` calls the factory once.
+name. `main.tsx` calls the factory once. A `401`, any `403` and a `400` with a fixed code are never
+retried, since each tells the page what to do; every other failure gets three retries, TanStack
+Query's default for a query a component reads, and a loader's `query()` takes the same rule
+([security.md](../security/security.md) section 6; [architecture.md](architecture.md) section 8).
 
 `src/billing/pay-invoice/invoice.queries.ts`:
 
@@ -954,9 +986,10 @@ Why it is good:
 
 Every read and write above goes through the one `ApiClient` in `src/core/api-client.ts`. The class
 takes the base URL in its constructor, so it reads no setting. Its `request` method parses the
-answer; the type import, the `ApiError` class, the type definitions, the options of the request,
-which carry the session and the headers, and the `report` method, which sends a report with
-neither, are cut, and those are [security-example.md](../security/security-example.md)'s:
+answer; the import, the error body's schema and type, the `ApiError` class, `readErrorBody`, the
+`ApiRequest` type, the options of the request, which carry the session and the headers, and the
+`report` method, which sends a report with neither, are cut, and those are
+[security-example.md](../security/security-example.md)'s:
 
 ```ts
 ...
@@ -977,7 +1010,13 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new ApiError(`${path} answered ${String(response.status)}`);
+      const errorBody = await readErrorBody(response);
+      throw new ApiError(
+        `${path} answered ${String(response.status)}`,
+        response.status,
+        errorBody?.code,
+        errorBody?.acrValues ?? undefined,
+      );
     }
 
     // Parsed, never cast: the returned type is checked against the data that arrived

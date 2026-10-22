@@ -15,9 +15,11 @@ application, with the metric it serves and why it is good. Names are placeholder
 - [The cache lines](#the-cache-lines)
 - [Not in the reference application](#not-in-the-reference-application)
 
-The reference application is not in this folder. The example files of the `react/` practices
-quote its code, and the checks named here were run on it on 2026-10-01, 2026-10-02, 2026-10-03
-and 2026-10-16.
+The reference application is not in this folder. The example files of the `react/` practices quote
+its code, and the checks named here were run on it on 2026-10-01, 2026-10-02, 2026-10-03 and
+2026-10-16. The `retry` option of `src/core/query-client.ts` is not in the application yet: on
+2026-10-22 it was type-checked alone under the application's TypeScript settings and run on six
+failing queries; no other check was run on it.
 
 What was verified, and what was not: the code was type-checked, linted, unit-tested and built.
 Nothing was run in a browser, so no metric of this application was measured. The example shows
@@ -29,7 +31,7 @@ The one number the build gives is the size of each chunk, shown below.
 | Field metrics to the application's own backend | `src/core/report-web-vitals.ts` | all three vitals, measured on real visits |
 | Startup: the API client in the router context, and preload on intent | `src/main.tsx` | LCP of each route change |
 | Loaders that start the request | `src/routes/invoices.index.tsx`, `src/routes/invoices.$invoiceId.pay.tsx` | LCP of the first screen and of each route change |
-| A global `staleTime` | `src/core/query-client.ts` | LCP of a screen opened again; fewer requests |
+| A global `staleTime`; the same file holds the retry rule | `src/core/query-client.ts` | LCP of a screen opened again; fewer requests |
 | Route-level splitting and the compiler | `vite.config.ts` | LCP of the first screen through a smaller entry chunk; INP through fewer re-renders |
 | Cache lines | `public/_headers` | LCP of a repeat visit; a deploy that reaches users at once |
 
@@ -241,13 +243,37 @@ Why it is good:
 ```ts
 import { QueryClient } from "@tanstack/react-query";
 
+import { ApiError } from "@/core/api-client.ts";
+
 // A screen opened again within a minute reads the cache instead of asking the server
 // (architecture.md section 8).
 const STALE_TIME_MS = 60_000;
+// Three retries for every other failure, TanStack Query's own default for a query a component
+// reads in the browser; a loader's `query()` takes this rule too (architecture.md section 8).
+const MAX_RETRIES = 3;
+
+// A 401, any 403 and a 400 with a fixed code tell the page what to do; a retry would only send
+// the guarded request again (security.md section 6).
+function asksThePageToAct(error: Error): boolean {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+
+  if (error.status === 401 || error.status === 403) {
+    return true;
+  }
+
+  return error.status === 400 && error.code !== undefined;
+}
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
-    defaultOptions: { queries: { staleTime: STALE_TIME_MS } },
+    defaultOptions: {
+      queries: {
+        staleTime: STALE_TIME_MS,
+        retry: (failureCount, error) => !asksThePageToAct(error) && failureCount < MAX_RETRIES,
+      },
+    },
   });
 }
 ```
@@ -262,6 +288,12 @@ Why it is good:
 - **The value has its reason at the line**, and the unit is in the name
   ([readability.md](../../any-language/readability/readability.md) sections 4 and 7). One minute
   is a product decision about how stale an invoice list may be; the practice does not set it.
+- **It never retries an answer that tells the page what to do**, a `401`, any `403` or a `400` with
+  a fixed code, and gives every other failure three retries, TanStack Query's default for a query a
+  component reads; a loader's `query()` takes the same rule, so a loader that fails on a `5xx`
+  holds the pending screen about seven seconds before the error screen
+  ([security.md](../security/security.md) section 6;
+  [architecture.md](../architecture/architecture.md) section 8).
 
 ## Route-level splitting and the build output
 

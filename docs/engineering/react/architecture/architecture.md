@@ -136,7 +136,7 @@ src/
 ├── core/                 # code no module owns; imports no module and no route
 │   ├── ui/               # design-system components with no business words: button, dialog
 │   ├── api-client.ts     # the ApiClient class: the one way to reach the API
-│   ├── config.ts         # reads import.meta.env once; only main.tsx imports it
+│   ├── config.ts         # reads each VITE_ setting by name; only main.tsx imports it
 │   ├── query-client.ts   # the query cache and its defaults
 │   ├── invoice.keys.ts   # the query-key root of data two modules read
 │   └── invoice.schema.ts # data two modules share
@@ -444,8 +444,11 @@ that reads it.
   cached data at once and the component's query refetches in the background. This practice awaits
   `query(options)`, so a screen opened after a write's invalidation shows fresh data; the cost is a
   wait for the network once data is older than the `staleTime`, and the error screen, not the
-  cached data, when that refetch fails. `query()` does not retry by default, so a failed loader
-  shows the error screen at once, and that screen's button is the retry (section 12).
+  cached data, when that refetch fails. `query()` turns retries off only when the query client sets
+  no `retry`; with the rule of [security.md](../security/security.md) section 6 set there, a failed
+  loader shows the error screen at once on an answer that asks the page to act, and after three
+  retries, about seven seconds in all, on any other failure (TanStack Query's `query-core` 5.103.2
+  source, read 2026-10-22). That screen's button is the retry (section 12).
 - **The component reads with `useSuspenseQuery(options)`.** Its `data` is always defined: the
   router's pending screen shows while the loader runs, and an error goes to the error screen. It
   cannot be turned on and off by a condition (TanStack Query's suspense guide).
@@ -1169,3 +1172,8 @@ of the React rules.
 75. TanStack Router discussion 3046, 2024-12-19:
     https://github.com/TanStack/router/discussions/3046 (a maintainer points to
     `routeFileIgnorePattern` for tests kept beside routes). Read 2026-10-03.
+76. TanStack Query, `@tanstack/query-core` 5.103.2 source, `retryer.ts` and `queryClient.ts`:
+    https://github.com/TanStack/query/blob/e0f6c5542fc767f77a6cf1d5546591beae05f10f/packages/query-core/src/retryer.ts ,
+    https://github.com/TanStack/query/blob/e0f6c5542fc767f77a6cf1d5546591beae05f10f/packages/query-core/src/queryClient.ts
+    (the retry delay starts at one second and doubles; `query()` turns retries off only when no
+    `retry` is set). Read 2026-10-22.
