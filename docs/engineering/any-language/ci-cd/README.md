@@ -119,7 +119,12 @@ to one named person.
    workflows follow three rules: every action pinned by commit, a `permissions:` block on every
    workflow, and no `pull_request_target` workflow that runs a pull request's code. They fix
    security holes, so they do not wait for a change to touch the file
-   ([refactoring.md](../refactoring/refactoring.md) section 6).
+   ([refactoring.md](../refactoring/refactoring.md) section 6). By the same date, pin each
+   application's Python minor as [pipeline.md](pipeline.md) section 9 says: set `.python-version`
+   and `requires-python` to the minor production runs today, run `uv lock`, and remove any setup-uv
+   `python-version` input. A library keeps a floor instead ([pipeline.md](pipeline.md) section 12).
+   A CI that tests one minor while production runs another is a correctness bug, so this does not
+   wait either; the Check in pipeline.md section 9 shows that it is done.
 6. Re-check the lines that name a moving target. Each file's Sources section opens with its
    `Checked <date>` line; the action releases and tool checksums in the examples are dated
    2026-10-18, and so are the plan limits and the preview status of GitHub's workflow lockfiles

@@ -451,9 +451,11 @@ one when the projects import each other, not for two folders that share nothing 
   sets setup-uv's `python-version` input [26].
 - **A production that is not built from the image**, such as a platform that runs the app on its
   own Python ([delivery.md](delivery.md) section 8): the platform's own setting picks the
-  interpreter, so set it to the pinned minor, and install with `uv sync --locked`, which refuses
-  an interpreter outside `requires-python` [59]; an exported requirements file carries no such
-  check.
+  interpreter, so set it to the pinned minor. Install with Python downloads off
+  (`UV_PYTHON_DOWNLOADS=0`, as the image build sets it in [images.md](../docker/images.md)
+  section 11) and with `uv sync --locked`, which then stops when the platform's interpreter is
+  outside `requires-python` [59]. With downloads on, as they are by default, uv downloads the
+  pinned minor instead [58], and nothing checks the platform's own setting.
 - **A small repository whose full run takes three minutes**: skip change detection (section 7);
   the gate job still pays, because it keeps the required checks to one name.
 - **A monorepo whose projects import each other**: path filters stop being safe, and a graph-aware
