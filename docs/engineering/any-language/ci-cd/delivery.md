@@ -519,7 +519,7 @@ above hold for each.
 | Managed container service | Amazon ECS on Fargate [25], Google Cloud Run [26], Azure Container Apps [27] | one or a few services in containers, and no team to run a cluster | each vendor's own deploy model; check that its deploy action supports OIDC: Azure's Container Apps guide still stores a service principal secret [27] |
 | Kubernetes with GitOps | Argo CD [28], Flux [29] | many services, a platform team, and a wish to keep cluster credentials out of CI | a cluster to run; write access to the config repository becomes production access |
 | Static hosting with a CDN | S3 and CloudFront [7], Azure Static Web Apps, Netlify, Cloudflare Pages | a frontend bundle | the bundle must hold no value that differs per environment, or be built per environment (section 3) |
-| Platform as a service | Heroku and the like | a small team that wants the platform to own the runtime | less control; a platform's release step, such as Heroku's, stops the release when a migration fails [30] |
+| Platform as a service | Heroku and the like | a small team that wants the platform to own the runtime | less control; a platform's release step, such as Heroku's, stops the release when a migration fails [30]; the platform, not the image, picks the Python, so set it to the pinned minor ([pipeline.md](pipeline.md) section 12) |
 
 **Push or pull.** Every target above takes a push from CI. With GitOps, CI only writes the new
 version into a configuration repository, and an agent in the cluster pulls it: "Software agents

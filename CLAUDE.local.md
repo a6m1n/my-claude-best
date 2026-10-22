@@ -109,8 +109,9 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   section 4), and an agent container that runs without approvals mounts no host credential and
   reaches the network only through the proxy (`agent-containers.md` sections 3 to 5).
 - Before you write or change a workflow under `.github/workflows/`, the required status checks of
-  `main`, a deploy job, a cloud role a pipeline assumes, or a secret a pipeline reads, read
-  `docs/engineering/any-language/ci-cd/README.md` and the file it routes to for that work, and
+  `main`, a deploy job, a cloud role a pipeline assumes, or a secret a pipeline reads, or a
+  toolchain pin (`.python-version`, `requires-python`, the Node version file, `packageManager`),
+  read `docs/engineering/any-language/ci-cd/README.md` and the file it routes to for that work, and
   `docs/engineering/any-language/ci-cd/ci-example.md` when you write a CI workflow,
   `docs/engineering/any-language/ci-cd/deploy-example.md` when you write a deploy workflow,
   `docs/engineering/any-language/ci-cd/security-example.md` when you set up the security checks. The
@@ -121,7 +122,8 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   by version (`pipeline.md` sections 8 and 9); no workflow whose check is required has a `paths:`
   or `branches:` filter on its `pull_request` or `merge_group` trigger (`pipeline.md` section 6);
   no value from outside sits inside a `run:` script as `${{ }}` (`pipeline-security.md` section 5);
-  and no deploy job reads a stored cloud key (`delivery.md` section 5).
+  an application's `requires-python` names one Python minor, such as `"==3.13.*"`
+  (`pipeline.md` section 9); and no deploy job reads a stored cloud key (`delivery.md` section 5).
 - Before you create a React application, add a module, a route, a query, a mutation or a
   dependency to one, or change its TypeScript or lint configuration, read
   `docs/engineering/react/architecture/architecture.md`, and
