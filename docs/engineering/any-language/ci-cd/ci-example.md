@@ -135,7 +135,7 @@ jobs:
           persist-credentials: false  # the token is not left on the runner for the steps after this one
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
-          working-directory: backend  # reads required-version from the backend; uv reads .python-version there
+          working-directory: backend  # reads required-version from the backend; no python-version input: uv takes the minor from backend/.python-version (pipeline.md section 9)
           enable-cache: true
       - run: uv sync --locked --project backend
       - run: uv run --locked --project backend pre-commit run --all-files --show-diff-on-failure
@@ -157,7 +157,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
-          working-directory: backend
+          working-directory: backend  # no python-version input: uv takes the minor from backend/.python-version (pipeline.md section 9)
           enable-cache: true
       - run: uv sync --locked  # fails when uv.lock does not match pyproject.toml
       - run: uv run --locked pytest tests/unit
@@ -209,7 +209,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
-          working-directory: backend
+          working-directory: backend  # no python-version input: uv takes the minor from backend/.python-version (pipeline.md section 9)
           enable-cache: true
       - run: uv sync --locked
       - name: Migrations apply to an empty database and match the models
