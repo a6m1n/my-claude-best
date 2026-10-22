@@ -6,7 +6,12 @@ rules, the startup file, the routes and one module's reads and writes. Each part
 follows and why. Names are invented. The code was type-checked, linted, unit-tested and built;
 nothing was run in a browser. The code is quoted from a reference application that is not in this
 folder: the example files of the `react/` practices quote its code, and the checks named were run
-on it on 2026-10-01, 2026-10-02 and 2026-10-03.
+on it on 2026-10-01, 2026-10-02, 2026-10-03 and 2026-10-16. The `retry` option of
+`src/core/query-client.ts` is not in the application yet: on 2026-10-22 it was type-checked alone
+under the application's TypeScript settings and run on six failing queries, and no other check was
+run on it. The error guard of `ApiClient.request` and the read by name in `src/core/config.ts` are
+[security-example.md](../security/security-example.md)'s, sections 1 and 2, and its note says how
+far they were checked.
 
 **Navigation**
 
@@ -34,8 +39,8 @@ vitals is in [performance-example.md](../performance/performance-example.md).
 │   ├── route-tree.gen.ts                # written by the router plugin; never edited, never linted
 │   ├── core/                            # code no module owns
 │   │   ├── api-client.ts                # the ApiClient class: the one way to reach the API; parses every answer
-│   │   ├── config.ts                    # reads import.meta.env once, through a schema; only main.tsx imports it
-│   │   ├── query-client.ts              # the query cache and its one staleTime
+│   │   ├── config.ts                    # reads each VITE_ setting by its full name, through a schema; only main.tsx imports it
+│   │   ├── query-client.ts              # the query cache: its one staleTime and its retry rule
 │   │   ├── invoice.keys.ts              # the key root of every invoice read, for both modules
 │   │   ├── invoice.schema.ts            # the invoice both modules parse
 │   │   ├── money.format.ts              # cents as currency text
@@ -243,7 +248,6 @@ Why it is good:
   a missing element a type error, not a crash. `verbatimModuleSyntax` keeps type-only imports
   marked, so a bundler that strips types keeps no runtime import by mistake. `erasableSyntaxOnly`
   allows only syntax a type stripper can erase, so the code also runs under Node's type stripping.
-  There is no `exactOptionalPropertyTypes`.
 - **`moduleResolution: "bundler"`, `allowImportingTsExtensions` and `noEmit`** let every import
   name its `.ts` or `.tsx` file ([architecture.md](architecture.md) section 5). Vite builds the
   code; `tsc` only checks it.
@@ -474,6 +478,10 @@ Why it is good:
   "rules": {
     "react/rules-of-hooks": "error",
     "react/exhaustive-deps": "error",
+    // Upstream `recommended` has this compiler rule; Oxlint files it under `restriction`, which
+    // `categories` does not turn on, so code the compiler skips would get no report (oxc.rs
+    // blog, 2026-08-18; react.dev, eslint-plugin-react-hooks; libraries.md section 4).
+    "react/unsupported-syntax": "error",
     "import/no-cycle": "error",
     "oxc/no-barrel-file": "error",
     "no-eval": "error",
@@ -500,6 +508,9 @@ Why it is good:
 - **`import/no-cycle` fails on two files that import each other.** Inside one module the boundary
   rule allows any import, so this is the rule that keeps a module's own files from going in a
   circle.
+- **`react/unsupported-syntax` is turned on by name**: Oxlint files it under `restriction`, which
+  `categories` leaves off, so without it code the React Compiler skips gets no report
+  ([libraries.md](libraries.md) section 4).
 - The React rules are [components.md](../components/components.md)'s, the `jsx-a11y` plugin is
   [accessibility.md](../design/accessibility.md)'s, and `no-eval`, `no-implied-eval`,
   `no-new-func`, `no-script-url` and `react/no-danger` are [security.md](../security/security.md)'s.
@@ -760,30 +771,61 @@ the list module uses too.
 ```ts
 // The root of every cached read about invoices. It lives in core because two modules read
 // invoices, and a write in one has to mark the reads of both as stale (file-structure.md
-// section 4; architecture.md section 9).
+// section 4; architecture.md section 9). Only the root: the rest of each key stays with its
+// query in the module that reads it (architecture.md section 6).
 export const invoiceKeys = {
   all: ["invoices"] as const,
-  detail: (invoiceId: string) => ["invoices", invoiceId] as const,
 };
 ```
 
 Why it is good: the key root is data both modules share, so it sits in `core/`, and its comment
-says why ([architecture.md](architecture.md) section 6). `detail` starts with the root, so an
-invalidation of `all` reaches every invoice by prefix ([architecture.md](architecture.md)
-section 9).
+says why ([architecture.md](architecture.md) section 6). The file holds only the root: the key of
+one invoice is built in `pay-invoice/invoice.queries.ts`, the one module that reads it, and starts
+with the root, so an invalidation of `all` reaches every invoice by prefix
+([architecture.md](architecture.md) sections 6 and 9;
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 4).
 
-`src/core/query-client.ts`:
+`src/core/query-client.ts`. The page's answers to the three failures this client does not retry are
+left out here, since the reference application has no sign-in screen
+([security-example.md](../security/security-example.md) section 9): the sign-out path on a `401`,
+the re-authentication control on a `403` `reauth_required`, and the message to clear this site's
+data on a `400` `cookie_conflict` ([security.md](../security/security.md) section 6). Until a team
+adds them, the router's error screen shows each one as a failed load:
 
 ```ts
 import { QueryClient } from "@tanstack/react-query";
 
+import { ApiError } from "@/core/api-client.ts";
+
 // A screen opened again within a minute reads the cache instead of asking the server
 // (architecture.md section 8).
 const STALE_TIME_MS = 60_000;
+// Three retries for every other failure, TanStack Query's own default for a query a component
+// reads in the browser; a loader's `query()` takes this rule too (architecture.md section 8).
+const MAX_RETRIES = 3;
+
+// A 401, any 403 and a 400 with a fixed code tell the page what to do; a retry would only send
+// the guarded request again (security.md section 6).
+function asksThePageToAct(error: Error): boolean {
+  if (!(error instanceof ApiError)) {
+    return false;
+  }
+
+  if (error.status === 401 || error.status === 403) {
+    return true;
+  }
+
+  return error.status === 400 && error.code !== undefined;
+}
 
 export function createQueryClient(): QueryClient {
   return new QueryClient({
-    defaultOptions: { queries: { staleTime: STALE_TIME_MS } },
+    defaultOptions: {
+      queries: {
+        staleTime: STALE_TIME_MS,
+        retry: (failureCount, error) => !asksThePageToAct(error) && failureCount < MAX_RETRIES,
+      },
+    },
   });
 }
 ```
@@ -791,7 +833,11 @@ export function createQueryClient(): QueryClient {
 Why it is good: one `staleTime` for the whole cache, set where the cache is made, with the reason
 for the value next to it ([architecture.md](architecture.md) section 8;
 [readability.md](../../any-language/readability/readability.md) section 4). The unit is in the
-name. `main.tsx` calls the factory once.
+name. `main.tsx` calls the factory once. A `401`, any `403` and a `400` with a fixed code are never
+retried, since each tells the page what to do (those answers are left out, as the note above the
+block says); every other failure gets three retries, TanStack Query's default for a query a
+component reads, and a loader's `query()` takes the same rule
+([security.md](../security/security.md) section 6; [architecture.md](architecture.md) section 8).
 
 `src/billing/pay-invoice/invoice.queries.ts`:
 
@@ -804,7 +850,7 @@ import { invoiceSchema } from "@/core/invoice.schema.ts";
 
 export function invoiceQueryOptions(apiClient: ApiClient, invoiceId: string) {
   return queryOptions({
-    queryKey: invoiceKeys.detail(invoiceId),
+    queryKey: [...invoiceKeys.all, invoiceId],
     queryFn: ({ signal }) =>
       // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
       apiClient.request(`/invoices/${encodeURIComponent(invoiceId)}`, { schema: invoiceSchema, signal }),
@@ -866,6 +912,7 @@ keeps the role word in its name, so `paymentMethodSchema` and the type
 ```ts
 import { mutationOptions } from "@tanstack/react-query";
 
+import { invoiceQueryOptions } from "@/billing/pay-invoice/invoice.queries.ts";
 import type { PaymentMethod } from "@/billing/pay-invoice/payment.schema.ts";
 import { paymentReceiptSchema } from "@/billing/pay-invoice/payment.schema.ts";
 import type { ApiClient } from "@/core/api-client.ts";
@@ -873,7 +920,9 @@ import { invoiceKeys } from "@/core/invoice.keys.ts";
 
 export function payInvoiceMutationOptions(apiClient: ApiClient, invoiceId: string) {
   return mutationOptions({
-    mutationKey: [...invoiceKeys.detail(invoiceId), "pay"],
+    // This key lets `useMutationState` and `useIsMutating` find this payment. Built from the
+    // invoice query's own key, so both keys name the same invoice (architecture.md section 6).
+    mutationKey: [...invoiceQueryOptions(apiClient, invoiceId).queryKey, "pay"],
     mutationFn: (method: PaymentMethod) =>
       // Encoded, so a "/", "?" or "#" in the id cannot change which path the request reaches.
       apiClient.request(`/invoices/${encodeURIComponent(invoiceId)}/payments`, {
@@ -896,7 +945,9 @@ Why it is good:
   reasons, so the next editor does not move it into the form ([architecture.md](architecture.md)
   section 9).
 - **It invalidates the invoice root**, so the list and the invoice both refresh, and it imports no
-  other module ([architecture.md](architecture.md) sections 6 and 9).
+  other module ([architecture.md](architecture.md) sections 6 and 9). Its mutation key lets
+  `useMutationState` and `useIsMutating` find the payment, and it is built from the invoice query's
+  own key, so both keys name the same invoice ([architecture.md](architecture.md) section 6).
 - **The receipt is parsed with its schema, and the cache is not written from it**: a receipt is not
   the full invoice ([architecture.md](architecture.md) section 9). There is no `retry`: a payment
   whose answer was lost would be sent a second time. There is no optimistic update: a payment can
@@ -941,9 +992,10 @@ Why it is good:
 
 Every read and write above goes through the one `ApiClient` in `src/core/api-client.ts`. The class
 takes the base URL in its constructor, so it reads no setting. Its `request` method parses the
-answer; the type import, the `ApiError` class, the type definitions, the options of the request,
-which carry the session and the headers, and the `report` method, which sends a report with
-neither, are cut, and those are [security-example.md](../security/security-example.md)'s:
+answer; the import, the error body's schema and type, the `ApiError` class, `readErrorBody`, the
+`ApiRequest` type, the options of the request, which carry the session and the headers, and the
+`report` method, which sends a report with neither, are cut, and those are
+[security-example.md](../security/security-example.md)'s:
 
 ```ts
 ...
@@ -964,7 +1016,13 @@ export class ApiClient {
     });
 
     if (!response.ok) {
-      throw new ApiError(`${path} answered ${String(response.status)}`);
+      const errorBody = await readErrorBody(response);
+      throw new ApiError(
+        `${path} answered ${String(response.status)}`,
+        response.status,
+        errorBody?.code,
+        errorBody?.acrValues ?? undefined,
+      );
     }
 
     // Parsed, never cast: the returned type is checked against the data that arrived

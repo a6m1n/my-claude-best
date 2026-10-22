@@ -45,9 +45,10 @@ their fixes. It is the React case of [readability](../../any-language/readabilit
    [performance.md](../performance/performance.md) for the rules they own. Copy those folders too,
    or replace each link with your own rule for that topic.
 6. Re-check the lines that name a moving target. List them with
-   `grep -rnE '2026-10-0[1-3]' docs/engineering/react/components/`. Each was read between
-   2026-10-01 and 2026-10-03. Check them on the day you adopt the folder, and again by 2027-04-01,
-   six months after the reading; after that date, distrust every dated line until it is read again.
+   `grep -rnE '2026-10-(0[1-3]|16)' docs/engineering/react/components/`. Each was read between
+   2026-10-01 and 2026-10-16. Check them on the day you adopt the folder, and again by 2027-04-01,
+   six months after the first reading; after that date, distrust every dated line until it is read
+   again.
 
 ## The points to adapt
 
@@ -55,8 +56,8 @@ Every rule labelled Taste is yours to change: props typed on the parameter rathe
 `React.FC`, `type` or `interface` for props, one exported component per file, named exports. Pick
 once and keep the choice across the code base. The Advice rules give way where your team can name
 what its case gains, such as a hand-written `useCallback` for a library that compares functions
-by identity. What does not change are the Rules of React in section 2 or 9: React depends on them,
-and the compiler skips a component that breaks one.
+by identity. What does not change are the Rules of React in section 2, 6 or 9: React depends on
+them, and the compiler skips a component that breaks one.
 
 The rules for testing a component are not a practice yet. [libraries.md](../architecture/libraries.md)
 section 6 gives the tools and a minimum, and the reference application's only tests are its two

@@ -21,14 +21,14 @@ way it is. Names are placeholders. The tree is the one
 
 The code here is quoted from a reference application. The application is not in this folder: the
 example files of the `react/` practices quote its code, and the checks named below were run on it
-on 2026-10-01 and 2026-10-02. Section 1's error handling, the body schema `errorBodySchema`, the
-fields of `ApiError` and `readErrorBody`, is not in the application yet; the same checks passed on
-2026-10-17 on a copy of the application with section 1's file in place. The `.catch(undefined)` on
-the two fields of `errorBodySchema` came after those checks: on 2026-10-19 the schema, `ApiError`
-and `readErrorBody` were type-checked alone under the application's TypeScript settings and run
-with zod 4.6.5 against nine error bodies; the application's own checks were not run again.
-Section 2's parse line, which reads the setting by its full name, is not in the application yet
-and has not been checked.
+on 2026-10-01, 2026-10-02 and 2026-10-16. Section 1's error handling, the body schema
+`errorBodySchema`, the fields of `ApiError` and `readErrorBody`, is not in the application yet; the
+same checks passed on 2026-10-17 on a copy of the application with section 1's file in place. The
+`.catch(undefined)` on the two fields of `errorBodySchema` came after those checks: on 2026-10-19
+the schema, `ApiError` and `readErrorBody` were type-checked alone under the application's
+TypeScript settings and run with zod 4.6.5 against nine error bodies; the application's own checks
+were not run again. Section 2's parse line, which reads the setting by its full name, is not in the
+application yet and has not been checked.
 
 What was verified, and what was not. The application in sections 1 to 7 of this file was
 type-checked, linted, unit-tested and built with Vite 8.3. Nothing was run in a browser: the
@@ -484,6 +484,9 @@ reads no setting.
 ```ts
   function reportMetric(metric: CoreWebVital): void {
     apiClient.report("/web-vitals", {
+      // CLS and INP can be reported more than once per page load; the backend keeps the last
+      // value per id (web-vitals README; performance.md section 3).
+      id: metric.id,
       name: metric.name,
       value: metric.value,
       rating: metric.rating,
@@ -569,10 +572,10 @@ The policy rests on what the build writes. The built `dist/index.html`, from the
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="module" crossorigin src="/assets/index-jrUD5Y6A.js"></script>
+    <script type="module" crossorigin src="/assets/index-DpqloCIC.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-CbXtAM7H.js">
-    <link rel="modulepreload" crossorigin href="/assets/preload-helper-C1JRZSNY.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-CmulJnWv.css">
+    <link rel="modulepreload" crossorigin href="/assets/preload-helper-98yH0uSP.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-CwyK9Hdg.css">
   </head>
   <body>
     <div id="root"></div>
@@ -798,6 +801,9 @@ Why it is good:
   `reauth_required` is not shown; security.md section 6, "Re-authentication", gives it. The
   `ApiError` of section 1 of this file carries the status, the code and the `acrValues` that this
   reaction reads.
+- **The reaction to a `400` `cookie_conflict`:** the message that tells the user to clear this
+  site's data in the browser is not shown; security.md section 6, "Reading the `Cookie` header",
+  gives it.
 - **The CI workflow:** pinned actions, a read-only token, no fork code in `pull_request_target`
   (security.md section 10).
 - **Server-side React:** the application renders in the browser only, so section 8 of security.md

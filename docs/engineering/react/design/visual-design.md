@@ -554,11 +554,10 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
 
 - **Keep the durations and curves with the other tokens,** so every component moves the same way.
   No owner read states this for motion; it is this file's one rule applied to motion.
-- **Animate only `transform` and `opacity`, and list the properties you animate.** Vercel's
-  guidelines: "NEVER: Animate layout props (`top`, `left`, `width`, `height`)" and "NEVER:
-  `transition: all`—list properties explicitly". Josh Comeau calls `transform` and `opacity` cheap
-  to animate and scales with `transform` instead of animating `width` or `height` (read as a snippet
-  only). What animation costs at run time is [performance.md](../performance/performance.md) section 6.
+- **List the properties you animate, never `transition: all`,** so nothing moves that nobody
+  meant to move. Vercel's guidelines: "NEVER: `transition: all`—list properties explicitly". Which
+  properties are cheap to animate, and what animation costs at run time, is
+  [performance.md](../performance/performance.md) section 6.
 
   The motion blocks of this section (the two below and the reduced-motion one after them) are not
   part of the reference application, which has no transition yet. The application's one motion is
@@ -593,18 +592,19 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
   }
 
   .invoice-details {
-    /* Only `opacity` and `transform`, listed: a layout property is costly to animate
-       (visual-design.md section 8). */
+    /* Listed, never `all` (visual-design.md section 8), and only `opacity` and `transform`:
+       a layout property is costly to animate (performance.md section 6). */
     transition:
       opacity var(--motion-duration-small) var(--motion-ease-enter),
       transform var(--motion-duration-small) var(--motion-ease-enter);
   }
   ```
 
-  Why it is good: only the two cheap properties move, and a change to the panel's size snaps
-  instead of animating. The duration and the curve are tokens, as the rule above asks, so every
-  component that moves takes the same two values. 150 ms is in the range for a small change, and
-  `ease-out` decelerates into place, the entrance curve; a panel that also leaves gets the
+  Why it is good: only the two cheap properties move
+  ([performance.md](../performance/performance.md) section 6), and a change to the panel's size
+  snaps instead of animating. The duration and the curve are tokens, as the rule above asks, so
+  every component that moves takes the same two values. 150 ms is in the range for a small change,
+  and `ease-out` decelerates into place, the entrance curve; a panel that also leaves gets the
   accelerating curve and a shorter time on its way out (the rules above).
 - **Honour `prefers-reduced-motion`: keep the fade, drop the movement.** MDN advises replacing
   scaling and panning with opacity fades, and the media query is Baseline widely available since
@@ -697,7 +697,7 @@ shadows on controls, decorative motion, type at brand sizes.
 | A border around everything | Visual noise that hides the structure it should show | Spacing, a second background, a divider where it carries meaning (section 7) | Linear (2026), Refactoring UI (summary), Hacker News commenters |
 | A value off the scale (`gap-[18px]`) | Every screen drifts to its own rhythm | A step of the 4 px scale (section 6) | Tailwind, Carbon |
 | Brand-size type or expressive motion on a task screen | The eye goes to decoration instead of the task | The product sizes and productive motion (sections 2, 5, 8) | Carbon, Geist, Atlassian |
-| `transition: all`, or an animated `height` | Properties nobody meant to move, and costly frames | `transform` and `opacity`, listed (section 8) | Vercel, Josh Comeau |
+| `transition: all`, or an animated `height` | Properties nobody meant to move, and costly frames | The properties listed, never `all` (section 8); which ones are cheap, [performance.md](../performance/performance.md) section 6 | Vercel |
 | Motion that ignores `prefers-reduced-motion` | Sliding and scaling for a user who asked for less | A fade only, inside the media query (section 8) | MDN, Vercel |
 | A dark-only theme | Worse reading performance for most users | Light by default, a switch, both designed (section 9) | NN/g |
 | Glass, soft shadows or thin decorative type on controls | Contrast a checker cannot see, cues users cannot find | The product look; glass at most for chrome (section 10) | NN/g, CSS-Tricks |
@@ -745,7 +745,7 @@ two or more is not ready.
 | 5. Type | Are sizes steps of the scale, and does the hierarchy use weight and colour first? | A size in square brackets; running text wider than 75 characters; numbers in a column without `tabular-nums` |
 | 6. Spacing and layout | Is every space a step of the 4 px scale? | A value in square brackets; a component that only adapts to the viewport |
 | 7. Shape and borders | Are radii small and named by role (a circle or a pill takes `rounded-full`), and does each border carry meaning? | A border around every box; a decorative border as the only edge of a field |
-| 8. Motion | Does motion answer an action, at a duration that fits its size (a loop that shows a wait keeps its utility's duration, section 8)? | `transition: all`; an animated `width` or `height`; no reduced-motion rule |
+| 8. Motion | Does motion answer an action, at a duration that fits its size (a loop that shows a wait keeps its utility's duration, section 8)? | `transition: all`; an animated layout property ([performance.md](../performance/performance.md) section 6); no reduced-motion rule |
 | 9. Themes | Was the dark theme looked at, not only computed? | A component that checks which theme is on; a colour set outside the token file |
 | 10. Styles | Does the style keep sections 3 to 9? | Glass under text, soft shadows on controls, a style chosen because it is in fashion |
 
@@ -857,7 +857,7 @@ two or more is not ready.
     https://raw.githubusercontent.com/material-components/material-components-android/master/docs/theming/Motion.md
     — duration tokens and easing curves (read through a summariser).
 34. Josh Comeau, CSS transitions: https://www.joshwcomeau.com/animation/css-transitions/ — the
-    place to look for cheap properties and reduced motion (read as a snippet only).
+    place to look for reduced motion (read as a snippet only).
 35. MDN, `prefers-reduced-motion`:
     https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion — replace
     scaling and panning with fades; Baseline status (read 2026-10-01).
