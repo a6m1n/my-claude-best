@@ -785,7 +785,12 @@ with the root, so an invalidation of `all` reaches every invoice by prefix
 ([architecture.md](architecture.md) sections 6 and 9;
 [file-structure.md](../../any-language/file-structure/file-structure.md) section 4).
 
-`src/core/query-client.ts`:
+`src/core/query-client.ts`. The page's answers to the three failures this client does not retry are
+left out here, since the reference application has no sign-in screen
+([security-example.md](../security/security-example.md) section 9): the sign-out path on a `401`,
+the re-authentication control on a `403` `reauth_required`, and the message to clear this site's
+data on a `400` `cookie_conflict` ([security.md](../security/security.md) section 6). Until a team
+adds them, the router's error screen shows each one as a failed load:
 
 ```ts
 import { QueryClient } from "@tanstack/react-query";
@@ -829,8 +834,9 @@ Why it is good: one `staleTime` for the whole cache, set where the cache is made
 for the value next to it ([architecture.md](architecture.md) section 8;
 [readability.md](../../any-language/readability/readability.md) section 4). The unit is in the
 name. `main.tsx` calls the factory once. A `401`, any `403` and a `400` with a fixed code are never
-retried, since each tells the page what to do; every other failure gets three retries, TanStack
-Query's default for a query a component reads, and a loader's `query()` takes the same rule
+retried, since each tells the page what to do (those answers are left out, as the note above the
+block says); every other failure gets three retries, TanStack Query's default for a query a
+component reads, and a loader's `query()` takes the same rule
 ([security.md](../security/security.md) section 6; [architecture.md](architecture.md) section 8).
 
 `src/billing/pay-invoice/invoice.queries.ts`:

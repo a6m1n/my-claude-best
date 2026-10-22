@@ -373,7 +373,12 @@ Why it is good:
 
 ## The form
 
-`src/billing/pay-invoice/pay-invoice-form.tsx`
+`src/billing/pay-invoice/pay-invoice-form.tsx`. The write's answers to a `401`, a `403`
+`reauth_required` and a `400` `cookie_conflict` are left out
+([security-example.md](../security/security-example.md) section 9): ask the session check once,
+and run the sign-out path when it answers `401`, or `200` for another user; start the step-up on
+a `403` `reauth_required`; tell the user to clear this site's data on a `400` `cookie_conflict`
+([security.md](../security/security.md) section 6).
 
 ```tsx
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";

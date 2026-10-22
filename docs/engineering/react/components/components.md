@@ -547,7 +547,10 @@ When an effect is the right tool:
   4).
 
 The only effect in the reference application is in the screen shown when a route fails to load,
-`src/routes/-screen-error.tsx`:
+`src/routes/-screen-error.tsx`. It shows every failed load the same way, a `401`, a `403`
+`reauth_required` and a `400` `cookie_conflict` included, since the page's answers to those three
+are left out ([security.md](../security/security.md) section 6;
+[security-example.md](../security/security-example.md) section 9):
 
 ```tsx
 import { useQueryErrorResetBoundary } from "@tanstack/react-query";

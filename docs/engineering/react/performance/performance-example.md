@@ -3,7 +3,8 @@
 A worked example for [performance.md](performance.md): the performance setup of the billing
 screens of `Acme Corp`, a client-rendered application behind a login, built with Vite, TanStack
 Router, TanStack Query and React Compiler. Each part is quoted as it stands in the reference
-application, with the metric it serves and why it is good. Names are placeholders.
+application, except the query client's retry rule, which the note below names, with the metric it
+serves and why it is good. Names are placeholders.
 
 **Navigation**
 
@@ -21,10 +22,10 @@ its code, and the checks named here were run on it on 2026-10-01, 2026-10-02, 20
 2026-10-22 it was type-checked alone under the application's TypeScript settings and run on six
 failing queries; no other check was run on it.
 
-What was verified, and what was not: the code was type-checked, linted, unit-tested and built.
-Nothing was run in a browser, so no metric of this application was measured. The example shows
-the setup, not a result: there is no LCP, INP or CLS value to report, and none is made up here.
-The one number the build gives is the size of each chunk, shown below.
+What was verified, and what was not: the rest of the code was type-checked, linted, unit-tested
+and built. Nothing was run in a browser, so no metric of this application was measured. The
+example shows the setup, not a result: there is no LCP, INP or CLS value to report, and none is
+made up here. The one number the build gives is the size of each chunk, shown below.
 
 | Part | File | Serves |
 |---|---|---|
@@ -238,7 +239,12 @@ Why it is good:
 
 ## The query client
 
-`src/core/query-client.ts`
+`src/core/query-client.ts`. The page's answers to the three failures this client does not retry are
+left out here, since the reference application has no sign-in screen
+([security-example.md](../security/security-example.md) section 9): the sign-out path on a `401`,
+the re-authentication control on a `403` `reauth_required`, and the message to clear this site's
+data on a `400` `cookie_conflict` ([security.md](../security/security.md) section 6). Until a team
+adds them, the router's error screen shows each one as a failed load.
 
 ```ts
 import { QueryClient } from "@tanstack/react-query";
@@ -289,9 +295,10 @@ Why it is good:
   ([readability.md](../../any-language/readability/readability.md) sections 4 and 7). One minute
   is a product decision about how stale an invoice list may be; the practice does not set it.
 - **It never retries an answer that tells the page what to do**, a `401`, any `403` or a `400` with
-  a fixed code, and gives every other failure three retries, TanStack Query's default for a query a
-  component reads; a loader's `query()` takes the same rule, so a loader that fails on a `5xx`
-  holds the pending screen about seven seconds before the error screen
+  a fixed code (those answers are left out, as the note above the block says), and gives every
+  other failure three retries, TanStack Query's default for a query a component reads; a loader's
+  `query()` takes the same rule, so a loader that fails on a `5xx` holds the pending screen about
+  seven seconds before the error screen
   ([security.md](../security/security.md) section 6;
   [architecture.md](../architecture/architecture.md) section 8).
 

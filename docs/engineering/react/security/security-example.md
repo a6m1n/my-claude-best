@@ -801,6 +801,9 @@ Why it is good:
   `reauth_required` is not shown; security.md section 6, "Re-authentication", gives it. The
   `ApiError` of section 1 of this file carries the status, the code and the `acrValues` that this
   reaction reads.
+- **The reaction to a `400` `cookie_conflict`:** the message that tells the user to clear this
+  site's data in the browser is not shown; security.md section 6, "Reading the `Cookie` header",
+  gives it.
 - **The CI workflow:** pinned actions, a read-only token, no fork code in `pull_request_target`
   (security.md section 10).
 - **Server-side React:** the application renders in the browser only, so section 8 of security.md

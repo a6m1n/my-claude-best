@@ -398,7 +398,10 @@ So the application does it, in this order:
    (section 7); skip the first load, which the screen reader already reads, and a change of the
    search string or the hash alone.
 
-The application shell, from `src/routes/__root.tsx`, with the imports and the route definition cut:
+The application shell, from `src/routes/__root.tsx`, with the imports and the route definition cut.
+The sign-out control that [security.md](../security/security.md) section 6 asks for on every screen
+that needs the session is left out, since the reference application has no sign-in screen
+([security-example.md](../security/security-example.md) section 9):
 
 ```tsx
 const APPLICATION_NAME = "Acme Billing";
