@@ -212,8 +212,10 @@ cases needs about a third to a half of the cases an unpaired one needs to see th
 
 **Must.** Before a change to a prompt, a tool definition, the model or its settings, the retrieval
 or an agent's graph merges, run its eval and put the result, with the baseline, in the pull
-request's Verification section ([git.md](../../any-language/git/git.md) section 4). A person may start this run by
-hand.
+request's Verification section ([git.md](../../any-language/git/git.md) section 4). A person who
+has read the diff starts this run by hand, on a machine or with `workflow_dispatch`; a push or a
+pull request never starts a job that holds a paid key
+([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4).
 
 **Should.** Run the whole eval on the main branch on a schedule, nightly or weekly, including
 repeated runs and pass^k for agents ([repeated-runs.md](repeated-runs.md) section 6). Start it when
@@ -230,7 +232,7 @@ What each run holds:
 | Moment | What runs | Real model |
 |---|---|---|
 | every push | the unit suite, with a stand-in for the model | no |
-| a pull request that changes model behaviour | the regression set, the real-model tests of the changed module, the result in the pull request | yes, started by hand, on a machine or in CI as [ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4 says |
+| a pull request that changes model behaviour | the regression set, the real-model tests of the changed module, the result in the pull request | yes, started by a person who has read the diff: on a machine, or in CI with `workflow_dispatch` ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4) |
 | the schedule | the whole eval: every set, repeated runs, judges, pass^k for agents | yes |
 | production | checks on sampled traces ([production.md](production.md)) | the production calls |
 
