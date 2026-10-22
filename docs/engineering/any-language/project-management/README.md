@@ -90,8 +90,9 @@ The files:
   what, each week when you write the update, and when a forecast leaves the tolerance.
 - [sla.md](sla.md): what an SLA is, how it differs from an SLO, severity levels, and what "fixed"
   means in it. Read it when you agree or change an SLA.
-- [release.md](release.md): what a release is, environments, the go or no-go decision, version
-  numbers, CI/CD, and how a release reaches users. Read it when you plan a release and before you
+- [release.md](release.md): what a release is, environments, the go or no-go decision and
+  continuous deployment as one standing decision, version numbers, CI/CD, and how a release reaches
+  users. Read it when you plan a release and before you
   mark a version released.
 - [rollback-plan.md](rollback-plan.md): the rollback plan of a release, its trigger, owner and
   steps, and how data changes are handled. Read it when you plan a release.
@@ -112,8 +113,9 @@ The files:
    Without it an agent never opens the folder.
 3. Set Jira and the team's pages up once, before the first project, as step 1 of
    [adoption-guide.md](adoption-guide.md) says, so the first sprint does not wait for admin work.
-4. The practice links [git.md](../git/git.md) for the branch, commit and pull request names, and
-   [refactoring.md](../refactoring/refactoring.md) for how existing code adopts a rule. Copy those
+4. The practice links [git.md](../git/git.md) for the branch, commit and pull request names,
+   [refactoring.md](../refactoring/refactoring.md) for how existing code adopts a rule, and
+   [delivery.md](../ci-cd/delivery.md) for how a pipeline runs continuous deployment. Copy those
    folders too, or replace each link with your own rule for that topic, so no link in this folder
    points at a file your repository does not have.
 5. Bring each project in by [adoption-guide.md](adoption-guide.md): a new project from its section

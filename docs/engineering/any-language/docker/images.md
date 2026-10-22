@@ -282,12 +282,21 @@ Whatever the choice:
 - **Write the OCI labels `org.opencontainers.image.source` and `org.opencontainers.image.revision`
   at least.** They tie the image to the repository and the commit [72]. On GitHub's registry, the
   `source` label links the package to its repository, so the package takes the repository's access
-  rules [73], [74]. `docker/metadata-action` writes these labels and the tags of the first
-  bullet [75].
+  rules [73], [74]. `docker/metadata-action` writes these labels and the commit tag of the first
+  bullet [75]; the version tag goes on as the last bullet says.
 - **Turn on immutable tags where the registry offers them** (Docker Hub, Amazon ECR, Google
   Artifact Registry) [76], [77], [78]. GitHub's documentation names no such setting for its
   container registry, and a commenter on the feature request says a pushed tag "can always be
   retargeted" [79]. There, the digest is the only fixed reference.
+- **Put the version tag on the digest the commit's build already pushed; never build the image
+  again for it.** A second build is an image no test saw. Its provenance records new build
+  timestamps [39] and sits in the image index [80], so the index gets a new digest, and its push
+  moves the commit tag too ([ci-cd/delivery.md](../ci-cd/delivery.md) section 3); where tags are
+  immutable, the registry refuses that push [76], [77]. With one source that is an image index,
+  `docker buildx imagetools create` "performs a carbon copy" [150]:
+  `docker buildx imagetools create --tag <image>:1.4.2 <image>:sha-1a2b3c4` gives the new tag the
+  same digest, its SBOM and provenance included. That job builds nothing, so section 10's one job
+  is still the only one that builds and pushes.
 
 ## 9. SBOM, provenance and signatures
 
@@ -337,14 +346,10 @@ Whatever the choice:
   `attestations: write` [96]. Check out with `persist-credentials: false`, so the checkout leaves
   no token for later steps to read [97]. Prefer OIDC to long-lived registry keys where the registry
   supports it [98].
-- **In this job, pin every action to a full commit SHA [126], with its version in a comment.** Attackers
-  moved existing tags to malicious commits in tj-actions (March 2025), reviewdog (March 2025) and
-  Trivy's own `trivy-action` (March 2026, 76 of its 77 tags) [99], [100], [101]. This job holds
-  write access to the registry, and the signing identity where the job signs, so a moved tag here
-  publishes an attacker's image under your name. A release marked "Immutable" on GitHub is not
-  enough: the badge showed on poisoned `trivy-action` tags [102], [101]. The rule covers the job
-  that pushes images; other workflows follow their own practice. Renovate updates SHA pins
-  together with the version comment [103], [127].
+- **In this job, pin every action to a full commit SHA [126], with its version in a comment.** This
+  job holds write access to the registry, so a moved tag here publishes an attacker's image under
+  your name; the rule itself, its incidents and the bot that moves the pins are
+  [ci-cd/pipeline-security.md](../ci-cd/pipeline-security.md) section 4's.
 - **Give each image its own cache scope, and keep cache writes away from untrusted code.** Two
   images that share a `scope` overwrite each other's cache [104]. A workflow that runs code from a
   fork must not write the cache the release build reads (section 5) [105].
@@ -521,11 +526,7 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [96] GitHub — actions/attest README, v4.2.2 — https://github.com/actions/attest/blob/v4.2.2/README.md
 - [97] GitHub — actions/checkout README, v7.0.1 — https://github.com/actions/checkout/blob/v7.0.1/README.md
 - [98] GitHub — OpenID Connect (security hardening for GitHub Actions) — https://docs.github.com/en/actions/concepts/security/openid-connect
-- [99] GitHub Advisory Database — GHSA-mrrh-fwg8-r2c3, tj-actions/changed-files (CVE-2025-30066) — https://github.com/advisories/GHSA-mrrh-fwg8-r2c3
-- [100] Rami McCarthy — New GitHub Action supply chain attack: reviewdog/action-setup (Wiz blog, 2025; case) — https://www.wiz.io/blog/new-github-action-supply-chain-attack-reviewdog-action-setup
 - [101] Aqua Security — GHSA-69fq-xp46-6x23, Trivy supply chain compromise (CVE-2026-33634) — https://github.com/aquasecurity/trivy/security/advisories/GHSA-69fq-xp46-6x23
-- [102] Aqua Security — Trivy Supply Chain Attack: What You Need to Know (Aqua blog, 2026; case) — https://www.aquasec.com/blog/trivy-supply-chain-attack-what-you-need-to-know/
-- [103] Renovate — github-actions manager, digest pinning and updating, 44.164.10 — https://github.com/renovatebot/renovate/blob/44.164.10/lib/modules/manager/github-actions/readme.md
 - [104] Docker — GitHub Actions cache backend — https://docs.docker.com/build/cache/backends/gha/
 - [105] Docker — Cache management with GitHub Actions — https://docs.docker.com/build/ci/github-actions/cache/
 - [106] Docker — Docker Hub usage and limits: pulls — https://docs.docker.com/docker-hub/usage/pulls/
@@ -549,7 +550,6 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [124] Docker — Rootless mode: UID/GID mapping — https://docs.docker.com/engine/security/rootless/uid-gid-mapping/
 - [125] GitHub — Dockerfile support for GitHub Actions, `USER` — https://docs.github.com/en/actions/reference/workflows-and-actions/dockerfile-support#user
 - [126] GitHub — Secure use reference (GitHub Docs) — https://docs.github.com/en/actions/reference/security/secure-use
-- [127] Renovate — github-actions manager, extract.ts (the replacement template), 44.164.10 — https://github.com/renovatebot/renovate/blob/44.164.10/lib/modules/manager/github-actions/extract.ts
 - [128] Traefik Labs — Traefik docs: Docker provider — https://github.com/traefik/traefik/blob/master/docs/content/reference/install-configuration/providers/docker.md
 - [129] Bridgecrew — Checkov check CKV_DOCKER_2, HealthcheckExists — https://github.com/bridgecrewio/checkov/blob/main/checkov/dockerfile/checks/HealthcheckExists.py
 - [130] Aqua Security — trivy-checks DS-0026, no_healthcheck_instruction — https://github.com/aquasecurity/trivy-checks/blob/main/checks/docker/no_healthcheck_instruction.rego
@@ -572,3 +572,4 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [147] Astral — uv: Locking and syncing, uv 0.13.1 — https://github.com/astral-sh/uv/blob/0.13.1/docs/concepts/projects/sync.md
 - [148] Docker — Volumes, Mounting a volume over existing data (`content/manuals/engine/storage/volumes.md`) — https://github.com/docker/docs/blob/31d174d090fd7111ca2199ed54a3978e0d4ac74d/content/manuals/engine/storage/volumes.md
 - [149] Rails — railties: `app_base.rb`, `dockerfile_chown_directories` — https://github.com/rails/rails/blob/d1deb4e897886f594e850bc135e77f1346927182/railties/lib/rails/generators/app_base.rb#L801-L808 — checked 2026-10-17
+- [150] Docker — docker buildx imagetools create (CLI reference) — https://docs.docker.com/reference/cli/docker/buildx/imagetools/create/ — checked 2026-10-22

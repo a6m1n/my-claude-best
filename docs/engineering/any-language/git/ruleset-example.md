@@ -1,6 +1,7 @@
 # Ruleset example
 
-This file gives one GitHub ruleset for the default branch and for the branch `main`. The ruleset
+This file gives one GitHub ruleset for the default branch and for the branch `main`, the rules to
+add when CI runs, and two tag rulesets for release tags. The branch ruleset
 applies the branch rules of [git.md](git.md) sections 5 and 6 to these two branches only. The
 repository settings in section 5 are a separate step. Section 5 uses a ruleset in a new
 repository. A repository that already has branch protection can keep it instead. The first two
@@ -13,6 +14,7 @@ names the changes that most repositories make.
 - [What each part means](#what-each-part-means)
 - [Apply it](#apply-it)
 - [What to change for your repository](#what-to-change-for-your-repository)
+- [Release tags](#release-tags)
 - [Change it later](#change-it-later)
 
 The ruleset works in a public repository on all GitHub plans. It also works in a private
@@ -100,10 +102,139 @@ permission. Run the commands in a folder outside any clone of the repository. Th
 
 - If your repository uses squash or rebase merges, change `allowed_merge_methods`. Read
   [README.md](README.md) § "The point to adapt" before you change it.
-- When two or more people review, you can ask for approvals. Set
-  `required_approving_review_count` to 1 or more.
+- When two or more people review, ask for approvals and for the code owners' review. Set
+  `required_approving_review_count` to 1 or more, `require_code_owner_review` to `true` and
+  `require_last_push_approval` to `true`, and give every person and team that `CODEOWNERS` names
+  write access. A pull request that changes a file with a code owner then merges only after that
+  owner approves it
+  ([GitHub Docs](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)),
+  and a push after the approval needs a new approval from someone other than the person who
+  pushed, so an author cannot change a workflow after it was approved. GitHub says that code owners
+  "must have write permissions for the repository"
+  ([GitHub Docs](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)).
+  [ci-cd/pipeline-security.md](../ci-cd/pipeline-security.md) section 8 says which files need
+  their owners.
 - This ruleset protects the default branch and `main` only. For the other shared branches that
   [git.md](git.md) section 6 protects, add one more ruleset with only the `non_fast_forward` rule.
+- When CI runs on pull requests, add a rule that requires its gate job, the one required check of
+  [ci-cd/pipeline.md](../ci-cd/pipeline.md) section 6, to the `rules` list. This JSON departs
+  from [readability.md](../readability/readability.md) section 4, which asks for the reason at the
+  line, because JSON has no comments; the reasons are in the paragraph after it. The cost: a copy
+  of the JSON alone loses these reasons.
+
+  ```json
+  {
+    "type": "required_status_checks",
+    "parameters": {
+      "strict_required_status_checks_policy": true,
+      "required_status_checks": [{ "context": "ci-ok", "integration_id": 15368 }]
+    }
+  }
+  ```
+
+  `context` is the name of the gate job. `integration_id` 15368 is the GitHub Actions app
+  (`gh api apps/github-actions --jq .id` prints it): without it, any person or app with write
+  access can set the check's state, and the ruleset can name an app as the expected source
+  ([GitHub Docs](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)),
+  so only a workflow run can turn `ci-ok` green. `strict_required_status_checks_policy: true` is
+  "Require branches to be up to date before merging": the branch must be current with `main`, so
+  the check ran on the code that lands, at the cost of more builds. The security jobs join the same
+  gate ([ci-cd/security-example.md](../ci-cd/security-example.md)), so `ci-ok` stays the one
+  required check.
+
+  The rule is good because one required name, set only by GitHub Actions, guards `main`: a new job
+  joins the gate in the workflow file, and nobody can mark the check green by hand.
+- When the repository runs CodeQL, also add the ruleset's code scanning rule to the `rules` list.
+  CodeQL's job stays green when it finds an alert, so this rule is what makes an alert block a
+  merge; why, and the plan it needs on a private repository:
+  [ci-cd/pipeline-security.md](../ci-cd/pipeline-security.md) section 7. This JSON departs from
+  [readability.md](../readability/readability.md) section 4, which asks for the reason at the
+  line, because JSON has no comments; the reasons are in the table after it. The cost: a copy of
+  the JSON alone loses these reasons.
+
+  ```json
+  {
+    "type": "code_scanning",
+    "parameters": {
+      "code_scanning_tools": [
+        { "tool": "CodeQL", "alerts_threshold": "errors", "security_alerts_threshold": "high_or_higher" }
+      ]
+    }
+  }
+  ```
+
+  | Part | What it does | Why |
+  |---|---|---|
+  | `"type": "code_scanning"` | A merge waits until each named tool has results for the pull request, and is blocked when a tool reports an alert at or above a threshold ([GitHub Docs](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)). | It works apart from the required status checks ([GitHub Docs](https://docs.github.com/en/code-security/concepts/code-scanning/merge-protection)), so `ci-ok` being green does not stand in for it. |
+  | `code_scanning_tools` | The tools that must report results; required ([GitHub Docs](https://docs.github.com/en/rest/repos/rules)). | One entry per tool the repository runs; here CodeQL is the only one. |
+  | `"tool": "CodeQL"` | The tool's name as code scanning shows it ([GitHub Docs](https://docs.github.com/en/code-security/how-tos/find-and-fix-code-vulnerabilities/manage-your-configuration/set-merge-protection)). | It names the tool of the `code` job in [ci-cd/security-example.md](../ci-cd/security-example.md). |
+  | `"alerts_threshold": "errors"` | A non-security alert of severity error blocks; warnings and notes do not. The values are `none`, `errors`, `errors_and_warnings` and `all` ([GitHub Docs](https://docs.github.com/en/rest/repos/rules)). | Set `none` when only security alerts should block. |
+  | `"security_alerts_threshold": "high_or_higher"` | A critical or high security alert blocks; medium and low do not. The values are `none`, `critical`, `high_or_higher`, `medium_or_higher` and `all` ([GitHub Docs](https://docs.github.com/en/rest/repos/rules)). | It matches the written policy of the image scan, which fails on critical and high findings that have a fix ([docker/images.md](../docker/images.md) section 10). Set the level your own written policy names. |
+
+  The rule has two limits: it does not apply to merge queue groups, and it blocks only when all
+  the lines of an alert are in the pull request's diff
+  ([GitHub Docs](https://docs.github.com/en/code-security/concepts/code-scanning/merge-protection)).
+  An alert on a line the pull request did not change, or one CodeQL raises on `main`, blocks
+  nothing.
+
+  The rule is good because it is the one setting that lets a CodeQL alert block a merge, and it
+  names the tool and both thresholds, so a reader sees which alerts block and which do not.
+
+## Release tags
+
+When a version tag starts the production deploy ([ci-cd/delivery.md](../ci-cd/delivery.md)
+section 4), creating the tag is the release decision, so only the go or no-go decider of
+[release.md](../project-management/release.md) section 3 and their backup may create one, and
+nobody may move or delete one. That takes two tag rulesets, because a bypass actor of a ruleset
+skips all of its rules, and the rules of several rulesets apply together.
+
+The two JSON files below depart from [readability.md](../readability/readability.md) section 4,
+which asks for the reason at the line, because JSON has no comments; the reasons are in the table
+after them. The cost: a copy of the JSON alone loses these reasons.
+
+The first lets only the go or no-go decider and their backup create a `v*` tag:
+
+```json
+{
+  "name": "release-tags-create",
+  "target": "tag",
+  "enforcement": "active",
+  "bypass_actors": [{ "actor_id": 0, "actor_type": "Team", "bypass_mode": "always" }],
+  "conditions": { "ref_name": { "include": ["refs/tags/v*"], "exclude": [] } },
+  "rules": [{ "type": "creation" }]
+}
+```
+
+The second stops everyone, the decider included, from moving or deleting a `v*` tag:
+
+```json
+{
+  "name": "release-tags-fixed",
+  "target": "tag",
+  "enforcement": "active",
+  "bypass_actors": [],
+  "conditions": { "ref_name": { "include": ["refs/tags/v*"], "exclude": [] } },
+  "rules": [{ "type": "update" }, { "type": "deletion" }]
+}
+```
+
+| Part | What it does | Why |
+|---|---|---|
+| `"target": "tag"` | the rules apply to tags | branch rulesets do not cover tags |
+| `"include": ["refs/tags/v*"]` | the version tags only | other tags stay free |
+| `creation` with the team as bypass actor | only members of that team can create a `v*` tag | creating the tag starts the production deploy; the team holds the go or no-go decider of [release.md](../project-management/release.md) section 3 and their backup, and for each release the named decider creates the tag. Put the team's ID in `actor_id`: `gh api orgs/{org}/teams/{team_slug} --jq .id` prints it |
+| `update`, `deletion` with no bypass actor | nobody can move or delete a `v*` tag | a released version never changes ([release.md](../project-management/release.md) section 4), and the deploy finds the image by the tagged commit |
+
+Apply each one as the section "Apply it" says, with its own file. Steps 7 to 9 of "Apply it" check
+the branch ruleset only: GitHub's rules endpoint "Returns all active rules that apply to the
+specified branch", and the same page lists no endpoint for the rules of a tag
+([GitHub Docs](https://docs.github.com/en/rest/repos/rules)). To check the tag rulesets, run
+`gh api repos/{owner}/{repo}/rulesets --jq '.[] | select(.target=="tag") | "\(.id) \(.name) \(.enforcement)"'`
+and make sure the output shows `release-tags-create` and `release-tags-fixed`, each `active`. If
+one is missing, a person with write access can create or move a `v*` tag.
+
+These rulesets are good because creating a release tag stays with the person who decides the
+release, and once created, no one, that person included, can point the tag at other code.
 
 ## Change it later
 

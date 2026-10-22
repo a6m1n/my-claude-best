@@ -181,18 +181,27 @@ on:
   push:
     branches: [main]
 
-permissions:
-  contents: read
+permissions: {}  # nothing by default; the job asks for what it uses
+
+concurrency:
+  # A new push to a pull request cancels its older run; a run on main is never cancelled
+  # (ci-cd/pipeline.md section 8).
+  group: checks-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # a version label: the OS changes only when this line does (ci-cd/pipeline.md section 9)
+    timeout-minutes: 15  # a hung hook stops here, not after the default 360 minutes
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v7
+      # Pinned to the release's commit, the release in the comment (ci-cd/pipeline-security.md section 4).
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          persist-credentials: false  # the token does not stay in .git/config for the later steps
+          persist-credentials: false  # the token is not left on the runner for the later steps
 
-      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
           enable-cache: true
 
@@ -203,7 +212,10 @@ jobs:
 
 | Step | What it does |
 |---|---|
-| `permissions: contents: read`, `persist-credentials: false` | the job reads the code and nothing more, and the token does not stay in `.git/config` for the later steps |
+| `permissions: {}`, the job's `contents: read`, `persist-credentials: false` | the job reads the code and nothing more, and the token is not left on the runner for the later steps ([ci-cd/pipeline-security.md](../../any-language/ci-cd/pipeline-security.md) section 3) |
+| each `uses:` pinned to a commit SHA, the release in a comment | a moved tag cannot change what runs; Renovate or Dependabot moves the pin and the comment together ([ci-cd/pipeline-security.md](../../any-language/ci-cd/pipeline-security.md) section 4) |
+| `ubuntu-24.04`, `timeout-minutes: 15` | the runner's OS changes only in a pull request, and a hung job stops in minutes ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) sections 8 and 9) |
+| `concurrency` | a new push to a pull request cancels its older run; a run on `main` gets its own group and is never cancelled ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 8) |
 | `uv sync --locked` | installs the locked dev tools; fails when `uv.lock` does not match `pyproject.toml` |
 | `pre-commit run --all-files` | runs every hook of section 2 on the whole tree: hygiene, lint, format, types, import contracts |
 | `--show-diff-on-failure` | when a hook would change a file, the log shows the change, so the author sees what to fix |
@@ -222,6 +234,7 @@ uv run pre-commit run --all-files
 A clone without the second command has no hooks. That is why CI runs the same file: the hook saves
 time, CI decides.
 
-What this example does not claim: the action versions are the latest in September 2026.
-`actions/checkout@v7` follows a major tag that moves; `setup-uv` publishes no major tag, so the
-example pins a release. A team that pins actions by commit hash trades updates for a fixed tree.
+What this example does not claim: the action releases are the latest on 2026-10-18, each pinned to
+the commit `git ls-remote` printed for it then. In a monorepo, the hook file sits at the root and
+its Python hooks name the project's folder, as
+[ci-cd/ci-example.md](../../any-language/ci-cd/ci-example.md) section 3 shows.

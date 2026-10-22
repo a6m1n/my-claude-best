@@ -31,8 +31,9 @@ flowchart TD
 - [readme-example.md](readme-example.md) — an ideal project README, section by section. Read
   it when you start a project README or rewrite one.
 - [ruleset-example.md](ruleset-example.md) — one GitHub ruleset for `main` and the default
-  branch, with what each part does and why. Read it when you set up a repository or change how
-  it protects `main` and the default branch.
+  branch, with what each part does and why, the rules to add when CI runs, and the tag rulesets
+  for release tags. Read it when you set up a repository, or change how it protects `main`, the
+  default branch or release tags.
 
 ## How to adopt
 
@@ -45,11 +46,11 @@ flowchart TD
 4. Each developer runs `git config --global merge.conflictStyle zdiff3` once. Nothing in a
    repository can turn this on for the people working in it, and section 7 says what it buys.
 5. Re-check what can go stale once the folder is copied. The git version in section 1 of
-   `git.md` is a moving target. Four docs this folder links live outside it: the doc about
+   `git.md` is a moving target. This folder links docs that live outside it: the doc about
    agent files (from `git.md` section 9), `file-structure.md` (from `git.md` section 9 and
-   `readme-example.md`), `refactoring.md` (from `commit-example.md` and this file) and
-   `readability.md` (from `ruleset-example.md`). Copy each one too, or drop the sentences that
-   link it. `grep -n '](\.\./' *.md`, run in this folder, prints every such link.
+   `readme-example.md`), `refactoring.md` (from `commit-example.md` and this file),
+   `readability.md` (from `ruleset-example.md`), and the ci-cd and project-management practices
+   (from `ruleset-example.md`). Copy each one too, or drop the sentences that link it. `grep -n '](\.\./' *.md`, run in this folder, prints every such link.
 
 ## The point to adapt
 

@@ -207,7 +207,10 @@ the `sha256:...` digests are placeholders until Renovate or the command above fi
 | `helpers:pinGitHubActionDigests` | pins each action in a workflow to a commit SHA, as [ci-example.md](ci-example.md) shows [25] |
 | `customManagers:dockerfileVersions` | updates an `ARG` or `ENV` whose name ends in `_VERSION` when a `# renovate: datasource=… depName=…` comment sits on the line above it, as for Claude Code in [agent-container-example.md](agent-container-example.md) section 3 [26] |
 
-It is good because every pin in these examples gets a pull request that moves it. Renovate pins no
+It is good because each preset keeps one kind of pin moving with a pull request: image digests in
+the Dockerfile, action SHAs in the workflows, and `_VERSION` values under a `# renovate:` comment.
+A pin of another kind, such as a scanner's `version:` input in a workflow or a tool a step
+downloads, gets no pull request and is moved by hand. Renovate pins no
 digest by default [23], and Docker warns that a digest pin means you update by hand, and that
 "you're opting out of automated security fixes" ([images.md](images.md) section 4) [27].
 
