@@ -856,8 +856,11 @@ eleven React applications in one repository [102]. A team of one or two keeps sh
 
 ## 13. Where the rules stop holding
 
-- **A library or a CLI tool**: nothing is deployed; the artifact is published once to a registry,
-  and section 3's build-once rule is the only one that applies.
+- **A library, a CLI tool, or an image published by a workflow that deploys nothing**
+  ([docker/ci-example.md](../docker/ci-example.md)): nothing is deployed; the artifact is published
+  once to a registry, an image's version tag goes on the digest `main` already pushed
+  ([images.md](../docker/images.md) section 8), and section 3's build-once rule is the only one
+  that applies.
 - **Continuous deployment in a scope that asks for an independent approver.** The EU's ICT risk
   rules for financial entities ask, for all changes to software, for "mechanisms to ensure the
   independence of the functions that approve changes and the functions responsible for requesting

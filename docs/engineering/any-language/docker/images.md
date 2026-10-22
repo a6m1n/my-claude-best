@@ -282,12 +282,21 @@ Whatever the choice:
 - **Write the OCI labels `org.opencontainers.image.source` and `org.opencontainers.image.revision`
   at least.** They tie the image to the repository and the commit [72]. On GitHub's registry, the
   `source` label links the package to its repository, so the package takes the repository's access
-  rules [73], [74]. `docker/metadata-action` writes these labels and the tags of the first
-  bullet [75].
+  rules [73], [74]. `docker/metadata-action` writes these labels and the commit tag of the first
+  bullet [75]; the version tag goes on as the last bullet says.
 - **Turn on immutable tags where the registry offers them** (Docker Hub, Amazon ECR, Google
   Artifact Registry) [76], [77], [78]. GitHub's documentation names no such setting for its
   container registry, and a commenter on the feature request says a pushed tag "can always be
   retargeted" [79]. There, the digest is the only fixed reference.
+- **Put the version tag on the digest the commit's build already pushed; never build the image
+  again for it.** A second build is an image no test saw. Its provenance records new build
+  timestamps [39] and sits in the image index [80], so the index gets a new digest, and its push
+  moves the commit tag too ([ci-cd/delivery.md](../ci-cd/delivery.md) section 3); where tags are
+  immutable, the registry refuses that push [76], [77]. With one source that is an image index,
+  `docker buildx imagetools create` "performs a carbon copy" [150]:
+  `docker buildx imagetools create --tag <image>:1.4.2 <image>:sha-1a2b3c4` gives the new tag the
+  same digest, its SBOM and provenance included. That job builds nothing, so section 10's one job
+  is still the only one that builds and pushes.
 
 ## 9. SBOM, provenance and signatures
 
@@ -563,3 +572,4 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [147] Astral — uv: Locking and syncing, uv 0.13.1 — https://github.com/astral-sh/uv/blob/0.13.1/docs/concepts/projects/sync.md
 - [148] Docker — Volumes, Mounting a volume over existing data (`content/manuals/engine/storage/volumes.md`) — https://github.com/docker/docs/blob/31d174d090fd7111ca2199ed54a3978e0d4ac74d/content/manuals/engine/storage/volumes.md
 - [149] Rails — railties: `app_base.rb`, `dockerfile_chown_directories` — https://github.com/rails/rails/blob/d1deb4e897886f594e850bc135e77f1346927182/railties/lib/rails/generators/app_base.rb#L801-L808 — checked 2026-10-17
+- [150] Docker — docker buildx imagetools create (CLI reference) — https://docs.docker.com/reference/cli/docker/buildx/imagetools/create/ — checked 2026-10-22

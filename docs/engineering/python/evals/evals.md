@@ -230,7 +230,7 @@ What each run holds:
 | Moment | What runs | Real model |
 |---|---|---|
 | every push | the unit suite, with a stand-in for the model | no |
-| a pull request that changes model behaviour | the regression set, the real-model tests of the changed module, the result in the pull request | yes, started by hand or by the CI job |
+| a pull request that changes model behaviour | the regression set, the real-model tests of the changed module, the result in the pull request | yes, started by hand, on a machine or in CI as [ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4 says |
 | the schedule | the whole eval: every set, repeated runs, judges, pass^k for agents | yes |
 | production | checks on sampled traces ([production.md](production.md)) | the production calls |
 

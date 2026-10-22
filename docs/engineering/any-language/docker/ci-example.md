@@ -56,6 +56,7 @@ concurrency:
 
 jobs:
   image:
+    if: github.ref_type != 'tag'  # a version tag builds nothing; the release job below tags main's image (images.md section 8)
     runs-on: ubuntu-24.04  # a version label, never ubuntu-latest: the OS changes only when this line does (ci-cd/pipeline.md section 9)
     timeout-minutes: 30  # a hung build or scan stops here, not after the default 360 minutes
     permissions:
@@ -88,7 +89,6 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
           tags: |
-            type=semver,pattern={{version}}
             type=sha
 
       # Build and load the image into the runner; the build checks run here and fail it
@@ -118,7 +118,7 @@ jobs:
           ignore-unfixed: true
           exit-code: "1"
 
-      # Only a push to main or a tag publishes; a pull request or a scheduled run does not.
+      # Only a push to main publishes; a pull request or a scheduled run does not.
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
         if: github.event_name == 'push'
         with:
@@ -143,6 +143,30 @@ jobs:
       - name: Record the digest
         if: github.event_name == 'push'
         run: echo "image=${IMAGE}@${{ steps.push.outputs.digest }}" >> "$GITHUB_STEP_SUMMARY"
+
+  release:
+    # A version tag names the image main already built and pushed for the tagged commit; it never
+    # builds again, so 1.4.2 and sha-1a2b3c4 name one digest (images.md section 8).
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04  # a version label, never ubuntu-latest (ci-cd/pipeline.md section 9)
+    timeout-minutes: 5  # a hung registry call stops here, not after the default 360 minutes
+    permissions:
+      packages: write  # add a tag on ghcr.io; nothing is checked out
+    steps:
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add the version tag to main's image
+        env:
+          IMAGE: ghcr.io/${{ github.repository }}
+        run: |
+          image="${IMAGE,,}"  # lowercase, as metadata-action writes the name in the image job
+          # v1.4.2 -> 1.4.2 on the digest of sha-<7 characters>; a carbon copy, so the digest stays.
+          # No sha- image (main never pushed this commit) fails the job, and nothing is published.
+          docker buildx imagetools create --tag "$image:${GITHUB_REF_NAME#v}" "$image:sha-${GITHUB_SHA::7}"
 ```
 
 `.trivyignore`, at the repository root, where Trivy looks for it [3]:
@@ -163,23 +187,25 @@ CVE-2026-0000 exp:2026-12-31
 | `timeout-minutes: 30` | a hung build or scan stops in half an hour, not after the default six hours ([ci-cd/pipeline.md](../ci-cd/pipeline.md) section 8) |
 | `concurrency` | a new push to a pull request cancels its older run; a push or a scheduled run gets its own group and is never cancelled ([ci-cd/pipeline.md](../ci-cd/pipeline.md) section 8) |
 | the Docker Hub login, skipped when the secret is absent | logged-in pulls have their own limit [10]; a fork's pull request runs without secrets [11], and so does one from Dependabot ([ci-cd/pipeline.md](../ci-cd/pipeline.md) section 4), so the job still runs and pulls anonymously |
-| `metadata-action` with `type=semver` and `type=sha` | the tags `1.4.2` and `sha-1a2b3c4`, and the OCI labels `source` and `revision`; `latest` appears only on a release tag, and nobody deploys it [12] |
+| `metadata-action` with `type=sha` | the tag `sha-1a2b3c4` and the OCI labels `source` and `revision` [12]; the version tag comes from the `release` job, and no run writes `latest`, which nobody deploys ([images.md](images.md) section 8) |
 | the first `build-push-action` with `load: true` | builds and puts the image in the runner, so the test and the scan check the image that will be pushed from the same cache [8] |
 | `cache-to: type=gha,scope=acme-api,mode=max` | this image's own cache scope; GitHub keeps a pull request's cache apart from `main`'s, so a pull request cannot write the cache a release build reads [13], [14] |
 | `Test the image` | the process runs as the non-root user, the package imports from the venv, the entry point `acme-api` is on `PATH`, and the one path the service writes, `/tmp`, works with the rest of the filesystem read-only, as compose-example.md runs it (images.md section 6) |
 | `trivy-action` with `severity`, `ignore-unfixed`, `exit-code: "1"` | the written policy of [images.md](images.md) section 10; `version` pins the Trivy release the action installs [15] |
 | `.trivyignore` | one waiver per entry, with its reason and an expiry date; after the `exp:` date the finding fails the job again ([images.md](images.md) section 10) [16] |
-| the second `build-push-action` (`id: push`), only on a push | pushes the tags with an SBOM and provenance, and gives the pushed image's digest as its `digest` output (`steps.push.outputs.digest`) [17]. A pull request or a scheduled run builds, tests and scans, and publishes nothing |
-| `Record the digest`, only on a push | writes `image=<name>@<digest>` to the run's summary page [18]; that line is the reference a deploy uses ([images.md](images.md) section 8) |
+| the second `build-push-action` (`id: push`), only on a push to `main` | pushes the tags with an SBOM and provenance, and gives the pushed image's digest as its `digest` output (`steps.push.outputs.digest`) [17]. A pull request or a scheduled run builds, tests and scans, and publishes nothing |
+| `Record the digest`, only on a push to `main` | writes `image=<name>@<digest>` to the run's summary page [18]; that line is the reference a deploy uses ([images.md](images.md) section 8) |
+| the `release` job, only on a `v*` tag | adds the version (`1.4.2` for `v1.4.2`) to the image `main` pushed for the tagged commit, found by its `sha-` tag of 7 characters, metadata-action's default [12]; it builds nothing ([images.md](images.md) section 8). With one source that is an index, `imagetools create` "performs a carbon copy" [30], so `1.4.2` and `sha-1a2b3c4` name one digest with one SBOM and provenance, and a re-run changes nothing. A tag on a commit that `main` never pushed finds no image and fails, so it publishes nothing; push the tag after the commit's run on `main` has passed. The job asks only for `packages: write` |
 
 The weekly schedule notifies only the person who last edited its cron line, and GitHub turns it
 off after 60 days without activity in a public repository, so name who watches it [11]. The weekly run
 scans the image built from `main`; where production runs an older digest, scan that digest too on
 the same schedule.
 
-It is good because a pull request runs every check the release runs and publishes nothing; the
-job can do only what its permissions name; and no tag that someone else controls decides what
-code runs with the right to push the image.
+It is good because a pull request runs every check the release runs and publishes nothing; a
+version tag names the image `main` built instead of building it again; the job can do only what
+its permissions name; and no tag that someone else controls decides what code runs with the right
+to push the image.
 
 In a monorepo with a deploy, this job splits in two: the build, test and scan run in CI on every
 pull request as a check, and the push runs only in the deploy workflow on `main`, which holds the
@@ -235,3 +261,4 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [27] Docker — Build attestations — https://docs.docker.com/build/metadata/attestations/
 - [28] Docker — docker/setup-docker-action README, v5.5.0 — https://github.com/docker/setup-docker-action/blob/v5.5.0/README.md
 - [29] Renovate — github-actions manager, extract.ts (the replacement template), 44.164.10 — https://github.com/renovatebot/renovate/blob/44.164.10/lib/modules/manager/github-actions/extract.ts
+- [30] Docker — docker buildx imagetools create (CLI reference) — https://docs.docker.com/reference/cli/docker/buildx/imagetools/create/ — checked 2026-10-22

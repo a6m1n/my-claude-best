@@ -17,7 +17,8 @@ What each part does:
   each run by code;
 - `evals/rate_gate.py` counts every run, fails when a rate falls below its baseline, and reports
   the rates;
-- `.github/workflows/evals.yml` runs it on a pull request that changes the call, and every night;
+- `.github/workflows/evals.yml` runs it every night, and a person runs it by hand on the branch of
+  a pull request that changes the call;
 - the pytest contract for single cases stays in `tests/integration/triage/`.
 
 ## `evals/triage/cases_triage.jsonl`: the cases
@@ -574,12 +575,9 @@ example.
 name: evals
 
 on:
-  pull_request:
-    paths:
-      - "src/acme/support/triage/**"
-      - "src/acme/core/acme_ai_client.py"
-      - "evals/rate_gate.py"
-      - "evals/triage/**"
+  # Run by hand on the pull request's branch, after reading its diff: the job holds a
+  # paid key, so no push starts it (ci-cd/pipeline.md section 4).
+  workflow_dispatch:
   # Nightly too: catches a change on the vendor's side that no pull request made
   # (evals.md section 8).
   # Name who reads a failed run: GitHub notifies only whoever last edited this
@@ -589,16 +587,11 @@ on:
 
 permissions: {}  # nothing by default; each job asks for what it uses
 
-concurrency:
-  # A new push to a pull request cancels its older run, and its model calls; the nightly run is never
-  # cancelled (ci-cd/pipeline.md section 8).
-  group: evals-${{ github.event.pull_request.number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-
 jobs:
   triage:
     runs-on: ubuntu-24.04  # a version label: the OS changes only when this line does (ci-cd/pipeline.md section 9)
     timeout-minutes: 30  # the case set's model calls, with room; a hung call stops here
+    environment: evals  # the keys' own environment: only a job that names it gets them (ci-cd/pipeline.md section 4)
     permissions:
       contents: read
     steps:
@@ -610,10 +603,6 @@ jobs:
       - run: uv sync --locked
       - run: uv run --locked python -m evals.triage.experiment_triage
         env:
-          # A departure from ci-cd/pipeline.md section 4, which keeps a paid key in an
-          # environment of its own: this eval runs on the pull requests evals.md section 8
-          # names, with no reviewer's wait. The cost: any branch author can read these keys,
-          # and a fork's pull request starts the job and fails; the model key has a spend limit.
           # A key of its own, in a project with a monthly spend limit (evals.md section 8).
           ACME_ACME_AI_API_KEY: ${{ secrets.EVALS_ACME_AI_API_KEY }}
           # An evals-only Langfuse project: its keys read every trace in it, and this
@@ -627,14 +616,23 @@ jobs:
           ACME_GIT_COMMIT: ${{ github.sha }}
 ```
 
-A pull request that changes what the triage call sends or how its run is graded runs the eval: the
-triage module (its prompt, its response schema, its model), the one client, the rate gate or the
-case set. So does every night: the schedule catches a change on the vendor's side that no pull
-request made ([evals.md](evals.md) section 8). A `RegressionError` ends the module with an error,
+Before a pull request that changes what the triage call sends or how its run is graded merges, a
+person who has read its diff runs the eval on its branch with "Run workflow" and copies the report
+from the job's log into the pull request's Verification section ([evals.md](evals.md) section 8).
+Such a change touches the triage module (its prompt, its response schema, its model), the one
+client, the rate gate or the case set. The job holds a paid key, so no push starts it
+([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4). "Run workflow" offers only
+this repository's branches, so for a pull request from a fork a maintainer pushes the reviewed
+branch here first. It also runs every night:
+the schedule catches a change on the vendor's side that no pull request made
+([evals.md](evals.md) section 8). A `RegressionError` ends the module with an error,
 so the job fails; a run that passes prints its report in the job's log. The key belongs to a
-project with a spend limit, because nobody is present while the nightly run spends. The Langfuse keys belong to a
-project of their own, because a project's keys read every trace in it, and this job runs the pull
-request's code.
+project with a spend limit, because nobody is present while the nightly run spends. The Langfuse
+keys belong to a project of their own, because a project's keys read every trace in it, and this job runs the pull
+request's code. The three keys are secrets of the `evals` environment, so the gate's jobs never
+get them. The environment has no branch rule, because a run starts on the pull request's branch,
+and no required reviewer, because the nightly run would wait for one. So, as with a repository
+secret, a writer who names the environment in a workflow still gets the keys.
 `Settings` reads each field from `ACME_` plus the field's name in upper case
 ([python/language/settings-example.md](../language/settings-example.md)), so `acme_ai_api_key` comes from
 `ACME_ACME_AI_API_KEY`. The job must also set every other required field of the application's
@@ -642,8 +640,7 @@ request's code.
 the real secrets; this snippet leaves them out.
 The checkout, the uv setup and the read-only token are those of
 [python/static-checks/setup-example.md](../static-checks/setup-example.md): the job holds a paid key, so
-the checkout's token is not left on the runner. A pull request from a fork gets no secrets, so this
-job starts there and fails ([ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4).
+the checkout's token is not left on the runner.
 
 ## The contract of single cases
 

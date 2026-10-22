@@ -188,7 +188,7 @@ rules. This practice found no case where this is too much.
 | 6. Publish | the image pushed by digest, the bundle stored | [delivery.md](delivery.md) section 3 | `publish-api`, `publish-web` | no | yes | no | no |
 | 7. Staging | migrate, deploy, smoke test; after the deploy, the passive scan of the running site and the header scans; end-to-end tests with axe, which the example does not show | [delivery.md](delivery.md) sections 5, 6 and 7; [pipeline-security.md](pipeline-security.md) section 7 (the passive scan); [security.md](../../react/security/security.md) section 14 (headers); [accessibility.md](../../react/design/accessibility.md) section 10 (axe) | `staging`, `dast-staging`, `headers-staging` | no | yes | no | no |
 | 8. Production | the same artifact deployed, smoke test | [delivery.md](delivery.md) section 4 | `tag-is-on-main`, `production` | no | no | yes | no |
-| Outside the gate | a job that needs a paid key, such as an eval that calls a model | [evals.md](../../python/evals/evals.md) section 8; section 4 above (the key) | not shown | started by hand or by a maintainer | no | no | as [evals.md](../../python/evals/evals.md) section 8 asks |
+| Outside the gate | a job that needs a paid key, such as an eval that calls a model | [evals.md](../../python/evals/evals.md) section 8; section 4 above (the key) | `triage` in the `evals.yml` of [case-set-example.md](../../python/evals/case-set-example.md) | started by hand or by a maintainer | no | no | as [evals.md](../../python/evals/evals.md) section 8 asks |
 
 ## 6. One required check: the gate job
 
