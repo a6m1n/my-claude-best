@@ -22,9 +22,9 @@ The repository, cut to the files this example touches:
 │   └── CODEOWNERS              # security-example.md
 ├── .pre-commit-config.yaml     # the hook file, at the root because pre-commit runs from there
 ├── backend/                    # one Python application, laid out as file-structure.md section 9 says
-│   ├── pyproject.toml          # dev tools, [tool.uv] required-version (static-checks setup-example.md section 1), [tool.alembic]
+│   ├── pyproject.toml          # requires-python "==3.13.*", dev tools, [tool.uv] required-version (static-checks setup-example.md section 1), [tool.alembic]
 │   ├── uv.lock
-│   ├── .python-version
+│   ├── .python-version         # 3.13: every job and the image run this minor (pipeline.md section 9)
 │   ├── Dockerfile              # dockerfile-example.md, with backend/ as the build context
 │   ├── .dockerignore
 │   ├── migrations/             # Alembic's env.py, which builds the application's Settings, and one file per schema change
@@ -135,7 +135,7 @@ jobs:
           persist-credentials: false  # the token is not left on the runner for the steps after this one
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
-          working-directory: backend  # reads required-version and .python-version from the backend
+          working-directory: backend  # reads required-version from the backend; no python-version input: uv takes the minor from backend/.python-version (pipeline.md section 9)
           enable-cache: true
       - run: uv sync --locked --project backend
       - run: uv run --locked --project backend pre-commit run --all-files --show-diff-on-failure
@@ -157,7 +157,7 @@ jobs:
           persist-credentials: false
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
-          working-directory: backend
+          working-directory: backend  # no python-version input: uv takes the minor from backend/.python-version (pipeline.md section 9)
           enable-cache: true
       - run: uv sync --locked  # fails when uv.lock does not match pyproject.toml
       - run: uv run --locked pytest tests/unit
@@ -209,7 +209,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
-          working-directory: backend
+          working-directory: backend  # no python-version input: uv takes the minor from backend/.python-version (pipeline.md section 9)
           enable-cache: true
       - run: uv sync --locked
       - name: Migrations apply to an empty database and match the models
@@ -357,7 +357,8 @@ jobs:
 | `changes` on pull requests only | the scoped form, for a monorepo whose full run no longer fits the feedback budget ([pipeline.md](pipeline.md) section 7); while a full run fits, delete it, the `if:` lines that read it and each `needs: changes`, and take `changes` out of `ci-ok`'s `needs`. One output per side; `dorny/paths-filter` reads the changed files through the API, so the job needs no checkout and only `pull-requests: read` [1]. A change to a workflow or to the hook file runs both sides, and a change to the root `.trivyignore` runs the backend, whose `image` job reads it ([pipeline.md](pipeline.md) section 7) |
 | `checks` with no condition | the hook file on every file of every run, as [static-checks.md](../../python/static-checks/static-checks.md) section 5 asks; section 3 below shows the root hook file |
 | `!cancelled() && (… != 'pull_request' \|\| …)` | on the queue, on `main` and on the weekly run, `changes` is skipped and every side runs; on a pull request a side runs only when its files changed. `!cancelled()` is what lets a job run after a skipped `needs` [2] |
-| `working-directory: backend` and `--project backend` | setup-uv reads the uv version and the Python version from the folder it is given [3]; `--project` runs uv on the backend from the repository root, where pre-commit works |
+| `working-directory: backend` and `--project backend` | setup-uv reads the uv version from the folder it is given [3], and `uv sync` there takes the Python from `.python-version`; `--project` runs uv on the backend from the repository root, where pre-commit works |
+| no `python-version` input on setup-uv | the input is a second copy of the minor: it sets `UV_PYTHON` over `.python-version` [3], so on another minor `requires-python` fails the job, and the next minor move has one more file to change; every job runs the pinned minor ([pipeline.md](pipeline.md) section 9) |
 | `uv sync --locked` | installs exactly `uv.lock`, and fails when it is stale ([pipeline.md](pipeline.md) section 9) |
 | `pytest tests/unit`, then `pytest tests/integration --timeout=120` in a job of its own | the two suites of [python/testing/README.md](../../python/testing/README.md), step 4 of "How to adopt" |
 | `services: postgres`, pinned by digest, with `credentials` | the empty scratch database of the migration check, which the steps reach at `localhost` through the mapped port [12]; pinned by digest like every image ([images.md](../docker/images.md) section 4). The runner logs in to the registry only when both the username and the password are set, and otherwise pulls without a login [13], so the run of a fork's pull request still starts. The health check asks over TCP, for the reason [compose.md](../docker/compose.md) section 3 gives for this image |

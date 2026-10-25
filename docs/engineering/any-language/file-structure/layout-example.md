@@ -91,6 +91,7 @@ Every folder under `src/` has an `__init__.py`; the tree leaves them out. A file
 ├── renovate.json                           # the bot that keeps the digest pins current (any-language/docker/images.md section 4)
 ├── pyproject.toml
 ├── uv.lock
+├── .python-version                         # one Python minor, the same as requires-python (any-language/ci-cd/pipeline.md section 9)
 ├── CLAUDE.md
 └── README.md
 ```

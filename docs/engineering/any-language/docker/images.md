@@ -373,6 +373,13 @@ Whatever the choice:
 - **Use the same Python image for the builder and the runtime stage.** A virtual environment is
   not movable: its scripts hold the absolute path of the interpreter that built it [111], [109].
   One `ARG` that both `FROM` lines read keeps the two equal.
+- **Name the project's Python minor in the image tag, and let uv stop the build when it differs.**
+  An application allows one minor in `requires-python` ([ci-cd/pipeline.md](../ci-cd/pipeline.md)
+  section 9). uv uses the first interpreter that fits that range [151], and with downloads off it
+  fails when no interpreter fits [152], so the first `uv sync` stops a build on an image of another
+  minor. The check needs no extra step and no copy of `.python-version` in the build context. The
+  tag names the minor, and the digest pins the patch (section 4). The tag moves with the pin, as
+  [ci-cd/pipeline.md](../ci-cd/pipeline.md) section 9 says.
 - **Copy only the virtual environment into the runtime stage, put its `bin` folder first on
   `PATH`, and run the project's entry point directly.** uv stays out of the runtime image, as in
   uv's own production example [109]. `uv run` forwards signals to its child (since uv 0.6.15), but
@@ -573,3 +580,5 @@ Checked 2026-10-16 unless a line ends with — checked <YYYY-MM-DD>.
 - [148] Docker — Volumes, Mounting a volume over existing data (`content/manuals/engine/storage/volumes.md`) — https://github.com/docker/docs/blob/31d174d090fd7111ca2199ed54a3978e0d4ac74d/content/manuals/engine/storage/volumes.md
 - [149] Rails — railties: `app_base.rb`, `dockerfile_chown_directories` — https://github.com/rails/rails/blob/d1deb4e897886f594e850bc135e77f1346927182/railties/lib/rails/generators/app_base.rb#L801-L808 — checked 2026-10-17
 - [150] Docker — docker buildx imagetools create (CLI reference) — https://docs.docker.com/reference/cli/docker/buildx/imagetools/create/ — checked 2026-10-22
+- [151] Astral — uv: Python versions (`docs/concepts/python-versions.md`), commit 4954c25 — https://github.com/astral-sh/uv/blob/4954c25a16b246c1b88aef6c3798a76d675c5cd0/docs/concepts/python-versions.md
+- [152] Astral — uv: the `uv sync` tests (`crates/uv/tests/sync/sync.rs`), commit 4954c25 — https://github.com/astral-sh/uv/blob/4954c25a16b246c1b88aef6c3798a76d675c5cd0/crates/uv/tests/sync/sync.rs

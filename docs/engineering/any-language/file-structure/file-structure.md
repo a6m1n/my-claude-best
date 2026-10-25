@@ -347,6 +347,7 @@ sit where [python/testing/layout.md](../../python/testing/layout.md) section 1 p
 ├── compose.yaml        # the local stack (any-language/docker/compose.md)
 ├── pyproject.toml
 ├── <lockfile>
+├── .python-version     # one Python minor, the same as requires-python (any-language/ci-cd/pipeline.md section 9)
 ├── CLAUDE.md
 └── README.md
 ```
@@ -360,10 +361,11 @@ sit where [python/testing/layout.md](../../python/testing/layout.md) section 1 p
   its code" (the same guide), so the project is installed into its environment before anything runs.
   `uv sync` does that, and since uv 0.12 (July 2026) `uv init` lays out an application this way by
   default.
-- **The root holds only the files a tool or a person looks for there**: the build and lock files,
-  the container files (`Dockerfile`, `.dockerignore`, `compose.yaml`, `.devcontainer/`), the update
-  bot's and the scanner's config (`renovate.json`, `.trivyignore`), the CI config, the agent
-  instruction file, `README.md`, `.env.example`, and the top folders above. Never a `.env` with
+- **The root holds only the files a tool or a person looks for there**: the build and lock files
+  and the Python version pin (`.python-version`), the container files (`Dockerfile`,
+  `.dockerignore`, `compose.yaml`, `.devcontainer/`), the update bot's and the scanner's config
+  (`renovate.json`, `.trivyignore`), the CI config, the agent instruction file, `README.md`,
+  `.env.example`, and the top folders above. Never a `.env` with
   real values, never a loose script.
 - **`scripts/` is for commands a person runs by hand**: seed data, a one-off upload. The application
   never imports from it; code both need lives in the package.

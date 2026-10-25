@@ -606,6 +606,7 @@ jobs:
         with:
           ref: ${{ inputs.commit || github.sha }}  # the commit that was read, never a later push; nightly, main's head (ci-cd/pipeline.md section 4)
           persist-credentials: false  # the job holds a paid key: the token is not left on the runner
+      # No python-version input: uv takes the minor from .python-version (ci-cd/pipeline.md section 9).
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
       - run: uv sync --locked
       - run: uv run --locked python -m evals.triage.experiment_triage
