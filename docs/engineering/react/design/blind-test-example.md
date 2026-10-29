@@ -72,12 +72,13 @@ enters the conversation, and with it the token ([skill-blind-test.md](skill-blin
 section 1). Then start `claude` in that same terminal, with the token exported there, and keep
 that session, the token session, open until the count. It runs the commands of steps 5 to 13 and
 reads the records for you; steps 10 and 12 are yours, and so are the two `/usage` reads of step 6,
-which need a session signed in with `/login`. It runs steps 6 and 7 and step 9's server as
-background commands, which have no time limit in a local session
+which need a session signed in with `/login`. It runs steps 6 and 7, step 9's server and its
+shoot script as background commands, which have no time limit in a local session
 ([skill-blind-test.md](skill-blind-test.md) section 1). *Not yet tried*: whether those commands
 get the exported token and keep running for days; the pilot settles it. If they do not, run steps
 6 and 7 in a plain terminal that stays open, such as a `tmux` session, with the token exported
-there, and step 9's server in a second terminal. Every arm still runs in Claude Code, as
+there, and step 9's server and its shoot script in a second terminal. Every arm still runs in
+Claude Code, as
 `claude -p` on your plan.
 
 0. **Make the folder.** Claude Code loads every `CLAUDE.md` above the folder it runs in, and project
@@ -168,13 +169,14 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    Success: for each arm, `git -C arms-src/<arm> rev-parse HEAD` prints the commit `arms.json`
    gives it.
 
-4. **Make the token, and hand it to this shell only.** Run this step in your own terminal, never in
-   Claude Code (above). Usage credits must be off, so the plan's limit pauses the bench and nothing
-   is billed ([skill-blind-test.md](skill-blind-test.md) section 3). Before you make the token,
-   check usage credits in a Claude Code session signed in with `/login`, started in a terminal where
-   `CLAUDE_CODE_OAUTH_TOKEN` is not set: run `/usage`. Success: no usage-credits row. If it shows
-   one, run `/usage-credits` in that same session and turn them off. Check there, not in the session
-   the block below starts: that one runs on the token, which can only make model requests. Each run
+4. **Make the token, and hand it to this shell only.** Run this step in your own terminal, never
+   through Claude Code's Bash tool or its `!` prefix (above). Usage credits must be off, so the
+   plan's limit pauses the bench and nothing is billed ([skill-blind-test.md](skill-blind-test.md)
+   section 3). Before you make the token, check usage credits in a Claude Code session signed in
+   with `/login`, started in a terminal where `CLAUDE_CODE_OAUTH_TOKEN` is not set: run `/usage`.
+   Success: no usage-credits row. If it shows one, run `/usage-credits` in that same session and
+   turn them off. Check there, not in the session the block below starts: that one runs on the
+   token, which can only make model requests. Then leave that session with `/exit`. Each run
    gets a configuration folder of its own with no login in it, so your subscription reaches it as a
    token. `claude setup-token` opens the same browser sign-in as `/login` and prints the token. Run
    the `read` line, paste the token and press Enter: `read -rs` takes it without showing it and
@@ -211,7 +213,7 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    node run-arms.mjs pilot
    ```
 
-   When the pilot has finished (its last line gives the runs asked), run:
+   When the pilot has ended, with its summary line (`… of N runs asked.`) or with an error, run:
 
    ```sh
    ls -a ~ | diff home-before.txt -
@@ -228,9 +230,11 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    reports `skillFilesRead`, the files the run read beside `SKILL.md`, and stops on nothing there.
    In the no-skill run, the pilot tries `skillRan` with every skill's name and stops when one
    matches: fix `skillRan` before the bench. Then send the pilot's pages
-   through steps 8 to 10 with `node blind-pages.mjs pilot-runs`, to see the whole path work, and
-   delete `judging/`, `key/` and `checks/` afterwards; if you will also judge, skip step 10 for the
-   pilot and only check that the shots render. To run the pilot again, delete `pilot-runs/` first.
+   through steps 8 to 10 (they are below; read them now) with `node blind-pages.mjs pilot-runs`,
+   to see the whole path work, and delete `judging/`, `key/` and `checks/` afterwards; stop the
+   pilot's page server too, since step 9 needs the same port; if you will also judge, skip step 10
+   for the pilot and only check that the shots render. To run the pilot again, delete
+   `pilot-runs/` first.
 
 7. **Run the bench,** from the token session, as a background command. It runs one run at a
    time, in the order it draws once, and picks up where it stopped when you start it again; a run
@@ -308,15 +312,16 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
     changed `pageServerPort`, change the port in `judging-instructions.md` step 4 to match.
 
 13. **Count.** The script refuses to count while a pick is missing or names a page outside its set.
-    Paste its two tables into `results.md`, the one record of the result, with the date of the
-    count. Then follow [skill-blind-test.md](skill-blind-test.md) section 7 for what the result
-    changes.
 
     ```sh
     node count-wins.mjs
     ```
 
     Success: the script prints two tables, and no error such as `Fix the picks first`.
+
+    Paste its two tables into `results.md`, the one record of the result, with the date of the
+    count. Then follow [skill-blind-test.md](skill-blind-test.md) section 7 for what the result
+    changes.
 
 14. **Undo what the bench changed on your machine.** Once `results.md` holds the count, stop the
     page server of step 9 and any other background command in the token session, then leave it
@@ -325,8 +330,9 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
     `unset CLAUDE_CODE_OAUTH_TOKEN` in each ([skill-blind-test.md](skill-blind-test.md) section 8).
     The token stays valid after it leaves the shell, for a year from when step 4 made it, and
     every arm's code could read it. In a terminal of your own, remove `DISABLE_AUTOUPDATER` from
-    the `env` of `~/.claude/settings.json`, so Claude Code updates itself again; success:
-    `claude doctor` no longer shows the `Auto-updates` line as disabled.
+    the `env` of `~/.claude/settings.json`, so Claude Code updates itself again;
+    success, on a native or npm installation: `claude doctor` shows the `Auto-updates` line as
+    `enabled`.
 
 Why it is good: every step says what it is for before it says what to run, so a reader can tell
 which step to repeat when something fails. The pilot comes before the days of runs, and the

@@ -481,9 +481,10 @@ bench's `results.md` ([blind-test-example.md](blind-test-example.md), "The resul
 the date of the count and the number of judges. `results.md` is the one record of the result; this
 file holds none. Not run yet.
 
-Then update every line in your copies that says no test with human raters exists;
+Then update the lines in your copies that say no test with human raters exists;
 `grep -rn -i -E 'human raters|rated by people|people rated|no published test' docs/engineering/react/design/`
-lists them. Add the result to the "What to expect" cell of each tested arm in
+lists them. It also prints its own two lines in this section, which stay as they are. Add the
+result to the "What to expect" cell of each tested arm in
 [choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 8.
 
 ## 8. Security: every arm runs third-party code
