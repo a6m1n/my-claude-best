@@ -140,14 +140,33 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   adds carries a comment that names the outside system or the escape hatch it is for
   (`components.md` sections 5 and 7).
 - Before you design or restyle a screen of a React application, add a control, a form or a route to
-  one, ask an agent to build a screen, or review such a change, read
-  `docs/engineering/react/design/README.md` and the file it routes to for that work, and
-  `docs/engineering/react/design/design-brief-example.md` when you write the brief for a screen. The
-  check: every colour, radius and space the change adds is a token role, a step of the scale or one
-  of the two exceptions (`visual-design.md` sections 3 and 6), the closing summary says which steps
-  of the manual accessibility pass were run (`accessibility.md` section 11), and someone other than
-  the author of the screen answered its review checklist (`designing-with-claude-code.md` section
-  6).
+  one, ask an agent to build a screen or a brand page, pick, install or call a design skill or a
+  design tool, or review such a change, read `docs/engineering/react/design/README.md` and the file
+  it routes to for that work, and `docs/engineering/react/design/design-brief-example.md` when you
+  write the brief for a screen, `docs/engineering/react/design/brand-direction-example.md` when you
+  fix the direction of a brand page, `docs/engineering/react/design/blind-test-example.md` when you
+  set up a blind test of design skills. The check: every colour, radius and space the change adds is
+  a token role, a step of the scale or one of the two exceptions (`visual-design.md` sections 3 and
+  6), the closing summary says which steps of the manual accessibility pass were run
+  (`accessibility.md` section 11), someone other than the author of the screen answered its review
+  checklist (`designing-with-claude-code.md` section 6), and every design skill a run uses is called
+  by name and shown loaded in that run (`choosing-tools-and-skills.md` section 5).
+- Before you plan, run or report a usability test, an expert review, a survey inside the product,
+  an A/B test or a UX metric, judge whether a screen works for its users, add an analytics SDK, an
+  event, a page-view source, a consent gate, heatmaps or session replay to a web application, or
+  give an agent its analytics data, read `docs/engineering/any-language/ux-evaluation/README.md` and
+  the file it routes to for that work, and
+  `docs/engineering/any-language/ux-evaluation/test-plan-example.md` when you write a test plan,
+  `docs/engineering/any-language/ux-evaluation/tracking-plan-example.md` when you write a tracking
+  plan. The check: every test plan the change adds writes the decision its round feeds and each
+  task's success before the first session (`evaluation.md` sections 2 and 4), every finding it
+  reports from a model or a synthetic user carries that label (`evaluation.md` sections 11 and 18),
+  every event it sends is in the tracking plan (`behaviour-analytics.md` section 3), each analytics
+  tool gets its page views from one source (`behaviour-analytics.md` section 4), a new browser
+  profile shows no request to the analytics host and no cookie or key of the tool before the
+  consent banner is answered (`behaviour-analytics.md` section 5), and no rage click, dead click or
+  hotspot is reported as a finding before a person watched the replay behind it
+  (`behaviour-analytics.md` section 6).
 - Before you put data from outside a React application on its page, spread an object from outside as
   props, handle a session or a token in one, keep or send a credential, add an environment variable,
   a dependency, a third-party script, a response header or a CI step to one, change the dev server's

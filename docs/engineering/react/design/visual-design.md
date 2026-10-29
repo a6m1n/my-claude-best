@@ -29,8 +29,8 @@ quoted here, is [accessibility.md](accessibility.md) sections 2 and 9. How to ge
 follow this file is [designing-with-claude-code.md](designing-with-claude-code.md) sections 3 and 4.
 Where the token file sits in the tree is [architecture.md](../architecture/architecture.md)
 section 3.
-Every line that carries a read date is to be distrusted after 2027-04-01 until it is read again;
-the README's "How to adopt" says how to list those lines.
+Distrust a line that carries a read date six months after that date, until it is read again; the
+README's "How to adopt" says how to list those lines.
 
 The one rule: **an application screen is designed in product mode, and every visual value on it
 comes from a token or a scale (section 3 names two exceptions), never from one screen's taste.**
@@ -56,6 +56,11 @@ stand: the motion and reduced-motion CSS in section 8 and the theme switch in se
 application has one motion, the loading spinner, and no switch yet. Nothing was run in a browser.
 The contrast numbers in section 4 were computed from the token values with the WCAG 2 formula, not
 measured on a screen.
+
+What the research did not settle (layout density, fields, banking, dark themes for code, motion
+between screens, a regulator's guidance, education systems, Salesforce's AppExchange, chart palettes
+for a dark theme, and one thing per page for expert users) is listed in section 12, under "Not
+covered yet".
 
 ## 2. Product mode and brand mode
 
@@ -86,6 +91,98 @@ A community design skill, Impeccable, sorts surfaces the same way: "Operate" for
 and tools, "Persuade" for landing pages and marketing (read in part from the skill file,
 2026-10-01). The advice to make a design bold and distinctive, which design skills for coding
 agents give, belongs to brand mode; section 12 says where it applies.
+
+### How much expression a product screen carries
+
+The mode says what kind of screen it is. Inside product mode a screen can still carry more or less
+expression, and this part says how much.
+
+**What "expressive" means here.** The sources use the word in two senses. Carbon uses it for two
+sets kept apart from the task: an expressive type set for editorial pages, and expressive motion
+that it asks teams to "Reserve expressive motion for occasional, important moments, to better
+capture the user's attention and offer a rhythmic break to the productive experience." Google
+uses it for a whole design system: its research page describes Material 3 Expressive through
+"color, shape, size, motion, and containment", so it also changes the size and grouping of the
+parts a person works with. This file uses Carbon's sense. Expression is what a screen adds to draw
+the eye or to show character, beyond what the task needs: a brand type step, a stronger colour, a
+longer or springier motion, an illustration. Layout, size and grouping are not expression here;
+sections 5 to 7 set them.
+
+**The three cases.** Name one before you design the screen, so the author and the reviewer judge
+the screen against the same aim.
+
+| Case | What it is | When it fits | When it is the wrong case |
+|---|---|---|---|
+| Effective | Dense and quiet. Every element earns its place, and motion only shows what changed (section 8). | Every product-mode screen, by default: screens used many times a day, data-dense tables, tools for experts (section 10). | A few moments need the user's attention or a welcome, such as an alert or onboarding: then a balance. |
+| Polished | The same structure as an effective screen, with more craft in type, palette, density and motion. Nothing is added. | Where what people think of the product counts as well as how fast they work: looks raised perceived usability in the studies below, and consumers cite a site's look when they judge its credibility (section 10, banking). | The polish costs the task, the state or a familiar control, or it stands in for a fix to what the screen says and in what order (the FCA's finding below). |
+| Balance | An effective screen with expression at a few important moments: a transition, a confirmation, an empty state, an alert. | A product that needs some character on screens people work in. | The moments spread to most of the screen, or fall on an interaction repeated many times a day (section 8). |
+
+The moments the owners name: Carbon's motion page holds that "System alerts and the appearance of
+notification boxes are great cases for expressive motion", and adds opening a new page, clicking
+the primary action button, and movement that itself carries a meaning. Carbon's type page calls
+expressive moments inside a product "less common" and places them on home pages and page headers or
+banners, where content "is not restricted to a container, card, or data table". Atlassian says:
+"Save expressive, characterful motion for key brand moments, like onboarding experiences." The
+empty state is this file's own example; no owner read names it, and what an empty state says is
+[ux.md](ux.md) section 6.
+
+**The default: start every product-mode screen as effective.** Move to a balance only for a moment
+like the ones above, and add polish only where it costs nothing in the task, the state or a
+familiar control. Why: the owners of four design systems put purpose before expression.
+
+- Carbon keeps productive type "for product design" and expressive type "for editorial pages", and
+  holds that "For the most part, this is still a good guideline to follow".
+- Atlassian: "Motion is a clarifying layer, not decoration." and "Keep everyday UI motion efficient
+  and focused, and let brand personality come through in restraint and polish rather than
+  spectacle." Its motion page is marked Early Access (read 2026-10-29).
+- Primer's accessibility guidance: "The first step is to consider whether motion is needed at all."
+  Of motion meant "to enhance engagement and provide visual delight" it says: "Use it sparingly, if
+  at all."
+- Fluent 2: "Motion is applied with purpose and intent to serve the functionality of an experience."
+  It names delight as an aim after that ("Delightful animation draws people in."), and that page
+  does not say where delight is out of place.
+
+At Vercel, the product-design skill given to coding agents says: "Do not add decorative novelty,
+motion, or copy unless it clarifies structure, state, or brand intent." (a simplified view of the
+skill, shown in a Vercel blog post, 2026).
+
+### What the studies measured, and how each case is judged
+
+No study read changed the looks of a screen alone and measured faster work. Each study changed
+something different, so each row says what it changed.
+
+| Study | What changed | Who took part | What it found | Limits |
+|---|---|---|---|---|
+| Bentley et al., "Usability Hasn't Peaked" (CHI '26) | Designs made to the Material 3 Expressive guidelines against versions made to the previous Material system, in 10 apps | 48 people | They "fixated on the correct screen element for a task 33% faster, completed tasks 20% faster, and rated experiences more positively" | Abstract only. The paper is listed by Google Research and the system is Google's; the authors' affiliation was not on the page. The abstract speaks of mobile usability throughout and ends on the "risks of added flexibility". A whole redesign: size and grouping changed with the look, so the study cannot say which part made the gain (this file's reading). |
+| Google, "Expressive Design: Google's UX Research" | Material 3 Expressive against Material 3, across "46 separate research studies" with "more than 18,000 participants" | as stated | People spotted key elements "up to four times faster"; up to 87% of 18-to-24-year-olds preferred it, but "a strong minority of users preferred calmer, less intense versions". When an album-art playlist replaced a vertical list, "usability scores suffered", and removing text labels from email actions "resulted in decreased usability". | The owner's own research page, with no method or statistics, so nobody can check it. Its own advice: "No amount of emotion can compensate for a lack of clarity." |
+| Thielsch, Haines and Flacke (PeerJ, 2019) | A tidy website against one made messy on purpose, "very varicolored" and with "a mixture of different fonts"; the same content on a made-up medical-information site; three tasks | 331 people, online, each saw one version | No significant effect of aesthetics on accuracy or response time in any of the three tasks | Tidy against deliberately messy, not plain against polished. People used the site for 10 to 20 minutes; the authors expect that "an office worker, who has to deal with an unaesthetic interface for eight hours every weekday, may be more strongly influenced". They still advise attention to aesthetics for its effect on how people perceive a site. |
+| Perrig, Ueffing, Opwis and Brühlmann (Frontiers in Psychology, 2023) | A smartphone web app of a made-up event agency, made "as aesthetically pleasing or as unaesthetic as possible" | 281 people analysed, recruited on MTurk in the US, each saw one version | Looks raised perceived usability, a significant effect. In the paper's body, time and the number of correct answers showed no significant difference. | The abstract's claim of better performance is stronger than the body. Most people answered correctly in both versions, and use was short. |
+| Moran, "The Aesthetic-Usability Effect" (NN/g, 2024, reviewed 2026) | A review of studies, no new measurement | none | "A pretty design can make users forgiving of minor usability problems, but not of large ones." In usability tests, the appeal of a site "masked its usability issues and made them harder to identify". | A practitioner's article backed by the studies it cites. |
+| FCA, "Consumer understanding: good practice and areas for improvement" (2026) | A regulator's review of customer communications under the Consumer Duty, with a survey of 38 firms | 38 firms | "Some firms made surface-level changes, shorter wording, new icons or colour changes without improving clarity, sequencing or prominence of key information. Our review continued to find customers missing or misinterpreting core points." | About documents, journeys and promotions, not interface redesigns; no measurement. |
+| Belton et al., FCA research note on digital design (2025) | Where product information sat in a hypothetical credit journey: behind a navigation-bar click or a link, or shown only on the quote page; against simplified information shown on time. No font or colour change was tested. | 6,045 people in the UK, online experiment | "Obscuring information generally reduces product comprehension." Simplified, timely information raised the comprehension of repayments "from 26 percent to 40 percent". Most treatments did not change acceptance, but showing the information only on the quote page lowered acceptance of the credit quote by about 4.9 percentage points, against a 54% baseline. | The authors call it "a superficial and highly stylised online setting", and the FCA says its research notes "may not necessarily represent the position of the FCA". |
+
+What the studies add up to: the one study that changed looks alone with no stake in a design system
+(Thielsch et al.) found no effect on performance, and Perrig et al.'s body agrees. The one study
+that found faster work (Bentley et al.) changed a whole mobile design system, and the system's
+owner lists it. Looks did raise what people said. Where the FCA moved information, comprehension moved. So
+the default above rests on clarity and placement first; how each case is judged is
+[evaluation.md](../../any-language/ux-evaluation/evaluation.md) section 12.
+
+### Alternatives considered on expression
+
+- **Expressive throughout, as Google's research favours for its own system.** Not taken. The speed
+  gain was measured on a whole redesign of mobile apps, in a paper the system's owner lists, and
+  only its abstract could be read. Google's own page warns that what works in a media player or email app "might not
+  be suitable for something like a banking interface", and Carbon, Atlassian and Primer keep
+  expression for moments. Look again when an independent study separates expression from layout on
+  web task screens.
+- **Expression speeds up work (Bentley et al.).** Not taken as a rule. Thielsch et al., with no stake
+  in a design system, changed only the looks of the same content and found no effect on
+  performance, and Perrig et al.'s body agrees. Bentley et al.'s result holds for a Material redesign
+  of a mobile app; a rule for such an app may rest on it, a rule here does not.
+- **"Expressive" in Google's whole-system sense.** Not taken. It bundles size, shape and grouping,
+  which sections 5 to 7 already set for product screens, so the word would cover changes this file
+  rules on elsewhere. Carbon's sense matches the mode split in the table at the top of this section.
 
 ## 3. Tokens: tiers, roles and pairs
 
@@ -532,6 +629,13 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
   welcome when it shows what changed", and motion nobody triggered is used "sparingly and
   deliberately, only to draw attention". In product mode, Carbon wants motion "subtle and out of
   the way".
+- **The more often a person sees a motion, the less of it there is.** Atlassian: "Match motion
+  expression to how often it is seen. High-frequency interactions like hover states, button
+  presses, and list items should use minimal, near-instant transitions that stay out of the way."
+  and "If someone will trigger this motion dozens of times a day, keep it under 150ms." This adds
+  no number to the table below: it puts every frequent interaction in the table's first row, and
+  keeps expressive motion for the rare moments of a balance (section 2). Atlassian's motion page is
+  marked Early Access (read 2026-10-29).
 - **Let the duration grow with the size of the change.** Carbon, Atlassian and Material all state
   it: the farther an element moves, or the more it grows, the longer the animation. The owners'
   numbers differ, so the table gives ranges and who states them:
@@ -623,6 +727,23 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
 
   Why it is good: a user who asked the system for less motion still sees that the panel changed,
   through the fade, and nothing slides or scales.
+- **When a chart changes form, animate its marks from the old form to the new one, with little
+  staging.** Heer and Robertson found, with 24 people in two experiments, that animated
+  transitions between statistical charts lowered error: "Even in highly predictable transitions,
+  such as the stacked bars to grouped bars conditions, animation had a significantly lower error
+  rate." They also found that "heavily staged animation resulted in increased error". They measured
+  error, not time, on changes between chart forms, not between screens; the rise with heavy staging
+  showed in two chart types and was not always significant, and they call the gain from simple
+  staging "not overwhelming". Their transitions ran 2 to 3 seconds and the study compared no
+  durations, so it sets no number: the duration table above still sets the time, and a chart
+  transition keeps the reduced-motion rule.
+- **Set the amount of motion by the audience.** NN/g's tests with 125 children found that children
+  liked animation and sound, where adults usually disliked them (Sherwin and Nielsen, 2019, in a
+  table row "Animation and sound: Liked / Usually disliked"). W3C's guidance for older users: "Some
+  older people are particularly distracted by any movement and sound on web pages." The two
+  audiences pull in opposite directions, so the rules above are a default for adults at work. An
+  application for children may carry more motion, and one for older adults less; both keep the
+  durations above and the reduced-motion rule.
 
 ## 9. Themes: light and dark
 
@@ -660,6 +781,23 @@ down the column. The class goes on the cells that hold numbers, and nowhere else
 - **Set `color-scheme` on the root element,** so the browser draws scrollbars, form controls and the
   page canvas in the matching theme. `color-scheme` is Baseline widely available since 2024-08-03
   (webstatus.dev, read 2026-10-02); Vercel's guidelines ask for it too.
+- **On a data screen, keep both themes designed and the switch in place; the studies do not pick
+  one.** Three recent studies disagree:
+  - Ettling et al. (ETRA '25): 15 people in a dimly lit room (114 lux) each solved dashboard tasks
+    once per theme at three levels of complexity. Mann-Whitney U tests found dark dashboards more
+    accurate at medium complexity only, with no difference at the easy and hard levels and none in
+    time. Dark gave a lower perceived workload on the NASA-TLX at every level. The authors note that
+    a larger sample would give the tests more power.
+  - While and Sarvghad (IEEE VIS '24, short paper; abstract only): in a crowdsourced study of 134
+    people (the abstract's own split, 69 under 60 and 66 aged 60 and over, adds up to 135), the
+    better polarity for charts "varied on an individual basis, with each polarity benefiting
+    comparable proportions of participants", and it did not always match the one people preferred.
+  - Gazit et al. (Ergonomics, 2025; abstract only): 173 people took cognitive tests online on a
+    light or a dark background, and "cognitive scores were higher in light mode compared to dark
+    mode". These were cognitive tests, not work in an interface.
+
+  Two designed themes with a switch fit all three results. None of them overturns the light default
+  above, and none supports a dark-only screen.
 
 ## 10. Design styles and their fit
 
@@ -680,12 +818,86 @@ research's own inference and no source tested it, the row says so.
 | Skeuomorphism | Real-world textures, shadows and gradients that make a three-dimensional effect (NN/g, 2024). | No, as a look for whole screens. | NN/g: it "led to cluttered interfaces and slower load times", and its interactions were "clunky and unintuitive in a digital medium". |
 | Neumorphism | Soft UI: an element in the colour of its background, raised by one light and one dark shadow (CSS-Tricks, 2020). | No, not for controls, forms or tables. | Users with colour blindness or poor vision "would have difficulty using it due to the poor contrast caused by the soft shadows", and contrast checkers cannot measure shadows, so a tool passes what people cannot see. One practitioner's article, read in full. |
 | Editorial, typographic | Large dramatic type, broadsheet layouts, hairline rules. | Brand pages and long reading. Carbon: the same type "would be distracting if used in product". | It is also one of the default looks of generated UI (section 11). |
-| Material 3 Expressive | Google's 2025 update for Android and Wear OS: "color, shape, size, motion, and containment", springy motion, dynamic colour. | Android apps. On the web, take nothing from it by default. | Google's own research reports 46 studies, more than 18,000 participants and key elements spotted "up to four times faster". It is the vendor's research on its own Android components, not replicated, methods not seen. Its own caveat: "Context still matters"; breaking familiar patterns reduced usability. |
-| Dark-first | Light text on a dark background as the only or the default theme. | As one of two designed themes, yes. As the default for a general audience, no. | NN/g (2020): light mode "leads to better performance most of the time" for people with normal vision. Linear designs both themes rather than dark only. WCAG 2 math may flatter dark pairs (section 4). |
+| Material 3 Expressive | Google's 2025 update for Android and Wear OS: "color, shape, size, motion, and containment", springy motion, dynamic colour. | Android apps. On the web, take nothing from it by default: Google's web library has it only as experimental components that it says are not for production. | Google's own research reports 46 studies, more than 18,000 participants and key elements spotted "up to four times faster", and Bentley et al. found faster tasks with it in 10 mobile apps (section 2). Both are published or listed by the system's owner, and both change the whole design, not the looks alone. Its own caveat: "Context still matters"; breaking familiar patterns reduced usability. On the web, `@material/web` v2.5.0 (July 2026) adds Expressive components only in its `labs` folder, whose README says: "This folder contains experimental features that are not recommended for production." The library's own README says it is "in maintenance mode pending new maintainers" (read 2026-10-29). |
+| Dark-first | Light text on a dark background as the only or the default theme. | As one of two designed themes, yes. As the default for a general audience, no. | NN/g (2020): light mode "leads to better performance most of the time" for people with normal vision. Linear designs both themes rather than dark only. WCAG 2 math may flatter dark pairs (section 4). On data screens, three recent studies disagree on which theme works better (section 9). |
 
 To use a style on a product screen, take the parts that keep sections 3 to 9: a grid, neutral type,
 flat surfaces with clear cues. Leave the parts that break them: translucent layers under text, soft
 shadows on controls, decorative motion, type at brand sizes.
+
+### By use case
+
+Before you design a screen for one of the fields or uses below, read its row: the owner of a design
+system, a host product, a public body or a regulator has said something about how it should look.
+Most rows quote the owner; the rows on complex tools, children, older adults and checkout quote
+research firms and NN/g. "None found" in the third column means the research for this file found no
+study, not that none exists. The last column is this file's rule for the row.
+
+| Use case | What the owners say | What was measured | What this file takes |
+|---|---|---|---|
+| Product screens in general | Carbon keeps productive type "for product design" and expressive type "for editorial pages", blended by "moments", and keeps expressive motion for "occasional, important moments". | Section 2 | Effective, or a balance (section 2). |
+| Onboarding and first use | Atlassian: "Save expressive, characterful motion for key brand moments, like onboarding experiences." | None found | One of the few moments a balance spends its expression on. |
+| Interactions repeated many times a day | Atlassian: "If someone will trigger this motion dozens of times a day, keep it under 150ms." | None found | Minimal, near-instant motion (section 8). |
+| Banking | Google's research page: "What works in a media player or email app might not be suitable for something like a banking interface. Product makers need to respect well-established UI patterns and standards." Nedbank, a South African bank that publishes its design system, asks in its motion guidelines: "Keep animations simple and unobtrusive", and "Use motion to enhance the brand story and create a sense of trust and reliability." | Figl et al. found that bank home pages that look typical of banks improved people's attitude to the bank and its appeal as an employer, with 107 people rating 16 home pages in a job-seeker scenario; attitude was measured through items on the bank's competence, not task performance. Stanford, Tauber, Fogg and Marable (2002) found that consumers cited a site's look in 54.6% of their comments on finance sites, against 16.4% for finance experts (15 experts, and 2,684 consumers in a parallel study): what people say they rely on, not proof that looks are a valid cue. | Effective, with the patterns users know from other banks; simple motion. |
+| Financial services, UK | The FCA's Consumer Duty guidance asks firms to "make key information prominent and easy to identify, including by means of headings and layout"; its rule PRIN 2A.5.10 says that "Where appropriate, a firm must: (a) test communications before communicating them to retail customers", and monitor their impact after. FG22/5 recommends layering, where "key information is provided upfront with cross-references or links to further detail". Friction that keeps customers from acting in their interests, such as complaining or switching, "is not consistent with the Duty", while the FCA's 2025 review holds that "Positive friction in journeys can drive good outcomes." | The FCA's research note and its review of 38 firms (section 2) | Effective; key information first; for UK retail customers, test before release where appropriate. |
+| Illustration inside the product | Atlassian: "Collage is for marketing landing pages and communications only — it's too visually busy for in-product use." and "Excessive illustrations increase cognitive load. Consider icons, copy, ambient pattern, or other affordances before using illustrations." Written for Atlassian's own brand. | None found | No decorative illustration on a task screen; an icon or a line of copy first. |
+| Public government services, UK | GOV.UK's design principles: "If we have to sacrifice elegance - so be it." and "We should use the same language and the same design patterns wherever possible." A site on a GOV.UK domain "must look like GOV.UK"; a public-facing service hosted elsewhere must still use the GOV.UK Design System, apart from branding such as logos and fonts. Since 9 July 2026 a site or service that is not on GOV.UK "cannot use GOV.UK brand colours" (read 2026-10-29). | None found | The government's design system, with no look of your own. |
+| Internal tools for staff | GOV.UK's service manual (2018): it makes sense for public-facing services to "look and feel like part of GOV.UK", and "This is not necessary for internal services"; it also asks to "Hold internal services to the same standard you would a public-facing service". DWP gives internal services "such as admin dashboards and agent-facing systems" a header with no GOV.UK branding or crest. The Home Office, whose system "builds on the GOV.UK design system", says: "For internal services, such as caseworking systems, use the Home Office styles (including logo, colours and internal font) in your prototypes"; its production guidance is not written yet. The NHS keeps one design system "for the public and staff", and allows smaller buttons where space is limited or where "there are several actions of a similar priority that a user can take, for example on a staff-facing system": "Use them sparingly." | None found. DWP reports a debate among government designers on whether 'one thing per page' suits "expert users who prioritise moving through a journey quickly", and does not settle it. | One design system with small variants (settled below). |
+| Complex tools for expert users | Kaplan (NN/g, 2025, an opinion with no new data): complex applications "demand higher levels of cognitive load and feature density compared to typical consumer apps", and splitting their users into novices and experts is "a false dichotomy". | Liu and Sra (preprint, 2025) found, in the 3D tool Blender, that a reduced, task-scaffolded panel lowered 32 beginners' perceived task load and raised their self-rated performance; time was the same in one task and shorter in the other. The 8 experts used only the new panel, with no baseline condition. | Effective and dense (section 6). A reduced panel for new users is something to test with them, not a default. |
+| US federal services | The U.S. Web Design System, on type only: "A straightforward and neutral typeface can help the user focus on using the interface as a tool." | None found | A neutral face (section 5). |
+| Healthcare | The NHS: "People trust the NHS. Take care not to jeopardise that. Design things that are reliable and secure." and "Do not push complexity onto the people using what you are designing." On contrast: "The NHS meets at least level AA for contrast and we aim for AAA where possible." One design system "for the public and staff". | Stanford, Tauber, Fogg and Marable (2002): consumers cited a site's look in 41.8% of their comments on health sites, health experts in 7.6%. | Effective; text contrast at AAA where you can (section 4). |
+| Data-dense tables | Carbon's data table: 40 px rows as "the default and most commonly used size", 24 px "for highly dense layouts where maximizing information within limited space is a priority". SAP's UI5 shows larger controls on touch devices and "a smaller, more compact design for devices that are operated by mouse"; its third density, condensed, is for tables and "can only be used in combination with the Compact density"; in SAP's Fiori launchpad the user can set the density on desktop. Atlassian names customisable density as a goal "in the future", keeps space tokens of 0 to 8 px "for small and compact pieces of UI", and has "a compact button for tight spaces". Shopify: "Avoid changing information density within a single page, otherwise your app can feel disjointed." | None found: no controlled study of dense against airy layouts (section 12) | Dense by default (section 6); targets keep their floor ([ux.md](ux.md) section 8); one density per page. |
+| Charts on data screens | The UK Government Analysis Function: "Avoid: shaded backgrounds; unnecessary borders; boxes around legends and other content; patterns, textures and shadows; 3D shapes; unnecessary data markers on line charts; thick or dark gridlines". "The right chart will depend on the values in your data and the statistical story you're telling." "We recommend a limit of four categories as best practice for basic data visualisations." Clustered and stacked bar charts get "no more than four series". "You should only use different colours when they show helpful differences in the data." "If you have a series of charts, assign the same colour to the same variable in each chart." The ONS: "Always use five colours or fewer". Atlassian: 5 to 6 colours, the rest grouped together. Carbon: a palette of 14 colours "applied in sequence strictly", with no cap. The U.S. Web Design System: "Prefer common visualization types." and "Use color with care." | Heer and Robertson, on transitions between charts (section 8) | Four categories at most, the same colour for the same variable, a text label on every status (settled below); marks at 3:1 (section 12). |
+| Dashboards | The Analysis Function: "Design your dashboard using an inverted pyramid structure, with your most important headline content up front and detailed information in other tabs", "limiting colour schemes and fonts to a few consistent choices", and consistent with other government dashboards. Carbon: "Place the most important at the top of the page", strip away "anything that could distract a user from interpreting the information", and "Always use consistent colors for each data set within a dashboard." | Ettling et al., on dark and light dashboards (section 9) | Effective; the headline first; one colour per data set. |
+| An app inside Shopify's admin | Shopify: "the best apps provide merchants with a user experience that matches the appearance and behaviors of the Shopify host surface", with Polaris components for embedded apps. Its Built for Shopify review, which an app applies for, asks: "Your app's UI should mimic Shopify's core look and feel", and lists as failures primary buttons in "a completely different color than Polaris" and a background "significantly different from the Shopify admin". Rule 4.3.5 forbids an app that a merchant could mistake for Shopify itself. The base App Store review asks for "a consistent embedded experience", which is about keeping features inside the admin, not about the look; sales channel apps must "Use the required Polaris components and style guide". | None found | Polaris and the admin's look; required for sales channel apps and for the badge (read 2026-10-29). |
+| An app inside Microsoft Teams | Teams: "The app uses native Teams design components or your own. There's no blend of color schemes, controls, and so on." Its store validation (rules starting July 2026) marks the styling of tabs "Good-to-fix", which does not block publishing; inside meetings, "Apps must only use a dark theme during meetings and calling" is a Must fix. The marketplace certification policy: "Apps must follow Teams tab design guidelines without impeding the customer experience within the host application." | None found | Teams components or your own, never a mix; the dark theme in meetings and calls (read 2026-10-29). |
+| An Office add-in | Office: "The functionality, as well as the look and feel, of an add-in must harmoniously complement the Office experience." and "Place your add-in branding in a brand bar footer at the bottom of your UI." Marketplace policy 1120.3: "Add-ins must follow design guidelines without impeding the customer experience within the host application." | None found | Office's look; the brand in a footer bar. |
+| An app inside an Atlassian product | Forge: Atlassian's design tokens "can be highly beneficial", and with them the app's colours "mirror and react to the active theme of the parent Atlassian app". The Marketplace approval guidelines: "If the UI breaks, your app will be rejected."; their trademark rule is about the app's name, not its look. | None found | Atlassian's tokens and the host's theme. |
+| A Slack app | Slack: "Utilize your brand color to complement your app's avatar to more clearly brand your messages.", and for meaning, the colours users know, such as "green for confirmation, red for cancelling actions". | None found | Your brand colour on the avatar; Slack's meanings for green and red. |
+| Colour as expression | Atlassian: "Don't use an accent when the color has semantic meaning." An accent is a colour with no meaning tied to it, in Atlassian's own roles. | None found | An expression colour never takes a status role (section 3). |
+| Developer tools | Primer: "GitHub's UI offers two color modes, light and dark." and "Every pattern in Primer is built to work across all color modes out of the box." Vercel's Web Interface Guidelines, a general list: "Only animate when it clarifies cause & effect or when it adds deliberate delight". | None found | Both themes designed (section 9); motion for cause and effect (section 8). |
+| Children | NN/g (Sherwin and Nielsen, 2019): "Kids expected some sites to play sound or have animation." | Think-aloud tests with 125 children in three rounds: in the table row "Animation and sound", children "Liked", adults "Usually disliked". | More motion may fit (section 8). |
+| Older adults | W3C: "Some older people are particularly distracted by any movement and sound on web pages.", and the existing W3C accessibility standards "address most older user needs". | Nielsen (NN/g, 2013), with 75 people aged 65 and over and a group aged 21 to 55, on websites: "Users aged 65 and older are 43% slower at using websites than users aged 21–55", and they succeeded in 55.3% of tasks against 74.5%. Kane (NN/g, 2019), in three rounds with 123 people aged 65 and over: "Readability has remained an issue for seniors throughout all our studies over the years", and "text on mobile apps was often too small and lightly colored for older adults to read comfortably". | Less motion (section 8); the WCAG floor; text that is neither small nor light grey. |
+| Checkout | Baymard, a research firm, in a 2026 blog post: "Enclosed design: Strip away main site navigation to prevent 'pogo-sticking' back to product pages, leaving only a logo 'escape hatch'" | None read | No main navigation in checkout; the logo as the way out. |
+
+Three points the sources disagree on, settled:
+
+- **Internal tools: one design system with small variants.** Give a staff screen the same tokens
+  and components as the public product, with its own header and a compact control where the work
+  needs it, such as the NHS's smaller button. Why: the sources that free internal tools from the
+  public look still build on a shared system. The Home Office's system "builds on the GOV.UK design
+  system", DWP's internal header is a component of DWP's design system, and GOV.UK expects that you
+  will "sometimes need to use different patterns, for example if you're building something like an
+  admin interface". One token file also keeps this file's one rule (section 1). DWP's question
+  about "one thing per page" for expert users stays open (section 12).
+- **Chart colours: four categories at most, as the Analysis Function sets.** It is the UK
+  government's guidance for its analysts, a public body's rule rather than a vendor's, and four also
+  meets the ONS's "five colours or fewer". The ONS's "Never use more than nine colours." sits in a
+  warning about its Chartbuilder tool, so it is a limit of that tool, not a cap for charts in
+  general. Atlassian advises 5 to 6 while it ships 8 categorical colours, and Carbon's palette page
+  gives 14 colours in a fixed order and states no cap. With more categories, group the rest into
+  "other", show fewer series, or change the chart type, the ways the ONS gives.
+- **Status colours: a text label every time.** The sources agree on a second signal. The Analysis
+  Function: "it is not possible to choose red, amber and green shades that have enough contrast
+  with a white background and each other"; where a table needs a red, amber and green column, it
+  lets text say what each colour means. Atlassian ships status colours for charts and says: "use
+  other visual indicators or consider categorical colors as a better option". Carbon ships a
+  four-colour alert palette, and its palette page gives no such advice. So a status in a chart or a
+  table carries its word, and the colour repeats it (section 4).
+
+### Alternatives considered for use cases
+
+- **A look of their own for internal tools, as DWP and the Home Office give them.** Not taken as the
+  default: a second look needs a second token file and a second review, and both departments still
+  build on a shared system. It fits where a rule forbids the public brand on internal screens, as
+  GOV.UK forbids the crown logo off service.gov.uk and asks for the Helvetica or Arial font stacks
+  instead; then change the branding, not the system.
+- **Five colours (the ONS) or five to six (Atlassian).** Not taken: four keeps within both, and
+  comes from the cross-government guidance. A team that builds on Atlassian's or Carbon's chart
+  palette may follow that system's own advice (section 12).
+- **Status by colour alone, from a palette such as Carbon's alert colours.** Not taken: colour is
+  never the only signal (WCAG SC 1.4.1, section 4), and the Analysis Function found no red, amber
+  and green that all reach enough contrast on white and with each other.
 
 ## 11. Common mistakes
 
@@ -701,6 +913,9 @@ shadows on controls, decorative motion, type at brand sizes.
 | Motion that ignores `prefers-reduced-motion` | Sliding and scaling for a user who asked for less | A fade only, inside the media query (section 8) | MDN, Vercel |
 | A dark-only theme | Worse reading performance for most users | Light by default, a switch, both designed (section 9) | NN/g |
 | Glass, soft shadows or thin decorative type on controls | Contrast a checker cannot see, cues users cannot find | The product look; glass at most for chrome (section 10) | NN/g, CSS-Tricks |
+| New icons or colours in place of a clarity fix | People still miss or misread the key points | Change what the screen says, in what order, and what stands out (sections 2 and 10) | FCA |
+| Expressive or slow motion on an interaction repeated many times a day | The motion gets in the way of work the person repeats | Minimal motion, under 150 ms (section 8) | Atlassian |
+| A chart with more than four colours, or a status shown by its colour | Readers cannot tell the categories apart; no red, amber and green all reach enough contrast with white and with each other | Four categories, the rest grouped; a word on every status (section 10) | Analysis Function, ONS, Atlassian |
 
 ### The looks generated UI falls into
 
@@ -722,14 +937,46 @@ is the mode and the token file, not a list of banned fonts.
   pairs for contrast, themes that swap values.
 - **A native mobile application.** Apple's and Google's platform guidelines decide its look; Liquid
   Glass and Material 3 Expressive belong there (section 10).
-- **Charts.** This practice already asks three things of any graphic: colour is never the only cue
-  (section 4); the marks of a chart meet the contrast that
-  [accessibility.md](accessibility.md) section 9 gives for graphical objects, 3:1; and a chart has a
-  text or table alternative (1.1.1, [accessibility.md](accessibility.md) section 12). No source
-  read picks a chart library or a categorical palette, so check a candidate's accessibility before
-  you use it. The [README](README.md), "The points to adapt", names the gap.
+- **Charts.** This practice asks these things of any chart: colour is never the only cue (section
+  4), and a status carries a word (section 10); the marks of a chart meet the contrast that
+  [accessibility.md](accessibility.md) section 9 gives for graphical objects, 3:1; a chart has a
+  text or table alternative (1.1.1, [accessibility.md](accessibility.md) section 12); and the rows
+  on charts and dashboards in section 10 set the rest: a plain chart chosen by the values and the
+  story, four categories at most, the same colour for the same variable, the headline first on a
+  dashboard. Those rows rest on government guidance (the UK Government Analysis Function, the ONS
+  and the U.S. Web Design System) and on Carbon's and Atlassian's chart pages. Three things are
+  still not covered. The values of a categorical palette: this file leaves them to the design system
+  you build on. A chart library: no source read picks one, so check a candidate's accessibility
+  before you use it. A chart palette for a dark theme: the EU Publications Office's guide notes that
+  Datawrapper "changes the colours of all elements on the chart in dark mode to ensure a high enough
+  contrast ratio with the dark background", and gives no palette and no ratio, and the Analysis
+  Function's colour page gives no dark-theme guidance. The [README](README.md), "The points to
+  adapt", names the gap.
 - **Code no change touches.** It keeps its values until a change edits it
   ([refactoring.md](../../any-language/refactoring/refactoring.md) section 2).
+
+### Not covered yet
+
+No source read for this file settles these, as of October 2026:
+
+- A controlled study of dense against airy layouts, for expert and for new users.
+- A study that compares fields, such as finance, health and productivity, on looks or visual
+  complexity against task performance. The nearest are one test on a health-information site
+  (Thielsch et al.) and the FCA's credit-journey experiment (section 2).
+- A controlled study from 2024-10 to 2026-10 of visual design and trust in banking web
+  applications, beyond the one study of typical-looking home pages (Figl et al., section 10).
+- A study from 2024-10 to 2026-10 of dark themes for reading code.
+- A study from 2024-10 to 2026-10 of transition motion between screens, not in charts, against task
+  time in work software.
+- A bank's published design system with guidance on type, colour or density: Nedbank's covers motion
+  only (section 10).
+- Guidance in force from the US consumer-finance regulator, the CFPB, on interface design.
+- Style principles from the design systems of education platforms.
+- Whether Salesforce's AppExchange requires the Lightning look today: its official pages could not
+  be read.
+- A chart palette for a dark theme (the Charts bullet above).
+- Whether "one thing per page" suits expert users of internal tools: DWP reports the question and
+  leaves it open (section 10).
 
 ## 13. Review checklist
 
@@ -740,14 +987,16 @@ two or more is not ready.
 | Section | Ask | Red flag |
 |---|---|---|
 | 2. Mode | Is this a task screen, and does it look like one? | Brand-size type, a gradient hero or expressive motion on a screen behind the login |
+| 2. Expression | Which case is the screen: effective, polished or a balance, and is each expressive moment one that section 2 names? | Expression spread over most of the screen |
 | 3. Tokens | Does every colour, radius and shadow name a role, with `rounded-full` only on a circle or a pill and `transparent` only on a part that shows no colour? | A palette class (`bg-blue-600`), a hex value, or a role picked because its colour looked right |
 | 4. Colour and contrast | Does every text-on-surface pair have its ratio in both themes? | A new pair with no ratio; colour as the only signal; grey text on a coloured surface |
 | 5. Type | Are sizes steps of the scale, and does the hierarchy use weight and colour first? | A size in square brackets; running text wider than 75 characters; numbers in a column without `tabular-nums` |
 | 6. Spacing and layout | Is every space a step of the 4 px scale? | A value in square brackets; a component that only adapts to the viewport |
 | 7. Shape and borders | Are radii small and named by role (a circle or a pill takes `rounded-full`), and does each border carry meaning? | A border around every box; a decorative border as the only edge of a field |
-| 8. Motion | Does motion answer an action, at a duration that fits its size (a loop that shows a wait keeps its utility's duration, section 8)? | `transition: all`; an animated layout property ([performance.md](../performance/performance.md) section 6); no reduced-motion rule |
+| 8. Motion | Does motion answer an action, at a duration that fits its size (a loop that shows a wait keeps its utility's duration, section 8)? | `transition: all`; an animated layout property ([performance.md](../performance/performance.md) section 6); no reduced-motion rule; motion over 150 ms on an interaction repeated many times a day |
 | 9. Themes | Was the dark theme looked at, not only computed? | A component that checks which theme is on; a colour set outside the token file |
 | 10. Styles | Does the style keep sections 3 to 9? | Glass under text, soft shadows on controls, a style chosen because it is in fashion |
+| 10. Use case | Does the screen follow its row in section 10's "By use case" table? | A chart with more than four categories; a status shown by colour alone; an app inside a host that ignores the host's rule in that table |
 
 ## 14. Sources
 
@@ -756,7 +1005,9 @@ two or more is not ready.
 1. IBM Carbon, Typography overview: https://carbondesignsystem.com/elements/typography/overview/ —
    the productive and expressive type sets, and why expressive type distracts in a product.
 2. IBM Carbon, Motion overview: https://carbondesignsystem.com/elements/motion/overview/ —
-   productive and expressive motion; the duration table and the curves (read as a summary).
+   productive and expressive motion; the duration table and the curves (read as a summary);
+   expressive motion kept for occasional, important moments, and the cases it names (own text,
+   read 2026-10-29).
 3. Atlassian Design System, Typography: https://atlassian.design/foundations/typography — the
    brand font and the in-app fonts; the heading sizes.
 4. Vercel Geist, Typography and Materials: https://vercel.com/geist/typography and
@@ -776,7 +1027,8 @@ two or more is not ready.
 8. Primer, token names: https://primer.style/product/primitives/token-names/ — base, functional
    and component tiers (read as a summary).
 9. Primer, colour usage: https://primer.style/product/getting-started/foundations/color-usage/ —
-   base tokens never in code; tokens that change with the colour mode (read as a summary).
+   base tokens never in code; tokens that change with the colour mode (read as a summary); two
+   colour modes with every pattern built for both (own text, read 2026-10-29).
 10. Material Web, theming: https://raw.githubusercontent.com/material-components/material-web/main/docs/theming/README.md
     and https://raw.githubusercontent.com/material-components/material-web/main/docs/theming/color.md
     — reference, system and component tokens; the `on-` pair rule (read through a summariser).
@@ -839,7 +1091,8 @@ two or more is not ready.
 27. Vercel, Web Interface Guidelines: https://vercel.com/design/guidelines,
     https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/command.md and
     https://raw.githubusercontent.com/vercel-labs/web-interface-guidelines/main/AGENTS.md —
-    `tabular-nums`, `color-scheme`, animation rules, reduced motion; one design team's rules.
+    `tabular-nums`, `color-scheme`, animation rules, reduced motion; one design team's rules;
+    animate only for cause and effect or deliberate delight (own text, read 2026-10-29).
 28. IBM Carbon, Spacing: https://carbondesignsystem.com/elements/spacing/overview/ — stay on the
     scale; steps may jump at breakpoints (read as a summary).
 29. MDN, Container queries: https://developer.mozilla.org/en-US/docs/Web/CSS/@container — Baseline
@@ -852,7 +1105,9 @@ two or more is not ready.
 ### Motion
 
 32. Atlassian, Motion: https://atlassian.design/foundations/motion — durations, exits faster than
-    entrances (read as a summary).
+    entrances (read as a summary); motion as "a clarifying layer, not decoration", expressive motion
+    for key brand moments, and motion matched to how often it is seen (own text, read 2026-10-29;
+    the page is marked Early Access).
 33. Material Components for Android, Motion:
     https://raw.githubusercontent.com/material-components/material-components-android/master/docs/theming/Motion.md
     — duration tokens and easing curves (read through a summariser).
@@ -881,6 +1136,8 @@ two or more is not ready.
     https://design.google/library/expressive-material-design-google-research, and the Material 3
     Expressive launch (2025-05-13):
     https://blog.google/products-and-platforms/platforms/android/material-3-expressive-android-wearos-launch/
+    — the research page's studies, its definition of expressive and its caveats on banking and
+    familiar patterns (own text, read 2026-10-29); the owner's own research, with no method given.
 
 ### The looks of generated UI
 
@@ -901,3 +1158,191 @@ two or more is not ready.
 49. webstatus.dev: https://webstatus.dev — the "Baseline widely available since" dates of
     `oklch()`, container size queries, `prefers-reduced-motion` and `color-scheme` (read
     2026-10-02).
+
+### Expression, and what was measured
+
+Sources 50 to 100 were read in their own text on 2026-10-29, unless a line says otherwise.
+
+50. IBM Carbon, Typography style strategies:
+    https://carbondesignsystem.com/elements/typography/style-strategies/ — productive type for
+    product design, expressive type for editorial pages, blended by "moments".
+51. GitHub Primer, Motion and animation:
+    https://primer.style/accessibility/design-guidance/motion-and-animation/ — consider first
+    whether motion is needed at all; accessibility guidance.
+52. Microsoft Fluent 2, Motion: https://fluent2.microsoft.design/motion — motion with purpose;
+    delight named as an aim.
+53. John Phamous, "Teaching agents product design at Vercel" (Vercel blog, 2026-06-25):
+    https://vercel.com/blog/teaching-agents-product-design-at-vercel — the product-design skill's
+    line on decorative novelty, in a simplified view of the skill; a case.
+54. Frank Bentley, Lennard Schmidt, Alyssa Sheehan, Bianca Gallardo and Ying Wang, "Usability
+    Hasn't Peaked: Exploring How Expressive Design Overcomes the Usability Plateau" (CHI '26):
+    https://research.google/pubs/usability-hasnt-peaked-exploring-how-expressive-design-overcomes-the-usability-plateau/
+    — research on Google's own design system, listed by Google Research; abstract only.
+55. Meinald T. Thielsch, Russell Haines and Leonie Flacke, "Experimental investigation on the
+    effects of website aesthetics on user performance in different virtual tasks" (PeerJ 7:e6516,
+    2019): https://pmc.ncbi.nlm.nih.gov/articles/PMC6388663/ — research, 331 people.
+56. Sebastian A. C. Perrig, David Ueffing, Klaus Opwis and Florian Brühlmann, "Smartphone app
+    aesthetics influence users' experience and performance" (Frontiers in Psychology, 2023):
+    https://pmc.ncbi.nlm.nih.gov/articles/PMC10306164/ — research, 281 people analysed.
+57. Kate Moran, "The Aesthetic-Usability Effect" (NN/g, 2024, reviewed 2026-09-01):
+    https://www.nngroup.com/articles/aesthetic-usability-effect/ — a practitioner's article that
+    cites studies.
+58. FCA, "Consumer understanding: good practice and areas for improvement" (2026-03-13):
+    https://www.fca.org.uk/publications/good-and-poor-practice/consumer-understanding-good-practice-areas-improvement
+    — a regulator's review, with a survey of 38 firms.
+59. Cameron Belton, Daniel Bogiatzis-Gibbons, Isaac Keeley, Cherryl Ng, Gráinne Murphy and Max
+    Spohn, "Digital design for financial products and services: Consumer impact of sludge,
+    deceptive design, timeliness and simplification" (FCA Research Note, 2025-07-31):
+    https://www.fca.org.uk/publication/research-notes/digital-design-financial-products-services.pdf
+    — research by the regulator, 6,045 people.
+
+### Motion and themes for an audience or a chart
+
+60. Jeffrey Heer and George G. Robertson, "Animated Transitions in Statistical Data Graphics" (IEEE
+    TVCG, 2007): https://idl.cs.washington.edu/files/2007-AnimatedTransitions-InfoVis.pdf —
+    research, 24 people.
+61. Katie Sherwin and Jakob Nielsen, "Children's UX: Usability Issues in Designing for Young People"
+    (NN/g, 2019): https://www.nngroup.com/articles/childrens-websites-usability-issues/ — research,
+    125 children.
+62. W3C WAI, "Developing Websites for Older People": https://www.w3.org/WAI/older-users/developing/
+    — movement and sound distract some older people.
+63. W3C WAI, "Older Users and Web Accessibility": https://www.w3.org/WAI/older-users/ — the existing
+    standards cover most needs of older users.
+64. Jakob Nielsen, "Usability for Senior Citizens: Improved, But Still Lacking" (NN/g, 2013):
+    https://www.nngroup.com/articles/usability-seniors-improvements/ — research on websites; old.
+65. Lexie Kane, "Usability for Older Adults: Challenges and Changes" (NN/g, 2019):
+    https://www.nngroup.com/articles/usability-for-senior-citizens/ — research, 123 people.
+66. Tobias Julien Ettling, Dominik Steinmann, Kenan Bektaş and Amine Abbad-Andaloussi, "An Eye
+    Tracking Study on the Effects of Dark and Light Themes on User Performance and Workload" (ETRA
+    '25): https://doi.org/10.1145/3715669.3725879 — research, 15 people; read in the authors'
+    open-access copy.
+67. Zack While and Ali Sarvghad, "Dark Mode or Light Mode? Exploring the Impact of Contrast Polarity
+    on Visualization Performance Between Age Groups" (IEEE VIS '24, short paper):
+    https://arxiv.org/abs/2409.10841 — research; abstract only.
+68. T. Gazit, T. Tager-Shafrir, H.-X. Zhong, P. C. K. Hung and V. Cheung, "The dark side of the
+    interface: examining the influence of different background modes on cognitive performance"
+    (Ergonomics, 2025): https://eprints.whiterose.ac.uk/id/eprint/231852 — research, 173 people;
+    abstract only.
+
+### Use cases
+
+69. Nedbank, Design System, Motion guidelines:
+    https://design.nedbank.co.za/design-system/foundations/motion-guidelines.html — a bank's motion
+    guidance.
+70. Figl et al., "The danger of not being typical" (Electronic Markets, 2025):
+    https://pmc.ncbi.nlm.nih.gov/articles/PMC12078413/ — research, 107 people.
+71. Julianne Stanford, Ellen R. Tauber, B. J. Fogg and Leslie Marable, "Experts vs. Online
+    Consumers: A Comparative Credibility Study of Health and Finance Web Sites" (Consumer WebWatch,
+    2002): https://advocacy.consumerreports.org/wp-content/uploads/2013/05/expert-vs-online-consumers.pdf
+    — research, sponsored by Consumer WebWatch; read in a Wayback Machine copy of that link.
+72. FCA Handbook, PRIN 2A.5 Communications: https://handbook.fca.org.uk/handbook/PRIN/2A/5.html;
+    FCA, FG22/5, Final non-Handbook Guidance for firms on the Consumer Duty (July 2022):
+    https://www.fca.org.uk/publication/finalised-guidance/fg22-5.pdf; FCA, "Digital design in
+    customers' online journeys" (2025):
+    https://www.fca.org.uk/publications/good-and-poor-practice/digital-design-customers-online-journeys
+    — prominence, testing, layering and friction under the Consumer Duty.
+73. Atlassian, Illustrations: https://atlassian.design/foundations/illustrations — no collage or
+    purely decorative illustration in product.
+74. GOV.UK, Government Design Principles: https://www.gov.uk/guidance/government-design-principles;
+    "Making your service look like GOV.UK":
+    https://www.gov.uk/service-manual/design/making-your-service-look-like-govuk; "Use GOV.UK
+    domains and the GOV.UK Design System":
+    https://www.gov.uk/guidance/use-govuk-domains-and-the-govuk-design-system; "Services for
+    government users" (2018):
+    https://www.gov.uk/service-manual/design/services-for-government-users — public and internal
+    services (read 2026-10-29).
+75. DWP Design System, Internal service header:
+    https://design-system.dwp.gov.uk/components/internal-service-header, and Internal systems:
+    https://design-system.dwp.gov.uk/get-started/internal-systems — the header for internal
+    services; the open question on "one thing per page".
+76. Home Office Design System, Get started:
+    https://design.homeoffice.gov.uk/design-system/get-started — Home Office styles for internal
+    services, in prototypes.
+77. NHS Service Manual, Design system: https://service-manual.nhs.uk/design-system; Buttons:
+    https://service-manual.nhs.uk/design-system/components/buttons; Design principles:
+    https://service-manual.nhs.uk/design-system/design-principles; Accessibility, design:
+    https://service-manual.nhs.uk/accessibility/design — one system for the public and staff,
+    smaller buttons, trust, contrast.
+78. Kate Kaplan, "Supporting 'Power Users' Isn't Enough: 3 Complex-App User Types" (NN/g, 2025):
+    https://www.nngroup.com/articles/complex-apps-users/ — an opinion with no new data.
+79. Yimeng Liu and Misha Sra, "Designing Scaffolded Interfaces for Enhanced Learning and Performance
+    in Professional Software" (arXiv:2505.12101, 2025): https://arxiv.org/html/2505.12101 — a
+    preprint, 32 beginners and 8 experts.
+80. U.S. Web Design System, Typography: https://designsystem.digital.gov/components/typography/ — a
+    neutral face for interfaces.
+81. IBM Carbon, Data table usage: https://carbondesignsystem.com/components/data-table/usage/ — row
+    sizes.
+82. SAP, SAPUI5 documentation, Content densities:
+    https://raw.githubusercontent.com/SAP-docs/sapui5/main/docs/04_Essentials/content-densities-e54f729.md,
+    and How to use densities for controls:
+    https://raw.githubusercontent.com/SAP-docs/sapui5/main/docs/04_Essentials/how-to-use-densities-for-controls-13e6f3b.md
+    — compact, cozy and condensed densities.
+83. Atlassian, Spacing: https://atlassian.design/foundations/spacing, and Button usage:
+    https://atlassian.design/components/button/usage — compact pieces of UI and the compact button.
+84. Shopify, App design guidelines: https://shopify.dev/docs/apps/design, and Layout:
+    https://shopify.dev/docs/apps/design/layout — match the admin; one density per page.
+85. Shopify, Built for Shopify: https://shopify.dev/docs/apps/launch/built-for-shopify, its
+    requirements: https://shopify.dev/docs/apps/launch/built-for-shopify/requirements, and the
+    Shopify App Store requirements:
+    https://shopify.dev/docs/apps/launch/shopify-app-store/app-store-requirements — what each review
+    checks (read 2026-10-29).
+86. Microsoft, Teams, Designing your custom app:
+    https://learn.microsoft.com/en-us/microsoftteams/platform/concepts/design/design-teams-app-overview,
+    and Teams Store validation guidelines:
+    https://learn.microsoft.com/en-us/microsoftteams/platform/concepts/deploy-and-publish/appsource/prepare/teams-store-validation-guidelines
+    — native or distinct, never a blend; what blocks publishing (read 2026-10-29).
+87. Microsoft, Office Add-ins, Design the UI:
+    https://learn.microsoft.com/en-us/office/dev/add-ins/design/add-in-design, and Branding patterns:
+    https://learn.microsoft.com/en-us/office/dev/add-ins/design/branding-patterns — complement
+    Office; the brand in a footer bar.
+88. Microsoft, Commercial marketplace certification policies:
+    https://learn.microsoft.com/en-us/legal/marketplace/certification-policies — add-ins and Teams
+    apps must not impede the host (read 2026-10-29).
+89. Atlassian, Forge design tokens and theming:
+    https://developer.atlassian.com/platform/forge/design-tokens-and-theming/, and Marketplace app
+    approval guidelines: https://developer.atlassian.com/platform/marketplace/app-approval-guidelines/
+    — the host's tokens and theme; an app that breaks the host is rejected.
+90. Slack, App design: https://docs.slack.dev/surfaces/app-design — the brand colour on the avatar.
+91. Atlassian, Color: https://atlassian.design/foundations/color — no accent where colour has a
+    meaning.
+92. Carl MacDonald, "Checkout UX" (Baymard Institute blog, 2026-04-23):
+    https://baymard.com/blog/checkout-flow-ux-optimization — enclosed checkout.
+
+### Charts and dashboards
+
+93. UK Government Analysis Function, Data visualisation: charts:
+    https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-charts/; Accessible
+    charts, a checklist of the basics:
+    https://analysisfunction.civilservice.gov.uk/policy-store/charts-a-checklist/; Data
+    visualisation: colours:
+    https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-colours-in-charts/;
+    Testing dashboards for design and accessibility:
+    https://analysisfunction.civilservice.gov.uk/policy-store/data-visualisation-testing-dashboards-for-design-and-accessibility/
+    — plain charts, four categories, red, amber and green with text, dashboards headline first.
+94. ONS Service Manual, Using colours in charts:
+    https://service-manual.ons.gov.uk/data-visualisation/colours/using-colours-in-charts — five
+    colours or fewer; the nine-colour limit of its Chartbuilder tool.
+95. U.S. Web Design System, Data visualizations:
+    https://designsystem.digital.gov/components/data-visualizations/ — common chart types, care with
+    colour.
+96. IBM Carbon, Data visualization: dashboards:
+    https://carbondesignsystem.com/data-visualization/dashboards/, and colour palettes:
+    https://carbondesignsystem.com/data-visualization/color-palettes/ — the most important at the
+    top; 14 colours in a fixed order and an alert palette (the palette page calls itself a work in
+    progress).
+97. Atlassian, Data visualization color:
+    https://atlassian.design/foundations/color/data-visualization-color — 5 to 6 colours; status
+    colours with other visual indicators.
+98. Publications Office of the European Union, Data Visualisation Guide, Dark mode (2023):
+    https://data.europa.eu/apps/data-visualisation-guide/dark-mode — one tool recolours charts in
+    dark mode; no palette.
+
+### Material 3 Expressive on the web
+
+99. Google, `@material/web` release v2.5.0:
+    https://github.com/material-components/material-web/releases/tag/v2.5.0 — Expressive components
+    added under `labs`; the `labs/README.md` of that release marks the folder as not for production
+    (read 2026-10-29).
+100. Google, `@material/web` README:
+     https://raw.githubusercontent.com/material-components/material-web/main/README.md — the library
+     is in maintenance mode (read 2026-10-29).
