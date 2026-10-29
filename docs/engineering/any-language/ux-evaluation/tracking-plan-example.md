@@ -157,7 +157,7 @@ The code the plan names is behaviour-analytics.md section 8's: the client with
 mark, type-checked as that section says. The Pay link's click handler in `src/routes/invoices.index.tsx` is not shown. The
 plan was never run against a live tool, so no count in it has been seen, and the metrics' reports
 are left out ([evaluation.md](evaluation.md) section 8). The tool's own properties in section 4
-were read in the source of posthog-js 1.442.0, not seen on a live event; the release check of
+were read in the source of posthog-js 1.442.0 on 2026-10-29, not seen on a live event; the release check of
 behaviour-analytics.md section 3 is where a team confirms them. The consent banner's words are
 left out, since how a banner should word its choice is not covered yet (behaviour-analytics.md
 section 1).

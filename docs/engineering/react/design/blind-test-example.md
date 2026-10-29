@@ -70,9 +70,10 @@ Where each step runs: a Claude Code session may do steps 0 to 3 for you. Step 4 
 terminal of your own, never through Claude Code's Bash tool or its `!` prefix: the command's output
 enters the conversation, and with it the token ([skill-blind-test.md](skill-blind-test.md)
 section 1). Then start `claude` in that same terminal, with the token exported there, and keep
-that session open until the count. It does steps 5 to 13 and reads the records for you,
-and it runs steps 6 and 7 and step 9's server as background commands, which have no time limit in
-a local session
+that session, the token session, open until the count. It runs the commands of steps 5 to 13 and
+reads the records for you; steps 10 and 12 are yours, and so are the two `/usage` reads of step 6,
+which need a session signed in with `/login`. It runs steps 6 and 7 and step 9's server as
+background commands, which have no time limit in a local session
 ([skill-blind-test.md](skill-blind-test.md) section 1). *Not yet tried*: whether those commands
 get the exported token and keep running for days; the pilot settles it. If they do not, run steps
 6 and 7 in a plain terminal that stays open, such as a `tmux` session, with the token exported
@@ -124,6 +125,14 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    user cache; the browser is a download of a few hundred megabytes. `puppeteer-core` is here
    because Hallmark's render checks ask for a global install; this keeps it in the bench (*not yet
    tried*). Record the version npm installs in `results.md`, since Hallmark's README names none.
+
+   This step departs from [security.md](../security/security.md) section 10, which turns on the
+   install-script block and a release cooldown for every install
+   ([skill-blind-test.md](skill-blind-test.md) section 3 routes the bench to it): the bench
+   installs three tools once, in a scratch folder outside every repository, and Hallmark needs
+   `puppeteer-core` as it ships. The cost: the packages' install scripts run, and a version
+   published minutes before you run the step is not held back, so look at each package's publish
+   date first (`npm view <package> time --json`).
 
    ```sh
    npm init -y
@@ -177,8 +186,9 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    claude
    ```
 
-   The last line starts the Claude Code session that runs the steps below, in this terminal, with
-   the token exported (above, "Where each step runs").
+   The last line starts the token session: the Claude Code session, in this terminal and with the
+   token exported, that runs the commands of steps 5 to 13 except those the intro gives to you
+   (above, "Where each step runs").
 
 5. **Add the photos.** Every arm gets the same photos, so a picture never decides a pick. Put the
    files each brief names into `photos/<brief-id>/`, use only photos whose licence lets you use
@@ -187,20 +197,30 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    each brief lists in `briefs.json` is in `photos/<brief-id>/`; the runner copies the folder and
    does not check the files.
 
-6. **Run the pilot,** from the session of step 4, as a background command. It runs every arm once
+6. **Run the pilot,** from the token session, as a background command. It runs every arm once
    on the first brief and settles the steps marked *not yet tried* before days of runs depend on
-   them. Save a listing of your home folder first, so you can see whether an arm wrote to it:
+   them. Before the pilot starts, and again when it ends, run `/usage` in a Claude Code session
+   signed in with `/login`, in a terminal where `CLAUDE_CODE_OAUTH_TOKEN` is not set, as in step 4;
+   never in the token session. The share of each limit the pilot used, times the runs asked over
+   the pilot's runs, says how many limit windows the bench needs
+   ([skill-blind-test.md](skill-blind-test.md) section 4). Save a listing of your home folder
+   first, so you can see whether an arm wrote to it:
 
    ```sh
    ls -a ~ > home-before.txt
    node run-arms.mjs pilot
+   ```
+
+   When the pilot has finished (its last line gives the runs asked), run:
+
+   ```sh
    ls -a ~ | diff home-before.txt -
    ```
 
    Check each pilot run against the list in [skill-blind-test.md](skill-blind-test.md) section 4,
    and follow the "When it fails" line of each item that fails. If you will also judge, open
    nothing under `pilot-runs/` yourself, since its pages and streams carry each arm's name: let the
-   session of step 4 read the records and report each item as pass or fail. If you will not judge,
+   token session read the records and report each item as pass or fail. If you will not judge,
    read each `pilot-runs/<run-id>/run.json` yourself: the verdict, `skills`, `permissionDenials`,
    `modelsUsed`, `durationMs` and `totalCostUsd`, and each run's `trace/prompt-expansions.jsonl`.
    The pilot records a skill nobody copied in under `isolationProblems` and goes on; write the
@@ -212,7 +232,7 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    delete `judging/`, `key/` and `checks/` afterwards; if you will also judge, skip step 10 for the
    pilot and only check that the shots render. To run the pilot again, delete `pilot-runs/` first.
 
-7. **Run the bench,** from the session of step 4, as a background command. It runs one run at a
+7. **Run the bench,** from the token session, as a background command. It runs one run at a
    time, in the order it draws once, and picks up where it stopped when you start it again; a run
    the plan's limit stopped runs again then. If you add or remove a brief or an arm, or change
    `runsPerArm`, after the first start, the runner refuses to go on until you delete `runs/`. It
@@ -237,7 +257,7 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    Success: the script prints `<N> pages copied under random ids to judging/pages.`, with N the
    valid count of step 7's last line.
 
-9. **Serve the copies, then shoot them.** The session of step 4 runs the server as a background
+9. **Serve the copies, then shoot them.** The token session runs the server as a background
    command, and it stays up through the judging, since the judges' scroll notes need it. The shoot
    script needs the same `PLAYWRIGHT_BROWSERS_PATH=0` to find the browser step 2 installed, and
    runs as a background command of the same session. By the script's own waits, a long page takes
@@ -288,8 +308,9 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
     changed `pageServerPort`, change the port in `judging-instructions.md` step 4 to match.
 
 13. **Count.** The script refuses to count while a pick is missing or names a page outside its set.
-    Paste its two tables into `results.md`, the one record of the result. Then follow
-    [skill-blind-test.md](skill-blind-test.md) section 7 for what the result changes.
+    Paste its two tables into `results.md`, the one record of the result, with the date of the
+    count. Then follow [skill-blind-test.md](skill-blind-test.md) section 7 for what the result
+    changes.
 
     ```sh
     node count-wins.mjs
@@ -297,13 +318,15 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
 
     Success: the script prints two tables, and no error such as `Fix the picks first`.
 
-14. **Undo what the bench changed on your machine.** In a terminal of your own, once `results.md`
-    holds the count, stop the page server of step 9. Remove `DISABLE_AUTOUPDATER` from the `env` of
-    `~/.claude/settings.json`, so Claude Code updates itself again; success: `claude doctor` no
-    longer shows the `Auto-updates` line as disabled. Close the terminal of step 4, or run
-    `unset CLAUDE_CODE_OAUTH_TOKEN` there ([skill-blind-test.md](skill-blind-test.md) section 8).
+14. **Undo what the bench changed on your machine.** Once `results.md` holds the count, stop the
+    page server of step 9 and any other background command in the token session, then leave it
+    with `/exit`. If you ran steps 6 and 7 in a `tmux` terminal, or the server in a second
+    terminal, stop those too. Then close every terminal that held the token, or run
+    `unset CLAUDE_CODE_OAUTH_TOKEN` in each ([skill-blind-test.md](skill-blind-test.md) section 8).
     The token stays valid after it leaves the shell, for a year from when step 4 made it, and
-    every arm's code could read it.
+    every arm's code could read it. In a terminal of your own, remove `DISABLE_AUTOUPDATER` from
+    the `env` of `~/.claude/settings.json`, so Claude Code updates itself again; success:
+    `claude doctor` no longer shows the `Auto-updates` line as disabled.
 
 Why it is good: every step says what it is for before it says what to run, so a reader can tell
 which step to repeat when something fails. The pilot comes before the days of runs, and the
@@ -429,7 +452,11 @@ Why it is good: the copy reads like a real client's, with real hours, a real off
 act, so an arm has something to set and the judges have something to compare. The brief says what
 the page is for and leaves the audience and tone for the model to infer, as
 [skill-blind-test.md](skill-blind-test.md) section 2 asks. The businesses, the address, the phone
-number and the e-mail addresses are placeholders that read as invented.
+number and the e-mail addresses are placeholders that read as invented. The briefs are the bench's
+case set, and they stay out of git: [evals.md](../../python/evals/evals.md) section 4 keeps a case
+set in git, and the bench sits outside every repository
+([skill-blind-test.md](skill-blind-test.md) section 3). The cost: no history of the briefs, and the
+runner does not see an edit inside one (step 7).
 
 ## The arms: arms.json
 
@@ -1057,7 +1084,9 @@ function claudeArguments(prompt) {
     // The answer is the page on disk; code reads the run's state from these
     // events. prompt-engineering.md section 11 asks for a response schema
     // (--json-schema), which would add a failure that has nothing to do with
-    // the page. The cost: no code reads the model's closing message.
+    // the page. The cost: no code reads the model's closing message, so how
+    // often a run states its own reading of the brief, the way out of
+    // prompt-engineering.md section 8, is not counted.
     "--output-format",
     "stream-json",
     // With stream-json, one JSON event per line; the runner reads the init and
@@ -2359,6 +2388,7 @@ own records, never from memory.
 | Item | Value |
 |---|---|
 | Dates of the runs | |
+| Date of the count | |
 | Claude Code version, from the runs' records | |
 | Runner SHA-256, from the runs' records | |
 | Model and effort | claude-opus-5-5, high |
@@ -2401,7 +2431,7 @@ own records, never from memory.
 
 ## What the winners share
 
-Not run yet.
+Not run yet. What the result changes: skill-blind-test.md section 7.
 
 ## Limits seen in this run
 

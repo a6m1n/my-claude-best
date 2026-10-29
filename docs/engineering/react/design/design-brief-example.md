@@ -154,8 +154,10 @@ Why it is good:
   section 2, it gives the roles one by one, the components, the screen to follow, the four states
   and every word the screen shows (designing-with-claude-code.md section 4).
 - **Each thing to avoid has its "instead"** in step 7. Naming the patterns to avoid is the Opus 5.5
-  guide's method; the "instead" for each is the rule of designing-with-claude-code.md section 3,
-  with prompt-engineering.md section 9. The first three echo looks that sources reported for
+  guide's method (read 2026-10-29,
+  [designing-with-claude-code.md](designing-with-claude-code.md) section 2); the "instead" for
+  each is the rule of designing-with-claude-code.md section 3, with prompt-engineering.md
+  section 9. The first three echo looks that sources reported for
   generated screens (repeated cards, gradients, pill shapes;
   designing-with-claude-code.md section 4); the fourth is particular to this screen.
 - **Each step names its moment, its act and how anyone can tell it was done**, so a missed step
