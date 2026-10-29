@@ -62,7 +62,8 @@ What this file leaves out, and where it lives:
 
 - Choosing product metrics, and A/B tests: [evaluation.md](evaluation.md) sections 8 and 10.
 - Core Web Vitals from real users: [performance.md](../../react/performance/performance.md)
-  section 3.
+  section 3. Whether that report needs consent is not covered yet: neither this file nor
+  performance.md decides it.
 - What a third-party script may see, keystroke listeners on login and payment screens, and replay
   masking: [security.md](../../react/security/security.md) sections 12 and 13.
 - Native apps. Page views in a server-rendered application (section 10).
@@ -319,11 +320,13 @@ offered when read on 2026-10-29:
 | Sentry, `sentry-mcp` (`@sentry/mcp-core` 0.42.0) | one replay's rage-click, dead-click and error counts, by its URL or id, and a search over many replays: "rage clicks, dead clicks, visited pages, errors seen, and replay users" (`search_replays`) [15] | not read |
 | Microsoft Clarity | "metrics including scroll depth, engagement time, total traffic, and more", at most 10 requests per project per day, 3 days of data and 3 dimensions per request [16] | no replay or heatmap tool is listed [16] |
 
-- **Before you connect a server, list its tools and deny the agent every tool that writes or
-  deletes.** PostHog's server lists two tools that delete recordings, and many more that write
-  [14]. In Claude Code (read
-  2026-10-29, version 2.1.312), a deny rule names one tool as `mcp__<server>__<tool>`, and "Deny
-  rules prevent Claude Code from using the specified tool" [36].
+- **Before you connect a server, take its write tools away at the server, and deny the rest in the
+  client.** PostHog's server drops the tools that create, update or delete data in read-only mode
+  (`x-posthog-read-only: true`), and pins one project with `x-posthog-project-id` [39]. Its
+  personal API key with the MCP Server preset is scoped to one project [39]. Where a server has no
+  such mode, list its tools and deny every tool that writes or deletes: in Claude Code, a deny rule
+  names one tool as `mcp__<server>__<tool>` [36]. A tool the vendor adds later is not on that
+  list, so list the tools again after each update of the server.
 - **Name the project, the date window and the filters in the request, and have the agent state
   them with its answer.** At Storyblok, an agent left unconfigured would "query whichever PostHog
   project was most recently mentioned, assume today's date", and early sessions needed correction:
@@ -884,3 +887,4 @@ Checked 2026-10-29 unless a line ends with — checked <YYYY-MM-DD>.
 - [36] Anthropic — Configure permissions (Claude Code docs) — https://code.claude.com/docs/en/permissions
 - [37] PostHog — posthog-js, `dist/module.mjs` (the default bundle), 1.442.0 — https://unpkg.com/posthog-js@1.442.0/dist/module.mjs
 - [38] PostHog — `@posthog/browser-common`, `dist/feature-flags.mjs`, 0.10.1 — https://unpkg.com/@posthog/browser-common@0.10.1/dist/feature-flags.mjs
+- [39] PostHog — PostHog MCP FAQ and advanced setup — https://posthog.com/docs/model-context-protocol/faq

@@ -70,7 +70,7 @@ Where each step runs: a Claude Code session may do steps 0 to 3 for you. Step 4 
 terminal of your own, never through Claude Code's Bash tool or its `!` prefix: the command's output
 enters the conversation, and with it the token ([skill-blind-test.md](skill-blind-test.md)
 section 1). Then start `claude` in that same terminal, with the token exported there, and keep
-that session open until the count. It does the steps after step 4 and reads the records for you,
+that session open until the count. It does steps 5 to 13 and reads the records for you,
 and it runs steps 6 and 7 and step 9's server as background commands, which have no time limit in
 a local session
 ([skill-blind-test.md](skill-blind-test.md) section 1). *Not yet tried*: whether those commands
@@ -106,6 +106,12 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    git --version
    claude --version
    ```
+
+   When `claude --version` prints a version other than 2.1.312, the one these files were read at,
+   read the headless page and the CLI reference again before the pilot (sources 23 and 11 of
+   [skill-blind-test.md](skill-blind-test.md)). Compare them with the flag table of section 4 and
+   the table "What a run must not inherit" of section 3. Check first that `-p` does not run in bare
+   mode by default: bare mode reads no `CLAUDE_CODE_OAUTH_TOKEN` and no subscription login.
 
    Then turn off auto-updates until the count is done, so the version stays the one you recorded
    ([skill-blind-test.md](skill-blind-test.md) section 3): set `DISABLE_AUTOUPDATER` to `"1"` in
@@ -154,13 +160,16 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    gives it.
 
 4. **Make the token, and hand it to this shell only.** Run this step in your own terminal, never in
-   Claude Code (above). Each run gets a configuration folder of its own with no login in it, so
-   your subscription reaches it as a token. `claude setup-token` opens the same browser sign-in as
-   `/login` and prints the token. Run the `read` line, paste the token and press Enter: `read -rs`
-   takes it without showing it and without writing it to your shell history. Then look at `/usage`
-   in a normal session: usage credits must be off, so the plan's limit pauses the bench and nothing
-   is billed ([skill-blind-test.md](skill-blind-test.md) section 3). Success: `/usage` shows no
-   usage-credits row; if it shows one, turn usage credits off, which `/usage-credits` opens.
+   Claude Code (above). Usage credits must be off, so the plan's limit pauses the bench and nothing
+   is billed ([skill-blind-test.md](skill-blind-test.md) section 3). Before you make the token,
+   check usage credits in a Claude Code session signed in with `/login`, started in a terminal where
+   `CLAUDE_CODE_OAUTH_TOKEN` is not set: run `/usage`. Success: no usage-credits row. If it shows
+   one, run `/usage-credits` in that same session and turn them off. Check there, not in the session
+   the block below starts: that one runs on the token, which can only make model requests. Each run
+   gets a configuration folder of its own with no login in it, so your subscription reaches it as a
+   token. `claude setup-token` opens the same browser sign-in as `/login` and prints the token. Run
+   the `read` line, paste the token and press Enter: `read -rs` takes it without showing it and
+   without writing it to your shell history.
 
    ```sh
    claude setup-token
@@ -274,7 +283,9 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
     `judges` in `bench.json`.
 
 12. **Hand over the judging.** Give each judge the `judging/` folder and
-    `judging-instructions.md`, and nothing else.
+    `judging-instructions.md`, and nothing else. The scroll notes need the page server of step 9,
+    which answers on this machine only: each judge writes the scroll notes at this machine. If you
+    changed `pageServerPort`, change the port in `judging-instructions.md` step 4 to match.
 
 13. **Count.** The script refuses to count while a pick is missing or names a page outside its set.
     Paste its two tables into `results.md`, the one record of the result. Then follow
@@ -285,6 +296,14 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
     ```
 
     Success: the script prints two tables, and no error such as `Fix the picks first`.
+
+14. **Undo what the bench changed on your machine.** In a terminal of your own, once `results.md`
+    holds the count, stop the page server of step 9. Remove `DISABLE_AUTOUPDATER` from the `env` of
+    `~/.claude/settings.json`, so Claude Code updates itself again; success: `claude doctor` no
+    longer shows the `Auto-updates` line as disabled. Close the terminal of step 4, or run
+    `unset CLAUDE_CODE_OAUTH_TOKEN` there ([skill-blind-test.md](skill-blind-test.md) section 8).
+    The token stays valid after it leaves the shell, for a year from when step 4 made it, and
+    every arm's code could read it.
 
 Why it is good: every step says what it is for before it says what to run, so a reader can tell
 which step to repeat when something fails. The pilot comes before the days of runs, and the
@@ -311,7 +330,7 @@ terminal as the fallback until the pilot shows that route works.
 | `runsPerArm` | how many runs each arm gets per brief; run *k* of every arm forms one set | always; 2 is the floor of [skill-blind-test.md](skill-blind-test.md) section 2 | never |
 | `judges` | one placeholder name per judge; each gets a folder of sheets | always, before `make-sheets.mjs` runs | never; name judges by placeholders, never by their names |
 | `skillsInEveryRun` | the names the no-skill pilot run's `skills` list held | always; empty until the pilot shows otherwise | never: an empty list makes the full bench stop on any skill but the arm's own; the pilot records such a skill and goes on |
-| `pageServerPort` | the port of the local page server | always; change it when 8173 is taken | never |
+| `pageServerPort` | the port of the local page server | always; change it when 8173 is taken, and change the address in `judging-instructions.md` with it | never |
 | `claudeCodeVersion` | the version `claude --version` printed when you set the bench up; the runner checks it before each run and stops on another | always, in step 1 | never: a Claude Code update between runs changes every run after it ([skill-blind-test.md](skill-blind-test.md) section 3) |
 
 Why it is good: every value a person changes between benches sits in one small file, and the

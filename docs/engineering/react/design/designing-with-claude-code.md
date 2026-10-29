@@ -299,10 +299,11 @@ in section 2 supports.
   than on the screenshot (WebDevJudge). On usability, against the problems human experts found, a
   model reading screenshots found 21% of them, with false findings of its own (GPT-4o, an older
   model). Zhong et al.'s GPT-4 also reported 95 of 147 items that the researchers rated as no
-  usability problem at all, and the first clicks Kuric et al.'s GPT-4.1 predicted differed
-  significantly from those of 3,431 people in 53% of the tasks (both preprints). So a model
-  reviewer is a first pass that finds real problems and false ones, and a person looks at a new
-  screen before it ships. What a model can and cannot judge as a usability reviewer is
+  usability problem at all (a preprint). So a model reviewer is a first pass that finds real
+  problems and false ones, and a person looks at a new screen before it ships. A model does not
+  stand in for the people either: when Kuric et al. asked GPT-4.1 to predict first clicks, a
+  prediction and not a review, its clicks differed significantly from those of 3,431 people in 53%
+  of the tasks (a preprint). What a model can and cannot judge as a usability reviewer is
   [evaluation.md](../../any-language/ux-evaluation/evaluation.md) section 11. The automated
   accessibility checks and the manual pass the person runs are [accessibility.md](accessibility.md) sections 10 and 11.
 - **After each edit, check again the screens and the states that passed before.** Edits break

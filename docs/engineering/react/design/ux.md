@@ -27,8 +27,8 @@ accessibility standard, native elements, focus and announcements are
 there for the rest. Where state lives, how server data, forms and routes are wired, and how errors
 are caught is [architecture.md](../architecture/architecture.md) sections 7 to 12. What fast means and how it is
 measured is [performance.md](../performance/performance.md) sections 2 and 3.
-Every line that carries a read date is to be distrusted after 2027-04-01 until it is read again;
-the README's "How to adopt" says how to list those lines.
+Distrust a line that carries a read date six months after that date, until it is read again; the
+README's "How to adopt" says how to list those lines.
 
 The one rule: **a screen never leaves the user guessing what happened, what is happening now, or
 what to do next.** It is the first of Nielsen's ten usability heuristics, "visibility of system
@@ -386,6 +386,8 @@ about half of the UX principles written into their prompts (a mean of 0.54), and
 built 6% or fewer of the functional principles. A principle written into a prompt is not a
 principle built into the screen. How to review a screen a coding agent built, and why a model
 should not be the only reviewer, is [designing-with-claude-code.md](designing-with-claude-code.md) section 6.
+How many reviewers to use, how to rate severity, and why this review never replaces a test with
+users is [evaluation.md](../../any-language/ux-evaluation/evaluation.md) section 3.
 
 ## 10. Where it stops holding
 

@@ -168,9 +168,6 @@ owner lists it. Looks did raise what people said. Where the FCA moved informatio
 the default above rests on clarity and placement first; how each case is judged is
 [evaluation.md](../../any-language/ux-evaluation/evaluation.md) section 12.
 
-Each case is judged by the task measures of
-[evaluation.md](../../any-language/ux-evaluation/evaluation.md) section 12, never by ratings alone.
-
 ### Alternatives considered on expression
 
 - **Expressive throughout, as Google's research favours for its own system.** Not taken. The speed

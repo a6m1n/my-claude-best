@@ -447,8 +447,8 @@ It is the one method here that shows cause, and it needs both versions built and
 
 - **Before you start, compute how many users each version needs.** Ron Kohavi, Roger Longbotham,
   Dan Sommerfield and Randal Henne give "a calculation for the minimum sample size, assuming the
-  desired confidence level is 95% and the desired power is 80%": `n = 16 × σ² / Δ²` users per
-  version, where σ² is the variance of the metric and Δ the smallest change you want to detect
+  desired confidence level is 95% and the desired power is 80%": `n = 16 × s² / d²` users per
+  version, where s² is the variance of the metric and d the smallest change you want to detect
   [28]. The change is squared, so halving it needs four times the users; in their example,
   detecting a 20% change in conversion instead of a 5% one needs 16 times fewer users, 7,600 [28].
   For 90% power they replace 16 with 21 [28].

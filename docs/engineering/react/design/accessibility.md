@@ -31,8 +31,8 @@ feedback, forms, states and navigation, is [ux.md](ux.md) sections 2 to 4, 6 and
 [components.md](../components/components.md). The examples come from one invented application,
 the billing screens of Acme Corp. Its code was type-checked, linted, unit-tested and built;
 nothing in it was run in a browser or with a screen reader.
-Every line that carries a read date is to be distrusted after 2027-04-01 until it is read again;
-the README's "How to adopt" says how to list those lines.
+Distrust a line that carries a read date six months after that date, until it is read again; the
+README's "How to adopt" says how to list those lines.
 
 The one rule: **use the native HTML element that already has the role and the keyboard behaviour
 you need, add ARIA only where HTML has no such element, and then keep every promise the ARIA role
@@ -759,6 +759,9 @@ says of itself that its checks "cover just a few accessibility issues".
 
 Check: the pull request that adds or changes a screen says in its Verification which steps of this
 list were run, and with which screen reader and browser.
+
+The pass removes barriers; it is not a test with disabled people, which
+[evaluation.md](../../any-language/ux-evaluation/evaluation.md) section 7 covers.
 
 ## 12. Common mistakes
 

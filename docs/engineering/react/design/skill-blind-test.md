@@ -217,9 +217,9 @@ them (section 4).
 
 - **Keep usage credits off while the bench runs.** Usage credits are extra usage you buy with
   `/usage-credits`; without them, Claude Code "blocks further requests until the reset time" [4],
-  so the plan's limit pauses the bench and nothing is billed. Look at `/usage` before the first
-  run: it "shows a usage-credits row while usage credits are on" [51], so no such row means they
-  are off.
+  so the plan's limit pauses the bench and nothing is billed. Look at `/usage` in a session signed
+  in with `/login` before the first run: it "shows a usage-credits row while usage credits are on"
+  [51], so no such row means they are off.
 
 Check: after the pilot, does `ls -a ~` show a folder an arm writes, such as `.taste-skill`,
 `.impeccable` or `.huashu-design`, that was not there before?
@@ -342,9 +342,10 @@ eight arms, three briefs and two runs make 48. Sum the pilot's time for each arm
 asked of that arm, and you have the bench's time before any wait at a limit. Add a person's time
 for the contrast look of [blind-test-example.md](blind-test-example.md) step 10: one look for each
 element the check could not decide, on every page it lists. The slowest arm takes
-"roughly 30 to 45 minutes and a few hundred thousand tokens" a build [3]. Read `/usage` before and
-after the pilot: the share of the plan's limits the pilot used, times the runs asked over the
-pilot's runs, says how many limit windows the bench needs. Every run is on Opus, and the plan has
+"roughly 30 to 45 minutes and a few hundred thousand tokens" a build [3]. Read `/usage` in a
+session signed in with `/login` before and after the pilot: the share of the plan's limits the
+pilot used, times the runs asked over the pilot's runs, says how many limit windows the bench
+needs. Every run is on Opus, and the plan has
 an Opus limit beside its session and weekly limits [4]. Plan for days, or weeks on a smaller plan.
 
 ## 5. Screenshots and the contrast floor
@@ -480,13 +481,10 @@ bench's `results.md` ([blind-test-example.md](blind-test-example.md), "The resul
 the date of the count and the number of judges. `results.md` is the one record of the result; this
 file holds none. Not run yet.
 
-Then update the lines in your copies that say no test with human raters exists:
-[choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 1 ("Not covered yet") and
-section 3 (the paragraph on whether a design skill helps), and the "What to expect" cell of each
-tested arm in its section 8; [brand-pages.md](brand-pages.md) section 10 ("Not covered yet");
-section 1 of this file ("Not covered yet"); and
-[designing-with-claude-code.md](designing-with-claude-code.md) section 2 (the first row of the
-table) and section 3 (the bullet on design skills).
+Then update every line in your copies that says no test with human raters exists;
+`grep -rn -i -E 'human raters|rated by people|people rated|no published test' docs/engineering/react/design/`
+lists them. Add the result to the "What to expect" cell of each tested arm in
+[choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 8.
 
 ## 8. Security: every arm runs third-party code
 

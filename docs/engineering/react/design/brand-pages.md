@@ -33,8 +33,8 @@ any skill beats no skill on your own briefs is [skill-blind-test.md](skill-blind
 and fonts on the first screen are [performance.md](../performance/performance.md) section 5.
 [brand-direction-example.md](brand-direction-example.md) shows a direction file, its theme file
 and the brief that points to both.
-Every line that carries a read date is to be distrusted after 2027-04-29 until it is read again;
-the README's "How to adopt" says how to list those lines.
+Distrust a line that carries a read date six months after that date, until it is read again; the
+README's "How to adopt" says how to list those lines.
 
 The one rule: **a person fixes the page's direction from the brand's own material before the
 model writes code, and someone other than the author judges the page from its render.**
@@ -79,7 +79,7 @@ who judged the result: people, a model, a script, or the author of the report.
 | A plan does more than a review | MM-WebAgent's full system won 78.99% of human comparisons, against other systems, not against its own parts. In its ablation, planning raised the score from 0.42 to 0.66 and reflection then to 0.75, but the planning gain came from generated images and video, while the layout and style scores fell [13] | 50 people for the win rate; a model for the ablation | research |
 | A critic that sees the render helps | Sansford et al.'s figures are the critic row of [designing-with-claude-code.md](designing-with-claude-code.md) section 2. Xiong et al., on copying a target screenshot, found that a model refining its own page with no rubric fell below its first attempt, and that one repair target per round reduced this for three frontier models but not for Qwen models [15] | a model, in both | research |
 | About three render-and-fix rounds are enough | Guo et al. found that three rounds gave 95.3% of the gain, on a score that mixes correct interaction with visual similarity to a site being copied [16]. Anthropic's evaluator ran 5 to 15 rounds, and its author often preferred "a middle iteration over the last one" [3] | a model; the author | research; case |
-| A skill's rules in other files reach the page | rulestack found a reference file read in 16 of 16 runs with any pointer from `SKILL.md` (a plain link, "you must read", an @-reference) and in 0 of 4 runs with none, on one small skill that is not about design [17]. On Haiku 4.5, ktlesr counted 0 attempts to open the files where 12 of Hallmark's 14 checked tells are defined [18] | file reads counted; a script of regular expressions | research |
+| A skill's rules in other files reach the page | The counts, for one small skill not about design and for Hallmark on Haiku 4.5, are [choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 5 | file reads counted; a script of regular expressions | research |
 | The hero first, then one section at a time | No measurement. Hallmark builds and reviews the hero first [19]; two builders report the same order [20], [21] | nobody | skill text; cases |
 
 Claude Code's best-practices page names "A browser screenshot next to the mockup" as a check Claude
@@ -326,15 +326,11 @@ Read this when you write or adapt a skill for brand pages, or a brief that point
 file.
 
 - **Put the rules that must hold, such as the do-nots and the order of the steps, near the top of
-  `SKILL.md`.** Claude Code adds a skill's text when it is invoked and "doesn’t re-read the file on
-  later turns", and "After compaction, Claude Code can keep only the start of an invoked skill":
-  the first 5,000 tokens of each, 25,000 for all of them together [56].
-- **Point to every other file from `SKILL.md`, one level deep, and say when to read it.** rulestack
-  found that any pointer worked, a plain link as well as "you must read" or an @-reference: the
-  file was read in 16 of 16 runs, and in 0 of 4 runs with no pointer; it was one small skill, two
-  runs per setting, and the author calls that "too few to rank the styles" [17]. On Haiku
-  4.5, the model never opened Hallmark's ban files, and the tells defined only there stayed on the
-  pages [18]. Anthropic's skill guide asks to "Keep references one level deep from SKILL.md"
+  `SKILL.md`,** because after a compaction Claude Code can keep only the start of an invoked skill
+  [56]; the token budget is [choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 5.
+- **Point to every other file from `SKILL.md`, one level deep, and say when to read it.** In the
+  one count, a file `SKILL.md` pointed to was read and a file it did not point to was not
+  ([choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 5). Anthropic's skill guide asks to "Keep references one level deep from SKILL.md"
   [57]. A brief that names the direction file is the same kind of pointer; that it works
   the same way in a brief is this file's reading, not a test.
 - **Choose a skill by how it sets the direction and checks the page,** as

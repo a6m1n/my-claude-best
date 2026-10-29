@@ -73,21 +73,18 @@ the two stay in one practice is [evaluation.md](evaluation.md) section 16.
    the tool before the consent banner is answered (`behaviour-analytics.md` section 5), and no rage
    click, dead click or hotspot is reported as a finding before a person watched the replay behind
    it (`behaviour-analytics.md` section 6)." Without it an agent never opens the folder.
-3. The rules and examples link the practices that own a neighbouring rule:
-   [ux.md](../../react/design/ux.md) section 9 (the heuristics as a reviewer's lens),
-   [accessibility.md](../../react/design/accessibility.md) sections 10 and 11 (the automated checks
-   and the manual pass), [designing-with-claude-code.md](../../react/design/designing-with-claude-code.md)
-   section 6 (the verify loop for a screen an agent built),
-   [visual-design.md](../../react/design/visual-design.md) section 2 (the effective, polished and
-   balanced cases), [security.md](../../react/security/security.md) sections 12 and 13 (third-party
-   scripts, analytics off login and payment screens, replay masking),
-   [performance.md](../../react/performance/performance.md) section 3 (page speed as users see it),
-   and [refactoring.md](../refactoring/refactoring.md) section 7 (how existing work moves). Copy
-   those practices too, or point each link at the rule your project follows instead.
+3. The files link other practices for the rules those own. Run
+   `grep -rhoE '\]\(\.\./[^)#]+' docs/engineering/any-language/ux-evaluation/ | sort -u` to print
+   every link that leaves this folder. Copy each folder or file it names, or replace each link with
+   your own rule for that topic.
 4. In work that exists already, apply the rules to new and changed screens first
    ([evaluation.md](evaluation.md) section 17, [behaviour-analytics.md](behaviour-analytics.md)
    section 12). A regulator's rule keeps the regulator's dates.
-5. Re-check the lines that name a moving target. Each file's Sources section opens with its
+5. Re-check each line that names a moving target six months after the date it carries, and
+   distrust it from then until you have read it again.
+   `grep -rnE '20[0-9]{2}-[0-9]{2}-[0-9]{2}' docs/engineering/any-language/ux-evaluation/` lists
+   them; skip a date that is a version or a default, such as `defaults: '2025-05-24'`. The six
+   months is this practice's choice. Each file's Sources section opens with its
    `Checked <date>` line. The studies of models as reviewers and participants are preprints from
    2025 and 2026, and NN/g's advice against AI moderators carries its review date of 2026-01-21
    ([evaluation.md](evaluation.md) section 11). The vendor pages, SDK versions and regulators'
