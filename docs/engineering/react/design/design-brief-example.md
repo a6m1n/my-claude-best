@@ -150,9 +150,9 @@ Why it is good:
 - **The brief names its case before the steps:** effective, the default for a product screen, as
   [visual-design.md](visual-design.md) section 2 asks before a screen is designed, so the build
   aims at a dense, quiet table and adds no polish or expressive moment the screen does not need.
-- **The spec is values, not adjectives**: the roles one by one, the components, the screen to
-  follow, the four states and every word the screen shows
-  (designing-with-claude-code.md section 4).
+- **The spec is values, not adjectives**: apart from the case's own words from visual-design.md
+  section 2, it gives the roles one by one, the components, the screen to follow, the four states
+  and every word the screen shows (designing-with-claude-code.md section 4).
 - **Each thing to avoid has its "instead"** in step 7. Naming the patterns to avoid is the Opus 5.5
   guide's method; the "instead" for each is the rule of designing-with-claude-code.md section 3,
   with prompt-engineering.md section 9. The first three echo looks that sources reported for
@@ -257,7 +257,11 @@ Why it is good:
   `primary` surface has a role of its own, and the comment says so at the top.
 - **Each role holds both colour schemes on one line**, with `light-dark()` under
   `color-scheme: light dark`. shadcn/ui's own theme puts the dark values under a `.dark` class
-  instead; how a theme switches is [visual-design.md](visual-design.md) section 9.
+  instead; how a theme switches is [visual-design.md](visual-design.md) section 9. The
+  application has no theme switch yet, which visual-design.md section 9 asks for on a data screen:
+  the screen follows the system through `color-scheme: light dark`, and step 8 checks both
+  schemes. The cost: a clerk cannot choose a theme other than the system's until the switch is
+  added.
 - **The build enforces step 3 of the brief.** `@theme inline` turns each role into utilities such
   as `bg-primary` and `text-muted-foreground`, and `--color-*: initial` clears Tailwind's default
   palette (Tailwind CSS 4.3, read 2026-10-01). The comment on that line keeps the next editor from
@@ -629,6 +633,7 @@ this code, and the screen-reader text and the focus outline were checked by the 
 the linters only.
 
 What the example leaves out: the reference application has no Storybook and no shadcn/ui
-`components.json`, so no manifest serves its components; and it has no baseline screenshot test
-yet. Once a person has approved the pay screen's screenshots, a `toHaveScreenshot()` test
+`components.json`, so no manifest serves its components; it has no theme switch yet
+([visual-design.md](visual-design.md) section 9); and it has no baseline screenshot test yet. Once
+a person has approved the pay screen's screenshots, a `toHaveScreenshot()` test
 (designing-with-claude-code.md section 5) turns item 9 of the checklist into a command.

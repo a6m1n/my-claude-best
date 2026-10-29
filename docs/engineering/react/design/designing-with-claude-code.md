@@ -386,8 +386,9 @@ Bad — the spec is three adjectives:
 
 ```text
 Build the invoices screen at /invoices, in src/routes/invoices.index.tsx. An accounts clerk
-opens it to see which invoices are due or overdue and to start paying one. Make it clean, modern
-and professional.
+opens it to see which invoices are due or overdue and to start paying one. The screen is
+effective, the default for a product screen (visual-design.md section 2): dense and quiet, with
+motion only to show what changed. Make it clean, modern and professional.
 ```
 
 "Clean, modern and professional" names nothing a reviewer can check, and the model guides say such
@@ -406,7 +407,8 @@ module's own, and give the screen the same frame as src/routes/invoices.$invoice
 ```
 
 The three adjectives became three things a reviewer can check in the diff: the roles, the
-components and the screen to follow (section 4).
+components and the screen to follow (section 4). The case sentence is the same in both: its words
+are the case's definition in visual-design.md section 2, not free adjectives.
 
 ### "Make it pop"
 

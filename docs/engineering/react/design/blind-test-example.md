@@ -54,11 +54,12 @@ skill-bench/
 Why it is good: what the judges get (`judging/`), what only the count reads (`key/`) and what
 holds every arm's name (`runs/`) are separate folders, so keeping the pick blind is a matter of
 handing over one folder. Each script does one job and is named for it, with no `utils` file
-([file-structure.md](../../any-language/file-structure/file-structure.md) section 7). The bench is
-a tool of a few scripts, below the size where that practice's module folders pay
-([file-structure.md](../../any-language/file-structure/file-structure.md) section 12), so the
-scripts sit at the root. No script imports another: each stands alone, which is why two small
-functions appear in two scripts.
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 7). The bench
+departs from that practice on purpose: its six commands are standalone scripts at the root, where
+section 2 gives module folders, and the runner keeps its model, effort and prompt in its own file,
+where section 3 gives each a role file. Why: a reader copies one script and it runs, and no script
+imports another. The cost: the model and the prompt sit beside the code that sends them, and a few
+small functions repeat, each marked where it does.
 
 ## Set it up and run it
 
@@ -194,7 +195,10 @@ there, and step 9's server in a second terminal. Every arm still runs in Claude 
    read each `pilot-runs/<run-id>/run.json` yourself: the verdict, `skills`, `permissionDenials`,
    `modelsUsed`, `durationMs` and `totalCostUsd`, and each run's `trace/prompt-expansions.jsonl`.
    The pilot records a skill nobody copied in under `isolationProblems` and goes on; write the
-   no-skill run's `skills` into `bench.json` as `skillsInEveryRun`. Then send the pilot's pages
+   no-skill run's `skills` into `bench.json` as `skillsInEveryRun`. For each skill arm, the pilot
+   reports `skillFilesRead`, the files the run read beside `SKILL.md`, and stops on nothing there.
+   In the no-skill run, the pilot tries `skillRan` with every skill's name and stops when one
+   matches: fix `skillRan` before the bench. Then send the pilot's pages
    through steps 8 to 10 with `node blind-pages.mjs pilot-runs`, to see the whole path work, and
    delete `judging/`, `key/` and `checks/` afterwards; if you will also judge, skip step 10 for the
    pilot and only check that the shots render. To run the pilot again, delete `pilot-runs/` first.
@@ -488,7 +492,7 @@ writes one `run.json` per run.
 ```js
 // run-arms.mjs
 import { execFile, spawn } from "node:child_process";
-import { randomInt } from "node:crypto";
+import { createHash, randomInt } from "node:crypto";
 import { once } from "node:events";
 import { createWriteStream } from "node:fs";
 import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
@@ -506,6 +510,10 @@ const ReasoningEffort = Object.freeze({
   MAX: "max",
 });
 
+// file-structure.md section 3 puts the model, the effort and the prompt in
+// role files of their own; each bench script stands alone, so the model and
+// the effort sit here and the prompt in buildPrompt. The cost: a change to
+// either is a change to the runner's code.
 // One model and one effort for every arm (skill-blind-test.md section 2). The
 // full model name, never an alias such as `opus`, so a new release cannot
 // change the model halfway through the bench.
@@ -517,6 +525,10 @@ const PAGE_BUILDER_LLM_REASONING_EFFORT = ReasoningEffort.HIGH;
 // The same tools for every arm. Add one only when the pilot's
 // permissionDenials show an arm needed it, and then for all arms
 // (skill-blind-test.md section 4).
+// Bash has no gate per call, which prompt-engineering.md section 14 asks
+// for: nobody answers a run, and the arms run their own scripts through it.
+// The cost: an arm's code runs as you; read each arm's scripts first, or run
+// the bench in a container (skill-blind-test.md section 8).
 const ALLOWED_TOOLS = "Read,Write,Edit,Bash,Skill";
 
 // A guard against a runaway run, far above a normal build. It caps Claude
@@ -588,6 +600,7 @@ async function main(argv, environment) {
     skillsInEveryRun: bench.skillsInEveryRun,
     passedThrough: passedThroughVariables(environment),
     oauthToken,
+    runnerSha256: await fileSha256(import.meta.filename),
   };
 
   let failedRunsInARow = [];
@@ -595,13 +608,16 @@ async function main(argv, environment) {
     if (await isDone(join(runsDir, run.runId, "run.json"))) continue;
 
     await assertClaudeCodeVersion(bench.claudeCodeVersion, runsDir);
+
     const record = await runWithRetry(run, context);
+
     console.log(runLine(record));
 
     // A run the plan's limit stopped neither counts as a failure nor ends
     // a row of them (skill-blind-test.md section 4).
     if (record.status === VALID) failedRunsInARow = [];
     if (record.status === "failed") failedRunsInARow.push(record.runId);
+
     if (failedRunsInARow.length >= STOP_AFTER_FAILED_RUNS_IN_A_ROW) {
       // A recorded run counts as done, so a failure the setup caused runs
       // again only once its folder is gone.
@@ -714,13 +730,16 @@ async function loadOrCreatePlan(planPath, runs, randomIndex) {
   // A resumed bench keeps the order it drew the first time.
   if (await exists(planPath)) {
     const plan = await readJson(planPath);
+
     assertSameRuns(plan, runs);
+
     return plan;
   }
 
   const plan = shuffled(runs, randomIndex);
 
   await writeJson(planPath, plan);
+
   return plan;
 }
 
@@ -737,14 +756,14 @@ function assertSameRuns(plan, runs) {
   }
 }
 
-// Fisher-Yates. Each script of the bench stands alone, so this function is
-// also in make-sheets.mjs.
+// Fisher-Yates. Also in make-sheets.mjs: no script imports another.
 function shuffled(items, randomIndex) {
   const copy = [...items];
   for (let last = copy.length - 1; last > 0; last -= 1) {
     const pick = randomIndex(last + 1);
     [copy[last], copy[pick]] = [copy[pick], copy[last]];
   }
+
   return copy;
 }
 
@@ -764,14 +783,17 @@ async function runWithRetry(run, context) {
   const record = { ...run, status: runStatus(attempts.at(-1)), attempts };
 
   await writeJson(join(runDir, "run.json"), record);
+
   return record;
 }
 
 function runStatus(lastAttempt) {
   if (lastAttempt.verdict === VALID) return VALID;
+
   // Not the arm's failure: the runner runs it again on its next start
   // (skill-blind-test.md section 4).
   if (lastAttempt.planLimitHit) return LIMIT;
+
   return "failed";
 }
 
@@ -794,27 +816,22 @@ async function runAttempt(run, attemptNumber, context) {
     stderrPath: paths.stderr,
   });
 
-  const stream = parseJsonLines(await readFile(paths.stream, "utf8"));
-  const expansions = parseJsonLines(await readTextIfPresent(paths.expansions));
-  const init = stream.items.find(
-    (event) => event.type === "system" && event.subtype === "init",
-  );
-  const result = stream.items.findLast((event) => event.type === "result");
+  const { stream, expansions, init, result } = await readRunEvents(paths);
   const problems =
     init === undefined
       ? []
       : isolationProblems(init, arm, context.skillsInEveryRun);
 
-  // The pilot is where skillsInEveryRun is found, so it records what loaded
-  // and goes on; the full bench stops (skill-blind-test.md section 3).
-  if (context.isPilot && problems.length > 0) {
-    console.log(`${run.runId}: ${problems.join("; ")}`);
-  } else {
-    assertIsolated(run.runId, problems);
+  checkIsolation(run.runId, problems, context.isPilot);
+
+  if (context.isPilot && arm.skill === null) {
+    assertSkillRanFailsNoSkillRun(context.arms, expansions.items, stream.items);
   }
 
   const ran =
     arm.skill !== null && skillRan(arm.skill, expansions.items, stream.items);
+  const filesRead =
+    arm.skill === null ? [] : skillFilesRead(arm.skill, stream.items);
   const pageWritten = await isNonEmptyFile(paths.page);
   const verdict = attemptVerdict({
     result,
@@ -830,6 +847,7 @@ async function runAttempt(run, attemptNumber, context) {
     init,
     result,
     ran,
+    filesRead,
     pageWritten,
     brokenLines: stream.brokenLines,
     isolationProblems: problems,
@@ -837,7 +855,45 @@ async function runAttempt(run, attemptNumber, context) {
     // with a result failed for the arm's own reason (skill-blind-test.md
     // section 4).
     planLimitHit: result === undefined && hitPlanLimit(stream.items),
+    runnerSha256: context.runnerSha256,
   });
+}
+
+async function readRunEvents(paths) {
+  const stream = parseJsonLines(await readFile(paths.stream, "utf8"));
+  const expansions = parseJsonLines(await readTextIfPresent(paths.expansions));
+
+  const init = stream.items.find(
+    (event) => event.type === "system" && event.subtype === "init",
+  );
+  const result = stream.items.findLast((event) => event.type === "result");
+
+  return { stream, expansions, init, result };
+}
+
+// The pilot is where skillsInEveryRun is found, so it records what loaded
+// and goes on; the full bench stops (skill-blind-test.md section 3).
+function checkIsolation(runId, problems, isPilot) {
+  if (isPilot && problems.length > 0) {
+    console.log(`${runId}: ${problems.join("; ")}`);
+  } else {
+    assertIsolated(runId, problems);
+  }
+}
+
+// The no-skill run calls no skill, so skillRan must match none there: a
+// grader is first tried on a run it must fail (evals.md section 5).
+function assertSkillRanFailsNoSkillRun(arms, expansions, events) {
+  for (const arm of arms) {
+    if (arm.skill === null) continue;
+
+    if (skillRan(arm.skill, expansions, events)) {
+      throw new Error(
+        `skillRan matched ${arm.skill} in the no-skill run; fix skillRan ` +
+          "before the bench (evals.md section 5).",
+      );
+    }
+  }
 }
 
 // The stream's rate_limit_event says when the plan stopped a run. Not yet
@@ -876,6 +932,7 @@ async function prepareAttempt(paths, arm, brief) {
   await cp(join(PHOTOS_DIR, brief.id), join(paths.work, "photos"), {
     recursive: true,
   });
+
   await writeJson(
     join(paths.work, ".claude", "settings.json"),
     traceSettings(paths.expansions),
@@ -914,6 +971,10 @@ function traceSettings(expansionsPath) {
   };
 }
 
+// prompt-engineering.md section 18 keeps every prompt in git; the bench is a
+// scratch folder outside every repository (skill-blind-test.md section 3), so
+// each run records the SHA-256 of this file, and the count stops when two runs
+// differ. The cost: no history of the prompt, only proof it did not change.
 function buildPrompt(brief, arm) {
   const task = [
     "Build the web page that the brief in <brief> asks for.",
@@ -959,7 +1020,11 @@ function claudeArguments(prompt) {
     // your user or local settings (skill-blind-test.md section 3).
     "--setting-sources",
     "project",
+    // No MCP server from any configuration reaches a run
+    // (skill-blind-test.md section 3).
     "--strict-mcp-config",
+    // File edits and the listed tools run without asking: nobody answers a
+    // run (skill-blind-test.md section 4).
     "--permission-mode",
     "acceptEdits",
     // What would wait for a person is denied instead, the question tool
@@ -976,6 +1041,8 @@ function claudeArguments(prompt) {
     // the page. The cost: no code reads the model's closing message.
     "--output-format",
     "stream-json",
+    // With stream-json, one JSON event per line; the runner reads the init and
+    // result events from it (skill-blind-test.md section 4).
     "--verbose",
   ];
 }
@@ -988,6 +1055,11 @@ function passedThroughVariables(environment) {
   );
 }
 
+// prompt-engineering.md section 17 asks for a cache switch. Claude Code builds
+// the system prompt, so no Request UUID line can go first, and a prompt cache
+// does not change the answer (same section), so the bench has none. The cost:
+// each run's time and tokens are measured with the cache, and they are
+// recorded, not judged (skill-blind-test.md section 2).
 function childEnvironment(passedThrough, paths, oauthToken) {
   return {
     ...passedThrough,
@@ -999,6 +1071,10 @@ function childEnvironment(passedThrough, paths, oauthToken) {
     // Your subscription, as a token, since the run's config folder holds no
     // login. The runner writes it to no file.
     CLAUDE_CODE_OAUTH_TOKEN: oauthToken,
+    // No skill bundled with Claude Code, and no memory from an earlier run,
+    // reaches a run. Without the bundled-skills line, the pilot would list the
+    // bundled skills in skillsInEveryRun and every arm would get them
+    // (skill-blind-test.md section 3).
     CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
     CLAUDE_CODE_DISABLE_BUNDLED_SKILLS: "1",
     // A dev server started in the background would hold the run open.
@@ -1045,6 +1121,7 @@ function parseJsonLines(text) {
       brokenLines += 1;
     }
   }
+
   return { items, brokenLines };
 }
 
@@ -1067,6 +1144,7 @@ function isolationProblems(init, arm, skillsInEveryRun) {
     const names = init.mcp_servers.map((server) => server.name);
     problems.push(`MCP servers loaded: ${names.join(", ")}`);
   }
+
   return problems;
 }
 
@@ -1083,6 +1161,10 @@ function assertIsolated(runId, problems) {
 // A typed /name shows in the hook's log; a skill the model calls shows as a
 // Skill tool call. Its input fields are not documented, so the call is
 // matched on the skill's name anywhere in the input.
+// choosing-tools-and-skills.md section 5 also asks that each file SKILL.md
+// points to was read. The bench tests each arm as its owner ships it
+// (skill-blind-test.md section 8), so a run that skips one stays valid and the
+// record lists what was read. The cost: a win may come from SKILL.md alone.
 function skillRan(skillName, expansions, events) {
   const typed = expansions.some((entry) => entry.command_name === skillName);
   const called = events
@@ -1093,15 +1175,31 @@ function skillRan(skillName, expansions, events) {
   return typed || called;
 }
 
+function skillFilesRead(skillName, events) {
+  const skillFolder = `/.claude/skills/${skillName}/`;
+  return events
+    .filter((event) => event.type === "assistant")
+    .flatMap((event) => event.message?.content ?? [])
+    .filter((block) => block.type === "tool_use" && block.name === "Read")
+    .map((block) => block.input?.file_path ?? "")
+    .filter(
+      (path) => path.includes(skillFolder) && basename(path) !== "SKILL.md",
+    );
+}
+
 function attemptVerdict({ result, armSkill, ran, pageWritten }) {
   if (result === undefined) {
     return "no result event: killed, crashed or timed out";
   }
+
   if (result.subtype !== "success" || result.is_error) {
     return `result ${result.subtype}, is_error ${result.is_error}`;
   }
+
   if (armSkill !== null && !ran) return "the arm's skill did not run";
+
   if (!pageWritten) return "no page at site/index.html";
+
   return VALID;
 }
 
@@ -1112,10 +1210,12 @@ function attemptSummary({
   init,
   result,
   ran,
+  filesRead,
   pageWritten,
   brokenLines,
   isolationProblems,
   planLimitHit,
+  runnerSha256,
 }) {
   return {
     attempt: attemptNumber,
@@ -1130,6 +1230,7 @@ function attemptSummary({
     // The init event a script reads carries no effort, so the record keeps
     // the effort the run was given (skill-blind-test.md section 4).
     effort: PAGE_BUILDER_LLM_REASONING_EFFORT,
+    runnerSha256,
     apiKeySource: init?.apiKeySource,
     skills: init?.skills,
     pluginErrors: init?.plugin_errors,
@@ -1143,6 +1244,7 @@ function attemptSummary({
     modelsUsed: Object.keys(result?.modelUsage ?? {}),
     permissionDenials: result?.permission_denials,
     skillRan: ran,
+    skillFilesRead: filesRead,
     pageWritten,
   };
 }
@@ -1153,10 +1255,14 @@ function runLine(record) {
   return `${record.runId}: ${record.status} (${last.verdict}), ${minutes} min`;
 }
 
+// Also in blind-pages.mjs, shoot-pages.mjs, make-sheets.mjs and
+// count-wins.mjs: no script imports another.
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
+// Also in blind-pages.mjs, shoot-pages.mjs and make-sheets.mjs: no script
+// imports another.
 async function writeJson(path, value) {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
@@ -1166,6 +1272,7 @@ async function readTextIfPresent(path) {
   return (await exists(path)) ? readFile(path, "utf8") : "";
 }
 
+// Also in blind-pages.mjs: no script imports another.
 async function exists(path) {
   return stat(path).then(
     () => true,
@@ -1178,6 +1285,11 @@ async function isNonEmptyFile(path) {
     (info) => info.isFile() && info.size > 0,
     () => false,
   );
+}
+
+async function fileSha256(path) {
+  const bytes = await readFile(path);
+  return createHash("sha256").update(bytes).digest("hex");
 }
 
 await main(process.argv, process.env);
@@ -1195,10 +1307,16 @@ checked before each run, and a changed plan stops the runner. The model and the 
 named constants, and the effort comes from a closed set
 ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md) section 15);
 the prompt states the goal and the steps, marks the brief with a tag, and gives a way out the model
-can check (sections 2, 5 and 8 of the same file). Two departures are declared at their lines: the run's answer is the page on disk, not
-a response schema (section 11), and each run's trace is a file, not a trace store
-([evals.md](../../python/evals/evals.md) section 9). Each function does one job, guard clauses end
-it early, and the environment and the random source come in as parameters
+can check (sections 2, 5 and 8 of the same file). Each departure is declared at its line, with its
+rule, its reason and its cost. Four depart from
+[prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md): the page on
+disk instead of a response schema (section 11), Bash with no gate per call (section 14), no cache
+switch (section 17) and the runner's hash instead of git (section 18). The others are the trace in
+a file ([evals.md](../../python/evals/evals.md) section 9), the model and the prompt outside role
+files ([file-structure.md](../../any-language/file-structure/file-structure.md) section 3), and
+reference reads recorded, not gated
+([choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 5). Each function does one
+job, guard clauses end it early, and the environment and the random source come in as parameters
 ([readability.md](../../any-language/readability/readability.md) sections 2, 3 and 6). Failed runs
 stay in the record, with the attempt that failed, so the count can divide by what was asked for.
 
@@ -1257,6 +1375,7 @@ async function main(argv) {
 
   await writeJson(KEY_FILE, key);
   await writeJson(SETS_FILE, setsWithoutArms(key));
+
   console.log(`${key.length} pages copied under random ids to ${PAGES_DIR}.`);
 }
 
@@ -1265,6 +1384,7 @@ async function validRuns(runsDir) {
   const records = await Promise.all(
     plan.map((run) => readJson(join(runsDir, run.runId, "run.json"))),
   );
+
   // A run still waiting at the plan's limit would be missing from every set,
   // and finishing it later would mean judging again.
   assertNoRunAtLimit(records);
@@ -1284,8 +1404,8 @@ async function validRuns(runsDir) {
 }
 
 // A run the plan's limit stopped is neither valid nor failed: it waits for
-// the runner's next start (skill-blind-test.md section 4). Each script of the
-// bench stands alone, so this function is also in count-wins.mjs.
+// the runner's next start (skill-blind-test.md section 4). Also in
+// count-wins.mjs: no script imports another.
 function assertNoRunAtLimit(records) {
   const waiting = records.filter((record) => record.status === "limit");
   if (waiting.length > 0) {
@@ -1360,18 +1480,24 @@ function setsWithoutArms(key) {
     set.ids.push(entry.id);
     sets.set(name, set);
   }
+
   return [...sets.values()].map((set) => ({ ...set, ids: set.ids.sort() }));
 }
 
+// Also in run-arms.mjs, shoot-pages.mjs, make-sheets.mjs and count-wins.mjs:
+// no script imports another.
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
+// Also in run-arms.mjs, shoot-pages.mjs and make-sheets.mjs: no script
+// imports another.
 async function writeJson(path, value) {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+// Also in run-arms.mjs: no script imports another.
 async function exists(path) {
   return stat(path).then(
     () => true,
@@ -1439,8 +1565,10 @@ async function main() {
 
 async function answer(request, response, root) {
   const path = fileInside(root, new URL(request.url, "http://page").pathname);
+
   if (path === null) {
     response.writeHead(403).end();
+
     return;
   }
 
@@ -1465,7 +1593,9 @@ function fileInside(root, urlPath) {
   }
 
   const path = resolve(root, `.${decoded}`);
+
   if (path !== root && !path.startsWith(root + sep)) return null;
+
   return decoded.endsWith("/") ? join(path, "index.html") : path;
 }
 
@@ -1536,6 +1666,7 @@ async function main() {
   const findings = {};
   try {
     await assertContrastGateWorks(browser);
+
     for (const id of ids) {
       findings[id] = await shootAtEveryWidth(browser, serverUrl, id);
       // Written after each page, so a stop keeps every page done so far.
@@ -1548,8 +1679,8 @@ async function main() {
 }
 
 // A page that cannot be shot or checked goes to a person's look with its
-// error, instead of stopping the pages after it (skill-blind-test.md
-// section 5).
+// error, instead of stopping the pages after it (the bench's own rule, beside
+// skill-blind-test.md section 5's look at what axe could not decide).
 async function shootAtEveryWidth(browser, serverUrl, id) {
   const byWidth = {};
   const errors = [];
@@ -1572,6 +1703,7 @@ async function shootAtEveryWidth(browser, serverUrl, id) {
       : `${id}: not shot (${errors.join("; ")}), ` +
           `listed in ${CONTRAST_REVIEW_FILE}`,
   );
+
   return byWidth;
 }
 
@@ -1623,6 +1755,7 @@ async function assertContrastGateWorks(browser) {
     await page.setContent(`<!doctype html><html lang="en"><body>${body}`);
     found[name] = await contrastFindings(page);
   }
+
   await context.close();
 
   const failsTheFailing = found.failing.violations.length > 0;
@@ -1641,6 +1774,7 @@ async function scrollThrough(page) {
       window.scrollTo(0, top);
       await new Promise((done) => setTimeout(done, pauseMs));
     }
+
     window.scrollTo(0, 0);
   }, SCROLL_PAUSE_MS);
 }
@@ -1716,7 +1850,7 @@ function nodesOf(ruleResults, answer) {
 // a person looks at it and writes pass or fail before the pick.
 function reviewSheet(findings) {
   const rows = Object.entries(findings)
-    .filter(([, byWidth]) => needsAPersonsLook(Object.values(byWidth)))
+    .filter(([, byWidth]) => needsAPersonsLook(byWidth))
     .map(([id, byWidth]) => {
       const count = Object.values(byWidth).reduce(
         (sum, width) => sum + width.needsReview.length,
@@ -1727,20 +1861,27 @@ function reviewSheet(findings) {
   return ["id,elements_to_review,manual_verdict", ...rows, ""].join("\n");
 }
 
-function needsAPersonsLook(widths) {
+// Also in make-sheets.mjs: no script imports another.
+function needsAPersonsLook(byWidth) {
+  const widths = Object.values(byWidth);
   const failed = widths.some((width) => width.violations.length > 0);
   const undecided = widths.some((width) => width.needsReview.length > 0);
   return undecided && !failed;
 }
 
+// Also in run-arms.mjs, blind-pages.mjs, make-sheets.mjs and count-wins.mjs:
+// no script imports another.
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
+// Also in run-arms.mjs, blind-pages.mjs and make-sheets.mjs: no script
+// imports another.
 async function writeJson(path, value) {
   await writeText(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+// Also in make-sheets.mjs: no script imports another.
 async function writeText(path, text) {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, text);
@@ -1785,7 +1926,7 @@ async function main() {
   // Every page axe could not decide gets a person's look before the pick
   // (skill-blind-test.md section 5).
   const undecided = Object.keys(contrast).filter(
-    (id) => needsVerdict(contrast[id]) && !VERDICTS.has(verdicts.get(id)),
+    (id) => needsAPersonsLook(contrast[id]) && !VERDICTS.has(verdicts.get(id)),
   );
   if (undecided.length > 0) {
     throw new Error(
@@ -1800,11 +1941,13 @@ async function main() {
     ...set,
     ids: set.ids.filter((id) => meetsFloor(contrast[id], verdicts.get(id))),
   }));
+
   await writeJson(SHOWN_SETS_FILE, shownSets);
 
   for (const judge of bench.judges) {
     await writeJudgeFolder(judge, shownSets, briefs, randomInt);
   }
+
   console.log(`Sheets written for ${bench.judges.length} judges.`);
 }
 
@@ -1818,7 +1961,8 @@ function manualVerdicts(csv) {
   );
 }
 
-function needsVerdict(byWidth) {
+// Also in shoot-pages.mjs: no script imports another.
+function needsAPersonsLook(byWidth) {
   const widths = Object.values(byWidth);
   const failed = widths.some((width) => width.violations.length > 0);
   const undecided = widths.some((width) => width.needsReview.length > 0);
@@ -1827,10 +1971,13 @@ function needsVerdict(byWidth) {
 
 function meetsFloor(byWidth, verdict) {
   const widths = Object.values(byWidth);
+
   if (widths.some((width) => width.violations.length > 0)) return false;
+
   if (widths.some((width) => width.needsReview.length > 0)) {
     return verdict === "pass";
   }
+
   return true;
 }
 
@@ -1862,14 +2009,14 @@ async function writeJudgeFolder(judge, shownSets, briefs, randomIndex) {
   );
 }
 
-// Fisher-Yates. Each script of the bench stands alone, so this function is
-// also in run-arms.mjs.
+// Fisher-Yates. Also in run-arms.mjs: no script imports another.
 function shuffled(items, randomIndex) {
   const copy = [...items];
   for (let last = copy.length - 1; last > 0; last -= 1) {
     const pick = randomIndex(last + 1);
     [copy[last], copy[pick]] = [copy[pick], copy[last]];
   }
+
   return copy;
 }
 
@@ -1921,14 +2068,19 @@ function escapeHtml(text) {
     .replaceAll('"', "&quot;");
 }
 
+// Also in run-arms.mjs, blind-pages.mjs, shoot-pages.mjs and count-wins.mjs:
+// no script imports another.
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
 
+// Also in run-arms.mjs, blind-pages.mjs and shoot-pages.mjs: no script
+// imports another.
 async function writeJson(path, value) {
   await writeText(path, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+// Also in shoot-pages.mjs: no script imports another.
 async function writeText(path, text) {
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, text);
@@ -2003,6 +2155,7 @@ async function main() {
     shownSets,
     bench,
   });
+
   console.log(winsTable(rows));
   console.log("");
   console.log(totalsTable(rows, arms));
@@ -2038,12 +2191,13 @@ async function readPicks(judges, shownSets) {
   if (problems.length > 0) {
     throw new Error(`Fix the picks first:\n${problems.join("\n")}`);
   }
+
   return picks;
 }
 
 // A run the plan's limit stopped is neither valid nor failed: it waits for
-// the runner's next start (skill-blind-test.md section 4). Each script of the
-// bench stands alone, so this function is also in blind-pages.mjs.
+// the runner's next start (skill-blind-test.md section 4). Also in
+// blind-pages.mjs: no script imports another.
 function assertNoRunAtLimit(records) {
   const waiting = records.filter((record) => record.status === "limit");
   if (waiting.length > 0) {
@@ -2054,15 +2208,16 @@ function assertNoRunAtLimit(records) {
   }
 }
 
-// One model and one Claude Code version across all valid runs, or the arms
-// did not run under the same conditions. The effort is the runner's own
-// constant: the init event does not report it (skill-blind-test.md section 4).
+// One model, one Claude Code version and one runner file across all valid
+// runs, or the arms did not run under the same conditions. The effort is the
+// runner's own constant: the init event does not report it
+// (skill-blind-test.md section 4).
 function assertOneSetup(records) {
   const finals = records
     .filter((record) => record.status === "valid")
     .map((record) => record.attempts.at(-1));
 
-  for (const field of ["model", "claudeCodeVersion"]) {
+  for (const field of ["model", "claudeCodeVersion", "runnerSha256"]) {
     const values = new Set(finals.map((attempt) => attempt[field]));
     if (values.size > 1) {
       throw new Error(`Runs differ in ${field}: ${[...values].join(", ")}`);
@@ -2153,6 +2308,8 @@ function totalsTable(rows, arms) {
   ].join("\n");
 }
 
+// Also in run-arms.mjs, blind-pages.mjs, shoot-pages.mjs and make-sheets.mjs:
+// no script imports another.
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
 }
@@ -2184,6 +2341,7 @@ own records, never from memory.
 |---|---|
 | Dates of the runs | |
 | Claude Code version, from the runs' records | |
+| Runner SHA-256, from the runs' records | |
 | Model and effort | claude-opus-5-5, high |
 | Playwright and @axe-core/playwright | 1.64.1 and 4.14.0 |
 | puppeteer-core, as npm installed it | |
@@ -2193,16 +2351,16 @@ own records, never from memory.
 
 ## Arms
 
-| Arm | Commit tested | What the pilot showed |
-|---|---|---|
-| no-skill | none | |
-| frontend-design | | |
-| hallmark | | |
-| taste-skill | | |
-| impeccable | | |
-| ui-ux-pro-max | | |
-| taste-skill-classics | | |
-| huashu-design | | |
+| Arm | Commit tested | What the pilot showed | Reference files read |
+|---|---|---|---|
+| no-skill | none | | none |
+| frontend-design | | | |
+| hallmark | | | |
+| taste-skill | | | |
+| impeccable | | | |
+| ui-ux-pro-max | | | |
+| taste-skill-classics | | | |
+| huashu-design | | | |
 
 ## Photos
 

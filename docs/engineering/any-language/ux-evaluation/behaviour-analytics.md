@@ -402,7 +402,7 @@ The `init` options the code below sets, read in posthog-js 1.442.0:
 | `mask_personal_data_properties` | the value of each ad click id the SDK knows, such as `gclid` and `fbclid`, becomes `<masked>` in the addresses it reads, the session's entry address included; `utm_*` values stay as they are [33], [34] | `true`, so the click ids that still leave in the `$session_entry_` properties carry no value | a question needs a click id's value; then the person who answers for data protection decides on it |
 | `disable_scroll_properties` | the SDK measures how far down each screen is scrolled and sends it with the next page view; `true` turns that off, but not the previous screen's path and time [33], [32] | `true`, unless a question needs scroll depth (section 6) | a question needs scroll depth |
 | `property_denylist` | properties the SDK deletes from every event before it leaves [33], [32] | always, for each property the tool adds that the plan refuses, such as the search words | the tool adds nothing the plan refuses |
-| `before_send` | a function that edits or drops each event before it leaves [33] | always, to keep paths only | never |
+| `before_send` | a function that edits or drops each event before it leaves [33] | always, to cut the query string and the hash | never |
 
 The public settings, in `src/core/config.ts`; the API's own setting and the comments the file
 already has are cut, and [security-example.md](../../react/security/security-example.md) section 2
@@ -411,8 +411,10 @@ shows the rest of the file:
 ```ts
 const publicEnvSchema = z.object({
   ...
-  // PostHog's project token is made for the browser: PostHog's React guide puts it in a VITE_
-  // variable. It still ships in the bundle like every value here (security.md section 9).
+  // PostHog's project token ships to the browser: PostHog's React guide puts it in a VITE_ variable.
+  // security.md section 9 asks for a restriction at the provider; PostHog's docs, read on
+  // 2026-10-29, name none for this token. The cost: anyone who reads the bundle can send events to
+  // the project.
   VITE_POSTHOG_PROJECT_TOKEN: z.string().min(1),
   // Where the events go. The Content-Security-Policy's connect-src must allow this host
   // (security.md section 5).
@@ -436,7 +438,8 @@ The analytics client, `src/core/analytics.ts`, whole:
 
 ```ts
 // A vendor's SDK in the page: a departure from security.md section 12, which prefers a data layer.
-// The team uses this SDK's session and device handling (behaviour-analytics.md section 8).
+// The team uses this SDK's session and device handling (behaviour-analytics.md section 8). The
+// cost: the vendor's code runs in the page, and it adds its own device properties to each event.
 import posthog from "posthog-js";
 import type { CaptureResult, Properties } from "posthog-js";
 
@@ -461,7 +464,7 @@ export type Analytics = {
 
 // Set once the SDK has started: posthog.init runs once per page load, and a user may agree more
 // than once (behaviour-analytics.md section 8).
-let started = false;
+let hasSdkStarted = false;
 
 // `src/main.tsx` calls this once, at the top level, before the first render
 // (behaviour-analytics.md section 8). The SDK starts later, in grantConsent().
@@ -477,6 +480,7 @@ export function createAnalytics(settings: AnalyticsSettings): Analytics {
     },
     grantConsent() {
       startOnce(settings);
+
       // No `$opt_in` event: the tracking plan lists every event the product sends
       // (behaviour-analytics.md section 3). The call also replaces a "no" the SDK stored on this
       // device when the user withdrew on an earlier visit.
@@ -484,7 +488,7 @@ export function createAnalytics(settings: AnalyticsSettings): Analytics {
     },
     denyConsent() {
       // Before the start there is nothing to stop: the SDK has sent and stored nothing.
-      if (started) {
+      if (hasSdkStarted) {
         posthog.opt_out_capturing();
       }
     },
@@ -495,13 +499,14 @@ export function createAnalytics(settings: AnalyticsSettings): Analytics {
 // would send every capture call at once, since none of the settings below holds one back
 // (behaviour-analytics.md section 5).
 function startOnce({ projectToken, host }: AnalyticsSettings): void {
-  if (started) {
+  if (hasSdkStarted) {
     return;
   }
 
-  started = true;
-  // The security.md section 12 departure: from here the vendor's code runs in the page and adds
-  // its own device properties to each event (behaviour-analytics.md section 8).
+  hasSdkStarted = true;
+
+  // The security.md section 12 departure: once started, the SDK adds its own device properties to
+  // each event (behaviour-analytics.md section 8).
   posthog.init(projectToken, {
     api_host: host,
     // If the user withdraws later, denyConsent() opts out, and this flag stops the SDK's cookie
@@ -537,30 +542,36 @@ function startOnce({ projectToken, host }: AnalyticsSettings): void {
     // The search words a clerk typed into a search engine are typed text, which no question needs;
     // the SDK copies them from the referrer into every event (behaviour-analytics.md section 3).
     property_denylist: ["ph_keyword", "$session_entry_ph_keyword"],
-    // The path, never the query string or the hash (security.md section 13).
-    before_send: withPathsOnly,
+    // Origin and path only: security.md section 13 asks for the path, because the query string can
+    // hold typed text; the hash is cut for the same reason. The origin stays: it holds nothing the
+    // user typed, and the SDK sends its host anyway, as $host for the page and $referring_domain
+    // for the referrer. The cost: the host name leaves in each URL, which the tool already has.
+    before_send: withQueryAndHashCut,
   });
 }
 
-// The SDK copies the page's full address into several properties ($current_url, the
-// $initial_ and $session_entry_ copies, $referrer). Every URL in the event keeps its origin
-// and path only.
-function withPathsOnly(event: CaptureResult): CaptureResult {
+// The SDK puts the page's full address into $current_url and copies it into the $initial_ and
+// $session_entry_ properties; $referrer holds the address of the page before. Every URL in the
+// event keeps its origin and path only.
+function withQueryAndHashCut(event: CaptureResult): CaptureResult {
   return {
     ...event,
-    properties: urlsAsPaths(event.properties),
-    ...(event.$set === undefined ? {} : { $set: urlsAsPaths(event.$set) }),
-    ...(event.$set_once === undefined ? {} : { $set_once: urlsAsPaths(event.$set_once) }),
+    properties: urlsWithQueryAndHashCut(event.properties),
+    ...(event.$set === undefined ? {} : { $set: urlsWithQueryAndHashCut(event.$set) }),
+    ...(event.$set_once === undefined ? {} : { $set_once: urlsWithQueryAndHashCut(event.$set_once) }),
   };
 }
 
-function urlsAsPaths(properties: Properties): Properties {
+function urlsWithQueryAndHashCut(properties: Properties): Properties {
   return Object.fromEntries(
-    Object.entries(properties).map(([name, value]) => [name, typeof value === "string" ? withoutQuery(value) : value]),
+    Object.entries(properties).map(([name, value]) => [
+      name,
+      typeof value === "string" ? withoutQueryAndHash(value) : value,
+    ]),
   );
 }
 
-function withoutQuery(value: string): string {
+function withoutQueryAndHash(value: string): string {
   // Only an absolute web address loses its tail: any other text keeps a "?" or "#" it holds.
   if (!/^https?:\/\//i.test(value)) {
     return value;
@@ -659,10 +670,10 @@ Why it is good:
 - **Login and payment screens send nothing:** each such route says so in its `staticData`, and one
   check in `main.tsx` reads it, for the router's page views and for the one the consent banner asks
   for ([security.md](../../react/security/security.md) section 12).
-- **Every URL leaves as a path,** through one function the SDK calls before it sends
-  ([security.md](../../react/security/security.md) section 13). The function cuts at the first `?`
-  or `#` rather than parsing the address, so it needs no browser API newer than the application's
-  floor.
+- **Every URL leaves as its origin and path,** through one function the SDK calls before it sends
+  ([security.md](../../react/security/security.md) section 13; the origin is a departure from its
+  path-only rule, declared at the `before_send` line). The function cuts at the first `?` or `#`
+  rather than parsing the address, so it needs no browser API newer than the application's floor.
 - **Only the events the plan lists leave the browser:** autocapture and heatmaps are off in code,
   not on a settings page, and no script comes from the vendor's servers, so `script-src` stays
   `'self'`. The client has one method per event of the plan
@@ -679,13 +690,20 @@ Why it is good:
   starts from the banner's click handler or, for a user who agreed before, at start, and the page
   view is the router's event ([components.md](../../react/components/components.md) section 5).
 
-The departure: [security.md](../../react/security/security.md) section 12 prefers a data layer to a
-vendor's script on the page. This example runs the vendor's SDK, because the team uses its session
-and device handling and its consent gate, which a data layer through the application's own backend
-would have to rebuild. The cost: the vendor's code runs in the page, and the SDK adds its own
-properties to each event (browser, operating system, device type, screen size, time zone) [34]. A
-team that needs none of the SDK's features sends its events through its own backend instead, as
-[security-example.md](../../react/security/security-example.md) section 5 does for metrics.
+The departures:
+
+- [security.md](../../react/security/security.md) section 12 prefers a data layer to a vendor's
+  script on the page. This example runs the vendor's SDK, because the team uses its session and
+  device handling, which a data layer through the application's own backend would have to rebuild.
+  The cost: the vendor's code runs in the page, and the SDK adds its own properties to each event
+  (browser, operating system, device type, screen size, time zone) [34]. A team that needs none of
+  the SDK's features sends its events through its own backend instead, as
+  [security-example.md](../../react/security/security-example.md) section 5 does for metrics.
+- [security.md](../../react/security/security.md) section 13 asks for the path alone.
+  `before_send` keeps the origin, since the origin holds nothing the user typed and the SDK sends
+  the host anyway: as `$host` for the page's own address, and as `$referring_domain` for the
+  referrer. The query string and the hash are cut. The cost: the host name leaves in each URL,
+  which the tool already has.
 
 What was checked: the lines shown above, in a scratch project with a hand-written route tree and
 stubs for the cut parts, passed `tsc --noEmit` with TypeScript 6.0.3, `posthog-js` 1.442.0,
@@ -693,10 +711,10 @@ stubs for the cut parts, passed `tsc --noEmit` with TypeScript 6.0.3, `posthog-j
 errors failed the same check: `isPaymentOrLogin: false` in the pay route and a call of
 `invoicePaymentStarted` with `"paid"`, on an earlier form of these lines, and a call of
 `grantConsent` with an argument, on this form. The scratch route used `createRoute`, since
-`createFileRoute` needs the router plugin; the `staticData` line is the same. `withoutQuery` was
-run in Node 24 on eight sample values. Not checked: the linters, a build, a run in a browser, the
-network and storage panels of section 5's check, the Content-Security-Policy, the consent banner,
-and the size the SDK adds to the first screen, which the budget gate of
+`createFileRoute` needs the router plugin; the `staticData` line is the same. `withoutQueryAndHash`
+was run in Node 24 on eight sample values. Not checked: the linters, a build, a run in a browser,
+the network and storage panels of section 5's check, the Content-Security-Policy, the consent
+banner, and the size the SDK adds to the first screen, which the budget gate of
 [performance.md](../../react/performance/performance.md) section 3 measures.
 
 ## 9. Common mistakes

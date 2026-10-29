@@ -371,21 +371,24 @@ site: the same clean style and the same polish.
 The model either copies Globex's look, as at Banani, or falls back on its own defaults, as in
 Kilo's test [30], [31]; in both cases the page is not the workshop's own (section 3).
 
-Good — the same brief, with the look taken from the brand and one named thing from the references:
+Good — the part of the brief that sets the look, taken from the brand, with one named thing from
+the references (the steps and the screenshots in `<references>` are cut):
 
 ```text
 Build the one-page site of Acme Corp, a bicycle repair workshop. Follow docs/brand-direction.md
 and take every colour, face and radius from the roles in src/styles.css. The screenshots in
 <references> come from three sites; take one thing from them, the rhythm of a long page where each
 section holds one idea and one photo, and nothing else.
+...
 ```
 
 Why it is good: the look comes from the direction file and the theme file, which hold the
 brand's own values (section 3), so no product is named as the look. The references are named for
-one quality and come from three sites, so the page cannot copy any one of them. They are pasted in
+one quality and come from three sites, so the page is less likely to copy any one of them; the
+reviewer's question in section 7 checks it. They are pasted in
 a named tag, as [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md)
-section 5 asks for material put into a prompt. The whole brief this belongs to is in
-[brand-direction-example.md](brand-direction-example.md).
+section 5 asks for material put into a prompt. A whole brief of this kind, without references, is
+in [brand-direction-example.md](brand-direction-example.md).
 
 ## 10. Where it stops holding
 

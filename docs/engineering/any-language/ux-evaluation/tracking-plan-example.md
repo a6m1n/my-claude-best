@@ -104,8 +104,9 @@ Why it is good:
 - **The plan lists what the team sends and each group the tool adds,** with what the client does
   about each; the release check in behaviour-analytics.md section 3 confirms the list on a real
   event.
-- **Every URL reaches the tool as a path,** and the row names the function that does it
-  ([security.md](../../react/security/security.md) section 13).
+- **Every URL reaches the tool as its origin and path,** and the row names the function that does it
+  ([security.md](../../react/security/security.md) section 13; the origin is a departure from its
+  path-only rule, declared at the `before_send` line).
 
 ## 5. Not collected, and why
 
