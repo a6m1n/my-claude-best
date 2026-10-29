@@ -90,9 +90,11 @@ keeps for one apply to it.
 
 ```text
 Build the invoices screen at the route /invoices. An accounts clerk at Acme Corp opens it to see
-which invoices are due or overdue and to start paying one. The module is
-src/billing/list-invoices/ and the route file is src/routes/invoices.index.tsx. The steps are in
-the order the work happens, and each ends with how anyone can tell it was done.
+which invoices are due or overdue and to start paying one. The screen is effective, the default
+for a product screen (visual-design.md section 2): dense and quiet, with motion only to show what
+changed. The module is src/billing/list-invoices/ and the route file is
+src/routes/invoices.index.tsx. The steps are in the order the work happens, and each ends with how
+anyone can tell it was done.
 
 1. Before you write code, read src/routes/invoices.$invoiceId.pay.tsx and the components in
    src/core/ui/, and take screenshots of the pay screen the way step 8 describes, with before- in
@@ -145,6 +147,9 @@ Why it is good:
 - **The goal comes first, then the steps in the order the work happens**, each with the rule that
   decides it ([prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md)
   section 2). Nothing in it tells the model how to think.
+- **The brief names its case before the steps:** effective, the default for a product screen, as
+  [visual-design.md](visual-design.md) section 2 asks before a screen is designed, so the build
+  aims at a dense, quiet table and adds no polish or expressive moment the screen does not need.
 - **The spec is values, not adjectives**: the roles one by one, the components, the screen to
   follow, the four states and every word the screen shows
   (designing-with-claude-code.md section 4).
