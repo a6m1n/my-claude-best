@@ -121,9 +121,10 @@ The boundaries come from named practitioners, each on their own site:
 Schwaber co-wrote Scrum but does not own Kanban, so his simple-against-complex test is his view
 and not this practice's rule. In his view, Scrum is too much when the work is simple or made simple
 and comes as single requests such as service tickets, and he names a Kanban flow for it [2]; this
-practice does not follow that test, because the Kanban Guide, Kanban's owner text, says Kanban "can
-be used at any scale and in most contexts where value is delivered" [17], so a test that keeps
-Kanban to simple work does not match Kanban's owner (section 9). What Kanban fits is
+practice does not follow that test, because both Kanban texts reject that limit: the Kanban Guide
+says Kanban "can be used at any scale and in most contexts where value is delivered" [17], so a
+test that keeps Kanban to simple work does not match either Kanban text ([kanban.md](kanban.md)
+section 2; section 9). What Kanban fits is
 [kanban.md](kanban.md)'s, and the rule that picks between Scrum and a Kanban flow is
 [life-cycle.md](../project-management/life-cycle.md) section 4.
 
@@ -347,9 +348,10 @@ that they do not endorse it.
   removing an event or a role, and Sprints with no time limit, to negative results [7], and the
   Guide says the result is not Scrum [1]. Taken for additions and for adjustments inside the rules
   (section 4).
-- **Schwaber's test: Scrum for complex work, a Kanban flow for simple work** [2]. Not taken: the
-  Kanban Guide says Kanban "can be used at any scale and in most contexts where value is delivered"
-  [17], so a test that keeps Kanban to simple work does not match Kanban's owner (section 2). The
+- **Schwaber's test: Scrum for complex work, a Kanban flow for simple work** [2]. Not taken: both
+  Kanban texts reject that limit, and the Kanban Guide says Kanban "can be used at any scale and in
+  most contexts where value is delivered" [17], so a test that keeps Kanban to simple work does not
+  match either Kanban text (section 2). The
   pick between the two is [life-cycle.md](../project-management/life-cycle.md) section 4.
 - **Treat a Kanban flow as a simpler Scrum for a team that finds Scrum heavy.** Not taken:
   Schwaber holds that flow "is another process for different types of problems" [2], and the pick

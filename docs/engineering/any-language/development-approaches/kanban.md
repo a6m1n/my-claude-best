@@ -76,8 +76,9 @@ service delivery principles [2], [3]. This file takes the Method's principles, a
 2022 Official Guide, because it is the body's own guide to the Method and the page is one author's
 article.
 
-**The one rule.** When you write a board policy, a Definition of Workflow or any rule that says
-"Kanban", name the text it follows and its edition. The reason: the two texts differ in
+**The one rule.** When you write a board policy or a Definition of Workflow for a Kanban system,
+or any other rule that says "Kanban", name the text it follows and its edition, in the rule or in
+the sources list of the file that holds it. The reason: the two texts differ in
 practices, measures and the size of a change, so a policy that names no text cannot be checked
 against either.
 
@@ -193,57 +194,72 @@ until there is enough historical data for a proper SLE calculation" [1]. The rea
 is marked as one gets replaced when the data arrives; an unmarked one is read as a measured
 promise.
 
-A Definition of Workflow for one team that follows the Guide and the project-management practice,
-so its elements 3 to 5 come from that practice. It names the entry and exit condition
-of each state and does not copy them: they are in the table of
+A Definition of Workflow for one team that works without sprints and follows the Guide and the
+project-management practice, so its elements 3 to 5 come from that practice. It names the entry
+and exit condition of each state and does not copy them: they are in the table of
 [jira-workflow.md](../project-management/jira-workflow.md) section 2. The team, the project key and
-the numbers are invented; a team sets its own.
+the numbers are invented; a team sets its own. A Scrum team changes the four parts of section 5.
 
 ```markdown
-# Definition of Workflow: Acme Corp payments team
+# Definition of Workflow: Acme Corp support team
 
 Follows: the Kanban Guide, v2025.5, May 2025. Named, so each rule can be checked against
 its text (kanban.md section 1).
 Size of a change: the team may make a big change in one step when it judges one is
 needed, as the Guide allows (kanban.md section 1).
 Owner: the team, the Guide's Kanban system members. It reviews this definition at its
-retrospective (meetings.md section 9) and changes it on any day a change cannot wait.
+retrospective, every second Thursday (meetings.md section 9), and changes it on any day a
+change cannot wait.
+Product Owner: Jane Doe, who orders the Backlog and decides a cancel (roles-and-decisions.md
+section 5).
 
-1. Work items: the stories, tasks and bugs of the PROJ project.
+1. Work items: the stories, tasks and bugs of the SUP project.
    Epics and subtasks are not counted: they have three statuses of their own
    (jira-workflow.md section 2).
-2. Started: the item enters In Progress, after the three-day check (tickets.md section 3).
+2. Started: the item moves from the Backlog to In Progress, after the three-working-day
+   check (tickets.md section 3). A later move into In Progress from Blocked, Code Review or
+   Pre-prod does not restart the clock.
    The clock starts here, not when the item is created, so cycle time measures the work
    and not the wait in the Backlog.
-   Finished: the item enters Done (deployed to production, Definition of Done met) or
-   Canceled. The four flow metrics count both finished points, as the Guide defines
-   them by the DoW's own points. Items resolved as Done are counted apart, as
-   Delivered, so a canceled item never shows as delivered work.
+   Finished: the item enters Done or Canceled, with the entry conditions of
+   jira-workflow.md section 2. The four flow metrics of kanban.md section 4 use both
+   finished points: an item is in WIP, and has an age, from its start until it enters Done
+   or Canceled; it counts once in throughput, with its cycle time, when it enters either.
+   Items that enter Done are also counted per week as Delivered, from the same start, so
+   a canceled item never shows as delivered work.
    An item canceled while it waits in the Backlog, whether it never entered In Progress
    or was returned there, has no start, so it counts in no flow metric. An item returned
-   to the Backlog leaves the flow, since the Backlog is not work in progress (item 3),
-   and starts again when it next enters In Progress, so its cycle time and its age count
-   from that start.
+   to the Backlog loses its start: this is the team's own policy, because the Guide counts
+   as WIP every item between a started and a finished point and says nothing on returns.
+   The item leaves WIP and starts again when it next moves from the Backlog to In
+   Progress, so its cycle time and its age count from that start.
 3. States: Backlog, In Progress, Blocked, Code Review, Pre-prod, Done, Canceled, with the
    entry and exit conditions of jira-workflow.md section 2.
    Work in progress: every item in In Progress, Blocked, Code Review or Pre-prod.
-4. WIP control: at most 2 items per person, and 8 for the team of five. Two limits, one
-   per person and one for the team (principles.md section 3).
+4. WIP control: at most 2 items per person, and 8 for the team of five; 8, not 10, so the
+   team limit binds before every person is full. Two limits, one per person and one for
+   the team (principles.md section 3).
    A Blocked item counts toward both limits (jira-workflow.md section 4).
    Pull the top item of the Backlog only when your own count and the team's count are
    both under their limits: that is the pull signal the Guide asks for.
-   Exception: one fix for a production incident may take the team over its limit. There
-   is no other exception; the Guide asks for every exception to be written here.
+   Exception: the fix for a production incident, its problem work item (sla.md section 3),
+   is pulled at once, ahead of the Backlog's order, as Jane Doe agreed as Product Owner,
+   and may take the team's count over its limit, one such fix at a time. The restore
+   itself is the person on call's (sla.md section 5). The per-person limit still holds: a
+   person under 2 items takes the fix. With 8 for a team of five, at least one person is
+   always under 2. There is no other exception; the Guide asks for every exception to be
+   written here.
 5. Policies: the entry and exit condition of each state (jira-workflow.md section 2),
    and the pull rule in item 4.
 6. SLE: 85% of work items will be finished in seven days or less.
    Days are elapsed days, weekends included, because the Guide's cycle time is elapsed
    time.
-   This is a best guess: the team has no cycle times yet. At each retrospective it checks
-   whether enough items have finished to compute the SLE from its own cycle times.
+   This is a best guess: the team has no cycle times yet. When 20 items have finished, a
+   number the team chose, it replaces the guess with the number of days within which 85%
+   of those items finished.
 
-Shown on the board: each item's age, both counts against their limits, and the SLE, so
-the minimum elements are visible where the team works.
+Shown on the board: the age of each item in work in progress, both counts against their
+limits, and the SLE, so the minimum elements are visible where the team works.
 ```
 
 This definition is good because it holds all six elements the Guide asks for, each in a form a
@@ -253,8 +269,9 @@ both finished points, because "started and finished refer to how the Kanban syst
 established those points in their DoW" [1], and delivered work has a count and a name of its own,
 so its throughput is the Guide's; an item canceled while it waits in the Backlog counts in no
 metric, so a clean-up of the Backlog adds nothing to throughput, and an item returned to the
-Backlog leaves the flow and starts again when it next enters In Progress, so an item that waits
-in the Backlog is never work in progress and its cycle time and its age count from that start;
+Backlog loses its start, by the team's own written policy, and starts again when it next moves
+from the Backlog to In Progress, so an item that waits in the Backlog is never work in progress
+and its cycle time and its age count from that start;
 and it takes its states, its limits and its Blocked rule from
 [jira-workflow.md](../project-management/jira-workflow.md) and
 [principles.md](../project-management/principles.md) by name, so the definition, the board and the

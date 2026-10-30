@@ -176,9 +176,10 @@ interrupts cannot go to that team, and some companies "create a second (likely K
 handle the unplanned work". A team with no history of interrupts yet decides by the Sprint Goal
 test alone (this practice's own reading). Ken Schwaber's view that Kanban fits simple work and
 Scrum complex work is in [scrum.md](../development-approaches/scrum.md) section 2; this rule does
-not follow it, because the Kanban Guide, Kanban's owner text, says Kanban "can be used at any scale
-and in most contexts where value is delivered", so a test that keeps Kanban to simple work does
-not match Kanban's owner. The meetings
+not follow it, because both Kanban texts reject that limit: the Kanban Guide says Kanban "can be
+used at any scale and in most contexts where value is delivered", so a test that keeps Kanban to
+simple work does not match either Kanban text
+([kanban.md](../development-approaches/kanban.md) section 2). The meetings
 of each are in [meetings.md](meetings.md), sections 2 and 9.
 
 Pick by the criteria above, not by a success rate. The comparisons found are studies of past

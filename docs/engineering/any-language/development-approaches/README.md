@@ -232,7 +232,7 @@ the sprint with the release checks run in the pipeline of [ci-cd](../ci-cd/READM
 ([combining-approaches.md](combining-approaches.md) section 1).
 
 The files touch no personal data: no rule in them collects, stores or sends it. Their examples use
-invented names, keys and numbers, such as the Acme Corp team and the PROJ project in
+invented names, keys and numbers, such as the Acme Corp support team and the SUP project in
 [kanban.md](kanban.md) section 3. What an agent may read, personal data included, falls under the
 one rule of [agent-containers.md](../docker/agent-containers.md) section 1.
 

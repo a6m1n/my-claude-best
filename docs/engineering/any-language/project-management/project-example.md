@@ -107,9 +107,9 @@ unresolved: the charter's assumption failed its check that day (section 5).
 | Part | In this project |
 |---|---|
 | Scope | Three deliverables, listed in section 4 |
-| Development approach | Chosen per deliverable ([life-cycle.md](life-cycle.md) section 4). Adaptive, in two-week sprints, for `PROJ-10`, `PROJ-12` and the flag code of `PROJ-11` (2.1), because the provider's API and the old payment records will show the team things the charter could not know. Predictive, as dated milestones, for the traffic steps of `PROJ-11` (2.2 to 2.4) and the provider contract, because their order and dates are agreed with the provider in advance |
+| Development approach | Chosen per deliverable ([life-cycle.md](life-cycle.md) section 4). Adaptive for `PROJ-10`, `PROJ-12` and the flag code of `PROJ-11` (2.1 and 2.5), because the provider's API and the old payment records will show the team things the charter could not know. Predictive, as dated milestones, for the traffic steps of `PROJ-11` (2.2 to 2.4) and the provider contract, because their order and dates are agreed with the provider in advance. Inside the adaptive part the payments team chose Scrum in two-week sprints, because it can agree a Sprint Goal for each sprint ([life-cycle.md](life-cycle.md) section 4); the choice is the team's own ([choosing-an-approach.md](../development-approaches/choosing-an-approach.md) section 3) |
 | Schedule | Four milestones as Jira versions (below), shown on the Timeline of `PROJ` |
-| Roles and resources | `PROJ-10` John Smith, `PROJ-11` Richard Roe, `PROJ-12` Mary Major; the payments team of four, with John Smith also the Product Owner and Mary Major the Scrum Master; the RACI matrix and deciders below |
+| Roles and resources | `PROJ-10` John Smith, `PROJ-11` Richard Roe, `PROJ-12` Mary Major; the payments team of four, with John Smith also the Product Owner and Mary Major the Scrum Master; the RACI matrix and deciders below; the Product Goal, written by John Smith before Sprint 1: every card payment runs through the new provider by 2027-03-31, with checkout success no lower than before (the charter's goal, section 2); the Definition of Done in section 6, kept on the team's Confluence page and linked from the `PROJ` board |
 | Risks | The register in section 5, a Confluence page linked to `PROJ-10`, `PROJ-11` and `PROJ-12` |
 | Communication | The team uses the `PROJ` board daily; a status update every Friday (below); one line for each stakeholder group, in the table under this one; escalation from a Developer to John Smith, who answers the same working day, and from him to Jane Doe, who answers an exception note within one working day |
 | Change control | A change request is a work item; a milestone may move up to one week from its Baseline date on John Smith's decision, a larger move goes to Jane Doe (below) |
@@ -168,6 +168,15 @@ requests to raise and which planning packages to split. Every Thursday, 15 minut
 at the board to decide which top risk needs an action and whether anyone is over the WIP limit
 ([project-plan.md](project-plan.md) section 6).
 
+The Scrum events run in every sprint in the order and timeboxes of [meetings.md](meetings.md)
+section 2: Sprint Planning on day 1 sets the Sprint Goal, the Daily Scrum is held at the board
+every working day, and the Sprint Review and the Sprint Retrospective fall on the last day. This
+example shows only the Sprint Review, through the communication table; the team tunes how it works
+at the Sprint Retrospective ([scrum.md](../development-approaches/scrum.md) section 3). The sprint
+in Jira holds the Sprint Backlog, and each item that meets the Definition of Done adds to the
+Increment, so the plan keeps every Scrum artifact
+([scrum.md](../development-approaches/scrum.md) section 4).
+
 WIP limit: two work items in progress per person and six for the team, set by the team at
 planning. At the Thursday board look on 2027-01-14, John Smith showed that Mary Major held three
 items, one over the limit.
@@ -217,22 +226,24 @@ The matrix is good because each row has exactly one A, and the A of each epic is
 WBS dictionary entry in section 4, so the two never disagree.
 
 Deciders ([roles-and-decisions.md](roles-and-decisions.md) section 5): the development approach of
-each deliverable, Jane Doe, on John Smith's recommendation, because the sponsor approves the
-baseline of the plan that holds it ([life-cycle.md](life-cycle.md) section 2) and the project
-manager recommends the approach ([life-cycle.md](life-cycle.md) section 4); a milestone move of up
-to one week, John Smith; a larger move, Jane Doe; the provider contract, data clauses acceptable:
-head of security; the provider contract, sign: Jane Doe, after the head of security's yes; how payment
-traffic moves to the new provider, Jane Doe, because the move puts the checkout revenue at risk,
-which the sponsor owns, so it is outside the team's authority
+each deliverable, predictive or adaptive, Jane Doe, on John Smith's recommendation, because the
+sponsor approves the baseline of the plan that holds it ([life-cycle.md](life-cycle.md) section 2)
+and the project manager recommends the approach ([life-cycle.md](life-cycle.md) section 4); a
+milestone move of up to one week, John Smith; a larger move, Jane Doe; the provider contract, data
+clauses acceptable: head of security; the provider contract, sign: Jane Doe, after the head of
+security's yes; how payment traffic moves to the new provider, Jane Doe, because the move puts the
+checkout revenue at risk, which the sponsor owns, so it is outside the team's authority
 ([roles-and-decisions.md](roles-and-decisions.md) section 5); a technical choice that is hard to
 undo, Richard Roe, whom the Developers named; go or no-go for each release, Richard Roe; a rollback,
 the decider of section 8; the order of the Product Backlog and canceling a work item, John Smith as
 Product Owner. The other kinds follow the defaults of
 [roles-and-decisions.md](roles-and-decisions.md) section 5.
 
-The list is good because each kind of decision has one name, and the provider contract is split
-into two decisions with one decider each, so nobody waits for a second decider
-([roles-and-decisions.md](roles-and-decisions.md) section 5).
+The list is good because each kind of decision has one name, the approach of each deliverable is
+the sponsor's while the way of working inside the adaptive part stays with the team, and the
+provider contract is split into two decisions with one decider each, so nobody waits for a second
+decider ([roles-and-decisions.md](roles-and-decisions.md) section 5,
+[choosing-an-approach.md](../development-approaches/choosing-an-approach.md) section 3).
 
 One entry of the decision log, a Confluence page from the DACI template
 ([roles-and-decisions.md](roles-and-decisions.md) sections 6 and 7):
