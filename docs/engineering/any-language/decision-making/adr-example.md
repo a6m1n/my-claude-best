@@ -45,12 +45,13 @@ Jane Doe, tech lead of the billing team, and the Approver on the DACI page.
 <!-- One person: the decider roles-and-decisions.md section 5 names for a technical choice
      that is hard to undo, and so the page's Approver (roles-and-decisions.md section 6). -->
 
-Drafted by: a coding agent, from the DACI page and the proposal thread in #team-backend, on
-2026-03-02.
+Drafted by: Claude Code 2.1.<n> with the model <model id>, from the DACI page and the proposal
+thread in #team-backend, on 2026-03-02.
 Accepted by: Jane Doe, on 2026-03-10, after she checked each fact against its source and that
 the status matches what was decided.
-<!-- An agent may draft; a named person accepts and says what she checked (agents.md
-     section 7). -->
+<!-- An agent may draft; a named person accepts and says what she checked. The agent is named
+     by its tool, version and model, so a reader who checks a fact knows what wrote it
+     (agents.md section 7). -->
 
 ## Context
 
@@ -116,6 +117,13 @@ still call v1 a year after v2 ships, and whether a future partner's tooling expe
 
 - DACI page: "Versioning the public invoices API" (link)
 - Work item: PROJ-123
+- Work item: PROJ-124, decide ADR-0012 by 2026-03-10, owner Jane Doe
+  <!-- A decision postponed to a date gets a dated work item with an owner, or nobody brings it
+       back on that date (decisions.md sections 6 and 9). -->
+- Work item: PROJ-125, due 6 months after v2 ships, owner Jane Doe: until then, a breaking
+  change to v2 comes to her first, against the first trigger in Revisit when
+  <!-- A trigger tied to a date gets a dated work item with an owner, or nobody sees it fire
+       (decisions.md section 9). -->
 - Alert: the v1 share of the mobile app's calls on the gateway dashboard, against the 2% trigger
   in Revisit when, from 12 months after v2 ships; owner Jane Doe
   <!-- A trigger tied to a date or a number gets an alert with an owner, or nobody sees it
@@ -136,9 +144,10 @@ still call v1 a year after v2 ships, and whether a future partner's tooling expe
 
 A team that does not run DACI, such as an open-source project with no
 [roles-and-decisions.md](../project-management/roles-and-decisions.md), keeps the options and the
-objections in the record itself. Its Decider is the one person the team's own rule names, the
-Links section has no DACI page, and Options considered becomes the full list, followed by an
-Objections and answers section. Every other part stays as above:
+objections in the record itself. Its Decider is the one person the team's own rule names,
+Drafted by names the proposal thread only, the Links section has no DACI page, and no decision
+log entry where the team keeps no decision log, and Options considered becomes the full list,
+followed by an Objections and answers section. Every other part stays as above:
 
 ```markdown
 ## Options considered
@@ -225,7 +234,7 @@ Objections and answers section. Every other part stays as above:
 | Revisit when | Fowler [3] |
 | Confirmation: the check | MADR [2] |
 | Confirmation: the expected outcome | this practice's own addition, after Farnam Street's decision journal [8] |
-| Links | [roles-and-decisions.md](../project-management/roles-and-decisions.md) sections 6 and 7; the alert with an owner on a trigger tied to a number, this practice's rule ([decisions.md](decisions.md) section 9) |
+| Links | [roles-and-decisions.md](../project-management/roles-and-decisions.md) sections 6 and 7; the dated work item or alert with an owner on a postponement or a trigger tied to a date or a number, this practice's rule ([decisions.md](decisions.md) section 9) |
 | Notes, dated, with the decision text never edited | Azure [5], AWS [4], Fowler [3]; the dated note is this practice's choice ([decisions.md](decisions.md) sections 8 and 9) |
 | The options on the DACI page, linked from the record | the DACI play [9]; which record holds the options is [roles-and-decisions.md](../project-management/roles-and-decisions.md) section 6's rule |
 

@@ -543,11 +543,14 @@ Why it is good:
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.example.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   # Trusted Types in report-only mode (security.md section 4). A departure from two rules of
   # security.md section 5, the named report receiver and the written end date: the reference
-  # application has no report receiver and no tracker. The cost: a violation shows only in the
-  # browser console of whoever visits a deploy that serves this file. A live application names a
-  # receiver and adds it to this header with `report-to`, writes the end date in the decision
-  # log, adds a task for that date with an owner to the team's tracker, fixes what the reports
-  # show, and enforces by that date (security.md sections 4 and 5).
+  # application has no report receiver, no decision log and no tracker. The cost: a violation
+  # shows only in the browser console of whoever visits a deploy that serves this file, and with
+  # no written end date nothing ends the report-only mode, so it can stay that way for good. A
+  # live application names a receiver and adds it to this header with `report-to`, records the
+  # end date as an entry in the decision log ("Write it down", security.md section 1), adds a
+  # task for that date with an owner to the team's tracker, linked from that entry, and, if the
+  # date moves, adds a new entry that supersedes the old one (roles-and-decisions.md section 7);
+  # it fixes what the reports show, and enforces by that date (security.md sections 4 and 5).
   Content-Security-Policy-Report-Only: require-trusted-types-for 'script'
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   X-Content-Type-Options: nosniff
@@ -606,9 +609,12 @@ The two security comments in the file give their reason at the line:
   in the browser console of whoever visits a deploy that serves this file, preview or production,
   because the header names no `report-to` endpoint; the team sees its own visits, on its preview
   deploys. A live application adds a report endpoint, the way the main policy's report-only phase
-  below does, writes the end date into the decision log, adds a task for that date with an owner
-  to the team's tracker, fixes what the reports show, and enforces by that date (security.md
-  sections 4 and 5).
+  below does, records the end date as an entry in the decision log ("Write it down", security.md
+  section 1), adds a task for that date with an owner to the team's tracker, linked from that
+  entry, and, if the date moves, adds a new entry that supersedes the old one
+  ([roles-and-decisions.md](../../any-language/project-management/roles-and-decisions.md)
+  section 7). It fixes what the reports show, and enforces by that date (security.md sections 4
+  and 5).
   DOMPurify returns a `TrustedHTML` where the browser has Trusted Types, so the one sink of
   section 4 of this file passes the report-only check (security.md section 4, "Make the policy
   sanitise"); this was type-checked and not run in a browser.
@@ -619,14 +625,19 @@ section 5 owns, and the comment on `/index.html` gives its reason at the line.
 What it leaves out, on purpose or for a later step:
 
 - **The report-only phase.** A live application sends this policy as
-  `Content-Security-Policy-Report-Only`, with a report endpoint, before it enforces it, and with
-  an end date written into the decision log and a task for that date, with an owner, in the
-  team's tracker (security.md section 5). The example shows the main policy in its enforced form;
+  `Content-Security-Policy-Report-Only`, with a report endpoint, before it enforces it. It records
+  the end date as an entry in the decision log ("Write it down", security.md section 1), adds a
+  task for that date with an owner to the team's tracker, linked from that entry, and, if the date
+  moves, adds a new entry that supersedes the old one (roles-and-decisions.md section 7;
+  security.md section 5). The example shows the main policy in its enforced form;
   only the Trusted Types header is report-only.
 - **Enforced Trusted Types.** They run in report-only mode now. A live application adds a report
-  endpoint, writes the end date into the decision log, adds a task for that date with an owner to
-  the team's tracker, fixes what the reports show, and enforces by that date (security.md sections
-  4 and 5); until then a violation shows only in the console (security.md section 4).
+  endpoint, records the end date as an entry in the decision log ("Write it down", security.md
+  section 1), adds a task for that date with an owner to the team's tracker, linked from that
+  entry, and, if the date moves, adds a new entry that supersedes the old one
+  (roles-and-decisions.md section 7). It fixes what the reports show, and enforces by that date
+  (security.md sections 4 and 5); until then a violation shows only in the console (security.md
+  section 4).
 - **`preload` in `Strict-Transport-Security`,** and the `X-Frame-Options`, CORP, COEP and
   `X-XSS-Protection` headers; the table in security.md section 5 says what each would add.
 

@@ -342,6 +342,9 @@ docker compose -p "$COMPOSE_PROJECT_NAME" exec agent python3 -c \
   "import socket; socket.create_connection(('1.1.1.1', 443), timeout=5)"  # fails: no route out
 
 # This container is the boundary, so the agent may run without approvals here.
+# The agent's delegation is left out (decision-making/agents.md section 2): this container
+# enforces its credential and network limits (agents.md section 3), and
+# decision-making/delegation-example.md shows a delegation.
 # Ask it to commit its work on the branch $branch.
 docker compose -p "$COMPOSE_PROJECT_NAME" exec agent \
   claude --dangerously-skip-permissions
@@ -383,7 +386,11 @@ sits in your own repository, out of the agent's reach until you merge a branch t
 Each session ends with its clone and its volume removed, and the agent has no credential to push
 anything itself.
 
-What this example does not claim: it was not built or run when it was written. The host list
+What this example does not claim: it was not built or run when it was written. The agent's
+delegation is left out: [agents.md](../decision-making/agents.md) section 2 still asks for one
+inside the container, a short one, and section 3 asks that each of its limits be enforced by tooling
+the agent cannot change; this container enforces the credential and network limits.
+[delegation-example.md](../decision-making/delegation-example.md) shows a delegation. The host list
 assumes an API key; a claude.ai login also needs the sign-in hosts on Claude Code's network access
 page [9]. Claude Code 2.1.301 and uv 0.13.1 were the latest releases on 2026-10-15 [17], [18]. The
 proxy does not terminate TLS, so it decides by host name and cannot stop domain fronting, and an

@@ -231,22 +231,47 @@ The list is good because each kind of decision has one name, and the provider co
 into two decisions with one decider each, so nobody waits for a second decider
 ([roles-and-decisions.md](roles-and-decisions.md) section 5).
 
-One entry of the decision log, a Confluence page from the DACI template
-([roles-and-decisions.md](roles-and-decisions.md) sections 6 and 7):
+The DACI page for D-3, a Confluence page from the DACI template
+([roles-and-decisions.md](roles-and-decisions.md) section 6):
 
 ```
-D-3  2026-10-12  Move traffic by the routing flag in steps (1%, 10%, all), not in one night
+D-3  Move payment traffic to the new provider
 Driver: John Smith. Approver: Jane Doe. Contributors: Richard Roe, head of security.
 Informed: customer support lead.
 Due: 2026-10-16, before the charter is issued on 2026-10-19, which names the steps.
-Options: one night for all traffic; steps by flag; split by card brand.
-Reason: the flag turns traffic back in minutes, and one night has no way back without
-a new deploy (rollback-plan.md section 2).   # the reason is what a later reader cannot rebuild
-Links: PROJ-11.   # added in planning, when the epic that carries it out was made
+Options:
+- One night for all traffic. Pro: one cutover. Con: no way back without a new deploy.
+- Steps by flag (1%, 10%, all). Pro: the flag turns traffic back in minutes. Con: old and
+  new routing run side by side until the last step.
+- Split by card brand. Pro: a fault hits one brand's customers. Con: each brand still moves
+  in one night, with no way back without a new deploy.
+Advice: Richard Roe put a rollback after one night at hours, not minutes; the head of
+security asked for a 1% first step. Both kept the steps; the 1% step came from the second.   # how the advice changed the decision (decisions.md section 4)
+Objections: none raised by 2026-10-12.   # "none raised" is written, so a reader knows the line was not forgotten (roles-and-decisions.md section 6)
+Outcome, 2026-10-12: steps by flag (1%, 10%, all), decided by Jane Doe.
 ```
 
-The entry is good because the reason names what the chosen option protects, and the links lead to
-the epic that carries it out.
+Its entry in the decision log, a page from Confluence's Decisions blueprint
+([roles-and-decisions.md](roles-and-decisions.md) section 7):
+
+```
+D-3  2026-10-12  Move traffic by the routing flag in steps (1%, 10%, all), not in one night
+Decider: Jane Doe.
+Options and objections: the DACI page "D-3 Move payment traffic to the new provider".   # a link, not a copy: the page is the one place for the options (roles-and-decisions.md section 6)
+Reason: the flag turns traffic back in minutes, and one night has no way back without
+a new deploy (rollback-plan.md section 2).   # the reason is what a later reader cannot rebuild
+Links: none yet.
+Note, 2026-11-16, John Smith: linked PROJ-11, the epic made in planning that carries it out.   # a later link is a dated note, so the entry still shows what was known on 2026-10-12 (roles-and-decisions.md section 7)
+```
+
+The page is good because the options with their pros and cons, the advice and the objections sit in
+one place, so the log entry links them instead of copying them
+([roles-and-decisions.md](roles-and-decisions.md) section 6,
+[decisions.md](../decision-making/decisions.md) section 4).
+
+The entry is good because the reason names what the chosen option protects, and the link to the epic
+came later as a dated note, so the entry still shows what the project knew on 2026-10-12
+([roles-and-decisions.md](roles-and-decisions.md) section 7).
 
 ### Schedule and critical path
 

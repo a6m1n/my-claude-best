@@ -6,7 +6,8 @@ of Acme Corp's billing application, the same invented application as
 `uv.lock`. Each Monday a scheduled job starts a coding agent, Claude Code, in a hardened container
 to keep those dependencies current. The file below is the agent's delegation for that one decision
 area: what it decides on its own, its limits, what it never does, when it stops and reports, and
-which tool enforces each limit. After it comes the first exception note the agent sent under it.
+which tool enforces each limit. After it come the managed settings file and the start command it
+names, then the first exception note the agent sent under it.
 Every name, date and number is invented, except the Claude Code version and the behaviour of its
 settings, which were checked against its documentation on 2026-10-30.
 
@@ -28,7 +29,8 @@ reason in an HTML comment.
   <!-- The decider roles-and-decisions.md section 5 names, and a backup, so a report never
        waits for one person's holiday (agents.md section 2). -->
 - Agent: Claude Code 2.1.312, started each Monday at 06:00 by the scheduled job `deps-weekly`.
-  <!-- The settings below were checked against this version's documentation on 2026-10-30.
+  <!-- The settings in `docker/managed-settings.json` and the start command were checked
+       against this version's documentation on 2026-10-30.
        Check them again when the version changes (agents.md section 3). -->
 - Where it runs: a hardened container for a trusted repository with no approvals, with no host
   credentials and with egress only through the allowlisting proxy (agent-containers.md
@@ -83,21 +85,28 @@ It stops work on the item and reports when:
 4. The intent does not settle a choice, such as two fixes for a call site that change the
    behaviour in different ways.
 
-It never meets an action the platform cannot undo here: none is in its reach, since it holds no
-credential, cannot push, and reaches the network only through the proxy.
-<!-- agents.md section 4 makes such an action a reason to stop. A delegation for an area where
-     one is in reach lists it as a fifth condition. -->
+The only actions in its reach that the platform cannot undo are its calls out: to the model API,
+through the gateway, and to the package index, for `uv lock` (agents.md section 2 counts a call to
+another service as one). They are accepted, not a reason to stop: no secret sits in the container,
+so nothing they carry can be a credential, and they change nothing on either service. They are
+still ways out; the proxy narrows the ways out to these hosts, it does not close them
+(agent-containers.md section 5). The agent holds no credential and cannot push.
+<!-- agents.md section 4 makes such an action a reason to stop; the calls the run needs are
+     named here and accepted. A delegation for an area where another one is in reach lists it as
+     a fifth condition. -->
 
 The report is an exception note in the form of communication.md section 5: the forecast, the
 cause, two or three options with what each costs, and a recommendation. It is the agent's final
 answer of the run. The job posts it in #team-backend for Jane Doe and adds the facts from its own
-log: the test results and the scanner's findings.
+log: the test results, the scanner's findings, and any count an option rests on, from a search the
+job runs in its own clone.
 <!-- Facts about state come from the tools, not from the agent's account of them (agents.md
      section 4). -->
 
 ## Done, and who approves
 
-- No prompt during a run. Anything the rules below do not allow is denied, not asked.
+- No prompt during a run. Anything the rules in `docker/managed-settings.json` do not allow is
+  denied, not asked.
   <!-- Routine updates run without a prompt; the person's attention goes to the merge, where
        every change can still be undone (agents.md section 5). -->
 - A pull request is done when the required check `ci-ok` passes on it, not when the agent says
@@ -110,7 +119,9 @@ log: the test results and the scanner's findings.
   (agent-containers.md section 7). Only then do they approve the runs and read `ci-ok`. Jane Doe
   and John Smith are there to check the limits no
   tool enforces: no new or removed direct dependency, `requires-python` unchanged, no test skipped
-  or loosened, the size limit, and code fixes that keep the behaviour.
+  or loosened, changes in `src/` and `tests/` only at call sites of the updated packages, a test
+  changed only where the package's API changed, the size limit, and code fixes that keep the
+  behaviour.
   <!-- The reviewer knows what to look for, instead of approving a diff that "looks fine"
        (agents.md section 5). -->
 
@@ -121,8 +132,11 @@ token, the split between the agent's job and the job that writes, and the caps o
 parallel runs. The agent's work comes back as agent-containers.md section 7 says. What this
 delegation adds:
 
-1. The start command, at the root of a fresh clone at `<start-sha>`, the commit the run starts
-   from: `claude -p "<the weekly task>" --append-system-prompt-file docs/delegations/dependency-updates.md --permission-mode dontAsk --max-turns <n> --output-format stream-json --verbose`.
+1. The start command, in `.github/workflows/deps-weekly.yml`, runs at the root of a fresh clone
+   at `<start-sha>`, the commit the run starts from. It passes this file with
+   `--append-system-prompt-file`, sets the mode `dontAsk` and the turn cap `--max-turns <n>`,
+   takes the model and its effort from the workflow's named constants, and asks for
+   `--output-format stream-json --verbose`.
    Before it, the job checks as the agent's user that the managed settings file is readable
    (`test -r /etc/claude-code/managed-settings.json`). It stops the run and pushes nothing if that
    check fails, or on any line Claude Code writes to stderr at startup, before its first
@@ -164,30 +178,32 @@ delegation adds:
 | Never push, merge or open a pull request | The agent holds no GitHub credential, and `github.com` is not on the proxy's allowlist | The container setup and the proxy configuration (agent-containers.md sections 4 and 5) | No |
 | Nothing reaches `main` without a review | The `main` ruleset: a pull request, an approving review, the required check `ci-ok`, no force push | GitHub (git.md sections 5 and 6) | No |
 | Never read a secret | No secret is mounted or set in the container; the gateway outside it adds the API key | The container setup (agent-containers.md section 4) | No |
-| Never change `.github/`, `.claude/`, the container files, `.python-version` or this file | The managed settings below; and the job's check on the fetched branch (step 2 of the run) | `/etc/claude-code/managed-settings.json`, owned by root in the image with mode 0644, so the agent's user can read it and not write it, while the agent runs as a non-root user (images.md section 6); the job's script | No |
+| Never ask for a secret | No tool: a `-p` run takes no reply [9], so a request can only reach the final answer the job posts in #team-backend, where Jane Doe reads it | This file | Not enforced |
+| Never change `.github/`, `.claude/`, the container files, `.python-version` or this file | The managed settings, `docker/managed-settings.json`; and the job's check on the fetched branch (step 2 of the run) | `/etc/claude-code/managed-settings.json`, owned by root in the image with mode 0644, so the agent's user can read it and not write it, while the agent runs as a non-root user (images.md section 6); the job's script | No |
 | This file and the files that enforce it change only with Jane Doe's approval | `.github/CODEOWNERS` names her for `.github/CODEOWNERS` itself (so nobody can drop her from it without her review), `docs/delegations/`, `docker/managed-settings.json` (copied into the image as its managed settings), `.github/workflows/deps-weekly.yml` (the start command, the checks of step 2 and the timeout), the proxy configuration `proxy/` (its allowlist included), the container setup `Dockerfile` and `compose.yaml`, and `.claude/`; the ruleset requires a code owner's review | GitHub | No |
-| Changes only in the dependency files, `src/` and `tests/` | The allow rules below; and the job's check on the fetched branch (step 2 of the run) | As above | No |
+| Changes only in the dependency files, `src/` and `tests/` | The allow rules in `docker/managed-settings.json`; and the job's check on the fetched branch (step 2 of the run) | As above | No |
 | Patch and minor versions only | The job's check on the fetched branch: each package's major version in `uv.lock` against `main` (step 2 of the run) | The job's script | No |
 | The agent's code runs in the branch's CI with no deploy secret | Every deploy secret sits in an environment limited to `main`; the repository secrets hold only what any run may use | GitHub (pipeline-security.md sections 6 and 10) | No |
-| No new or removed direct dependency; `requires-python` unchanged; tests not loosened; the size limit; behaviour kept | No tool: the reviewer checks them before the merge | This file | Not enforced |
-| Two attempts, then a report; the four report conditions | No tool: the job's 60-minute timeout ends a run that never stops | The job's configuration | Not enforced |
+| No new or removed direct dependency; `requires-python` unchanged; tests not loosened; changes in `src/` and `tests/` only at call sites of the updated packages; a test changed only where the package's API changed; the size limit; behaviour kept | No tool: the reviewer checks them before the merge | This file | Not enforced |
+| Two attempts, then a report; the four report conditions | No tool. The job's 60-minute timeout ends a run that never stops; it and `--max-turns <n>` cap only the cost, so a third attempt that ends inside them is not caught, and its result reaches the reviewer at the merge like any other change | The job's configuration | Not enforced |
 
 With another agent tool, the left column stays and the middle column names that tool's own
 mechanisms (agent-containers.md section 11).
+````
 
 The managed settings file, kept in the repository as `docker/managed-settings.json` and copied
-into the image at `/etc/claude-code/managed-settings.json`:
+into the image at `/etc/claude-code/managed-settings.json`. JSON holds no comments, so the reasons
+come first. `allowManagedPermissionRulesOnly` makes this file the only source of rules, so a
+settings file in the repository cannot add one. `allowManagedHooksOnly` runs only the hooks this
+file sets, and it sets none, so no hook from the repository can approve a call.
+`disableBypassPermissionsMode` and `disableAutoMode` keep a changed start command from skipping
+every check, or from handing the checks to auto mode's classifier instead of the allow list [6].
+`dontAsk` denies every call that would prompt; reads inside the clone, read-only commands and
+calls an allow rule approves still run, so a tool or command the allow list does not name stays
+closed until this file or the job's start command changes. The deny rules hold in every mode, so
+these paths stay closed even if the start command changes. None of them covers a script that
+writes a file itself; the job's check on the fetched branch does (agents.md section 3).
 
-<!-- allowManagedPermissionRulesOnly makes this file the only source of rules, so a settings
-     file in the repository cannot add one. allowManagedHooksOnly runs only the hooks this file
-     sets, and it sets none, so no hook from the repository can approve a call.
-     disableBypassPermissionsMode keeps a changed start command from skipping every check.
-     dontAsk denies every call that would prompt; reads inside the clone, read-only commands and
-     calls an allow rule approves still run, so a tool or command the allow list does not name
-     stays closed until this file or the job's start command changes. The deny rules hold in
-     every mode, so these paths stay closed even if the start command changes. None of them
-     covers a script that writes a file itself; the job's check on the fetched branch does
-     (agents.md section 3). -->
 ```json
 {
   "allowManagedPermissionRulesOnly": true,
@@ -195,6 +211,7 @@ into the image at `/etc/claude-code/managed-settings.json`:
   "permissions": {
     "defaultMode": "dontAsk",
     "disableBypassPermissionsMode": "disable",
+    "disableAutoMode": "disable",
     "allow": [
       "Edit(./pyproject.toml)",
       "Edit(./src/**)",
@@ -217,10 +234,27 @@ into the image at `/etc/claude-code/managed-settings.json`:
   }
 }
 ```
-````
 
-The first exception note the agent sent under it, as the job posted it in #team-backend. The
-package and the advisory are invented:
+The start command, the step's `run:` script in `.github/workflows/deps-weekly.yml`. The rest of
+the workflow is left out; pipeline-security.md section 10 gives its form. The workflow's `env:`
+sets the two constants.
+
+```sh
+# The model and its effort are named constants in the workflow's env: a dated model id, never
+# an alias that moves, and its effort, so a change to either is a reviewed diff
+# (prompt-engineering.md section 15).
+claude -p "<the weekly task>" \
+  --append-system-prompt-file docs/delegations/dependency-updates.md \
+  --model "$DEPS_AGENT_LLM_MODEL" --effort "$DEPS_AGENT_LLM_REASONING_EFFORT" \
+  --permission-mode dontAsk --max-turns <n> --output-format stream-json --verbose
+# Departs from prompt-engineering.md section 11, which asks for a response schema: the run's
+# output is a branch the job checks (step 2 of the run) and a note a person reads, which the job
+# posts with its own facts added. The cost: no code checks that a note holds the forecast, the cause, the
+# options and a recommendation, so a note that misses one reaches Jane Doe that way.
+```
+
+The first exception note the agent sent under the delegation, as the job posted it in
+#team-backend. The package and the advisory are invented:
 
 ```text
 Exception note: dependency updates, run of 2026-11-09
@@ -234,7 +268,8 @@ Cause: the maintainers fixed it on the 5.x line only and have announced no more 
 
 Options:
 1. Update to 5.0.0 in a pull request of its own. Cost: 5.0.0 renames render() to
-   render_pdf(), so 14 call sites in src/ change; about half a day of review.
+   render_pdf(), so every call site in src/ changes (the job's count is below); about half a
+   day of review.
 2. Stay on 4.9.3 and turn off the affected feature, custom fonts in invoice PDFs, by its
    setting. Cost: Globex's invoices lose their custom font until option 1 lands.
 3. Stay on 4.9.3 and accept the advisory until the planned upgrade in December. Cost: a
@@ -243,7 +278,8 @@ Options:
 Recommendation: option 1, reviewed by John Smith, who knows the PDF code best.
 
 Added by the job from its log: scanner step, EXAMPLE-2026-0042 in example-pdf 4.9.3, fixed in
-5.0.0; test suite at the start of the run, 212 passed and 0 failed.
+5.0.0; test suite at the start of the run, 212 passed and 0 failed; call sites of render( in
+src/ on main, from the job's git grep in its own clone: 14.
 ```
 
 Jane Doe chose option 1 the same day and gave the update to John Smith as PROJ-131. The agent's
@@ -280,8 +316,10 @@ next runs left `example-pdf` alone, because a major version stays outside its li
   `--name-only` shows only "the name of each changed file in the post-image tree" [8]: a
   moved file would show its new path only.
 - **The agent holds no GitHub credential at all.** It cannot push or merge, and `github.com`
-  stays off the allowlist, so it cannot carry data out
-  ([agent-containers.md](../docker/agent-containers.md) sections 4, 5 and 7).
+  stays off the allowlist, so it cannot post code to a code host. No secret sits in the
+  container; the hosts left on the list, the model API and the package index, are still ways out,
+  and the delegation names them ([agent-containers.md](../docker/agent-containers.md) sections 4,
+  5 and 7).
 - **No prompt during a run, one approval at the merge.** In `dontAsk` mode a call that would
   prompt is denied instead [6]. Every change stays on a branch until a person merges it, so the
   approval comes where a person can still refuse the merge; the pull request's CI runs the
