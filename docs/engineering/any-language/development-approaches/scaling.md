@@ -173,10 +173,8 @@ scalable, and configurable, no matter your organization's size, industry, or com
 
 **Core SAFe and AI-Native SAFe.** Since June 2026 Scaled Agile has supported "two co-existing
 versions of the Framework, Core SAFe and AI-Native SAFe" [8], [9]. Its release post of 2026-06-23
-says "This release does not replace Core SAFe" [8]. In AI-Native SAFe, "Standardized Agile roles
-are replaced by flexible capabilities", named Product, Builder and Domain Expert, PI Planning
-becomes PI Outcome Planning, and "Teams define their own cadence around three core activities":
-Align, Sense and Respond [9]. These are the owner's descriptions of its product. The posts read
+says "This release does not replace Core SAFe" [8]. What AI-Native SAFe changes, in its owner's
+words, is in [ai-agents.md](ai-agents.md) section 2. The posts read
 name no case for picking one version over the other; the release post says only "For many
 organizations, Core SAFe continues to provide the right operating model for their current needs"
 [8]. What a team keeps when AI agents take part is [ai-agents.md](ai-agents.md).

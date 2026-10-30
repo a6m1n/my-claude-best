@@ -215,11 +215,11 @@ different populations, and they disagree. So the rules in section 4 rest on no s
 - Popescu et al. studied 111,969 pull requests on GitHub from five agents and from humans, June to
   August 2025. "The median human-opened PR was approximately 60 lines"; Claude Code's median was
   376 lines, "with the exception of Codex, which was used in smaller changes" [24]. The authors
-  add that "the actual effect size can be moderate to fairly negligible" (Cliff's δ about 0.37 for
-  Claude Code against humans, about −0.03 for humans against Codex) [24].
+  add that "the actual effect size can be moderate to fairly negligible" (Cliff's delta about 0.37
+  for Claude Code against humans, about −0.03 for humans against Codex) [24].
 - Pham and Ghaleb compared 31,268 closed agent pull requests with 6,135 closed human ones, from a
   dataset in which Codex made 21,799 of 33,596 agent pull requests: "The number of changed lines
-  does not differ significantly (𝑝 = 0.131)", and agent pull requests had fewer commits, files
+  does not differ significantly (p = 0.131)", and agent pull requests had fewer commits, files
   and directories [25].
 - In the one firm, the median pull request grew from 35 lines in the baseline months to 61 lines
   in April 2026 [19].

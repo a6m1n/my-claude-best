@@ -327,6 +327,9 @@ the team works, and refining on need keeps the Backlog from growing stale. Where
 lists no cadence, the team picks it, and writes it down, so the cadence does not depend on anyone's
 memory. When a team should work without sprints is in [life-cycle.md](life-cycle.md) section 4.
 
+What a team without sprints checks for its development approach is listed in
+[development-approaches/README.md](../development-approaches/README.md#what-is-here), "What is here".
+
 ## 10. PRINCE2 and PMBOK: reports, not meetings
 
 PRINCE2 prescribes reports and stage decisions, not team meetings. In PRINCE2 7 a Checkpoint Report

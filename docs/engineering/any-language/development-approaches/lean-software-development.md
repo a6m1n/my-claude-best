@@ -57,8 +57,8 @@ What this file leaves out, and where it lives:
   [life-cycle.md](../project-management/life-cycle.md) section 4.
 - Who chooses the approach, the models behind the choice, and what the evidence says about
   outcomes: [choosing-an-approach.md](choosing-an-approach.md).
-- A limit on work in process in a project, and the Kanban Guide's flow measures:
-  [principles.md](../project-management/principles.md) section 3.
+- A limit on work in process in a project: [principles.md](../project-management/principles.md)
+  section 3. The Kanban Guide's flow measures: [kanban.md](kanban.md) section 4.
 - Fixed-price and fixed-scope contracts: [regulated-work.md](regulated-work.md).
 - Lean Startup, which uses the word "lean" for product discovery: out of scope.
 - Security and privacy: there are no known security impacts of the principles in this file, and
@@ -131,7 +131,7 @@ of its own, so its cost is the changes the flow shows; that reading is this file
    after the request has a flow efficiency of 3 ÷ 15 = 20%; the map from step 2 shows where the
    other 12 days went. The
    span starts at the request, so it is wider than the Kanban Guide's cycle time, which starts when
-   work on an item starts ([principles.md](../project-management/principles.md) section 3); that
+   work on an item starts ([kanban.md](kanban.md) section 4); that
    comparison is this file's own.
 4. **Remove the biggest wait first, and judge each change by flow.** A change counts as better when
    the request reaches the customer sooner, not when people are busier. Mary Poppendieck: "flow

@@ -240,8 +240,9 @@ section 5).
    team limit binds before every person is full. Two limits, one per person and one for
    the team (principles.md section 3).
    A Blocked item counts toward both limits (jira-workflow.md section 4).
-   Pull the top item of the Backlog only when your own count and the team's count are
-   both under their limits: that is the pull signal the Guide asks for.
+   Pull the top item of the Backlog only when the count of items you hold (you are their
+   assignee) and the team's count are both under their limits: that is the pull signal
+   the Guide asks for.
    Exception: the fix for a production incident, its problem work item (sla.md section 3),
    is pulled at once, ahead of the Backlog's order, as Jane Doe agreed as Product Owner,
    and may take the team's count over its limit, one such fix at a time. The restore
@@ -253,7 +254,11 @@ section 5).
    and the pull rule in item 4.
 6. SLE: 85% of work items will be finished in seven days or less.
    Days are elapsed days, weekends included, because the Guide's cycle time is elapsed
-   time.
+   time. A day is a calendar day, and both ends count: cycle time in days is the finish
+   date minus the start date, plus one, so an item that starts and finishes on the same
+   day has a cycle time of one day and one that starts on a Monday and finishes on the
+   Tuesday has two. Age counts the same way, up to today. This counting is the team's own
+   policy; the Guide says only that cycle time is elapsed time.
    This is a best guess: the team has no cycle times yet. When 20 items have finished, a
    number the team chose, it replaces the guess with the number of days within which 85%
    of those items finished.
@@ -262,17 +267,14 @@ Shown on the board: the age of each item in work in progress, both counts agains
 limits, and the SLE, so the minimum elements are visible where the team works.
 ```
 
-This definition is good because it holds all six elements the Guide asks for, each in a form a
-team member can check against the board; it names the text it follows and that text's position on
-the size of a change, so a proposal for a big change has a known rule; its four flow metrics count
-both finished points, because "started and finished refer to how the Kanban system members have
-established those points in their DoW" [1], and delivered work has a count and a name of its own,
-so its throughput is the Guide's; an item canceled while it waits in the Backlog counts in no
-metric, so a clean-up of the Backlog adds nothing to throughput, and an item returned to the
-Backlog loses its start, by the team's own written policy, and starts again when it next moves
-from the Backlog to In Progress, so an item that waits in the Backlog is never work in progress
-and its cycle time and its age count from that start;
-and it takes its states, its limits and its Blocked rule from
+This definition is good because it holds all six elements the Guide asks for, each in a form a team
+member can check against the board. It names its text and that text's position on the size of a
+change, so a proposal for a big change has a known rule. Its flow metrics use both finished points,
+because "started and finished refer to how the Kanban system members have established those points
+in their DoW" [1], and delivered work has a count of its own. An item canceled in the Backlog counts
+in no metric, so a clean-up adds nothing to throughput. An item returned to the Backlog loses its
+start, by the team's written policy, so an item that waits there is never work in progress. And it
+takes its states, limits and Blocked rule from
 [jira-workflow.md](../project-management/jira-workflow.md) and
 [principles.md](../project-management/principles.md) by name, so the definition, the board and the
 weekly board look cannot drift apart.

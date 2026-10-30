@@ -145,11 +145,11 @@ back the confusion this section is there to remove.
   the team keeps Scrum whole.** Why: the two meanings disagree on whether Scrum's rules still hold,
   and Ladas's Scrumban has no fixed set of practices [9], so the word alone tells a reader neither
   what the team does nor which rules apply.
-- **On Ladas's path, at the step where the team drops a Scrum event, accountability or artifact,
-  write in the plan that the team no longer runs Scrum, and name what it runs instead.** Why: by
-  the Scrum Guide, when only parts are implemented "the result is not Scrum" [1], and a reader who
-  believes the team runs Scrum expects every event and accountability. What dropping a part costs
-  is [scrum.md](scrum.md). The flow a team arrives at is [kanban.md](kanban.md) or
+- **On Ladas's path, at the step where the team stops keeping the minimum of
+  [scrum.md](scrum.md) section 4, write in the plan that the team no longer runs Scrum, and name
+  what it runs instead.** Why: by the Scrum Guide, when only parts are implemented "the result is
+  not Scrum" [1], and a reader who believes the team runs Scrum expects every event and
+  accountability. What dropping a part costs is [scrum.md](scrum.md). The flow a team arrives at is [kanban.md](kanban.md) or
   [lean-software-development.md](lean-software-development.md).
 
 Check: when you write or edit a plan or a process doc, search it for "Scrumban". Every hit says it

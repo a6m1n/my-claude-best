@@ -216,12 +216,10 @@ What PMI's texts say:
 - PMI's FAQ on PMBOK 7, from 2020 and also superseded, names practitioners:
   "Practitioners are now tasked with identifying the right delivery approach (predictive, adaptive,
   or hybrid) to get the job done and deliver value" [14].
-- The PMP exam outline for July 2026 lists "Recommend a project management development approach
-  (i.e., predictive, adaptive/agile, or hybrid management)" under the project manager's Task 1,
-  "Develop an integrated project management plan and plan delivery" [15]. It is an enabler, which
-  the outline defines as "Illustrative examples of the work associated with the task" [15]. The
-  verb is recommend: the outline gives the project manager the recommendation and does not say who
-  decides.
+- The PMP exam outline for July 2026 makes recommending a development approach an enabler of the
+  project manager's Task 1, as [life-cycle.md](../project-management/life-cycle.md) section 4
+  quotes. The outline defines an enabler as "Illustrative examples of the work associated with the
+  task" [15], so it gives the project manager the recommendation and does not say who decides.
 - The 2017 Agile Practice Guide, now superseded, says of its questionnaire that "the final decision
   should rest and be supported by the people involved" [4].
 

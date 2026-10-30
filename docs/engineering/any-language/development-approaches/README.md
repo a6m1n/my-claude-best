@@ -114,11 +114,12 @@ check falls at that event:
 | Copying the Spotify model | [scaling.md](scaling.md) section 5 |
 | The sprint events, their timeboxes, and a team without sprints | [meetings.md](../project-management/meetings.md) sections 2 to 9 |
 | The Definition of Done and the story form | [tickets.md](../project-management/tickets.md) section 2 |
-| How the two Kanban texts name and define the flow measures | [kanban.md](kanban.md) section 4; the WIP limits and the weekly board look: [principles.md](../project-management/principles.md) section 3 |
+| How the two Kanban texts name and define the flow measures | [kanban.md](kanban.md) section 4 |
 | The WIP limit per person and for the team, and the measures at the weekly board look | [principles.md](../project-management/principles.md) section 3 |
-| What a Sprint Planning checks for the team's approach | [kanban.md](kanban.md) section 5, [ai-agents.md](ai-agents.md) section 4 |
+| What a Sprint Planning checks for the team's approach | [scrum.md](scrum.md) section 3 (before the first one), [kanban.md](kanban.md) section 5, [ai-agents.md](ai-agents.md) section 4 |
 | What a Sprint Review checks for the team's approach | [kanban.md](kanban.md) section 5, [regulated-work.md](regulated-work.md) section 2 |
-| What a retrospective checks for the team's approach | [scrum.md](scrum.md) section 4, [kanban.md](kanban.md) section 5, [extreme-programming.md](extreme-programming.md) section 4, [ai-agents.md](ai-agents.md) section 4, [choosing-an-approach.md](choosing-an-approach.md) section 3; in a Kanban flow: [regulated-work.md](regulated-work.md) section 2 |
+| What a Sprint Retrospective checks for the team's approach | [scrum.md](scrum.md) section 4, [kanban.md](kanban.md) section 5, [extreme-programming.md](extreme-programming.md) section 4, [ai-agents.md](ai-agents.md) section 4, [choosing-an-approach.md](choosing-an-approach.md) section 3 |
+| What a team without sprints checks at its regular retrospective and its refinement | [regulated-work.md](regulated-work.md) section 2, [ai-agents.md](ai-agents.md) section 4 |
 
 The files:
 
@@ -183,13 +184,15 @@ The files:
    coding agents into the team's work — read
    `docs/engineering/any-language/development-approaches/README.md` and the file it routes to for
    that work, and `docs/engineering/any-language/project-management/life-cycle.md` section 4 when
-   the choice is made for a project's deliverables. The check: the plan or the team's page names the
-   approach and its reason (`life-cycle.md` section 4), no Scrum event, role or artifact is dropped
-   while the team still calls its process Scrum (`scrum.md` section 4), every Definition of Workflow
-   it writes names the Kanban text and edition it follows (`kanban.md` section 1), and no claim that
-   one approach works better than another, or that AI agents speed a team up by one figure, appears
-   without its study, the study's sample and its kind (`choosing-an-approach.md` section 5,
-   `ai-agents.md` section 3)." Without it an agent never opens the folder.
+   the choice is made for a project's deliverables. The check: every deliverable the change picks
+   an approach for has that approach and its reason in the plan (`life-cycle.md` section 4); no
+   Scrum event, accountability or artifact is dropped, and the Sprint keeps its fixed length, while
+   the team still calls its process Scrum (`scrum.md` section 4); every Definition of Workflow or
+   board policy the change writes for a Kanban system names the Kanban text and edition it follows (`kanban.md` section 1); no claim
+   that one approach works better than another appears without its study, the study's sample and its
+   kind (`choosing-an-approach.md` section 5); and no report of what AI changed for the team quotes
+   a published speed-up figure (`ai-agents.md` section 4)." Without it an agent never opens the
+   folder.
 3. The files link other practices for the rules those own:
    [project-management](../project-management/README.md) most of all, for the pick of an approach,
    the meetings, work items, the Definition of Done, WIP, releases, the plan and who decides;
@@ -207,10 +210,8 @@ The files:
 4. A team or a project that already runs an approach does not stop to rebuild it. The answer is
    new and touched code ([refactoring.md](../refactoring/refactoring.md) section 7), applied to a
    process: a rule reaches the team's work the next time the team changes that part of how it
-   works. The files name that moment for their own rules: the next Sprint Retrospective for a Scrum
-   with parts removed, or, when the team dropped the Retrospective, a session the Scrum Master holds
-   before the next Sprint Planning, where the team plans to bring each part back or stops calling its
-   process Scrum ([scrum.md](scrum.md) section 4), the next change of the plan for a mix
+   works. The files name that moment for their own rules: for a Scrum with parts removed, the
+   moment [scrum.md](scrum.md) section 4 names, the next change of the plan for a mix
    ([combining-approaches.md](combining-approaches.md) section 4), the next time a group adds or
    splits a team or picks a framework ([scaling.md](scaling.md) section 8), a point the project's
    own plan names for regulated work, with a signed contract keeping its terms
@@ -238,10 +239,9 @@ one rule of [agent-containers.md](../docker/agent-containers.md) section 1.
 
 ## The points to adapt
 
-The shape stays: a process the team calls Scrum keeps every event, accountability and artifact
-([scrum.md](scrum.md) section 4), every policy that says "Kanban" names its text
-([kanban.md](kanban.md) section 1), and a person answers for every change an agent makes
-([ai-agents.md](ai-agents.md) section 1). Within that shape, these are the team's or the project's
+The shape stays: a process the team calls Scrum keeps the minimum of [scrum.md](scrum.md)
+section 4, every policy that says "Kanban" names its text ([kanban.md](kanban.md) section 1), and
+a person answers for every change an agent makes ([ai-agents.md](ai-agents.md) section 1). Within that shape, these are the team's or the project's
 choices; each file names the options and their costs. A row holds only for a team that runs that
 part, and a team that does not skips it.
 
