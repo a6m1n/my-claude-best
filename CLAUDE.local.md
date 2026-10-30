@@ -92,6 +92,25 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   request's Verification holds the eval's result next to its baseline, every rate the eval reports
   is divided by the cases it asked for, and every judge that gates has its TPR and TNR on held-back
   labels.
+- Before you add or change a cache, a background task, a task queue, a message producer or
+  consumer, a broker, queue or stream client, an outbox or its relay, a durable workflow or a
+  scheduled job in a Python service, read
+  `docs/engineering/python/caching-and-messaging/README.md` and the file it routes to for that
+  work, and `docs/engineering/python/caching-and-messaging/consumer-example.md` when you write a
+  service's first consumer, `docs/engineering/python/caching-and-messaging/outbox-relay-example.md`
+  when you write an outbox and its relay. The check: every task or message the change sends after
+  a database write goes out through an outbox row or a job written on that transaction's own
+  connection, or, when losing it is cheap, after the commit (`delivery.md` section 4,
+  `task-queues.md` section 4); every consumer, unless `delivery.md` section 12's case applies,
+  acknowledges a message, or stores its offset, only after the transaction that holds its work
+  commits, and a second run of it changes nothing (`delivery.md` section 3, `event-streaming.md`
+  section 6); every queue the change declares has a
+  dead-letter target and a written delivery limit, in its arguments or in a policy the change
+  ships (`delivery.md` section 6); every write to a shared cache sets its expiry in the same
+  command (`caching.md` section 4); workflow code calls no system
+  clock, random number, network or file (`durable-workflows.md` section 4); every schedule the
+  change adds has one scheduler (`scheduled-jobs.md` section 3); and no log line the change adds
+  carries a message body (`delivery.md` section 10, `logging.md` section 10).
 - Before you write or change a `Dockerfile`, a `.dockerignore`, a `compose.yaml`, the CI job that
   builds or pushes an image, a dev container a person works in, or a container, a dev container or
   a sandbox a coding agent works in, read `docs/engineering/any-language/docker/README.md` and the
