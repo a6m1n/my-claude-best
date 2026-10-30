@@ -147,18 +147,53 @@ person decides and everyone else knows whether they advise or only hear the resu
 
 Write the options, the date by which the decision is due, and the outcome on one page, from
 Confluence's DACI decision template, so anyone who opens it later sees what was weighed, by when, and
-what was chosen.
+what was chosen. The page also holds each objection with the Approver's answer
+([decisions.md](../decision-making/decisions.md) sections 4 and 7).
+
+The DACI page is the one place for the options, also when the decision is a technical choice that
+gets an architecture decision record: that record links the page for them
+([decisions.md](../decision-making/decisions.md) section 8). A decision that runs no DACI keeps its
+options in its architecture decision record when it has one, and otherwise in its log entry
+(section 7). The reason: options written in two places drift apart, and the DACI play already has
+the Driver fill "Options considered" before the meeting: "Use a table format to present each
+option, including description, pros and cons, and estimated resources and financial costs"
+(Atlassian). Atlassian's engineering handbook keeps the two documents apart: a DACI for the
+decision, and an RFC, "used to communicate the chosen solution", of which it says "Some companies
+refer to these as design documents or architectural decision record" (Atlassian, 2021). How the
+Driver gathers the input and how the discussion closes before the Approver decides are in
+[decisions.md](../decision-making/decisions.md) sections 4 to 6.
 
 ## 7. The decision log
 
 Record every decision that changes the scope, the schedule, the budget, the development approach or
-the architecture: its date, the decision, the decider, the options weighed, the reason, and links to
-the epics or work items it touches. PMI's Lexicon has no decision log, only an issue log; the log is
-Atlassian's: Confluence's Decisions blueprint makes "a decision log page for the space". The reason:
+the architecture: its date, the decision, the decider, the options weighed, or a link to the DACI
+page or architecture decision record that holds them (section 6), the reason, and links to the
+epics or work items it touches. When no DACI page or architecture decision record holds the
+objections, the entry also holds each objection with the decider's answer
+([decisions.md](../decision-making/decisions.md) sections 4 and 7). PMI's Lexicon has no decision
+log, only an issue log; the log is Atlassian's: Confluence's Decisions blueprint makes "a decision log page for the space". The reason:
 in three months nobody remembers why, and a decision nobody can find gets made again.
 
 Link each new decision from the weekly status update ([communication.md](communication.md) section
 2).
+
+When a decision also has an architecture decision record, its entry links the record, so a reader of
+the log reaches the context and the consequences; the record's form and life cycle are in
+[decisions.md](../decision-making/decisions.md) section 8.
+
+Do not rewrite an entry after the decision is made. When the decision changes, add a new entry that
+names the one it replaces, and mark the old entry superseded. Add a correction as a dated note, not
+as an edit to the entry's text. The reason: a log edited in place no longer shows what the project
+knew and decided at the time. The rule follows the records-management principle that a record is
+kept complete and unaltered and protected against unauthorised change. Kastenhofer (2015) quotes
+ISO 15489-1:2001 on integrity: "The integrity of a record refers to its being complete and
+unaltered. It is necessary that a record be protected against unauthorized alteration." The US rule
+for federal agencies' records says to "Prevent the unauthorized access, modification, or deletion of
+declared records" and to keep audit trails (36 CFR 1236.20(b)(4)). Both name unauthorised change, so
+they ask for control of the record, not for a ban on every added note. The superseding step is the
+one Nygard gives for architecture decision records: "If a decision is reversed, we will keep the old
+one around, but mark it as superseded." No standard requires this for a project's decision log, and
+no source read covers the three steps together, so the rule is this practice's own.
 
 Check: when the plan changes, find the decision behind it in the log.
 
@@ -179,3 +214,7 @@ decide.
 - Rothman, ["The Agile Project Manager: To Facilitate, Serve and Protect"](https://www.jrothman.com/articles/2010/01/the-agile-project-manager-to-facilitate-serve-and-protect/), 2010-01-01.
 - Atlassian, [RACI chart template](https://www.atlassian.com/software/confluence/templates/raci-chart), [DACI decision template](https://www.atlassian.com/software/confluence/templates/decision), Team Playbook plays ["Roles and responsibilities"](https://www.atlassian.com/team-playbook/plays/roles-and-responsibilities) and ["DACI"](https://www.atlassian.com/team-playbook/plays/daci), and the Confluence ["Decisions blueprint"](https://confluence.atlassian.com/doc/decisions-blueprint-339739406.html) (Data Center documentation). All undated, read 2026-10-06.
 - Bain & Company, ["RAPID: a tool to clarify decision accountability"](https://www.bain.com/insights/rapid-tool-to-clarify-decision-accountability/), 2023-10-13.
+- Atlassian, ["DACI: a decision-making framework"](https://www.atlassian.com/team-playbook/plays/daci), Team Playbook play, re-read 2026-10-30 for what the Driver fills in before the meeting, and ["Atlassian Engineering's handbook: a guide for autonomous teams"](https://www.atlassian.com/blog/how-we-build/handbook), How We Build blog, 2021-06-02, read 2026-10-30: the DACI and the RFC as two documents.
+- Kastenhofer, ["The logic of archival authenticity: ISO 15489 and the varieties of forgeries in archives"](https://publications.archivists.org.au/index.php/asa/article/download/10605/10933), Archives and Manuscripts 43(3), 2015, pp. 166-180, a peer-reviewed article, read 2026-10-30: it quotes the integrity clause of ISO 15489-1:2001; the 2016 edition of the standard was not readable and is not cited.
+- US National Archives, [36 CFR 1236.20(b)(4)](https://www.law.cornell.edu/cfr/text/36/1236.20) (Cornell Legal Information Institute copy of the federal regulation), read 2026-10-30: it binds US federal agencies only, and is cited as an example of the same principle.
+- Nygard, ["Documenting Architecture Decisions"](https://www.cognitect.com/blog/2011/11/15/documenting-architecture-decisions), Cognitect blog, 2011-11-15, read 2026-10-30: marking an old decision superseded.

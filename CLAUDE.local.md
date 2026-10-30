@@ -197,10 +197,10 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   source and its date in the pull request's Verification (`performance.md` section 4), and every
   image the change adds has `width` and `height` (`performance.md` section 5).
 - Before you open a project, write or change its charter, plan, scope, schedule, WBS, risk
-  register, stakeholder register or RACI matrix, make or record a decision that is hard to undo,
-  write a status update, write, triage, split or move a Jira work item, fill its fields or comment
-  on one, set up a board or a space, plan a release or its rollback, open or run an incident or
-  roll a release back, agree an SLA, or plan or run a team meeting, read
+  register, stakeholder register or RACI matrix, name who decides a decision and write its
+  decision-log entry, write a status update, write, triage, split or move a Jira work item, fill
+  its fields or comment on one, set up a board or a space, plan a release or its rollback, open or
+  run an incident or roll a release back, agree an SLA, or plan or run a team meeting, read
   `docs/engineering/any-language/project-management/README.md` and the files it routes to for that
   work, and `docs/engineering/any-language/project-management/adoption-guide.md` when you start a
   project with the practice or bring it into a project that is already running,
@@ -218,6 +218,23 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   meeting it plans names the decision it makes (`meetings.md` section 1), and every release it
   plans has one go or no-go decider (`release.md` section 3) and a rollback plan with a trigger,
   one decider and a time that fits the SLA (`rollback-plan.md` section 2).
+- Before you choose between options the task does not settle, when that choice is hard to undo,
+  crosses teams, or its problem or answer is unclear (a data store, a framework, a schema, a public
+  interface), close the discussion of such a decision, record a technical decision as an
+  architecture decision record, review a recorded decision, or write or change what an AI agent
+  may decide or do on its own (its delegation, its approval steps, or how several agents reach one
+  answer), read
+  `docs/engineering/any-language/decision-making/README.md` and the file it routes to for that
+  work, and `docs/engineering/any-language/decision-making/adr-example.md` when you write an
+  architecture decision record, `docs/engineering/any-language/decision-making/delegation-example.md`
+  when you write an agent's delegation. The check: every architecture decision record the change
+  adds names its decider, its options or the DACI page that holds them, its confidence and what
+  would trigger a new look (`decisions.md` section 8); no accepted record's decision text changes
+  in the diff, and a changed decision is a new record that supersedes it (`decisions.md`
+  section 8); and every limit that a delegation the change adds must hold is enforced by a
+  permission rule, a hook, a sandbox or a token scope the agent cannot change, or is marked in the
+  delegation's enforcement part as a gap, with what catches a breach instead (`agents.md`
+  sections 2 and 3).
 - Before you start the research for a new practice or for a new rules file in one, or create or
   edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md` first. The check:
   the closing summary names it.
