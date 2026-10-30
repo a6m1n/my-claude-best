@@ -37,11 +37,11 @@ reason in an HTML comment.
   request when Claude Code publishes a security advisory.
   <!-- A scheduled run can start late or be dropped, so the schedule has a named watcher
        (pipeline.md sections 4 and 10). -->
-  <!-- The settings in `docker/managed-settings.json` and the start command were checked
-       against this version's documentation on 2026-10-30. The pull request that moves the pin
-       checks them again against the new version's documentation (agents.md section 3), and the
-       job stops when the container holds another version (step 2 of the run). The pin and the
-       self-update switch are agent-containers.md section 9's. -->
+  <!-- The settings in `.devcontainer/agent/managed-settings.json` and the start command were
+       checked against this version's documentation on 2026-10-30. The pull request that moves
+       the pin checks them again against the new version's documentation (agents.md section 3),
+       and the job stops when the container holds another version (step 2 of the run). The pin
+       and the self-update switch are agent-containers.md section 9's. -->
 - Where it runs: a hardened container for a trusted repository with no approvals, with no host
   credentials and with egress only through the allowlisting proxy (agent-containers.md
   section 3).
@@ -52,6 +52,8 @@ reason in an HTML comment.
   is such a change, never an answer given during a run.
   <!-- An "always allow" widens the delegation for good; it gets the same review as any other
        change to this file (agents.md section 2). -->
+  <!-- A change to this file runs no eval: a departure from prompt-engineering.md section 18,
+       declared with its cost at the start command in `.github/workflows/deps-weekly.yml`. -->
 
 ## Intent
 
@@ -128,8 +130,8 @@ stream-json log, or "no search recorded" when there is none.
 
 ## Done, and who approves
 
-- No prompt during a run. Anything the rules in `docker/managed-settings.json` do not allow is
-  denied, not asked.
+- No prompt during a run. Anything the rules in `.devcontainer/agent/managed-settings.json` do not
+  allow is denied, not asked.
   <!-- Routine updates run without a prompt; the person's attention goes to the merge, where
        every change can still be undone (agents.md section 5). -->
 - A pull request is done when the required check `ci-ok` passes on it, not when the agent says
@@ -243,9 +245,9 @@ request instead, since two open pull requests would conflict on `uv.lock`.
 | Nothing reaches `main` without a review | The `main` ruleset: a pull request, an approving review, the required check `ci-ok`, no force push | GitHub (git.md sections 5 and 6) | No |
 | Never read a secret | No secret is mounted or set in the container; the gateway outside it adds the API key | The container setup (agent-containers.md section 4) | No |
 | Never ask for a secret | No tool: a `-p` run takes no reply [9], so a request can only reach the final answer the job posts in #team-backend, where Jane Doe reads it | This file | Not enforced |
-| Never change `.github/`, `.claude/`, the container files, `.python-version` or this file | The managed settings, `docker/managed-settings.json`; and the job's check on the fetched branch (step 3 of the run) | `/etc/claude-code/managed-settings.json`, owned by root in the image with mode 0644, so the agent's user can read it and not write it, while the agent runs as a non-root user (images.md section 6); the job's script | No |
-| This file and the files that enforce it change only with the approval of Jane Doe or John Smith, never of their author | `.github/CODEOWNERS` names both of them for `.github/CODEOWNERS` itself (so nobody can drop them from it without the review of one of them), `docs/delegations/`, `docker/managed-settings.json` (copied into the image as its managed settings), `.github/workflows/deps-weekly.yml` (the scan job, the start command and its checks, the checks of step 3, the last job and the timeout), the proxy configuration `proxy/` (its allowlist included), the container setup `Dockerfile` (the pinned Claude Code version included) and `compose.yaml`, and `.claude/`; the ruleset requires a code owner's review, and "Pull request authors cannot approve their own pull requests" [15], so a change Jane Doe writes needs John Smith's approval | GitHub | No |
-| Changes only in the dependency files, `src/` and `tests/` | The allow rules in `docker/managed-settings.json`; and the job's check on the fetched branch (step 3 of the run) | As above | No |
+| Never change `.github/`, `.claude/`, the container files, `.python-version` or this file | The managed settings, `.devcontainer/agent/managed-settings.json`; and the job's check on the fetched branch (step 3 of the run) | `/etc/claude-code/managed-settings.json`, owned by root in the image with mode 0644, so the agent's user can read it and not write it, while the agent runs as a non-root user (images.md section 6); the job's script | No |
+| This file and the files that enforce it change only with the approval of Jane Doe or John Smith, never of their author | `.github/CODEOWNERS` names both of them for `.github/CODEOWNERS` itself (so nobody can drop them from it without the review of one of them), `docs/delegations/`, `.devcontainer/agent/` (the managed settings `managed-settings.json`, copied into the image, and the proxy configuration `squid.conf`, its allowlist included), `.github/workflows/deps-weekly.yml` (the scan job, the start command and its checks, the checks of step 3, the last job and the timeout), the container setup `Dockerfile` (the pinned Claude Code version included) and `compose.yaml`, and `.claude/`; the ruleset requires a code owner's review, and "Pull request authors cannot approve their own pull requests" [15], so a change Jane Doe writes needs John Smith's approval | GitHub | No |
+| Changes only in the dependency files, `src/` and `tests/` | The allow rules in `.devcontainer/agent/managed-settings.json`; and the job's check on the fetched branch (step 3 of the run) | As above | No |
 | Patch and minor versions only | The job's check on the fetched branch: each package's major version in `uv.lock` at `FETCH_HEAD` against `<start-sha>`, read as the first number of its version, or by the rule the script lists for a package on calendar versions or on 0.x (step 3 of the run); a package on one side only is left to the reviewer | The job's script | No |
 | Every commit carries the identity the job set, never one the agent chose | The job's check on the fetched branch: the author and committer of each commit in `<start-sha>..FETCH_HEAD` against the identity step 2 set (step 3 of the run) | The job's script | No |
 | The agent's code runs in the branch's CI with no deploy secret | Every deploy secret sits in an environment limited to `main`; the repository secrets hold only what any run may use | GitHub (pipeline-security.md sections 6 and 10) | No |
@@ -256,11 +258,11 @@ With another agent tool, the left column stays and the middle column names that 
 mechanisms (agent-containers.md section 11).
 ````
 
-The managed settings file, kept in the repository as `docker/managed-settings.json` and copied
-into the image at `/etc/claude-code/managed-settings.json`. JSON holds no comments, so the reasons
-come first. `allowManagedPermissionRulesOnly` makes this file the only source of rules, so a
-settings file in the repository cannot add one. `allowManagedHooksOnly` runs only the hooks this
-file sets, and it sets none, so no hook from the repository can approve a call.
+The managed settings file, kept in the repository as `.devcontainer/agent/managed-settings.json`
+and copied into the image at `/etc/claude-code/managed-settings.json`. JSON holds no comments,
+so the reasons come first. `allowManagedPermissionRulesOnly` makes this file the only source of
+rules, so a settings file in the repository cannot add one. `allowManagedHooksOnly` runs only the
+hooks this file sets, and it sets none, so no hook from the repository can approve a call.
 `disableBypassPermissionsMode` and `disableAutoMode` keep a changed start command from skipping
 every check, or from handing the checks to auto mode's classifier instead of the allow list [6].
 `dontAsk` denies every call that would prompt; reads inside the clone, read-only commands and
@@ -295,10 +297,12 @@ job's check on the fetched branch does (agents.md section 3).
     "deny": [
       "Edit(./.github/**)",
       "Edit(./.claude/**)",
+      "Edit(./.devcontainer/**)",
       "Edit(./docs/delegations/**)",
       "Edit(./.python-version)",
       "Edit(./Dockerfile)",
-      "Edit(./compose.yaml)"
+      "Edit(./compose.yaml)",
+      "Edit(./.dockerignore)"
     ]
   }
 }
@@ -314,11 +318,26 @@ and [agent-containers.md](../docker/agent-containers.md) sections 3 to 7 describ
 # The model and its effort are named constants in the workflow's env: a dated model id, never
 # an alias that moves, and its effort, so a change to either is a reviewed diff
 # (prompt-engineering.md section 15).
+# Departs from prompt-engineering.md section 18, which asks for an eval run on every change to a
+# prompt, the model or its settings, and from ../../python/evals/production.md section 6, which
+# asks for one before a switch to a new model version; here that is the delegation file, the
+# model and its effort.
+# Why: a coding agent's work is checked by the repository's tests and the reviewer, and this run
+# has no case set for its stop conditions. The cost: a change that makes the agent stop or report
+# less often is seen only in later notes and pull requests.
 # The task names the advisories of step 1 by their ids, packages, fixed versions and severities
 # only, never an advisory's text; they reach this script through env:, as every outside value does
 # (pipeline-security.md sections 5 and 10).
 # The agent runs in its container, never on the runner: the proxy is its only way out
 # (agent-containers.md section 5). -T: no terminal, so standard output is the stream-json only.
+# --append-system-prompt-file: the delegation loads in every run; a file CLAUDE.md only links
+# loads when the agent decides to open it (agents.md section 2).
+# --permission-mode dontAsk: every call that would prompt is denied, so the run never waits for a
+# person; the mode comes from the command as well as the settings file.
+# --max-turns <n>: the turn cap (pipeline-security.md section 10).
+# --output-format stream-json: the tool's own record of every denied call and every search the
+# agent ran, which the job posts (agents.md section 4); in a -p run it needs --verbose, or the
+# tool exits before the agent starts.
 docker compose -p "$COMPOSE_PROJECT_NAME" exec -T agent \
   claude -p "<the weekly task>" \
   --append-system-prompt-file docs/delegations/dependency-updates.md \
