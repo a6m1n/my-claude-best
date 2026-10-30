@@ -141,25 +141,52 @@ own: "Predictive life cycles expect to take
 advantage of high certainty around firm requirements, a stable team, and low risk", and an iterative
 life cycle suits "when complexity is high, when the project incurs frequent changes, or when the
 scope is subject to differing stakeholders' views" (PMI and Agile Alliance, first edition, 2017; a
-second edition came out in 2026 and was not read for this practice).
+second edition came out in 2026, Agile Alliance offers it for download only to its members, and it
+was not read for this practice).
 
 Decide per deliverable, not once for the whole project, because the deliverables of one project
 can differ in how firm their requirements are. The Agile Practice Guide says "It is not necessary
-to use a single approach for an entire project." The PMP exam outline asks the project
-manager to "Assess project needs, complexity, and magnitude" and then recommend the approach. In a
-software project this usually means that the software runs adaptive, in sprints or a Kanban flow,
-and the parts fixed by a contract or a date, such as a provider contract or a migration window, are
-planned predictively, as milestones ([project-plan.md](project-plan.md) section 3). That reading is
-this practice's own.
+to use a single approach for an entire project." In the PMP exam outline of July 2026, "Assess
+project needs, complexity, and magnitude." and "Recommend a project management development approach
+(i.e., predictive, adaptive/agile, or hybrid management)." are enablers of the project manager's
+Task 1, "Develop an integrated project management plan and plan delivery", so the project manager
+recommends the approach; that the recommendation is made per deliverable is this practice's own
+reading, built on the Agile Practice Guide's sentence above. In a software project this usually
+means that the
+software runs adaptive, in sprints or a Kanban flow, and the parts fixed by a contract or a date,
+such as a provider contract or a migration window, are planned predictively, as milestones
+([project-plan.md](project-plan.md) section 3). That reading is this practice's own.
 
-Inside the adaptive part, pick Scrum when the team can agree a Sprint Goal for each sprint, and a
-Kanban flow when it cannot because the work arrives unplanned, as support and operations work does
-(this practice's own rule). The Scrum Guide gives every sprint one Sprint Goal, and the Kanban Guide
-has no sprints. The meetings of each are in [meetings.md](meetings.md), sections 2 and 9.
+A fixed price alone does not make a part predictive: Martin Fowler holds that a fixed scope, not a
+fixed price, is what conflicts with agile work. Fixed-price and fixed-scope contracts are in
+[regulated-work.md](../development-approaches/regulated-work.md) section 3. A Scrum team that works
+inside a plan fixed up front and a slower release cadence runs the hybrid called Water-Scrum-Fall,
+which is in [combining-approaches.md](../development-approaches/combining-approaches.md) section 3.
 
-Pick by the criteria above, not by a success rate: no reviewed study found for this practice
-compares the approaches' success head to head. A hybrid approach is also what many teams already
-run: in the HELENA survey of 69 practitioners, "Most combinations follow a pattern in which a
+The team that does the work on an adaptive deliverable chooses its own way of working inside that
+approach and keeps tuning it; the two layers of the choice, and their sources, are in
+[choosing-an-approach.md](../development-approaches/choosing-an-approach.md) section 3. Inside the
+adaptive part, the team picks Scrum when it can agree a Sprint Goal for each sprint, and a
+Kanban flow when it cannot, because the Scrum Guide gives every sprint one Sprint Goal and the
+Kanban Guide has no sprints (this practice's own rule). Work that arrives unplanned, as support and
+operations work does, does not decide it alone. Ken Rubin holds (2022) that when the team's past
+interrupts show "useful predictability", the same Scrum team can "reserve a capacity buffer during
+sprint planning" for them; when "the historical data does not lead to any useful pattern", the
+interrupts cannot go to that team, and some companies "create a second (likely Kanban) team to
+handle the unplanned work". A team with no history of interrupts yet decides by the Sprint Goal
+test alone (this practice's own reading). Ken Schwaber's view that Kanban fits simple work and
+Scrum complex work is in [scrum.md](../development-approaches/scrum.md) section 2; this rule does
+not follow it, because both Kanban texts reject that limit: the Kanban Guide says Kanban "can be
+used at any scale and in most contexts where value is delivered", so a test that keeps Kanban to
+simple work does not match either Kanban text
+([kanban.md](../development-approaches/kanban.md) section 2). The meetings
+of each are in [meetings.md](meetings.md), sections 2 and 9.
+
+Pick by the criteria above, not by a success rate. The comparisons found are studies of past
+projects, not trials, and they do not agree on a winner on cost and time
+([choosing-an-approach.md](../development-approaches/choosing-an-approach.md) section 5). A hybrid
+approach is also what many teams already run: in the HELENA survey of 69 practitioners, "Most
+combinations follow a pattern in which a
 traditional process model serves as framework in which several fine-grained (agile) practices are
 plugged in" (2017). The survey measured what teams use, not what works better.
 
@@ -171,11 +198,14 @@ Check: open the plan and find, for each deliverable, its approach and the reason
 - [PMBOK Guide eighth edition, table of contents](https://www.pmi.org/-/media/pmi/documents/public/pdf/publications/pmbok-guide-eighth-edition_table-of-contents.pdf), PMI, 2025: the Focus Areas (section 4.5) and project phases (section 4.1). The full text is paid, so this folder takes its definitions from the free PMI Lexicon.
 - [Atlassian, "Software development life cycle (SDLC)"](https://www.atlassian.com/agile/software-development/sdlc), undated, read 2026-10-05: the seven phases; requirements in planning.
 - [PMI Lexicon of Project Management Terms, version 5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: sponsor; requirement; predictive, adaptive and hybrid approach.
-- [PMP Examination Content Outline, July 2026 exam](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf?rev=b618cf45573e4276a54151e7636c97bf), PMI, 2026: change control, lessons learned, recommending a development approach.
+- [PMP Examination Content Outline, July 2026 exam](https://www.pmi.org/-/media/pmi/documents/public/pdf/certifications/new-pmp-examination-content-outline-2026.pdf?rev=b618cf45573e4276a54151e7636c97bf), PMI, 2026, read 2026-10-30: change control, lessons learned, and the enablers of Domain II Task 1 that assess a project and recommend a development approach.
 - PeopleCert, [PRINCE2 7 Foundation Quick Reference Guide](https://www.nilc.co.uk/wp-content/uploads/2023/10/PRINCE2-Quick-Reference-Guide.pdf), 2023, a PeopleCert document on a third-party host: closing a project, open issues and risks with follow-on action recommendations.
 - PMI and Agile Alliance, [Agile Practice Guide](https://www.agilealliance.org/wp-content/uploads/2021/02/AgilePracticeGuide.pdf), first edition, 2017: when predictive and iterative life cycles fit; one project may mix approaches.
+- Agile Alliance, ["Agile Practice Guide – 2nd Edition"](https://agilealliance.org/agile-practice-guide-2nd-edition/), undated, read 2026-10-30: the second edition is a download for Agile Alliance members only.
 - Kuhrmann et al., ["Hybrid software and system development in practice: waterfall, scrum, and beyond"](https://dl.acm.org/doi/pdf/10.1145/3084100.3084104) (the HELENA study), ICSSP 2017: hybrid use, not success.
-- [The Scrum Guide](https://scrumguides.org/scrum-guide.html), 2020, and the [Kanban Guide](https://kanbanguides.org/english/), version 2025.5: the Sprint Goal; no sprints in Kanban.
+- [The Scrum Guide](https://scrumguides.org/scrum-guide.html), 2020, and the [Kanban Guide](https://kanbanguides.org/english/), version 2025.5: the Sprint Goal; no sprints in Kanban; Kanban at any scale and in most contexts.
+- Ken Rubin, ["Can a Scrum Team Handle Both Plan-Driven and Interrupt-Driven Work?"](https://innolution.com/blog/can-a-scrum-team-handle-both-plan-driven-and-interrupt-driven-work), Innolution blog, 2022-01-23, read 2026-10-30: interrupts the team can predict get a capacity buffer at sprint planning, and the others go to a second, often Kanban, team.
+- Martin Fowler, ["FixedPrice"](https://martinfowler.com/bliki/FixedPrice.html), bliki, 2003-07-29, read 2026-10-30: a fixed scope, not a fixed price, conflicts with agile work.
 - [Atlassian, "What is a version"](https://support.atlassian.com/jira-software-cloud/docs/what-is-a-version/) and [enable releases and versions](https://support.atlassian.com/jira-software-cloud/docs/enable-releases-and-versions/), undated: versions and the Fix versions field.
 - [Atlassian, "Link a Confluence page to an epic"](https://support.atlassian.com/jira-software-cloud/docs/link-a-confluence-page-to-an-epic/), undated.
 - [Royce, "Managing the Development of Large Software Systems", 1970](http://arafatm.com/programming/managing-the-development-of-large-software-systems-royce-1970), a web transcription.

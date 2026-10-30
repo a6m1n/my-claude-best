@@ -53,7 +53,8 @@ The files:
 - [life-cycle.md](life-cycle.md): the five phases of a project, the artifact each one ends with and
   who approves it, and the seven SDLC phases each release passes through, with their Jira homes.
   Read it when you start a project, a phase or a release, when you decide whether a phase is
-  over, and when you pick the development approach.
+  over, and when you pick the development approach; what each approach is, such as Scrum, Kanban
+  or XP, is in [development-approaches](../development-approaches/README.md).
 - [charter.md](charter.md): the project charter, what it holds, who issues it, and how it differs
   from the plan. Read it when you open a project.
 - [stakeholders.md](stakeholders.md): the stakeholder register, influence and interest, and
@@ -114,10 +115,12 @@ The files:
 3. Set Jira and the team's pages up once, before the first project, as step 1 of
    [adoption-guide.md](adoption-guide.md) says, so the first sprint does not wait for admin work.
 4. The practice links [git.md](../git/git.md) for the branch, commit and pull request names,
-   [refactoring.md](../refactoring/refactoring.md) for how existing code adopts a rule, and
-   [delivery.md](../ci-cd/delivery.md) for how a pipeline runs continuous deployment. Copy those
-   folders too, or replace each link with your own rule for that topic, so no link in this folder
-   points at a file your repository does not have.
+   [refactoring.md](../refactoring/refactoring.md) for how existing code adopts a rule,
+   [delivery.md](../ci-cd/delivery.md) for how a pipeline runs continuous deployment, and the
+   [development-approaches](../development-approaches/README.md) folder, which
+   [life-cycle.md](life-cycle.md) links for who chooses the way of working, contracts and hybrids.
+   Copy those folders too, or replace each link with your own rule for that topic, so no link in
+   this folder points at a file your repository does not have.
 5. Bring each project in by [adoption-guide.md](adoption-guide.md): a new project from its section
    2, a project that is already running from its section 8.
 

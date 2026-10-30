@@ -69,11 +69,10 @@ each one decides, are in [meetings.md](meetings.md) section 1.
 
 Show the work in progress on the board, and agree a limit on it with the team: a limit per person
 and for the team, so a person who holds too much shows on the board before it shows as a missed
-date. The Kanban Guide defines work in process as the number of work items started but
-not finished, and names four flow measures: work in process, throughput, work item age and cycle time (the
-elapsed time between when a work item started and when it finished). PMI describes a kanban board as
-a tool that shows work in progress "to help identify bottlenecks and overcommitments" (PMI Lexicon,
-2026).
+date. Work in process is one of the Kanban Guide's four flow measures; the Guide's definitions of
+all four are in [kanban.md](../development-approaches/kanban.md) section 4. PMI describes a kanban
+board as a tool that shows work in progress "to help identify bottlenecks and overcommitments"
+(PMI Lexicon, 2026).
 
 How a Blocked item counts against the limit is in [jira-workflow.md](jira-workflow.md) section 4.
 
