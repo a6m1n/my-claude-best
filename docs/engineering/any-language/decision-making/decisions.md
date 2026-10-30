@@ -5,9 +5,10 @@ developer who proposes a change, a tech lead or a project manager who decides, a
 open-source project, and an AI agent asked to choose between options or to write a decision down.
 It says how much process a decision gets, how to gather input before it, how a discussion closes,
 what happens to objections, how an architecture decision record is written and kept, and how a
-decision is reviewed later. Who decides each kind of decision, the DACI roles and the decision log
-belong to [roles-and-decisions.md](../project-management/roles-and-decisions.md) sections 5 to 8;
-this file links them and adds the steps around them. What an AI agent may decide on its own, and
+decision is reviewed later. Who decides each kind of decision, the roles of DACI (Driver,
+Approver, Contributors, Informed) and the decision log belong to
+[roles-and-decisions.md](../project-management/roles-and-decisions.md) sections 5 to 8; this file
+links them and adds the steps around them. What an AI agent may decide on its own, and
 what the person who approves its actions needs, is part two: [agents.md](agents.md).
 
 **Navigation**
@@ -96,7 +97,7 @@ a decision can be undone.
 ## 2. The steps of a decision
 
 A decision that others will live with needs these steps. A choice inside one person's own work
-that is easy to undo does not: the person doing the work decides
+that is easy to undo and clear does not: the person doing the work decides
 ([roles-and-decisions.md](../project-management/roles-and-decisions.md) section 5, the row "How a
 work item is built"). GitLab's handbook says the same of its directly responsible individual: "The
 DRI has final decision-making power but should consult and collaborate with relevant stakeholders
@@ -142,7 +143,7 @@ should be made quickly by high judgment individuals or small groups", and that l
 tend "to use the heavy-weight Type 1 decision-making process on most decisions, including many
 Type 2 decisions" [11]. A year later he put it as "never use a one-size-fits-all
 decision-making process" [12]. The levels below are needed from the first decision a team
-shares; filling them in as a form for an easy choice inside one person's work is too much. The
+shares; filling them in as a form for an easy and clear choice inside one person's work is too much. The
 simpler way for such a choice: the decider of
 [roles-and-decisions.md](../project-management/roles-and-decisions.md) section 5 decides, and a
 line in the section 7 log is the record when the log asks for one.
@@ -434,8 +435,8 @@ repositories, reports that "the adoption of ADRs is still low" [49]. A worked re
   | Field | What it means | Set it when | Leave it out when |
   |---|---|---|---|
   | Title | The decision as a short phrase [52] | always | never |
-  | Status | One value from the status table below, with the date of each change [52], [55] | always | never |
-  | Decider | The one person who sets the status: from [roles-and-decisions.md](../project-management/roles-and-decisions.md) section 5, or the group's rule of section 5 here. MADR has a field for it: "decision-makers" [55] | always | never |
+  | Status | One value from the status table below, with the date of each change. The dates are this practice's own: MADR keeps one date, when the record was last updated [55], and AWS adds a timestamp when the team accepts [32]. | always | never |
+  | Decider | The one person who sets the status: from [roles-and-decisions.md](../project-management/roles-and-decisions.md) section 5, or the group's rule of section 5 here. MADR's nearest field, "decision-makers", lists "everyone involved in the decision" [55]; one person is [roles-and-decisions.md](../project-management/roles-and-decisions.md) section 5's rule. | always | never |
   | Context | The problem and the forces at work [52] | always | never |
   | Options considered | Each serious option with its pros and cons and why it lost. Fowler: "explicitly list all the serious alternatives that were considered, together with their pros and cons" [50]. When DACI runs, a link to the DACI page's "Options considered" instead ([roles-and-decisions.md](../project-management/roles-and-decisions.md) section 6) | always; the link form when DACI runs | never; with only one real choice, say so and why (the check at the end of this section) |
   | Decision | The chosen option and why | always | never |
@@ -756,7 +757,7 @@ One question per section, for a proposal, a DACI page, an ADR, or a review.
 | Section | Ask | Red flag |
 |---|---|---|
 | 2. Steps | Were the question and the decider named before the input started? | two people who each think they decide; a decision nobody framed |
-| 3. Level | Was the level set by the three signs? | a level 3 process on a choice inside one person's work; a hard-to-undo choice made at level 1 |
+| 3. Level | Was the level set by the three signs? | a level 3 process on an easy and clear choice inside one person's work; a hard-to-undo or unclear choice made at level 1 |
 | 4. Input | Did each Contributor give facts and concerns before anyone stated a preference, and does the record say how the advice changed the decision? | the Approver's view at the top of the thread; advice listed with no answer |
 | 5. Method | One named decider, or a written rule where there is none? | a vote in a team that has a decider; a veto with no reason |
 | 6. Closing | An end date announced, and one of the three dispositions? | a thread with no end; a rejection with no reason; a postponement with no date |

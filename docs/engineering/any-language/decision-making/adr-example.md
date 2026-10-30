@@ -6,7 +6,7 @@ billing application, the same invented one as
 clients: Globex, a partner that pulls invoices into its own accounting system, and Acme Corp's
 mobile team. A planned change to the shape of an invoice's amount (work item PROJ-123) would break
 both, so the team had to choose how the API takes breaking changes. That choice is hard to undo
-and crosses teams, so the team ran DACI for it
+and crosses teams, so the team ran DACI (Driver, Approver, Contributors, Informed) for it
 ([roles-and-decisions.md](../project-management/roles-and-decisions.md) section 6): the Driver
 wrote the options and gathered the input on the DACI page, as the DACI play asks [9], and
 recorded each objection there with the Approver's answer
@@ -76,7 +76,8 @@ shape and gets no new field. PROJ-123 ships the new amount in `/v2/`. The propos
 12 months after `/v2/` ships. The mobile team's objection changed that: old app versions keep
 calling the API for months after a release, so `/v1/` now ends only when its calls are below 2%
 of the mobile app's calls for 30 days in a row, and never earlier than 12 months after `/v2/`
-ships. Every client gets the end date in writing 6 months before it.
+ships. The end date is set on the day that share has stayed below 2% for 30 days in a row, at
+least 6 months after that day, and every client gets it in writing that day.
 <!-- What the proposal had and what the objection changed, in the record itself, so a reader of
      the record alone sees how the advice changed the decision (decisions.md section 4). -->
 
@@ -103,6 +104,7 @@ still call v1 a year after v2 ships, and whether a future partner's tooling expe
   would run at once.
 - The v1 share of the mobile app's calls is still above 2% 12 months after v2 ships.
 - A new client of the API asks for header versioning as a condition of its integration.
+- Globex still calls `/v1/` 6 months after v2 ships.
 <!-- The triggers are written before the outcome, so a review starts from a fact and not from
      a mood (decisions.md section 9). -->
 
@@ -116,7 +118,11 @@ still call v1 a year after v2 ships, and whether a future partner's tooling expe
 ## Links
 
 - DACI page: "Versioning the public invoices API" (link)
-- Work item: PROJ-123
+- Work item: PROJ-123. Its last step, when v2 ships, sets the due date of PROJ-125 and the
+  start date of each alert below.
+  <!-- The watchers below count from the day v2 ships, which had no date when the record was
+       accepted; the work item that ships v2 dates them, so a trigger is watched from its first
+       day (decisions.md section 9). -->
 - Work item: PROJ-124, decide ADR-0012 by 2026-03-10, owner Jane Doe
   <!-- A decision postponed to a date gets a dated work item with an owner, or nobody brings it
        back on that date (decisions.md sections 6 and 9). -->
@@ -128,6 +134,10 @@ still call v1 a year after v2 ships, and whether a future partner's tooling expe
   in Revisit when, from 12 months after v2 ships; owner Jane Doe
   <!-- A trigger tied to a date or a number gets an alert with an owner, or nobody sees it
        fire (decisions.md section 9). -->
+- Alert: Globex's v1 calls on the gateway dashboard, against the Globex trigger in Revisit when,
+  from 6 months after v2 ships; owner Jane Doe
+  <!-- The end condition counts the mobile app's calls only, so Globex's move to v2 has a
+       trigger and an alert of its own (decisions.md section 9). -->
 - Decision log entry: 2026-03-10, "Version the public invoices API in the URL path"
 
 ## Notes
@@ -144,10 +154,14 @@ still call v1 a year after v2 ships, and whether a future partner's tooling expe
 
 A team that does not run DACI, such as an open-source project with no
 [roles-and-decisions.md](../project-management/roles-and-decisions.md), keeps the options and the
-objections in the record itself. Its Decider is the one person the team's own rule names,
-Drafted by names the proposal thread only, the Links section has no DACI page, and no decision
-log entry where the team keeps no decision log, and Options considered becomes the full list,
-followed by an Objections and answers section. Every other part stays as above:
+objections in the record itself. These parts change:
+
+- "Decider": the one person the team's own rule names.
+- "Drafted by": the proposal thread only.
+- "Links": no DACI page, and no log entry where the team keeps no log.
+- "Options considered": the full list, then an "Objections and answers" section.
+
+Every other part stays as above:
 
 ```markdown
 ## Options considered
@@ -222,8 +236,9 @@ followed by an Objections and answers section. Every other part stays as above:
 | Part of the record | Listed by |
 |---|---|
 | Title, Status, Context, Decision, Consequences | Nygard [1] |
-| Status names, with the date of each change | Nygard [1], MADR [2], Fowler [3], AWS [4] |
-| Decider | MADR's decision-makers [2]; one person, as [roles-and-decisions.md](../project-management/roles-and-decisions.md) section 5 says |
+| Status names | Nygard [1], MADR [2], Fowler [3], AWS [4] |
+| The date of each status change | this practice's choice ([decisions.md](decisions.md) section 8); AWS adds a timestamp at acceptance [4], MADR keeps the date of the last update [2] |
+| Decider | MADR's nearest field, "decision-makers", which lists "everyone involved in the decision" [2]; one person, as [roles-and-decisions.md](../project-management/roles-and-decisions.md) section 5 says |
 | Comment window and its end date | this practice's rule ([decisions.md](decisions.md) section 6) |
 | Drafted by, accepted by | this practice's choice ([agents.md](agents.md) section 7) |
 | Options considered, with pros, cons and why each lost (the variant without DACI) | Fowler [3], MADR [2], Azure [5]; at least two options, Zimmermann [6] |

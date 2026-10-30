@@ -342,8 +342,10 @@ docker compose -p "$COMPOSE_PROJECT_NAME" exec agent python3 -c \
   "import socket; socket.create_connection(('1.1.1.1', 443), timeout=5)"  # fails: no route out
 
 # This container is the boundary, so the agent may run without approvals here.
-# The agent's delegation is left out (decision-making/agents.md section 2): this container
-# enforces its credential and network limits (agents.md section 3), and
+# Departs from decision-making/agents.md section 2, which asks for a short delegation even
+# here: this example shows the container, which enforces the credential and network limits
+# (agents.md section 3). The cost: inside it, the agent's limits are whatever it can reach, and
+# nobody can tell a decision it was meant to make from one it took.
 # decision-making/delegation-example.md shows a delegation.
 # Ask it to commit its work on the branch $branch.
 docker compose -p "$COMPOSE_PROJECT_NAME" exec agent \

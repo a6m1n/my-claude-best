@@ -218,12 +218,11 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   meeting it plans names the decision it makes (`meetings.md` section 1), and every release it
   plans has one go or no-go decider (`release.md` section 3) and a rollback plan with a trigger,
   one decider and a time that fits the SLA (`rollback-plan.md` section 2).
-- Before you choose between options the task does not settle, when that choice is hard to undo,
-  crosses teams, or its problem or answer is unclear (a data store, a framework, a schema, a public
-  interface), close the discussion of such a decision, record a technical decision as an
-  architecture decision record, review a recorded decision, or write or change what an AI agent
-  may decide or do on its own (its delegation, its approval steps, or how several agents reach one
-  answer), read
+- Before you make a choice the task does not settle and that is hard to undo, crosses teams or has
+  an unclear problem or answer (a data store, a framework, a schema, a public interface), close the
+  discussion of such a choice, record a technical decision as an architecture decision record,
+  review a recorded decision, or write or change what an AI agent may decide or do on its own (its
+  delegation, its approval steps, or how several agents reach one answer), read
   `docs/engineering/any-language/decision-making/README.md` and the file it routes to for that
   work, and `docs/engineering/any-language/decision-making/adr-example.md` when you write an
   architecture decision record, `docs/engineering/any-language/decision-making/delegation-example.md`

@@ -132,8 +132,9 @@ of the team's authority." (PMI Lexicon, 2026) In PRINCE2 7 the same place is the
 
 ## 6. One decision: DACI
 
-For a decision that is hard to undo or crosses teams, use DACI (Atlassian Team Playbook), so one
-person decides and everyone else knows whether they advise or only hear the result:
+For a decision that is hard to undo ([decisions.md](../decision-making/decisions.md) section 3 says
+how to judge that) or crosses teams, use DACI (Atlassian Team Playbook), so one person decides and
+everyone else knows whether they advise or only hear the result:
 
 - **Driver:** "The person responsible for corralling stakeholders, collating all the necessary
   information, determining the scope of the decision, and getting a decision made by the agreed

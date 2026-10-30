@@ -239,6 +239,7 @@ D-3  Move payment traffic to the new provider
 Driver: John Smith. Approver: Jane Doe. Contributors: Richard Roe, head of security.
 Informed: customer support lead.
 Due: 2026-10-16, before the charter is issued on 2026-10-19, which names the steps.
+Comment window: 2026-10-06 to 2026-10-12, its end date sent to the Contributors and the Informed on 2026-10-06.   # the end date is announced when the window opens, so nobody learns of the decision after it is made; 5 business days (decisions.md section 6)
 Options:
 - One night for all traffic. Pro: one cutover. Con: no way back without a new deploy.
 - Steps by flag (1%, 10%, all). Pro: the flag turns traffic back in minutes. Con: old and
@@ -267,7 +268,9 @@ Note, 2026-11-16, John Smith: linked PROJ-11, the epic made in planning that car
 The page is good because the options with their pros and cons, the advice and the objections sit in
 one place, so the log entry links them instead of copying them
 ([roles-and-decisions.md](roles-and-decisions.md) section 6,
-[decisions.md](../decision-making/decisions.md) section 4).
+[decisions.md](../decision-making/decisions.md) section 4). The comment window carries its dates,
+so a later review can see that the Contributors knew the end date before the decision
+([decisions.md](../decision-making/decisions.md) section 6).
 
 The entry is good because the reason names what the chosen option protects, and the link to the epic
 came later as a dated note, so the entry still shows what the project knew on 2026-10-12

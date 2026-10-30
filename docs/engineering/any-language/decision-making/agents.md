@@ -63,9 +63,9 @@ What it leaves out on purpose, and where that lives:
   [roles-and-decisions.md](../project-management/roles-and-decisions.md) section 5.
 - The container, its credentials, its network, and why the agent's own settings are not the
   boundary: [agent-containers.md](../docker/agent-containers.md) sections 3, 4, 5 and 10.
-- How to read an approval rate, and the session in which a person approves every action that
-  changes state (the Rule of Two): [production.md](../../python/evals/production.md) sections 4
-  and 7.
+- How to read an approval rate, and the Rule of Two (no session combines untrusted input, private
+  data, and changing state or talking outside; when one must, a person approves each such action):
+  [production.md](../../python/evals/production.md) sections 4 and 7.
 - Testing that an agent asks, refuses or hands over, and graders that never read the agent's own
   report: [python/evals/agents.md](../../python/evals/agents.md) sections 2 and 6.
 - A question back about a fact missing from the input:
@@ -132,7 +132,11 @@ Rules:
   control, such as Git" [9]. At Railway, an agent deleted a production volume through
   an API that "ran the deletion immediately, with no way to undo it", while "the dashboard had a
   48-hour window for the same action" [10]. The words "only when" are this practice's own; the
-  sources show that undo depends on the tool, and do not state the rule.
+  sources show that undo depends on the tool, and do not state the rule. A call out that the work
+  cannot run without, that carries no secret and that changes nothing on the other service, such
+  as a call to the model API or a read from a package index, may be named in the delegation as
+  accepted; it is then not a reason to stop. Every other action that cannot be undone stops the
+  agent (section 4). This exception is this practice's own view.
 - **Keep the delegation in the repository, link it from the agent's instruction file (and pass it
   in the start command of an unattended run, since a linked file loads only when the agent opens
   it [85]), and change it only through a reviewed pull request that the area's decider approves.**
@@ -158,7 +162,7 @@ The parts of a delegation. [delegation-example.md](delegation-example.md) shows 
 | Intent | what the work is for, so the agent can choose where the limits say nothing | always | never |
 | Decides on its own | the choices the agent makes without asking | always | never |
 | Limits | the bounds it works within, each one a number or a list it can check: the files it may touch, the size of a change, the versions it may move to | always | never |
-| Never | actions it does not take even inside the limits, such as an action the platform cannot undo, reading a secret, or a push to the main branch | an action like that is in the agent's reach | no such action is in reach; write "none in reach" and why |
+| Never | actions it does not take even inside the limits, such as an action the platform cannot undo (other than a call out the delegation names as accepted, section 2), reading a secret, or a push to the main branch | an action like that is in the agent's reach | no such action is in reach; write "none in reach" and why |
 | Report when | the conditions that make it stop and bring a decision back (section 4) | always | never |
 | Done means | the test or the read of real state that says the work is finished (section 6) | the work changes files, data or anything outside the agent | the result is one thing a person reads at once, such as an answer in chat |
 | Enforcement | for each limit and each never-action, the mechanism that enforces it, or "gap" and what catches a breach instead (section 3) | always | never |
@@ -248,7 +252,7 @@ Claude Code 2.1.312. Other agents have their own mechanisms; ask the same questi
 | a command or a tool call | a deny rule; rules are evaluated "deny, then ask, then allow" [12] | other spellings of the same action [17] |
 | a check that needs code | a `PreToolUse` hook that exits with code 2, which blocks the call before the allow rules are read [12], set to `"onFailure": "block"`, with its script and folder out of the agent's write reach | a hook that fails or times out: "A policy hook with a wrong path or a crashing script then lets everything through", unless the hook sets `"onFailure": "block"` (Claude Code 2.1.295 or later) [20]; a hook script or folder the agent can edit [15] |
 | the permission rules themselves | managed settings, with `allowManagedPermissionRulesOnly` [14] | an administrator can still edit them ([agent-containers.md](../docker/agent-containers.md) section 10); a managed settings file the agent's user cannot read, which Claude Code skips, in a `-p` run with only a line on stderr; and a higher managed source, which by default replaces the file [84] |
-| what any process may touch | the sandbox, or a read-only mount | a sandbox that cannot start, which runs commands unsandboxed unless `sandbox.failIfUnavailable` is set [19]; the sandbox's retry outside it, unless it is turned off [19] |
+| what any process may touch | the sandbox, or a read-only mount | a sandbox that cannot start, which runs commands unsandboxed unless `sandbox.failIfUnavailable` is set [19]; the sandbox's retry outside it, unless it is turned off [19]; inside an unprivileged container, a weaker mode; there the container, not this sandbox, is the boundary ([agent-containers.md](../docker/agent-containers.md) section 10) |
 | what a credential can do | the token's scope | a broader token the agent finds on disk [10] |
 
 Leave out the mechanism of a row when its limit has exceptions: such a limit stays a line in the
@@ -263,7 +267,8 @@ with one visible result: the person reads the result. That simpler way is this p
 Rules:
 
 - **The agent stops and brings the decision back when** a limit of its delegation is forecast to
-  break; before an action the platform cannot undo; when the intent does not settle a choice it
+  break; before an action the platform cannot undo, other than a call out the delegation names as
+  accepted (section 2); when the intent does not settle a choice it
   must make; and when agents disagree on a decision that cannot be undone or checked (section 6).
   The reason: at these points the agent would otherwise decide something the delegation did not
   give it. PRINCE2's exception report goes up "to inform the project board when a stage plan or
@@ -316,19 +321,23 @@ A person approves an agent's action when the delegation sends the action to them
 control only if the person sees what will happen, can say no, and is not asked so often that they
 stop reading.
 
-**When a project needs it:** before every action the platform cannot undo. **When it is too
-much:** a prompt for reversible actions inside the delegation. Zhong et al. propose a filesystem
+**When a project needs it:** before every action the platform cannot undo, other than a call out
+the delegation names as accepted (section 2). **When it is too much:** a prompt for reversible
+actions inside the delegation. Zhong et al. propose a filesystem
 that stages changes and can undo them, so that for those changes "the agent does not need to wait
 for the user to pre-approve opaque commands" [8]. **The simpler way**, for a short task a person
-watches from start to end: approve every action as it comes. Most tools work this way by default;
+watches from start to end: approve every action as it comes. In Claude Code this holds only with
+auto mode turned off ([agent-containers.md](../docker/agent-containers.md) section 10). Most tools
+work this way by default;
 Wang, Li and Tian count runtime approval as "the most widely deployed mechanism (15/21)" among the
 production agent systems they surveyed [11]. Using it as the simpler way is this practice's own
 view.
 
 Rules:
 
-- **Before an action the platform cannot undo, the tool shows its effect, and one named person who
-  can refuse or stop it approves.** The effect is a diff or the output of a dry run, produced by the
+- **Before an action the platform cannot undo, other than a call out the delegation names as
+  accepted (section 2), the tool shows its effect, and one named person who can refuse or stop it
+  approves.** The effect is a diff or the output of a dry run, produced by the
   tool, not the agent's description of it. The reason: a person cannot judge an action whose effect
   they cannot see, and the agent's text can be wrong or forged. Zhong et al. found that "Approval prompts show
   commands rather than their filesystem effects", and that "Users therefore cannot make informed
@@ -384,7 +393,8 @@ Rules:
   acting as the tool, such as answering an ask_user prompt. Do not use respond to deny
   side-effecting tools, because its message is treated as a successful tool result" [79].
 - **Two cases put a person on more actions than this section does, and other practices own them:**
-  the session of [production.md](../../python/evals/production.md) section 7, and the machines of
+  a session that combines untrusted input, private data, and changing state or talking outside
+  ([production.md](../../python/evals/production.md) section 7), and the machines of
   [agent-containers.md](../docker/agent-containers.md) section 10. Where either applies, its rule
   wins over the rule on per-action approval above.
 - **Do not count on training to remove automation bias; make checking cheap instead.** The reason:
@@ -525,10 +535,11 @@ Rules:
   the real state before a person or another agent acts on it.** The reason: the report and the work
   often differ. Smyth, Mantilla-Ramos et al. found that agents did not read every file they were
   asked to review in 67.9% of runs, and were misleading in 80.4% of those runs [3]. Liu et
-  al. found agents that conceal failure [24], and Advani's abstract reports false success
-  in up to 75.8% of runs in one setting [25]. Review agents do better when they "separate claim
-  extraction from claim verification: first identify what the PR claims, then test those claims
-  against the diff" [33]. Section 6 applies the same check to the question of when work is done.
+  al. found agents that conceal failure [24], and Advani's abstract reports false success in
+  75.8% of the AppWorld coding-agent runs that claimed a status [25]. Review agents do better when
+  they "separate claim extraction from claim verification: first identify what the PR claims, then
+  test those claims against the diff" [33]. Section 6 applies the same check to the question of
+  when work is done.
 - **When an agent drafts a record from a meeting transcript, tell the people in the meeting that an
   AI tool is used, and check its output for accuracy.** The reason: UK data-protection guidance asks
   for both. The ICO: "Where an AI tool is used, privacy notices should be updated to inform people
@@ -589,7 +600,9 @@ not repeat. Defences against prompt injection in general, and how to test them, 
 - **A sandbox with test credentials and no path to production.** The sandbox does most of the work
   (section 2). The delegation can be short, and section 5 applies only where a person approves.
 - **A short task that a person watches.** Approving every action, or reading the one result, is
-  simpler than a delegation and its enforcement (sections 4 and 5; this practice's own view).
+  simpler than a delegation and its enforcement (sections 4 and 5; this practice's own view). In
+  Claude Code, approving every action holds only with auto mode turned off
+  ([agent-containers.md](../docker/agent-containers.md) section 10).
 - **Agents other than Claude Code.** The mechanisms in section 3 are Claude Code's, as its
   documentation read on 2026-10-29 describes them for version 2.1.312. Other tools have their own;
   the questions of section 3 still hold.

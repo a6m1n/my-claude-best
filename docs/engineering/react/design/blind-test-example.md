@@ -581,6 +581,12 @@ const PAGE_BUILDER_LLM_REASONING_EFFORT = ReasoningEffort.HIGH;
 // for: nobody answers a run, and the arms run their own scripts through it.
 // The cost: an arm's code runs as you; read each arm's scripts first, or run
 // the bench in a container (skill-blind-test.md section 8).
+// It departs from decision-making/agents.md section 3 too, which asks that
+// each limit that must hold be enforced by tooling the agent cannot change:
+// the prompt's limits, such as every file under ./site/, are text only,
+// because the bench tests each arm as its owner ships it and leaves
+// isolation to the container (skill-blind-test.md section 8). The cost:
+// outside the container, nothing keeps an arm's code off your files.
 const ALLOWED_TOOLS = "Read,Write,Edit,Bash,Skill";
 
 // A guard against a runaway run, far above a normal build. It caps Claude
@@ -1077,6 +1083,16 @@ function claudeArguments(prompt) {
     "--strict-mcp-config",
     // File edits and the listed tools run without asking: nobody answers a
     // run (skill-blind-test.md section 4).
+    // Departs from decision-making/agents.md section 5, which asks that a
+    // named person approve each action the platform cannot undo, such as
+    // reading a secret or a call to another service: nobody answers a run.
+    // The cost: an arm's code reads the token in its environment and calls
+    // outside services with nobody approving (skill-blind-test.md section 8).
+    // It departs from section 2 of that file too, which asks for a written
+    // delegation: the prompt is the run's only statement of its task and
+    // limits, the same text for every arm (skill-blind-test.md section 4).
+    // The cost: no person answers a choice an arm cannot settle; the arm
+    // decides it and states its reading in one line.
     "--permission-mode",
     "acceptEdits",
     // What would wait for a person is denied instead, the question tool
@@ -1365,7 +1381,10 @@ can check (sections 2, 5 and 8 of the same file). Each departure is declared at 
 rule, its reason and its cost. Four depart from
 [prompt-engineering.md](../../any-language/prompt-engineering/prompt-engineering.md): the page on
 disk instead of a response schema (section 11), Bash with no gate per call (section 14), no cache
-switch (section 17) and the runner's hash instead of git (section 18). The others are the trace in
+switch (section 17) and the runner's hash instead of git (section 18). Three depart from
+[agents.md](../../any-language/decision-making/agents.md): no written delegation (section 2),
+limits in the prompt that no tool enforces (section 3), and nobody who approves an action that
+cannot be undone (section 5). The others are the trace in
 a file ([evals.md](../../python/evals/evals.md) section 9), the model and the prompt outside role
 files ([file-structure.md](../../any-language/file-structure/file-structure.md) section 3), and
 reference reads recorded, not gated

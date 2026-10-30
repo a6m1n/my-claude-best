@@ -11,7 +11,7 @@ decides on its own, when it brings a decision back, the person who approves, sev
 what an agent records. Its one rule: an agent decides on its own only inside a written delegation
 whose limits the tooling enforces, and every decision outside it comes back to a named person, who
 decides from what the tool shows, not from the agent's account. Who decides each kind of decision,
-DACI and the decision log belong to
+DACI (Driver, Approver, Contributors, Informed) and the decision log belong to
 [roles-and-decisions.md](../project-management/roles-and-decisions.md); this practice links them.
 
 **Navigation**
@@ -28,13 +28,14 @@ The problem: a decision that nobody named a decider for is made by whoever pushe
 twice, and a year later nobody can say why it was made. The practice gives a team the steps from the
 question to a record, and gives an agent a written limit on what it may decide alone.
 
-A team needs it for a decision that is hard to undo or that other teams live with: a data store, a
-framework, a schema, a public interface. It needs part two when an agent works on a repository, a
-cloud account or data, since each such action is a decision someone should have delegated.
+A team needs it for a decision that is hard to undo, that other teams live with, or whose problem
+or answer is unclear: a data store, a framework, a schema, a public interface. It needs part two
+when an agent works on a repository, a cloud account or data, since each such action is a decision
+someone should have delegated.
 
-It is too much for a choice inside one person's own work that is easy to undo. Bezos holds that
-most decisions can be undone, and that these "can and should be made quickly by high judgment
-individuals or small groups" [1]. GitLab's handbook asks for a documented proposal only for
+It is too much for a choice inside one person's own work that is easy to undo and clear. Bezos
+holds that most decisions can be undone, and that these "can and should be made quickly by high
+judgment individuals or small groups" [1]. GitLab's handbook asks for a documented proposal only for
 "Decisions that require input, buy-in, or awareness of others" [2], which draws the line at who
 else is affected, not at how big the decision is. The simpler way for such a choice: the person
 doing the work decides, and nothing is written ([decisions.md](decisions.md) section 3 sets the
@@ -69,17 +70,22 @@ team with no agents reads part one only.
 ## How to adopt
 
 1. Copy this folder into your repository at `docs/engineering/any-language/decision-making/`.
-2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you choose between options the task does
-   not settle, when that choice is hard to undo, crosses teams, or its problem or answer is unclear
-   (a data store, a framework, a schema, a public interface), close the discussion of such a
-   decision, record a technical decision as an architecture decision record, review a recorded
-   decision, or write or change what an AI agent
-   may decide or do on its own (its delegation, its approval steps, or how several agents reach one
-   answer), read `docs/engineering/any-language/decision-making/README.md` and the file it routes
-   to for that work, and `docs/engineering/any-language/decision-making/adr-example.md` when you
-   write an architecture decision record,
-   `docs/engineering/any-language/decision-making/delegation-example.md` when you write an agent's
-   delegation."
+2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you make a choice the task does not
+   settle and that is hard to undo, crosses teams or has an unclear problem or answer (a data
+   store, a framework, a schema, a public interface), close the discussion of such a choice, record
+   a technical decision as an architecture decision record, review a recorded decision, or write or
+   change what an AI agent may decide or do on its own (its delegation, its approval steps, or how
+   several agents reach one answer), read `docs/engineering/any-language/decision-making/README.md`
+   and the file it routes to for that work, and
+   `docs/engineering/any-language/decision-making/adr-example.md` when you write an architecture
+   decision record, `docs/engineering/any-language/decision-making/delegation-example.md` when you
+   write an agent's delegation. The check: every architecture decision record the change adds names
+   its decider, its options or the DACI page that holds them, its confidence and what would trigger
+   a new look (`decisions.md` section 8); no accepted record's decision text changes in the diff,
+   and a changed decision is a new record that supersedes it (`decisions.md` section 8); and every
+   limit that a delegation the change adds must hold is enforced by a permission rule, a hook, a
+   sandbox or a token scope the agent cannot change, or is marked in the delegation's enforcement
+   part as a gap, with what catches a breach instead (`agents.md` sections 2 and 3)."
    Without it an agent never opens the folder; [agents.md](agents.md) section 13 says how an agent
    applies the practice once it has. The line that names who decides a decision and writes its
    decision-log entry stays in the project-management line, since
