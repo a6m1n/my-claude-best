@@ -35,6 +35,7 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 
 - [any-language/git](docs/engineering/any-language/git/) — branches, commits, pull requests and merging, with no rewriting of pushed history.
 - [any-language/project-management](docs/engineering/any-language/project-management/) — how a project runs with Jira: a step-by-step guide to adopting it, then its phases, charter, plan, work breakdown, risks, work items and board, meetings, status updates, releases, SLA and rollback plan.
+- [any-language/decision-making](docs/engineering/any-language/decision-making/) — how a team makes a decision that is hard to undo: the steps, how much process it gets, input before the meeting, objections, architecture decision records and their review; and what an AI agent may decide on its own, when it brings a decision back, and what the person who approves it needs.
 - [python/language](docs/engineering/python/language/) — where a constraint belongs, what in Python enforces it, strict types a checker can read, and PEP 8 as the base style.
 - [any-language/refactoring](docs/engineering/any-language/refactoring/) — how old code reaches a practice without a rewrite of the whole repository.
 - [any-language/file-structure](docs/engineering/any-language/file-structure/) — where code lives in an application, and file names that say what a file holds.
