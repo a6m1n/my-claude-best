@@ -188,11 +188,11 @@ The files:
    an approach for has that approach and its reason in the plan (`life-cycle.md` section 4); no
    Scrum event, accountability or artifact is dropped, and the Sprint keeps its fixed length, while
    the team still calls its process Scrum (`scrum.md` section 4); every Definition of Workflow or
-   board policy the change writes for a Kanban system names the Kanban text and edition it follows (`kanban.md` section 1); no claim
-   that one approach works better than another appears without its study, the study's sample and its
-   kind (`choosing-an-approach.md` section 5); and no report of what AI changed for the team quotes
-   a published speed-up figure (`ai-agents.md` section 4)." Without it an agent never opens the
-   folder.
+   board policy the change writes for a Kanban system names the Kanban text and edition it follows
+   (`kanban.md` section 1); no claim that one approach works better than another appears without
+   its study, the study's sample and its kind (`choosing-an-approach.md` section 5); and no report
+   of what AI changed for the team quotes a published speed-up figure (`ai-agents.md` section 4)."
+   Without it an agent never opens the folder.
 3. The files link other practices for the rules those own:
    [project-management](../project-management/README.md) most of all, for the pick of an approach,
    the meetings, work items, the Definition of Done, WIP, releases, the plan and who decides;
@@ -241,9 +241,9 @@ one rule of [agent-containers.md](../docker/agent-containers.md) section 1.
 
 The shape stays: a process the team calls Scrum keeps the minimum of [scrum.md](scrum.md)
 section 4, every policy that says "Kanban" names its text ([kanban.md](kanban.md) section 1), and
-a person answers for every change an agent makes ([ai-agents.md](ai-agents.md) section 1). Within that shape, these are the team's or the project's
-choices; each file names the options and their costs. A row holds only for a team that runs that
-part, and a team that does not skips it.
+a person answers for every change an agent makes ([ai-agents.md](ai-agents.md) section 1). Within
+that shape, these are the team's or the project's choices; each file names the options and their
+costs. A row holds only for a team that runs that part, and a team that does not skips it.
 
 | What you set | When you set it | Where the options are |
 |---|---|---|

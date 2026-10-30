@@ -216,6 +216,9 @@ section 5).
 1. Work items: the stories, tasks and bugs of the SUP project.
    Epics and subtasks are not counted: they have three statuses of their own
    (jira-workflow.md section 2).
+   The incident work item the person on call opens (sla.md section 3) is not one of
+   them: the restore runs on the SLA clock, outside this system, and only the problem
+   work item for the root cause enters the Backlog.
 2. Started: the item moves from the Backlog to In Progress, after the three-working-day
    check (tickets.md section 3). A later move into In Progress from Blocked, Code Review or
    Pre-prod does not restart the clock.
@@ -225,8 +228,8 @@ section 5).
    jira-workflow.md section 2. The four flow metrics of kanban.md section 4 use both
    finished points: an item is in WIP, and has an age, from its start until it enters Done
    or Canceled; it counts once in throughput, with its cycle time, when it enters either.
-   Items that enter Done are also counted per week as Delivered, from the same start, so
-   a canceled item never shows as delivered work.
+   At the retrospective the team reads throughput next to WIP to decide whether a limit
+   changes (principles.md section 2).
    An item canceled while it waits in the Backlog, whether it never entered In Progress
    or was returned there, has no start, so it counts in no flow metric. An item returned
    to the Backlog loses its start: this is the team's own policy, because the Guide counts
@@ -240,25 +243,31 @@ section 5).
    team limit binds before every person is full. Two limits, one per person and one for
    the team (principles.md section 3).
    A Blocked item counts toward both limits (jira-workflow.md section 4).
-   Pull the top item of the Backlog only when the count of items you hold (you are their
-   assignee) and the team's count are both under their limits: that is the pull signal
+   Pull the top item of the Backlog only when your count (the items whose assignee you
+   are; the assignee is the one person who works on the item now, jira-fields.md
+   section 1) and the team's count are both under their limits: that is the pull signal
    the Guide asks for.
    Exception: the fix for a production incident, its problem work item (sla.md section 3),
    is pulled at once, ahead of the Backlog's order, as Jane Doe agreed as Product Owner,
-   and may take the team's count over its limit, one such fix at a time. The restore
-   itself is the person on call's (sla.md section 5). The per-person limit still holds: a
-   person under 2 items takes the fix. With 8 for a team of five, at least one person is
-   always under 2. There is no other exception; the Guide asks for every exception to be
-   written here.
+   and may take the team's count over its limit, one such fix at a time. While one such
+   fix is in work, the next incident's fix is pulled at once only if the team's count is
+   under its limit; otherwise it waits at the top of the Backlog and is pulled as soon as
+   the team's count is under its limit or the first fix finishes. The restore itself is
+   the person on call's (sla.md section 5). The per-person limit still holds: a person
+   under 2 items takes the fix. With 8 for a team of five, at least one person is always
+   under 2. There is no other exception; the Guide asks for every exception to be written
+   here.
 5. Policies: the entry and exit condition of each state (jira-workflow.md section 2),
    and the pull rule in item 4.
 6. SLE: 85% of work items will be finished in seven days or less.
-   Days are elapsed days, weekends included, because the Guide's cycle time is elapsed
-   time. A day is a calendar day, and both ends count: cycle time in days is the finish
-   date minus the start date, plus one, so an item that starts and finishes on the same
-   day has a cycle time of one day and one that starts on a Monday and finishes on the
-   Tuesday has two. Age counts the same way, up to today. This counting is the team's own
-   policy; the Guide says only that cycle time is elapsed time.
+   Days are calendar days, weekends included, because the Guide's cycle time is elapsed
+   time, not working time. Both ends count: cycle time in days is the finish date minus
+   the start date, plus one, so no finished item shows zero days. An item that starts and
+   finishes on the same day has a cycle time of one day, and one that starts on a Monday
+   and finishes on the Tuesday has two. Age counts the same way, with today as the finish
+   date, so an item's age is the cycle time it would have if it finished today. Counting
+   both ends is the team's own policy; the Guide says only that cycle time is elapsed
+   time.
    This is a best guess: the team has no cycle times yet. When 20 items have finished, a
    number the team chose, it replaces the guess with the number of days within which 85%
    of those items finished.
@@ -271,11 +280,10 @@ This definition is good because it holds all six elements the Guide asks for, ea
 member can check against the board. It names its text and that text's position on the size of a
 change, so a proposal for a big change has a known rule. Its flow metrics use both finished points,
 because "started and finished refer to how the Kanban system members have established those points
-in their DoW" [1], and delivered work has a count of its own. An item canceled in the Backlog counts
-in no metric, so a clean-up adds nothing to throughput. An item returned to the Backlog loses its
-start, by the team's written policy, so an item that waits there is never work in progress. And it
-takes its states, limits and Blocked rule from
-[jira-workflow.md](../project-management/jira-workflow.md) and
+in their DoW" [1]. An item canceled in the Backlog counts in no metric, so a clean-up adds nothing
+to throughput. An item returned to the Backlog loses its start, by the team's written policy, so an
+item that waits there is never work in progress. And it takes its states, limits and Blocked rule
+from [jira-workflow.md](../project-management/jira-workflow.md) and
 [principles.md](../project-management/principles.md) by name, so the definition, the board and the
 weekly board look cannot drift apart.
 

@@ -227,10 +227,10 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   approach for has that approach and its reason in the plan (`life-cycle.md` section 4); no Scrum
   event, accountability or artifact is dropped, and the Sprint keeps its fixed length, while the
   team still calls its process Scrum (`scrum.md` section 4); every Definition of Workflow or board
-  policy the change writes for a Kanban system names the Kanban text and edition it follows (`kanban.md` section 1); no claim that one approach
-  works better than another appears without its study, the study's sample and its kind
-  (`choosing-an-approach.md` section 5); and no report of what AI changed for the team quotes a
-  published speed-up figure (`ai-agents.md` section 4).
+  policy the change writes for a Kanban system names the Kanban text and edition it follows
+  (`kanban.md` section 1); no claim that one approach works better than another appears without
+  its study, the study's sample and its kind (`choosing-an-approach.md` section 5); and no report
+  of what AI changed for the team quotes a published speed-up figure (`ai-agents.md` section 4).
 - Before you start the research for a new practice or for a new rules file in one, or create or
   edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md` first. The check:
   the closing summary names it.
