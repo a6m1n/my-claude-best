@@ -242,9 +242,12 @@ class JobsClient:
     async def defer(
         self, conn: AsyncConnection[TupleRow], task: TaskName, arguments: BaseModel
     ) -> None:
-        # By task name, so core/ imports no worker code (file-structure.md section 2).
+        # configure_task takes the task by name, so core/ imports no worker code
+        # (file-structure.md section 2).
         deferrer = self._app.configure_task(task, connection=conn)
         # On the caller's connection: the job row commits or rolls back with its data.
+        # mode="json": the job's arguments are stored as JSON, so ids and amounts go
+        # in as the strings the task parses back.
         await deferrer.defer_async(**arguments.model_dump(mode="json"))
 ```
 
@@ -342,22 +345,26 @@ runs it ([file-structure.md](../../any-language/file-structure/file-structure.md
   all of them", and when several applications share the broker "the shortest value will be
   used" [54].
 
-Celery settings for long tasks. Celery calls `configure_long_tasks` itself: it is connected to
-the app's `on_after_configure` signal, as Celery's own periodic-tasks example connects its setup
-function, and "on_after_configure is sent after the app is set up" [61]. The app itself is a bare
-`Celery(...)` built at import in this module, a departure from
-[python.md](../language/python.md) section 5, which builds no app at import: `celery -A` imports
-that attribute and calls no factory. The cost: the module holds an app object at import, with no
-settings in it. Building the app and its broker connection is left out:
+The worker's Celery settings: those for long tasks, and the others section 8 asks every worker to
+set. Celery calls `configure_worker` itself: it is connected to the app's `on_after_configure`
+signal, as Celery's own periodic-tasks example connects its setup function, and
+"on_after_configure is sent after the app is set up" [61]. The app is a bare `Celery(...)` built
+at import, and its line declares that departure from [python.md](../language/python.md) section 5.
+The app's broker connection is left out:
 
 ```python
 from celery import Celery
+
+# A departure from python.md section 5, which builds no app at import: `celery -A`
+# imports this attribute and calls no factory. The cost: the module holds an app
+# object at import, with no settings in it.
+app = Celery("acme")
 
 
 # `celery -A` only imports this module; the signal makes Celery call this
 # once the app's configuration is ready.
 @app.on_after_configure.connect
-def configure_long_tasks(sender: Celery, **kwargs: object) -> None:
+def configure_worker(sender: Celery, **kwargs: object) -> None:
     sender.conf.update(
         # Ack after the task returns, so a dead worker means a rerun, not a lost task.
         task_acks_late=True,
@@ -380,6 +387,9 @@ def configure_long_tasks(sender: Celery, **kwargs: object) -> None:
         # JSON only, the default: pickle would run code for anyone who can write to
         # the broker (task-queues.md section 12).
         accept_content=["json"],
+        # Off: whoever can write to the control exchange could shut the workers down;
+        # turn it on only for a tool you run (task-queues.md section 12).
+        worker_enable_remote_control=False,
     )
 ```
 
@@ -433,22 +443,28 @@ per process, so its Tasks guide keeps a client on a base `Task` class that opens
 and a task declared with `base=` and `bind=True` reads it through `self` [2].
 
 The same task as a Dramatiq actor written with `async def`. Setting up the broker and the AsyncIO
-middleware is left out:
+middleware, the import of the use case and the clients it takes (see below) are left out:
 
 ```python
 import asyncio
+from typing import Final
 
 import dramatiq
 from pydantic import ValidationError
 
 from acme.core.schemas import ReindexOrder
 
+# Nine minutes, under the 10-minute time_limit below: the docs do not say how
+# time_limit reaches a coroutine, so this bound ends the work first
+# (task-queues.md section 6).
+REINDEX_TIMEOUT_SECONDS: Final = 540
+
 
 # Five retries, not the default 20: after that a person should look, so the message
 # goes to the dead-letter queue and its alarm (delivery.md section 6).
-# The wait in milliseconds, at Dramatiq's defaults: 15 s, growing to 7 days at most
-# (delivery.md section 5).
-# The time limit at Dramatiq's default, 10 minutes (delivery.md section 5).
+# The wait is in milliseconds, at Dramatiq's defaults: 15 s, growing to 7 days at
+# most (delivery.md section 5).
+# The time limit is Dramatiq's default, 10 minutes (delivery.md section 5).
 @dramatiq.actor(
     max_retries=5,
     min_backoff=15_000,
@@ -462,8 +478,8 @@ async def reindex_order(payload: str) -> None:
     # A message is outside data: parse it once, here (python.md section 4).
     command = ReindexOrder.model_validate_json(payload)
     # The docs do not say how time_limit reaches a coroutine, so bound the work here.
-    async with asyncio.timeout(60):
-        ...  # call the reindex_order use case with its clients (see below)
+    async with asyncio.timeout(REINDEX_TIMEOUT_SECONDS):
+        await usecase.reindex_order(command)
 ```
 
 It is good because Dramatiq runs an `async def` actor once the worker adds the AsyncIO

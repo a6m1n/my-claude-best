@@ -113,8 +113,8 @@ from pydantic import SecretStr
 async def connect_rabbitmq(
     host: str, port: int, user: str, password: SecretStr, vhost: str
 ) -> AbstractRobustConnection:
-    # Requires the broker's certificate and checks its host name
-    # (message-brokers.md section 15).
+    # The default context requires the broker's certificate and checks its host
+    # name (message-brokers.md section 15).
     tls = ssl.create_default_context()
     tls.minimum_version = ssl.TLSVersion.TLSv1_2
 
@@ -173,6 +173,7 @@ async def open_billing_queue(
 ) -> AbstractQueue:
     # A channel of its own: a channel is never shared (message-brokers.md section 5).
     channel = await connection.channel()
+
     # Per consumer, and never 0: aio-pika's default of 0 means no limit
     # (message-brokers.md section 9).
     await channel.set_qos(prefetch_count=prefetch_count)
@@ -180,6 +181,7 @@ async def open_billing_queue(
     ...  # Billing's dead-letter exchange and its queue: consumer-example.md section 4
 
     events = await open_event_exchange(channel)
+
     queue = await channel.declare_queue(
         BILLING_QUEUE,
         durable=True,  # Quorum queues are always durable; aio-pika defaults to False.
@@ -190,6 +192,7 @@ async def open_billing_queue(
             "x-consumer-timeout": 1_800_000,
         },
     )
+
     # Only OrderPlaced reaches this queue's parser: the exchange is a topic
     # (message-brokers.md section 6).
     await queue.bind(events, routing_key=RoutingKey.ORDER_PLACED)
@@ -239,7 +242,9 @@ async def publish_event(
     message = aio_pika.Message(
         body,
         content_type="application/json",
-        # Consumers drop a second copy by this id (delivery.md section 3).
+        # The broker and the log lines carry this id; consumers drop a second copy by
+        # the same id in the body, a departure from delivery.md section 3 that the
+        # outbox table declares (outbox-relay-example.md section 3).
         message_id=str(message_id),
         # A dead-lettered copy keeps this mode; it survives a restart if persistent.
         delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
@@ -248,7 +253,9 @@ async def publish_event(
     # On a channel with confirms and on_return_raises=True, this returns after the
     # broker's ack, and a nack or a returned message raises. mandatory=True is
     # aio-pika's default, written out: without it a message no queue takes is
-    # dropped and still confirmed (message-brokers.md section 8).
+    # dropped and still confirmed (message-brokers.md section 8). The broker's
+    # errors leave here as they are: the caller wraps them, a departure its use
+    # case declares (outbox-relay-example.md section 7).
     await exchange.publish(message, routing_key=routing_key, mandatory=True)
 ```
 
@@ -265,7 +272,7 @@ With automatic acknowledgement, RabbitMQ counts a message as delivered "immediat
 - **Set a prefetch count from the settings class, and never 0.** The prefetch count caps how many unacknowledged messages a consumer holds. A value of 0 "is treated as infinite" [38], and aio-pika's `set_qos` and pika's `basic_qos` both default to 0 [39], [35]. RabbitMQ finds that "Values in the 100 through 300 range usually offer optimal throughput", while 1 "is the most conservative" and "will significantly reduce throughput" [34]. The timeout above runs for each delivered message, and a prefetched message waits behind the slow ones, so a handler that takes minutes needs a small prefetch.
 - **Keep the prefetch per consumer, never per channel.** RabbitMQ applies `prefetch_count` "separately to each new consumer on the channel" [38], and quorum queues "do not support global QoS prefetch": consuming with it returns a channel error [1]. aio-pika's `set_qos` is per consumer unless you pass `global_=True` [39]; pika's `basic_qos` unless you pass `global_qos=True` [35].
 
-The handler, in the same `src/acme/worker/handlers_charge_order.py` as the queue in section 7. The file's imports gain `AbstractIncomingMessage` from `aio_pika.abc`, `ValidationError` from `pydantic`, `ChargeOrder` from `acme.billing.charge_order.usecase` and `OrderPlaced` from `acme.worker.schemas`. The loop that hands it one message at a time, which must write `no_ack=False` at its `iterator()` call (section 9), and its two log lines are [consumer-example.md](consumer-example.md) section 7's, left out or cut with `...`:
+The handler, in the same `src/acme/worker/handlers_charge_order.py` as the queue in section 7. The file's imports gain `AbstractIncomingMessage` from `aio_pika.abc`, `ValidationError` from `pydantic`, `ChargeOrder` from `acme.billing.charge_order.usecase` and `OrderPlaced` from `acme.worker.schemas`. The loop that hands it one message at a time, which must write `no_ack=False` at its `iterator()` call (section 9), its two log lines, the check that stops the worker once billing's database connection has closed, and the `INFO` line after the ack are [consumer-example.md](consumer-example.md) section 7's, left out or cut with `...`:
 
 ```python
 async def on_order_placed(
@@ -275,11 +282,19 @@ async def on_order_placed(
     # error line would then hold the body (message-brokers.md section 9).
     try:
         # A message is outside data, parsed into a model once (python.md section 4).
-        event = OrderPlaced.model_validate_json(message.body)
+        event: OrderPlaced | None = OrderPlaced.model_validate_json(message.body)
     except ValidationError:
+        event = None
+
+    if event is None:
         ...  # One INFO line with the message id, never the error's text
+
         # No retry can fix the body: the dead-letter exchange takes it at once.
+        # Outside the except block: a reject that failed inside it would carry the
+        # ValidationError, and the body in its text, as its context (logging.md
+        # section 10).
         await message.reject(requeue=False)
+
         return
 
     try:
@@ -291,9 +306,11 @@ async def on_order_placed(
         )
     except Exception:
         ...  # One WARNING line with the message id
+
         # Through reject, never nack: the delivery limit counts a reject
         # (delivery.md section 6).
         await message.reject(requeue=True)
+
         return
 
     # After run() has committed: a crash before this line brings a redelivery that

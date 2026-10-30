@@ -203,9 +203,11 @@ shutdown; that wiring is left out. `UndeliveredEventsError`, in `src/acme/core/e
 also left out, holds only the number of events not sent.
 
 ```python
-"""The one way into Kafka for code that publishes events."""
+"""The one way into Kafka: the producer for every publish, and the consumer settings."""
 
 import logging
+from collections.abc import Callable
+from typing import Final, TypeAlias
 from uuid import UUID
 
 from confluent_kafka import KafkaError, Message, Producer
@@ -214,6 +216,13 @@ from pydantic import BaseModel, SecretStr
 from acme.core.errors import UndeliveredEventsError
 
 logger = logging.getLogger(__name__)
+
+# This header carries each event's id. The consumers import this name, so the
+# two sides cannot drift apart (python.md section 3); "id" is the key Debezium's
+# outbox router writes (delivery.md section 3).
+EVENT_ID_HEADER: Final = "id"
+
+DeliveryCallback: TypeAlias = Callable[[KafkaError | None, Message], None]
 
 
 def build_producer(
@@ -230,7 +239,7 @@ def build_producer(
             # librdkafka leaves it off; without it a retry can write a second copy
             # (event-streaming.md section 4).
             "enable.idempotence": True,
-            # Already the default; written out so nobody lowers it
+            # This is already the default; it is written out so nobody lowers it
             # (event-streaming.md section 4).
             "acks": "all",
             # The default, 5 minutes, written: after it the delivery report says the
@@ -243,6 +252,18 @@ def build_producer(
     )
 
 
+def _log_failed_delivery(err: KafkaError | None, msg: Message) -> None:
+    if err is None:
+        return
+
+    # A departure from logging.md section 5, which leaves the final ERROR to the
+    # caller: librdkafka reports the final outcome in this callback, run from
+    # poll() or flush(), with no caller to raise to. The cost: the caller does not
+    # learn the outcome. The line holds the topic and the error, and no payload
+    # (logging.md section 10).
+    logger.error("Kafka delivery to topic %s failed: %s", msg.topic(), err)
+
+
 class EventPublisher:
     """Publishes one kind of event to its topic."""
 
@@ -250,35 +271,35 @@ class EventPublisher:
         self._producer = producer
         self._topic = topic
 
-    def publish(self, key: str, message_id: UUID, event: BaseModel) -> None:
+    def publish(
+        self,
+        key: str,
+        message_id: UUID,
+        event: BaseModel,
+        *,
+        on_delivery: DeliveryCallback = _log_failed_delivery,
+    ) -> None:
         self._producer.produce(
             self._topic,
             # The key picks the partition (delivery.md section 7).
             key=key.encode(),
             value=event.model_dump_json().encode(),
             # Consumers drop a second copy by this id (delivery.md section 3).
-            headers=[("id", str(message_id).encode())],
-            on_delivery=_log_failed_delivery,
+            headers=[(EVENT_ID_HEADER, str(message_id).encode())],
+            # A caller that must learn the broker's answer, such as an outbox relay,
+            # passes its own callback here (event-streaming.md section 4).
+            on_delivery=on_delivery,
         )
-        # Runs the delivery callbacks (event-streaming.md section 4).
+        # This call runs the delivery callbacks (event-streaming.md section 4).
         self._producer.poll(0)
 
     def close(self, timeout_s: float) -> None:
         undelivered = self._producer.flush(timeout_s)
+
         if undelivered:
             # Raised, not logged: main.py, the caller that decides, logs it once
             # (logging.md section 5).
             raise UndeliveredEventsError(undelivered)
-
-
-def _log_failed_delivery(err: KafkaError | None, msg: Message) -> None:
-    if err is None:
-        return
-    # Departs from logging.md section 5, which leaves the final ERROR to the caller:
-    # librdkafka reports the final outcome in this callback, run from poll() or
-    # flush(), with no caller to raise to. The cost: the caller does not learn the
-    # outcome. The topic and the error only: no payload (logging.md section 10).
-    logger.error("Kafka delivery to topic %s failed: %s", msg.topic(), err)
 ```
 
 It is good because the durability settings sit in the one place every send goes through, so no
@@ -286,24 +307,28 @@ second producer can leave them out. The password stays a `SecretStr` until the o
 the text ([python.md](../language/python.md) section 5). The event that leaves is a Pydantic model
 ([python.md](../language/python.md) section 4). Each event carries its id in a header, so a
 consumer drops a copy without parsing the body ([delivery.md](delivery.md) section 3), and an
-asyncio service calls `publish` through `run_in_executor()` (the rule below). A failed send is
+asyncio service calls `publish` through `asyncio.to_thread()` (the rule below). A failed send is
 logged once, without its payload ([logging.md](../logging/logging.md) section 10). That one line
 departs from [logging.md](../logging/logging.md) section 5, which leaves the final `ERROR` to the
 caller, and says so at the line: librdkafka reports the final outcome in a callback run from
 `poll()` or `flush()`, with no caller to raise to, so the caller does not learn the outcome. A
-relay that must learn it, such as the outbox relay above, passes its own `on_delivery` to
-`produce()`. `close()` logs nothing: it raises `UndeliveredEventsError` with the number of events
-it could not send, and `main.py`, the caller that decides, logs it once, as that section asks.
+relay that must learn it, such as the outbox relay above, passes its own callback to `publish` as
+`on_delivery`, so its sends still go through this one client. `close()` logs nothing: it raises
+`UndeliveredEventsError` with the number of events it could not send, and `main.py`, the caller
+that decides, logs it once, as that section asks.
 
 **In an asyncio service, send each event with the synchronous `produce()`, called through
-`run_in_executor()`, not with `AIOProducer`.** Why: every event carries its id in a header
+`asyncio.to_thread()`, not with `AIOProducer`.** Why: every event carries its id in a header
 ([delivery.md](delivery.md) section 3), and Confluent's docs send you to the synchronous client
 when "You require per-message headers in produce operations (not supported in asynchronous
 batched path)": "If you require headers, invoke the synchronous produce() using
 run_in_executor() for that path" [6]. The same page advises the asyncio clients when "Your
 application runs under an event loop" and "You must avoid blocking the event loop during Kafka
-operations" [6], which is why the call goes through `run_in_executor()`. A trace context in a
-header takes the same path ([delivery.md](delivery.md) section 9).
+operations" [6], which is why the call leaves the event loop's thread. `asyncio.to_thread()`
+takes Confluent's path and adds what [logging.md](../logging/logging.md) section 8 asks: it copies
+the context, then runs the call with `run_in_executor()` on the loop's default executor [33]. Both
+hold, and the trace and the request id reach `publish`, which a bare `run_in_executor()` call
+loses. A trace context in a header takes the same path ([delivery.md](delivery.md) section 9).
 
 ## 5. Keys and ordering
 
@@ -364,7 +389,8 @@ event and fails again, so it only buys time.
 offsets stored since the last automatic commit are lost, and the group waits for the session
 timeout before it moves the partitions (section 7).
 
-The consumer is built beside the producer in `src/acme/core/kafka_client.py`:
+The consumer is built beside the producer in `src/acme/core/kafka_client.py`, whose imports gain
+`Consumer` from `confluent_kafka`:
 
 ```python
 def build_consumer(
@@ -378,34 +404,41 @@ def build_consumer(
             "sasl.mechanism": "SCRAM-SHA-512",  # the mechanism your cluster accepts
             "sasl.username": username,
             "sasl.password": password.get_secret_value(),
-            # Set, so a library upgrade cannot change what the rebalance callbacks
-            # receive (event-streaming.md section 7).
+            # The protocol is set, so a library upgrade cannot change what the
+            # rebalance callbacks receive (event-streaming.md section 7).
             "group.protocol": "classic",
             # The default stores an offset before the work, and a crash then skips
             # the event (event-streaming.md section 6).
             "enable.auto.offset.store": False,
-            # Commits what the loop stored, every 5 s and on close.
+            # The client commits what the loop stored, every 5 s and on close.
             "enable.auto.commit": True,
             # The default, 5 s, written: after a crash the next owner re-reads at most
             # 5 s of stored events (event-streaming.md section 7).
             "auto.commit.interval.ms": 5_000,
-            # The default, 45 s, written: how long a dead consumer keeps its partitions.
-            # Classic protocol only: drop it with group.protocol=consumer
+            # The default, 45 s, written: a dead consumer keeps its partitions this
+            # long. Classic protocol only: drop it with group.protocol=consumer
             # (event-streaming.md section 7).
             "session.timeout.ms": 45_000,
             # earliest, not the default largest: a skipped order costs more than one
             # read twice (event-streaming.md section 10).
             "auto.offset.reset": "earliest",
-            # The default, 5 minutes, written: well above one order's work
+            # The default, 5 minutes, written: it is well above one order's work
             # (event-streaming.md section 7).
             "max.poll.interval.ms": 300_000,
         }
     )
 ```
 
-The loop is the queue consumer's adapter, `src/acme/consumer/handlers_orders.py`
+It is good because every consumer setting of section 10 whose "Leave it out when" reads Never is
+written, the default's value included ([delivery.md](delivery.md) section 5), each with its reason
+at the line, and the password stays a `SecretStr` until the one line that needs its text
+([python.md](../language/python.md) section 5).
+
+The loop is the queue consumer's adapter, `src/acme/consumer/handlers_record_order.py`
 ([file-structure.md](../../any-language/file-structure/file-structure.md) section 5). It takes the
-consumer, the topic and the use case as parameters:
+consumer, the topic and the use case as parameters. It leaves out the retry and the dead-letter
+step above and raises instead, as the comment at the use case's call says; the module's own input
+type, `RecordOrderRequest` in `src/acme/reports/record_order/schemas.py`, is left out too:
 
 ```python
 import logging
@@ -422,71 +455,80 @@ from confluent_kafka import (
 )
 from pydantic import ValidationError
 
+from acme.consumer.errors import InvalidOrderEventError
 from acme.consumer.schemas import OrderPlaced
+from acme.core.kafka_client import EVENT_ID_HEADER
+from acme.reports.record_order.schemas import RecordOrderRequest
 
 logger = logging.getLogger(__name__)
-
-
-class InvalidOrderEvent(Exception):
-    """An event that does not parse. It names the event's place, never its values."""
-
-    def __init__(
-        self, topic: str | None, partition: int | None, offset: int | None
-    ) -> None:
-        super().__init__(
-            f"Order event at {topic} [{partition}] offset {offset} does not parse"
-        )
 
 
 def consume_orders(
     consumer: Consumer,
     topic: str,
-    record_order: Callable[[UUID, OrderPlaced], None],
+    record_order: Callable[[UUID, RecordOrderRequest], None],
     stop: threading.Event,
 ) -> None:
     consumer.subscribe([topic], on_revoke=_commit_stored, on_lost=_log_lost)
+
     try:
         while not stop.is_set():
+            # A poll waits up to a second, so the loop sees a set stop within a second.
             msg = consumer.poll(timeout=1.0)
+
             if msg is None:
                 continue
+
             if msg.error():
                 raise KafkaException(msg.error())
 
             payload = msg.value()
+
             if payload is None:
                 raise ValueError("An order event arrived with no value")
+
             # Outside data becomes a model once, here (python.md section 4).
             try:
                 event = OrderPlaced.model_validate_json(payload)
             except ValidationError:
                 # The error's text holds the event's values: raise one that names only
                 # where the event is (logging.md section 10).
-                raise InvalidOrderEvent(
+                raise InvalidOrderEventError(
                     msg.topic(), msg.partition(), msg.offset()
                 ) from None
+
+            # The module's own type: a module never imports an adapter's model
+            # (file-structure.md section 2).
+            request = RecordOrderRequest(
+                order_id=event.order_id, total_cents=event.total_cents
+            )
             # The producer's id: record_order drops a second copy by it
-            # (delivery.md section 3).
-            record_order(_event_id(msg), event)
+            # (delivery.md section 3). A failure raises out of the loop: the retry and
+            # the dead-letter step of section 6 are left out. The cost: the worker
+            # stops on this event, and its restart reads the event again.
+            record_order(_event_id(msg), request)
+
             # After the work, never before: a crash before this line re-reads the
             # event, and record_order skips it by its id (delivery.md section 3).
             consumer.store_offsets(message=msg)
     finally:
-        # Commits what was stored and leaves the group (event-streaming.md section 6).
+        # close() commits what was stored and leaves the group (event-streaming.md
+        # section 6).
         consumer.close()
 
 
 def _event_id(msg: Message) -> UUID:
-    # The id header the producer sets (event-streaming.md section 4).
+    # The producer sets the id header (event-streaming.md section 4).
     for name, value in msg.headers() or []:
-        if name == "id" and value is not None:
+        if name == EVENT_ID_HEADER and value is not None:
             return UUID(value.decode())
+
     raise ValueError("An order event arrived with no id header")
 
 
 def _commit_stored(consumer: Consumer, partitions: list[TopicPartition]) -> None:
-    # The last moment to commit before these partitions move to another member
-    # (event-streaming.md section 7).
+    # This is the last moment to commit before these partitions move to another
+    # member (event-streaming.md section 7).
     try:
         consumer.commit(asynchronous=False)
     except KafkaException as exc:
@@ -501,17 +543,38 @@ def _log_lost(consumer: Consumer, partitions: list[TopicPartition]) -> None:
     logger.warning("Kafka partitions lost: %s", partitions)
 ```
 
+The adapter's own error, in `src/acme/consumer/errors.py`
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 5):
+
+```python
+"""The errors that end the consumer loop."""
+
+
+class InvalidOrderEventError(Exception):
+    """An event that does not parse. It names the event's place, never its values."""
+
+    def __init__(
+        self, topic: str | None, partition: int | None, offset: int | None
+    ) -> None:
+        super().__init__(
+            f"Order event at {topic} [{partition}] offset {offset} does not parse"
+        )
+```
+
 It is good because the offset is stored only after `record_order` returns, so a crash re-reads
 the event instead of skipping it. A failure raises before the store line, so no later offset
 passes a failed event, and `close()` still commits what was stored before it. The event is parsed
 into a model once, at the edge ([python.md](../language/python.md) section 4). A value that does
-not parse raises `InvalidOrderEvent`, which names the topic, the partition and the offset,
+not parse raises `InvalidOrderEventError`, which names the topic, the partition and the offset,
 `from None`, so the error that leaves the loop carries none of the event's values
 ([python.md](../language/python.md) section 4, [logging.md](../logging/logging.md) section 10).
-The producer's `id` header reaches `record_order`, which drops a second copy by it
-([delivery.md](delivery.md) section 3). The consumer, the
-topic and the use case come in as parameters, so a unit test can call the loop with a fake
-([readability.md](../../any-language/readability/readability.md) section 6,
+The loop maps the event into the module's own `RecordOrderRequest` before the call, so the use
+case never imports the adapter's model
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 2). The
+producer's id header, read by the `EVENT_ID_HEADER` name the producer writes, reaches
+`record_order`, which drops a second copy by it ([delivery.md](delivery.md) section 3). The
+consumer, the topic and the use case come in as parameters, so a unit test can call the loop with
+a fake ([readability.md](../../any-language/readability/readability.md) section 6,
 [fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 3). Left out: the retry
 and the dead-letter step above; this loop raises instead, which stops on the event without
 skipping it. The API reference lists `_NO_OFFSET`, "No offset stored", among the error codes
@@ -775,3 +838,4 @@ Checked 2026-10-29 unless a line ends with — checked <YYYY-MM-DD>.
 - [30] Confluent — confluent-kafka-python KIP-848 migration guide — https://github.com/confluentinc/confluent-kafka-python/blob/master/docs/kip-848-migration-guide.md
 - [31] Apache Kafka — Monitoring, 4.3 — https://kafka.apache.org/43/operations/monitoring/
 - [32] Socure — RETROACTIVE: [Sev2] RiskOS Delayed Webhook Deliveries (Socure status page, 2026; case) — https://status.socure.com/incidents/167ly5ws2xsk
+- [33] Python — `Lib/asyncio/threads.py` (`to_thread`), branch 3.13 — https://github.com/python/cpython/blob/3.13/Lib/asyncio/threads.py — checked 2026-10-30

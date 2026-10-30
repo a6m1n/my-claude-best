@@ -162,13 +162,13 @@ How to build it:
    arrive, that is while the message can sit in its queue, in its dead-letter queue (section 6), or
    in a topic a consumer may read again. Then delete older rows in batches.
 
-The use case, its result type and its query; the payment query and the `OrderPaid` model are left
-out:
+The use case, its result type and its query; the imports, the payment query and the `OrderPaid`
+model are left out:
 
 ```python
-# src/acme/billing/payments/schemas.py
-# What one run did with one message: a closed set, so the caller can tell a copy
-# from a payment (python.md section 2).
+# src/acme/billing/record_payment/schemas.py
+# Each member names what one run did with one message. The members are a closed
+# set, so the caller can tell a copy from a payment (python.md section 2).
 @unique
 class PaymentOutcome(StrEnum):
     RECORDED = "recorded"
@@ -176,9 +176,9 @@ class PaymentOutcome(StrEnum):
 ```
 
 ```python
-# src/acme/billing/payments/repository.py
-# One row per consumer and message (delivery.md section 3).
-CONSUMER: Final = "billing.payments"
+# src/acme/billing/record_payment/repository.py
+# processed_message keeps one row per consumer and message (delivery.md section 3).
+CONSUMER: Final = "billing.record_payment"
 
 
 async def claim_message(conn: AsyncConnection[TupleRow], message_id: UUID) -> bool:
@@ -193,16 +193,18 @@ async def claim_message(conn: AsyncConnection[TupleRow], message_id: UUID) -> bo
 ```
 
 ```python
-# src/acme/billing/payments/usecase.py
+# src/acme/billing/record_payment/usecase.py
 async def record_payment(
     conn: AsyncConnection[TupleRow], message_id: UUID, paid: OrderPaid
 ) -> PaymentOutcome:
     # One transaction: the id row and the payment commit together, or neither does.
     async with conn.transaction():
         if not await repository.claim_message(conn, message_id):
-            # A copy of a message this consumer has already processed.
+            # The message is a copy of one this consumer has already processed.
             return PaymentOutcome.ALREADY_PROCESSED
+
         await repository.insert_payment(conn, paid)
+
     return PaymentOutcome.RECORDED
 ```
 
@@ -255,7 +257,8 @@ emit where if the process crashes or there's a bug, the job is gone" [19].
 **Store the message in an outbox table in the same transaction as the change.** Richardson: "The
 solution is for the service that sends the message to first store the message in the database as
 part of the transaction that updates the business entities." [18] A separate
-process, the relay, then sends it.
+process, the relay, then sends it. The pair below leaves out the imports, `OrderStatus`,
+`OrderPaidEvent`, `BrokerClient`, and the repository's `set_status` and `add_outbox_message`.
 
 ```python
 # Bad: the dual write. A crash between the commit and the publish loses the event.
@@ -275,6 +278,7 @@ page describes [18].
 async def mark_paid(conn: AsyncConnection[TupleRow], order_id: int) -> None:
     async with conn.transaction():
         await repository.set_status(conn, order_id, OrderStatus.PAID)
+
         # After the status: the row lock orders this entity's outbox rows
         # (delivery.md section 4).
         await repository.add_outbox_message(
@@ -346,9 +350,9 @@ simpler of the two ways: one more process, and no server you do not already run.
    [18] A crash after the sends and before the commit sends the batch again, so
    every consumer must be idempotent (section 3); AWS gives the same advice [21].
 
-The claim query and one pass of the relay; the broker client, the row type, the `BATCH_SIZE`
-constant, the `take_relay_lock` query (`SELECT pg_try_advisory_xact_lock(%s)` with the relay's
-key) and the loop that calls `relay_batch` are left out:
+The claim query and one pass of the relay; the imports, the broker client, the row type, the
+`BATCH_SIZE` constant, the `take_relay_lock` query (`SELECT pg_try_advisory_xact_lock(%s)` with the
+relay's key), the `delete_rows` query and the loop that calls `relay_batch` are left out:
 
 ```sql
 SELECT id, aggregatetype, aggregateid, type, payload
@@ -364,13 +368,17 @@ async def relay_batch(conn: AsyncConnection[TupleRow], broker: BrokerClient) -> 
         # One relay at a time keeps the order (step 4); the lock ends with the block.
         if not await repository.take_relay_lock(conn):
             return 0
+
         rows = await repository.claim_batch(conn, limit=BATCH_SIZE)
+
         for row in rows:
-            # Returns only after the broker accepted it.
+            # The call returns only after the broker accepted it.
             await broker.publish_confirmed(row)
+
         # Delete after the sends: a crash before the commit sends the batch again,
         # never loses it.
         await repository.delete_rows(conn, [row.id for row in rows])
+
     return len(rows)
 ```
 
@@ -710,8 +718,11 @@ value used by the messaging system as an identifier for the message, represented
 [56] Its `messaging.message.conversation_id` is the id it says is sometimes called the
 correlation id [56].
 
+A line the consumer of section 3 writes once its payment commits; the logger and the code around
+the line are left out:
+
 ```python
-# One line for a finished unit of work, with the id that finds the message
+# A finished unit of work gets one line, with the id that finds the message
 # (logging.md section 4).
 logger.info(
     "Payment for order %s recorded", paid.order_id, extra={"message_id": message_id}

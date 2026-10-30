@@ -198,10 +198,11 @@ A workflow that charges an invoice and sends a receipt, in the worker's adapter 
 ([file-structure.md](../../any-language/file-structure/file-structure.md) section 5):
 
 ```python
-# src/acme/worker/workflows_settle_invoice.py: workflows only, no other side effects.
-# Departs from file-structure.md section 5, one file per module, named for the role
-# and the module: a workflow file is named for the workflow it runs, which calls the
-# activities of several modules. The cost: the file maps to no one module.
+# src/acme/worker/workflows_settle_invoice.py
+# The file holds workflows only, with no other side effects.
+# A departure from file-structure.md section 5, one file per module, named for the
+# role and the module: a workflow file is named for the workflow it runs, which
+# calls the activities of several modules. The cost: the file maps to no one module.
 from datetime import timedelta
 from typing import Final
 
@@ -212,10 +213,11 @@ from temporalio.common import RetryPolicy
 with workflow.unsafe.imports_passed_through():
     from acme.billing.charge_invoice.schemas import SettleInvoiceRequest
     from acme.core.schemas import PaymentId, Receipt
-    from acme.worker.activities_charge_invoice import ChargeInvoiceActivities
-    from acme.worker.activities_send_receipt import SendReceiptActivities
+    from acme.worker.activities_charge_invoice import ChargeInvoice
+    from acme.worker.activities_send_receipt import SendReceipt
 
-# Five attempts, then the workflow gets the error: the default never stops (section 6).
+# The policy allows five attempts, then the workflow gets the error: the default
+# never stops (section 6).
 # The wait is written too, at Temporal's defaults (delivery.md section 5).
 STEP_RETRY_POLICY: Final = RetryPolicy(
     initial_interval=timedelta(seconds=1),
@@ -230,9 +232,10 @@ class SettleInvoice:
     @workflow.run
     async def run(self, request: SettleInvoiceRequest) -> PaymentId:
         payment_id = await workflow.execute_activity_method(
-            ChargeInvoiceActivities.charge_invoice,
+            ChargeInvoice.charge_invoice,
             request,
-            # Bounds one attempt; the SDK requires a timeout on every activity call.
+            # This bounds one attempt; the SDK requires a timeout on every activity
+            # call.
             start_to_close_timeout=timedelta(minutes=2),
             retry_policy=STEP_RETRY_POLICY,
         )
@@ -240,15 +243,16 @@ class SettleInvoice:
         receipt = Receipt(
             invoice_id=request.invoice_id,
             payment_id=payment_id,
-            # The time the engine recorded, the same on every replay (section 4).
+            # The engine recorded this time, the same on every replay (section 4).
             paid_at=workflow.now(),
         )
         await workflow.execute_activity_method(
-            SendReceiptActivities.send_receipt,
+            SendReceipt.send_receipt,
             receipt,
             start_to_close_timeout=timedelta(minutes=1),
             retry_policy=STEP_RETRY_POLICY,
         )
+
         return payment_id
 ```
 
@@ -314,7 +318,7 @@ from acme.core.payments_client import PaymentsClient
 from acme.core.schemas import PaymentId
 
 
-class ChargeInvoiceActivities:
+class ChargeInvoice:
     # main.py builds the client once and passes it in (file-structure.md section 4).
     def __init__(self, payments: PaymentsClient) -> None:
         self._payments = payments
@@ -335,7 +339,7 @@ from acme.core.mail_client import MailClient
 from acme.core.schemas import Receipt
 
 
-class SendReceiptActivities:
+class SendReceipt:
     # main.py builds the client once and passes it in (file-structure.md section 4).
     def __init__(self, mail: MailClient) -> None:
         self._mail = mail
@@ -361,33 +365,54 @@ executes only once" [3]. How Temporal treats a second start with the same workfl
 part of this research.
 
 ```python
-from dbos import DBOS, SetWorkflowID
+# src/acme/worker/workflows_charge_invoice.py
+from dbos import DBOS, DBOSConfiguredInstance, SetWorkflowID
 
+from acme.core.payments_client import PaymentsClient
 from acme.core.schemas import InvoiceId, PaymentId
 
 
-# DBOS retries no step unless told to; this one calls the payment provider (section 6).
-# The wait is written too, at DBOS's defaults (delivery.md section 5).
-@DBOS.step(retries_allowed=True, interval_seconds=1.0, max_attempts=5, backoff_rate=2.0)
-def charge_invoice(invoice_id: InvoiceId, amount_cents: int) -> PaymentId: ...
+# SettleInvoice is a class, so the client comes in as a parameter: DBOS records the
+# instance's name to find it again when it recovers a workflow.
+@DBOS.dbos_class()
+class SettleInvoice(DBOSConfiguredInstance):
+    # main.py builds the client once and passes it in, before DBOS launches
+    # (file-structure.md section 4).
+    def __init__(self, payments: PaymentsClient) -> None:
+        super().__init__("settle-invoice")
+        self._payments = payments
+
+    # DBOS retries no step unless told to; this one calls the payment provider
+    # (section 6). The wait is written too, at DBOS's defaults (delivery.md section 5).
+    @DBOS.step(
+        retries_allowed=True, interval_seconds=1.0, max_attempts=5, backoff_rate=2.0
+    )
+    def charge_invoice(self, invoice_id: InvoiceId, amount_cents: int) -> PaymentId: ...
+
+    @DBOS.workflow()
+    def settle_invoice(self, invoice_id: InvoiceId, amount_cents: int) -> PaymentId:
+        return self.charge_invoice(invoice_id, amount_cents)
 
 
-@DBOS.workflow()
-def settle_invoice(invoice_id: InvoiceId, amount_cents: int) -> PaymentId:
-    return charge_invoice(invoice_id, amount_cents)
-
-
-def start_settlement(invoice_id: InvoiceId, amount_cents: int) -> PaymentId:
+def start_settlement(
+    settlement: SettleInvoice, invoice_id: InvoiceId, amount_cents: int
+) -> PaymentId:
     # The workflow ID is the idempotency key: a second start for one invoice runs once.
     with SetWorkflowID(f"settle-invoice-{invoice_id}"):
-        return settle_invoice(invoice_id, amount_cents)
+        return settlement.settle_invoice(invoice_id, amount_cents)
 ```
 
-The step's body is cut; like the Temporal activity, it sends the invoice id to the provider as the
-idempotency key. It is good because both halves of the rule are visible: the step that calls
-another system turns its retries on and states how many and how long it waits, and the workflow
-starts under an ID that
-a second request for the same invoice repeats.
+The step's body is cut; like the Temporal activity, it calls the module's use case with the client
+the class was given, and the use case sends the invoice id to the provider as the idempotency key.
+It is good because both halves of the rule are visible: the step that calls another system turns
+its retries on and states how many and how long it waits, and the workflow starts under an ID that
+a second request for the same invoice repeats. The client comes in as a parameter, as in the
+Temporal half ([readability.md](../../any-language/readability/readability.md) section 6): DBOS's
+base class is for "DBOS functions that access instance state", and DBOS records the instance's
+name to find the instance when it recovers a workflow [42]. `main.py` builds the instance once,
+before DBOS launches, because "All configured instances should be instantiated before DBOS is
+launched" [42]. The file is named for the one module it calls
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 5).
 
 **An engine still delivers at least once.** Jepsen tested Orkes Conductor 5.3.2 to 5.5.0-rc2, in
 work Orkes paid for ("This research was funded by Orkes Inc."), and found that "healthy Conductor
@@ -439,20 +464,21 @@ programmatically roll them out in Deployment Versions" [34].
 The receipt step of section 4, moved to a new `email_receipt` activity. The new activity does a
 different job from `send_receipt`, so it calls the entry point of a module of its own,
 `billing/email_receipt/`, and sits in `activities_email_receipt.py`; the workflow file imports its
-class with the others:
+class with the others. The fragment takes the place of the receipt call in `run`, and the rest of
+`run` is unchanged:
 
 ```python
         # Runs started before this deploy replay the old branch (section 7).
         if workflow.patched("receipt-by-email"):
             await workflow.execute_activity_method(
-                EmailReceiptActivities.email_receipt,
+                EmailReceipt.email_receipt,
                 receipt,
                 start_to_close_timeout=timedelta(minutes=1),
                 retry_policy=STEP_RETRY_POLICY,
             )
         else:
             await workflow.execute_activity_method(
-                SendReceiptActivities.send_receipt,
+                SendReceipt.send_receipt,
                 receipt,
                 start_to_close_timeout=timedelta(minutes=1),
                 retry_policy=STEP_RETRY_POLICY,
@@ -584,7 +610,9 @@ personal data in messages, are [delivery.md](delivery.md) section 10.
   https://cloud.dbos.dev at startup and exits if it cannot reach it"; "For air-gapped deployments,
   contact sales" [38]. Allow that call, or plan for it, before the first production start.
 
-The client the worker's `main.py` builds once, from three `Settings` fields:
+The client for Temporal Cloud, which the worker's `main.py` builds once from three `Settings`
+fields; on a self-hosted service it passes `tls=TLSConfig(...)` with the client certificate
+instead (the bullet above):
 
 ```python
 # src/acme/core/temporal_client.py
@@ -599,9 +627,10 @@ async def connect_temporal(
     return await Client.connect(
         target_host,
         namespace=namespace,
-        # Unwrapped only where the client is built (python.md section 5).
+        # The key is unwrapped only where the client is built (python.md section 5).
         api_key=api_key.get_secret_value(),
-        # Stated, not left to the default, which turns TLS off when no key is passed.
+        # TLS is stated, not left to the default, which turns it off when no key is
+        # passed.
         tls=True,
         # Workflow inputs are Pydantic models (section 9).
         data_converter=pydantic_data_converter,

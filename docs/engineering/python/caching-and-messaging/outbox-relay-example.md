@@ -92,7 +92,7 @@ Only the files this example touches. Every folder under `src/` and `tests/` has 
     │   └── relay_outbox/
     │       └── test_usecase.py     TestRelayOutbox, and the second connection it uses
     ├── support/
-    │   └── postgres_connection.py  connect_to: the worker's own way into the test database
+    │   └── connection_postgres.py  connect_to: the worker's own way into the test database
     └── unit/
         ├── core/
         │   └── test_config.py      gains the relay's settings (section 10)
@@ -188,11 +188,11 @@ class Settings(BaseSettings):
     # Small: the claim's transaction stays open while its batch is sent
     # (delivery.md section 4).
     outbox_batch_size: Annotated[int, Field(gt=0)] = 100
-    # The wait after an empty claim: about the longest a new event waits to leave.
+    # The wait after an empty claim is about the longest a new event waits to leave.
     outbox_poll_interval_seconds: Annotated[float, Field(gt=0)] = 1.0
 
-    # Every secret field, so a RabbitMQ password left at the placeholder stops the
-    # start as the others do.
+    # The validator checks every secret field, so a RabbitMQ password left at the
+    # placeholder stops the start as the others do.
     @field_validator("database_password", "payments_api_key", "rabbitmq_password")
     @classmethod
     def reject_placeholder(cls, secret: SecretStr) -> SecretStr:
@@ -270,7 +270,7 @@ from acme.core.schemas import RoutingKey
 
 EVENTS_EXCHANGE: Final = "acme.events"
 
-# What a publish, an ack or a reject raises when the broker did not get it: a nack, a
+# A publish, an ack or a reject raises these when the broker did not get it: a nack, a
 # returned message, a lost connection, or a closed channel, which aiormq raises as a
 # RuntimeError and not as an AMQPError. A connection the heartbeat finds stuck fails
 # a pending confirm with asyncio.CancelledError instead, which this does not catch:
@@ -300,7 +300,7 @@ async def publish_event(
     message = aio_pika.Message(
         body,
         content_type="application/json",
-        # The id the broker and the log lines carry; consumers drop a second copy by
+        # The broker and the log lines carry this id; consumers drop a second copy by
         # the same id in the body, a departure from delivery.md section 3 that the
         # outbox table declares (outbox-relay-example.md section 3).
         message_id=str(message_id),
@@ -313,6 +313,8 @@ async def publish_event(
     # returns after the broker's ack, and a nack or a returned message raises.
     # mandatory=True is aio-pika's default, written out: without it a message no
     # queue takes is dropped and still confirmed (message-brokers.md section 8).
+    # The broker's errors leave here as they are: the caller wraps them, a
+    # departure its use case declares (outbox-relay-example.md section 7).
     await exchange.publish(message, routing_key=routing_key, mandatory=True)
 ```
 
@@ -412,7 +414,7 @@ async def insert_order_placed(
             AGGREGATE_TYPE,
             str(event.order_id),
             EVENT_TYPE,
-            # mode="json": the ids and the currency as the strings billing parses.
+            # mode="json": the ids and the currency go in as the strings billing parses.
             Jsonb(event.model_dump(mode="json")),
         ),
     )
@@ -502,12 +504,12 @@ class OutboxRow:
     position: int
     event_id: EventId
     routing_key: RoutingKey
-    # The event's JSON as text, sent on as it is and never parsed here.
+    # The field holds the event's JSON as text, sent on as it is and never parsed here.
     payload: str
 
 
-# Which path one batch took. The loop and the tests write its members by name, so
-# the type is a StrEnum (python.md section 2).
+# Each member names the path one batch took. The loop and the tests write its
+# members by name, so the type is a StrEnum (python.md section 2).
 @unique
 class RelayOutcome(StrEnum):
     SENT = "sent"
@@ -550,7 +552,7 @@ from psycopg.rows import TupleRow, kwargs_row
 from acme.core.schemas import EventId, RoutingKey
 from acme.orders.relay_outbox.schemas import OutboxRow
 
-# Any bigint that no other advisory lock in this database uses.
+# The key can be any bigint that no other advisory lock in this database uses.
 RELAY_LOCK_KEY: Final = 7_241_001
 
 
@@ -559,8 +561,8 @@ async def take_relay_lock(conn: AsyncConnection[TupleRow]) -> bool:
     cursor = await conn.execute(
         "SELECT pg_try_advisory_xact_lock(%s)", (RELAY_LOCK_KEY,)
     )
-    row = await cursor.fetchone()
 
+    row = await cursor.fetchone()
     return row is not None and bool(row[0])
 
 
@@ -677,13 +679,17 @@ class RelayOutbox:
             )
         except PublishError as error:
             # Returned: no queue is bound to the event's key, and only a person can
-            # bind one. From None, for the reason below.
+            # bind one. The error is raised from None, for the reason below.
             raise EventReturnedError(
                 row.event_id, broker_error=type(error).__name__
             ) from None
         except BROKER_ERRORS as error:
-            # From None: the broker's error can hold the message, body included; the
-            # event id is all the log needs (logging.md section 10).
+            # A departure from logging.md section 10, where the one client raises
+            # its own safe error: the relay is publish_event's one caller, and its
+            # error adds the event id. The cost: a second caller of publish_event
+            # must wrap the broker's errors the same way. From None: the broker's
+            # error can hold the message, body included; the event id is all the log
+            # needs.
             raise EventNotPublishedError(
                 row.event_id, broker_error=type(error).__name__
             ) from None
@@ -772,7 +778,7 @@ def _log_refused_batch(error: EventNotPublishedError) -> None:
             extra={"message_id": str(error.event_id)},
         )
     else:
-        # WARNING: a nack or a lost connection, which the relay gets past by itself
+        # WARNING: the relay gets past a nack or a lost connection by itself
         # (logging.md section 4). A connection the heartbeat finds stuck never gets
         # here: its CancelledError ends the worker, whose restart sends the rows.
         logger.warning(
@@ -819,6 +825,9 @@ import logging
 import logging.config
 import signal
 import sys
+from importlib.metadata import version
+
+from pydantic import SecretStr
 
 from acme.core.config import Settings
 from acme.core.database import connect_database
@@ -832,6 +841,7 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     settings = Settings()
+
     logging.config.dictConfig(
         build_logging_config(settings.log_level, settings.log_format)
     )
@@ -871,22 +881,33 @@ async def run_worker(settings: Settings) -> None:
     )
 
     async with rabbitmq, relay_database:
-        # Confirms on, and a returned message raises: publish_event returns only after
-        # the broker's ack, and an event no queue takes stays in the outbox
+        # Confirms are on, and a returned message raises: publish_event returns only
+        # after the broker's ack, and an event no queue takes stays in the outbox
         # (message-brokers.md section 8).
         channel = await rabbitmq.channel(publisher_confirms=True, on_return_raises=True)
+
         relay = RelayOutbox(
             relay_database,
             await open_event_exchange(channel),
             batch_size=settings.outbox_batch_size,
         )
-        # INFO, once the clients are built: the start, with the tuning values and no
-        # secret (logging.md section 4).
+
+        # INFO, once the clients are built: the line logs the start, with the version
+        # and every setting that is not a secret (logging.md sections 4 and 10).
         logger.info(
             "Worker started",
             extra={
-                "batch_size": settings.outbox_batch_size,
-                "poll_interval_seconds": settings.outbox_poll_interval_seconds,
+                # The version comes from the installed distribution, so nothing reads
+                # the environment outside Settings (python.md section 5).
+                "version": version("acme"),
+                # The dict is built from the class, so a new field joins with no edit
+                # and a SecretStr never does. It sits under one key, so no field name
+                # clashes with a record attribute (logging.md section 3).
+                "settings": {
+                    name: value
+                    for name, value in settings.model_dump().items()
+                    if not isinstance(value, SecretStr)
+                },
             },
         )
 
@@ -902,8 +923,11 @@ It is good because:
   `run_worker` turns the settings into clients, each built once at startup and handed in
   ([file-structure.md](../../any-language/file-structure/file-structure.md) sections 4 and 5).
 - **The worker logs its start and the error that ends it.** The start is one `INFO` line with the
-  tuning values and no secret, and an error that leaves `asyncio.run` is one `CRITICAL` line with
-  its traceback before the exit code 1 ([logging.md](../logging/logging.md) section 4). Each
+  service's version and every setting that is not a `SecretStr`, built from the class, so a field
+  added later joins the line with no edit and a secret never does
+  ([logging.md](../logging/logging.md) sections 4 and 10). An error that leaves `asyncio.run` is
+  one `CRITICAL` line with its traceback before the exit code 1
+  ([logging.md](../logging/logging.md) section 4). Each
   designed stop of the worker then reaches the log store through the logging config, with its
   level, instead of as raw lines on stderr that an alert on the level never sees.
 - **The relay has a database connection and a channel of its own**
@@ -958,9 +982,9 @@ from psycopg import AsyncConnection
 from psycopg.rows import TupleRow
 from testcontainers.community.postgres import PostgresContainer
 
-from tests.support.postgres_connection import connect_to
+from tests.support.connection_postgres import connect_to
 
-# The major version production runs, so a query that works here works there.
+# Production runs this major version, so a query that works here works there.
 POSTGRES_IMAGE: Final = "postgres:18-alpine"
 
 
@@ -992,12 +1016,12 @@ async def database(
     async with await connect_to(postgres) as conn:
         yield conn
 
-        # Every table a test writes, so no test sees another's rows
+        # TRUNCATE empties every table a test writes, so no test sees another's rows
         # (fixtures.md section 3).
         await conn.execute("TRUNCATE orders, outbox")
 ```
 
-`tests/support/postgres_connection.py`:
+`tests/support/connection_postgres.py`:
 
 ```python
 """A connection to the test run's PostgreSQL, opened the way the worker opens one."""
@@ -1052,14 +1076,13 @@ from acme.orders.place_order.usecase import PlaceOrder
 ORDER_ID: Final = OrderId(UUID("6f1c2b8e-0d4a-4c1e-9b7a-3e5f2a1d0c01"))
 SECOND_ORDER_ID: Final = OrderId(UUID("6f1c2b8e-0d4a-4c1e-9b7a-3e5f2a1d0c02"))
 EVENT_ID: Final = EventId(UUID("a3d9e4f0-5b6c-4d7e-8f9a-0b1c2d3e4f01"))
-# 12.50 EUR in cents.
+# 1250 is 12.50 EUR in cents.
 AMOUNT_MINOR: Final = 1250
 
 
 async def stored_orders(conn: AsyncConnection[TupleRow]) -> list[TupleRow]:
     """Read every order as (id, amount_minor, currency)."""
     cursor = await conn.execute("SELECT id, amount_minor, currency FROM orders")
-
     return await cursor.fetchall()
 
 
@@ -1069,7 +1092,6 @@ async def outbox_rows(conn: AsyncConnection[TupleRow]) -> list[TupleRow]:
         "SELECT id, aggregatetype, aggregateid, type, payload FROM outbox"
         " ORDER BY position"
     )
-
     return await cursor.fetchall()
 
 
@@ -1197,7 +1219,7 @@ from acme.orders.relay_outbox.errors import EventNotPublishedError
 from acme.orders.relay_outbox.repository import take_relay_lock
 from acme.orders.relay_outbox.schemas import RelayOutcome
 from acme.orders.relay_outbox.usecase import RelayOutbox
-from tests.support.postgres_connection import connect_to
+from tests.support.connection_postgres import connect_to
 
 ORDER_ID: Final = OrderId(UUID("6f1c2b8e-0d4a-4c1e-9b7a-3e5f2a1d0c01"))
 EVENT_ID: Final = EventId(UUID("a3d9e4f0-5b6c-4d7e-8f9a-0b1c2d3e4f01"))
@@ -1291,7 +1313,7 @@ class LockCheckingExchange(FakeExchange):
         immediate: bool = False,
         timeout: TimeoutType = None,
     ) -> aiormq.spec.Basic.Ack | None:
-        # The other relay, starting its own batch while this one is being sent.
+        # The other relay starts its own batch while this one is being sent.
         async with self._other_relay.transaction():
             self.other_relay_locked.append(await take_relay_lock(self._other_relay))
 
@@ -1317,7 +1339,6 @@ async def place_an_order(conn: AsyncConnection[TupleRow]) -> None:
 async def outbox_event_ids(conn: AsyncConnection[TupleRow]) -> list[UUID]:
     """Read the ids of the events still in the outbox."""
     cursor = await conn.execute("SELECT id FROM outbox ORDER BY position")
-
     return [row[0] for row in await cursor.fetchall()]
 
 
@@ -1429,7 +1450,7 @@ class TestRelayOutbox:
         relay = RelayOutbox(database, exchange, batch_size=BATCH_SIZE)
 
         async with second_connection.transaction():
-            # The other relay, in the middle of its batch.
+            # The other relay is in the middle of its batch.
             await take_relay_lock(second_connection)
 
             await relay.run()
@@ -1523,7 +1544,8 @@ class AlwaysEmptyRelay(RelayOutbox):
     async def run(self) -> RelayOutcome:
         self.batches_run += 1
 
-        # So a loop that never waits still ends, and fails on its assertion.
+        # The third batch sets the stop, so a loop that never waits still ends, and
+        # fails on its assertion.
         if self.batches_run == 3:
             self._stop.set()
 
@@ -1540,6 +1562,7 @@ class RecordingStop(asyncio.Event):
     @override
     async def wait(self) -> Literal[True]:
         self.waits += 1
+
         self.set()
 
         return True
@@ -1552,7 +1575,7 @@ class TestRelayUntilStopped:
         stop = asyncio.Event()
         relay = FirstBatchRefusedRelay(stop)
 
-        # No wait between polls, so the test does not sleep.
+        # A zero interval means no wait between polls, so the test does not sleep.
         await relay_until_stopped(relay, stop, poll_interval_seconds=0)
 
         assert relay.batches_run == 2

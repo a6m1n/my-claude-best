@@ -126,8 +126,8 @@ The use case's own dependencies, such as its repository, are left out. In Procra
 reaches them through its job context: a task declared with `pass_context=True` gets a
 `JobContext` as its first argument, and the worker started with
 `run_worker_async(additional_context=...)` adds that dict to the context [11]. The adapter's
-`main.py` registers the Blueprint on the App with
-`app.add_tasks_from(blueprint, namespace="reports")` [11].
+`main.py` builds the App with `periodic_defaults={"max_delay": 600}` (section 6) and registers the
+Blueprint on it with `app.add_tasks_from(blueprint, namespace="reports")` [11].
 
 ```python
 # src/acme/worker/handlers_build_daily_report.py
@@ -143,14 +143,14 @@ blueprint = Blueprint()
 
 
 @blueprint.periodic(cron="15 2 * * *")
-# One run at a time, one waiting (scheduled-jobs.md section 7).
+# The locks allow one run at a time and one waiting (scheduled-jobs.md section 7).
 # retry=False is the default, written: a failed run is not tried again
 # (delivery.md section 5).
 @blueprint.task(lock="daily_report", queueing_lock="daily_report", retry=False)
 async def build_daily_report(timestamp: int) -> None:
     """Build the report for the day before the scheduled run."""
-    # The time the run was due, not the clock, so a late or a second
-    # run builds the same day (scheduled-jobs.md section 4).
+    # The day comes from the time the run was due, not the clock, so a late or a
+    # second run builds the same day (scheduled-jobs.md section 4).
     due_at = datetime.fromtimestamp(timestamp, tz=UTC)
     await usecase.build_daily_report(due_at.date() - timedelta(days=1))
 ```
@@ -220,7 +220,10 @@ up to 8 hours late "but no later, because a backup taken any later wouldn't be u
   is 1 second, and `coalesce` is on, so several missed runs become one [15], [4]. The docs suggest a
   higher `misfire_grace_time` when runs start late because the executor's pool is busy [4].
 
-A Celery beat config written by these rules; the broker's settings are left out. Celery calls
+Section 4's job on a service that runs Celery instead of Procrastinate, so each service has one
+scheduler: a Celery beat config written by these rules, and the task it sends. The broker's
+settings, the worker settings of [task-queues.md](task-queues.md) section 8, and the `imports`
+setting that makes the worker import the task's module [13] are left out. Celery calls
 `configure_beat` itself: it is connected to the app's `on_after_configure` signal, as Celery's own
 periodic-tasks example connects its setup function, and "on_after_configure is sent after the app
 is set up" [2].
@@ -232,7 +235,9 @@ is set up" [2].
 from celery import Celery
 from celery.schedules import crontab
 
-# Departs from python.md section 5, which builds no app at import: `celery -A`
+from acme.core.schemas import TaskName
+
+# A departure from python.md section 5, which builds no app at import: `celery -A`
 # imports this attribute and calls no factory. The cost: the module holds an app
 # object at import, with no settings in it.
 app = Celery("acme")
@@ -252,16 +257,53 @@ def configure_beat(sender: Celery, **kwargs: object) -> None:
         beat_cron_starting_deadline=1800,
         beat_schedule={
             "build-daily-report": {
-                "task": "acme.worker.handlers_build_daily_report.build_daily_report",
+                # By its TaskName member: beat sends the task by name and imports no
+                # task code (python.md section 3).
+                "task": TaskName.BUILD_DAILY_REPORT,
                 "schedule": crontab(minute=15, hour=2),
             },
         },
     )
 ```
 
+The task beat sends. On this service it sits in `src/acme/worker/handlers_build_daily_report.py`,
+the file that holds section 4's task on a service that runs Procrastinate. The import of the use
+case and the use case's own dependencies, such as its repository, are left out. A Celery task
+reaches them through a base `Task` class: a task declared with `base=` and `bind=True` reads them
+through `self` ([task-queues.md](task-queues.md) section 7). That class and those two arguments
+are left out as well. On this service the use case is a plain `def` too, because a coroutine that
+the task calls does not run ([task-queues.md](task-queues.md) section 9):
+
+```python
+# src/acme/worker/handlers_build_daily_report.py
+"""Scheduled jobs of the build_daily_report module."""
+
+from datetime import UTC, datetime, timedelta
+
+from celery import shared_task
+
+from acme.core.schemas import TaskName
+
+
+# name: beat's entry in main.py sends the task by this TaskName member
+# (task-queues.md section 7).
+@shared_task(name=TaskName.BUILD_DAILY_REPORT)
+def build_daily_report() -> None:
+    """Build the report for the day before the run."""
+    # Beat passes no due time, so the clock is read once, here; the deadline in
+    # main.py bounds how late it can be (scheduled-jobs.md sections 4 and 6).
+    report_day = datetime.now(UTC).date() - timedelta(days=1)
+    usecase.build_daily_report(report_day)
+```
+
 It is good because the zone is written down where a Django setting cannot move it, and the
 deadline is a choice made for this job, not the default that sends every past-due run at once.
-The schedule sits in the worker's entry point, read by the one beat process of section 3.
+The schedule sits in the worker's entry point, read by the one beat process of section 3, and it
+is this job's only scheduler. Beat names the task by its `TaskName` member, a closed set and never
+a bare `str` ([python.md](../language/python.md) section 3), and the task is a plain `def`,
+because Celery 5.6.3 does not run an `async def` task ([task-queues.md](task-queues.md) section 9).
+The task works its day out from the clock it reads once, because a beat entry carries no due time
+(section 4).
 
 ## 7. A run still going when the next one is due
 

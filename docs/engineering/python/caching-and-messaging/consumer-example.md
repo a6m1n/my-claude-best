@@ -135,8 +135,8 @@ file's imports gain `Annotated` from `typing` and `Field` from `pydantic`.
 class Settings(BaseSettings):
     ...  # The fields of outbox-relay-example.md section 4 and settings-example.md
 
-    # Never 0, which means no limit; small, so no waiting message nears the ack
-    # timeout (message-brokers.md section 9).
+    # The count is never 0, which means no limit, and it is small, so no waiting
+    # message nears the ack timeout (message-brokers.md section 9).
     billing_prefetch_count: Annotated[int, Field(gt=0)] = 10
 ```
 
@@ -202,6 +202,7 @@ async def open_billing_queue(
 ) -> AbstractQueue:
     # A channel of its own: a channel is never shared (message-brokers.md section 5).
     channel = await connection.channel()
+
     # Per consumer, and never 0: aio-pika's default of 0 means no limit
     # (message-brokers.md section 9).
     await channel.set_qos(prefetch_count=prefetch_count)
@@ -216,6 +217,7 @@ async def open_billing_queue(
         # (message-brokers.md section 8).
         durable=True,
     )
+
     # No delivery limit or dead-letter target of its own, a departure from the check
     # of delivery.md section 6: this queue ends the path. Nothing consumes it, and a
     # person sends a dead letter back by publishing it again, never by rejecting it
@@ -226,14 +228,17 @@ async def open_billing_queue(
         durable=True,  # Quorum queues are always durable; aio-pika defaults to False.
         arguments={"x-queue-type": "quorum"},  # A policy cannot set the type.
     )
+
     await dead_letter_queue.bind(dead_letters)
 
     events = await open_event_exchange(channel)
+
     queue = await channel.declare_queue(
         BILLING_QUEUE,
         durable=True,  # Quorum queues are always durable; aio-pika defaults to False.
         arguments={"x-queue-type": "quorum"},  # A policy cannot set the type.
     )
+
     # Only OrderPlaced reaches this queue's parser: the exchange is a topic
     # (message-brokers.md section 6).
     await queue.bind(events, routing_key=RoutingKey.ORDER_PLACED)
@@ -287,6 +292,9 @@ worker_user="$2"
 
 # Priority 10 beats a broader policy left at the default of 0. The anchors keep the
 # policy off billing.order_placed.dead-letter, whose name starts the same.
+# delivery-limit and consumer-timeout are RabbitMQ's defaults, written because the
+# code relies on them (delivery.md section 5). overflow is reject-publish because
+# at-least-once dead-lettering needs it (delivery.md section 6).
 rabbitmqctl set_policy --vhost "$vhost" --priority 10 --apply-to quorum_queues \
     billing-order-placed '^billing\.order_placed$' \
     '{"dead-letter-exchange": "billing.dead-letter",
@@ -379,7 +387,7 @@ EventId = NewType("EventId", UUID)
 OrderId = NewType("OrderId", UUID)
 
 
-# The currencies an order takes. Code and tests write its members by name, so the
+# An order takes these currencies. Code and tests write its members by name, so the
 # type is a StrEnum (python.md section 2).
 @unique
 class Currency(StrEnum):
@@ -387,8 +395,8 @@ class Currency(StrEnum):
     USD = "USD"
 
 
-# The key each event is published with. An event name is a closed set, never a bare
-# str (python.md section 3).
+# Each member is the key one event is published with. An event name is a closed set,
+# never a bare str (python.md section 3).
 @unique
 class RoutingKey(StrEnum):
     ORDER_PLACED = "orders.order_placed"
@@ -426,9 +434,10 @@ class OrderPlaced(BaseModel):
 
     event_id: EventId
     order_id: OrderId
-    # Minor units, such as cents. Strict: an amount of money is never coerced from a
-    # string or a float (python.md section 4). The upper bound is a bigint's largest
-    # value, so an amount the table cannot store fails here and is never retried.
+    # The amount is in minor units, such as cents. Strict: an amount of money is never
+    # coerced from a string or a float (python.md section 4). The upper bound is a
+    # bigint's largest value, so an amount the table cannot store fails here and is
+    # never retried.
     amount_minor: Annotated[int, Field(gt=0, le=9_223_372_036_854_775_807, strict=True)]
     currency: Currency
 ```
@@ -483,8 +492,8 @@ CREATE TABLE charge (
 from enum import StrEnum, unique
 
 
-# What one run did with one event. The use case and the tests write its members by
-# name, so the type is a StrEnum (python.md section 2).
+# Each member names what one run did with one event. The use case and the tests
+# write its members by name, so the type is a StrEnum (python.md section 2).
 @unique
 class ChargeOutcome(StrEnum):
     CHARGED = "charged"
@@ -566,12 +575,12 @@ from acme.core.schemas import Currency, EventId, OrderId
 
 class ChargeOrder:
     def __init__(self, conn: AsyncConnection[TupleRow]) -> None:
-        # From connect_database, so autocommit: the block below is then a real
-        # transaction, not a savepoint (delivery.md section 3).
+        # The connection comes from connect_database, so it is in autocommit: the block
+        # below is then a real transaction, not a savepoint (delivery.md section 3).
         self._conn = conn
 
     @property
-    def connection_closed(self) -> bool:
+    def is_connection_closed(self) -> bool:
         """True once the connection is closed, after which every charge fails."""
         # psycopg reports a broken connection as closed too.
         return self._conn.closed
@@ -625,9 +634,9 @@ amount is the point-of-use check that section's condition 4 keeps for money, and
 section 9 uses it to make a charge fail. A database error leaves `run` as `ChargeNotRecordedError`,
 raised `from None` with the SQLSTATE only, because PostgreSQL adds the row a check refused to the
 error's detail, as "Failing row contains" and the row's values [22], and the handler of section 7
-logs the error's traceback ([logging.md](../logging/logging.md) section 10). `connection_closed`
-lets the handler tell a closed connection from a charge that failed once, and it reads `closed`
-alone because psycopg's docs say "A broken connection is always closed" [23].
+logs the error's traceback ([logging.md](../logging/logging.md) section 10).
+`is_connection_closed` lets the handler tell a closed connection from a charge that failed once,
+and it reads `closed` alone because psycopg's docs say "A broken connection is always closed" [23].
 
 ## 7. The handler: ack after the commit, reject on failure
 
@@ -719,7 +728,7 @@ async def on_order_placed(
 
         # A closed connection fails every charge after this one: stop the worker, so
         # that its restart opens a new connection.
-        if charge_order.connection_closed:
+        if charge_order.is_connection_closed:
             raise ConsumerStoppedError("billing's database connection is closed")
 
         return
@@ -813,6 +822,8 @@ async def run_worker(settings: Settings) -> None:
     )
 
     async with rabbitmq, relay_database, billing_database:
+        # On the relay's connection, against RabbitMQ's advice of separate connections:
+        # section 10 declares that departure and its cost.
         queue = await open_billing_queue(rabbitmq, settings.billing_prefetch_count)
 
         async with asyncio.TaskGroup() as tasks:
@@ -869,8 +880,8 @@ fixture whose connection comes from `connect_to`, which opens it with the applic
 gains billing's two tables.
 
 ```python
-        # Every table a test writes, billing's two included, so no test sees another's
-        # rows (fixtures.md section 3).
+        # TRUNCATE empties every table a test writes, billing's two included, so no
+        # test sees another's rows (fixtures.md section 3).
         await conn.execute("TRUNCATE orders, outbox, processed_message, charge")
 ```
 
@@ -906,14 +917,12 @@ async def stored_charges(conn: AsyncConnection[TupleRow]) -> list[TupleRow]:
     cursor = await conn.execute(
         "SELECT order_id, amount_minor, currency FROM charge ORDER BY id"
     )
-
     return await cursor.fetchall()
 
 
 async def processed_events(conn: AsyncConnection[TupleRow]) -> list[TupleRow]:
     """Return the id of every message the database records as processed."""
     cursor = await conn.execute("SELECT message_id FROM processed_message")
-
     return await cursor.fetchall()
 
 
@@ -1025,18 +1034,18 @@ class FakeChargeOrder(ChargeOrder):
         self,
         outcome: ChargeOutcome = ChargeOutcome.CHARGED,
         error: Exception | None = None,
-        connection_closed: bool = False,
+        is_connection_closed: bool = False,
     ) -> None:
         # No super().__init__(): the fake reaches no database and needs no connection.
         self.event_ids: list[EventId] = []
         self._outcome = outcome
         self._error = error
-        self._connection_closed = connection_closed
+        self._is_connection_closed = is_connection_closed
 
     @property
     @override
-    def connection_closed(self) -> bool:
-        return self._connection_closed
+    def is_connection_closed(self) -> bool:
+        return self._is_connection_closed
 
     @override
     async def run(
@@ -1092,7 +1101,6 @@ def a_delivery(body: bytes) -> NonCallableMagicMock:
     delivery: NonCallableMagicMock = create_autospec(
         IncomingMessage, instance=True, message_id=str(EVENT_ID), body=body
     )
-
     return delivery
 ```
 
@@ -1130,7 +1138,7 @@ class TestOnOrderPlaced:
 
     # A departure from test-structure.md section 7, which writes two rows as two
     # named tests: the table runs over every ChargeOutcome, so an outcome added later
-    # is tested the day it is added. The cost: a table of two rows today.
+    # is tested the day it is added. The cost: the table has two rows today.
     @pytest.mark.parametrize(
         "outcome",
         [pytest.param(outcome, id=outcome.value) for outcome in ChargeOutcome],
@@ -1192,7 +1200,7 @@ class TestOnOrderPlaced:
         """
         message = a_delivery(an_order_placed_body())
         charge_order = FakeChargeOrder(
-            error=RuntimeError("db down"), connection_closed=True
+            error=RuntimeError("db down"), is_connection_closed=True
         )
 
         with pytest.raises(ConsumerStoppedError, match="connection is closed"):
@@ -1238,6 +1246,8 @@ class TestOnOrderPlaced:
         await on_order_placed(message, FakeChargeOrder())
 
         assert any(record.levelno == logging.INFO for record in caplog.records)
+        # Every attribute, extra= included: caplog.text holds only the format's
+        # fields (assertions.md section 6).
         assert not any(
             UNPARSEABLE_CURRENCY in repr(vars(record)) for record in caplog.records
         )
@@ -1294,7 +1304,7 @@ class FakeMessages(QueueIterator):
     @override
     async def __anext__(self) -> AbstractIncomingMessage:
         if not self._deliveries:
-            # What the robust iterator does when its channel has not come back.
+            # The robust iterator does this when its channel has not come back.
             raise StopAsyncIteration
 
         return self._deliveries.pop(0)
@@ -1343,6 +1353,8 @@ class TestConsumeOrderEvents:
             await consume_order_events(a_queue_of(unparseable), FakeChargeOrder())
 
         assert any(record.levelno == logging.WARNING for record in caplog.records)
+        # Every attribute, extra= included: caplog.text holds only the format's
+        # fields (assertions.md section 6).
         assert not any(
             UNPARSEABLE_CURRENCY in repr(vars(record)) for record in caplog.records
         )

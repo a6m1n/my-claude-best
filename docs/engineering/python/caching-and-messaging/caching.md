@@ -98,6 +98,8 @@ RATE_TTL_SECONDS: Final = 600
 class RatesClient:
     def __init__(self, http: httpx.Client) -> None:
         self._http = http
+        # maxsize is above the number of Currency members, so a rate leaves the
+        # cache only when it expires.
         self._rates: TTLCache[Currency, Decimal] = TTLCache(
             maxsize=64, ttl=RATE_TTL_SECONDS
         )
@@ -198,7 +200,8 @@ from acme.core.schemas import Product, ProductId
 
 logger = logging.getLogger(__name__)
 
-# The errors of a cache that cannot be reached; any other error is a bug and is raised.
+# These are the errors of a cache that cannot be reached; any other error is a bug
+# and is raised.
 CACHE_DOWN: Final = (cache_errors.ConnectionError, cache_errors.TimeoutError)
 
 # A product page may show a price up to five minutes old. This is the real bound: a
@@ -212,14 +215,15 @@ def _cache_key(product_id: ProductId) -> str:
 
 
 async def read_product(cache: Valkey, product_id: ProductId) -> Product | None:
-    """The cached copy, or None: no copy, or the cache is down (a miss either way)."""
+    """Return the cached copy, or None when there is no copy or the cache is down."""
     try:
         cached = await cache.get(_cache_key(product_id))
     except CACHE_DOWN:
-        # Departs from python.md section 2 (a failure turned into None): a cache outage
-        # must not become a service outage (caching.md section 10). The cost: every
-        # read goes to the database while the cache is down.
+        # A departure from python.md section 2 (a failure turned into None): a
+        # cache outage must not become a service outage (caching.md section 10).
+        # The cost: every read goes to the database while the cache is down.
         logger.warning("Cache read failed, product %s comes from the store", product_id)
+
         return None
 
     if cached is None:
@@ -231,15 +235,15 @@ async def read_product(cache: Valkey, product_id: ProductId) -> Product | None:
 
 async def store_product(cache: Valkey, product: Product) -> None:
     try:
-        # JSON, never pickle (caching.md section 6); the expiry goes in the same
-        # SET (caching.md section 4).
+        # The copy is JSON, never pickle (caching.md section 6); the expiry goes in
+        # the same SET (caching.md section 4).
         await cache.set(
             _cache_key(product.id), product.model_dump_json(), ex=PRODUCT_TTL_SECONDS
         )
     except CACHE_DOWN:
-        # Departs from python.md section 2 (an except that carries on): a cache outage
-        # must not become a service outage (caching.md section 10). The cost: no copy
-        # is stored, so the next read goes to the database again.
+        # A departure from python.md section 2 (an except that carries on): a
+        # cache outage must not become a service outage (caching.md section 10).
+        # The cost: no copy is stored, so the next read goes to the database again.
         logger.warning("Cache write failed for product %s", product.id)
 
 
@@ -247,9 +251,9 @@ async def forget_product(cache: Valkey, product_id: ProductId) -> None:
     try:
         await cache.delete(_cache_key(product_id))
     except CACHE_DOWN:
-        # Departs from python.md section 2 (an except that carries on): a cache outage
-        # must not become a service outage (caching.md section 10). The cost: the old
-        # copy lives until PRODUCT_TTL_SECONDS ends it.
+        # A departure from python.md section 2 (an except that carries on): a
+        # cache outage must not become a service outage (caching.md section 10).
+        # The cost: the old copy lives until PRODUCT_TTL_SECONDS ends it.
         logger.warning("Cache delete failed for product %s", product_id)
 ```
 
@@ -266,6 +270,7 @@ async def get_product(
         return cached
 
     product = await repository.load_product(session, product_id)
+
     await product_cache.store_product(cache, product)
 
     return product
@@ -277,6 +282,7 @@ async def change_price(
     product_id: ProductId, price: Decimal, cache: Valkey, session: AsyncSession
 ) -> None:
     await repository.update_price(session, product_id, price)
+
     await session.commit()
 
     # After the commit: removing the copy first lets a reader put the old price
@@ -488,7 +494,7 @@ def build_cache(host: str, port: int, user: str, password: SecretStr) -> Valkey:
     return Valkey(
         host=host,
         port=port,
-        # An ACL user that may run only the commands this service sends
+        # The ACL user may run only the commands this service sends
         # (caching.md section 14).
         username=user,
         password=password.get_secret_value(),
