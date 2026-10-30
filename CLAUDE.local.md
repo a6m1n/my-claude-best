@@ -218,6 +218,18 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   meeting it plans names the decision it makes (`meetings.md` section 1), and every release it
   plans has one go or no-go decider (`release.md` section 3) and a rollback plan with a trigger,
   one decider and a time that fits the SLA (`rollback-plan.md` section 2).
+- Before you choose or change how a team works — pick its development approach, start, combine or
+  change Scrum, Kanban, XP or Lean practices, scale past one team, run the work under a regulator or
+  a fixed-price contract, or bring AI coding agents into the team's work — read
+  `docs/engineering/any-language/development-approaches/README.md` and the file it routes to for
+  that work, and `docs/engineering/any-language/project-management/life-cycle.md` section 4 when the
+  choice is made for a project's deliverables. The check: the plan or the team's page names the
+  approach and its reason (`life-cycle.md` section 4), no Scrum event, role or artifact is dropped
+  while the team still calls its process Scrum (`scrum.md` section 4), every Definition of Workflow
+  it writes names the Kanban text and edition it follows (`kanban.md` section 1), and no claim that
+  one approach works better than another, or that AI agents speed a team up by one figure, appears
+  without its study, the study's sample and its kind (`choosing-an-approach.md` section 5,
+  `ai-agents.md` section 3).
 - Before you start the research for a new practice or for a new rules file in one, or create or
   edit any file under `docs/engineering/`, read `docs/engineering/CLAUDE.md` first. The check:
   the closing summary names it.

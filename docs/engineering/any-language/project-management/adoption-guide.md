@@ -386,8 +386,9 @@ for two weeks, the same bug sits inside a large pull request with three other ch
 release waits for all of them.
 
 **Ask** the team: what must be true before we call a work item Done? How many items can one person
-hold at once before work slows down? Can we agree a Sprint Goal every two weeks, or does our work
-arrive unplanned?
+hold at once before work slows down? Can we agree a Sprint Goal every two weeks and keep it, with
+capacity held for the interrupts our history lets us predict ([life-cycle.md](life-cycle.md)
+section 4)?
 
 **You end with** the Definition of Done, the work-in-progress limits, the sprint length or the flow,
 and the meetings in the team's calendar.

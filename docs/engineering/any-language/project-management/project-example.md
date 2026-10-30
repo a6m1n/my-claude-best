@@ -216,9 +216,12 @@ The RACI matrix, a Confluence page linked from the charter page
 The matrix is good because each row has exactly one A, and the A of each epic is the owner in its
 WBS dictionary entry in section 4, so the two never disagree.
 
-Deciders ([roles-and-decisions.md](roles-and-decisions.md) section 5): a milestone move of up to one
-week, John Smith; a larger move, Jane Doe; the provider contract, data clauses acceptable: head of
-security; the provider contract, sign: Jane Doe, after the head of security's yes; how payment
+Deciders ([roles-and-decisions.md](roles-and-decisions.md) section 5): the development approach of
+each deliverable, Jane Doe, on John Smith's recommendation, because the sponsor approves the
+baseline of the plan that holds it ([life-cycle.md](life-cycle.md) section 2) and the project
+manager recommends the approach ([life-cycle.md](life-cycle.md) section 4); a milestone move of up
+to one week, John Smith; a larger move, Jane Doe; the provider contract, data clauses acceptable:
+head of security; the provider contract, sign: Jane Doe, after the head of security's yes; how payment
 traffic moves to the new provider, Jane Doe, because the move puts the checkout revenue at risk,
 which the sponsor owns, so it is outside the team's authority
 ([roles-and-decisions.md](roles-and-decisions.md) section 5); a technical choice that is hard to
