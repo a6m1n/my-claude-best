@@ -21,8 +21,9 @@ flowchart TD
 ## What is here
 
 - [git.md](git.md) — the rules: branches, commits, pull requests, merging, force push,
-  conflicts, several agents, the project README and the navigation block that opens a README
-  or a long rules file. Read it before any git operation.
+  conflicts, several agents and closing a working tree after its pull request, the project
+  README and the navigation block that opens a README or a long rules file. Read it before
+  any git operation.
 - [commit-example.md](commit-example.md) — four good commit messages and three bad ones, each
   with the reason; each bad one names the good one that fixes it. Read it when you write a
   commit message.
