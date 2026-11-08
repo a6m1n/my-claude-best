@@ -29,7 +29,7 @@ For example, the git practice needs this one line in your `CLAUDE.md`:
 
 With this line in your `CLAUDE.md`, the agent opens `git.md` before its first git command, and its commit titles take one form, such as `fix(orders): reject an empty cart`.
 
-It is for teams that write code with an AI coding agent. The code examples are in Python, in TypeScript for the React practices and for a labelled React case, and in JavaScript for the Node.js scripts of one test bench. The practices are Markdown, so there is nothing to build or install. Every name in the examples is invented.
+It is for teams that write code with an AI coding agent. The code examples are in Python, and in TypeScript for the React practices and for a labelled React case, with configuration files (YAML, TOML, Dockerfiles and the like), SQL, shell commands and scripts, and short HTML, CSS, HTTP and JavaScript snippets beside them. The practices are Markdown, so there is nothing to build or install. Every name in the examples is invented.
 
 The practices sit in group folders: `any-language/` for the ones whose rules work in any language (their code examples are in Python, apart from a part labelled as one language's case, such as a React case), `python/` for the ones written for Python, and `react/` for the ones written for a React application. [docs/engineering/CLAUDE.md](docs/engineering/CLAUDE.md) says how a practice's group is picked. In the order to read them:
 
@@ -44,6 +44,7 @@ The practices sit in group folders: `any-language/` for the ones whose rules wor
 - [any-language/prompt-engineering](docs/engineering/any-language/prompt-engineering/) — the prompts that application code sends to a language model, and the call that carries them.
 - [python/testing](docs/engineering/python/testing/) — which code earns a test, and how a pytest suite is laid out and written.
 - [python/evals](docs/engineering/python/evals/) — how to check what a language model does in an application, with real calls on real cases.
+- [python/caching-and-messaging](docs/engineering/python/caching-and-messaging/) — caches, task queues, message brokers, event streams, durable workflows and scheduled jobs in a Python service, written to stay correct when a message arrives twice, late or out of order.
 - [any-language/docker](docs/engineering/any-language/docker/) — one application's image from the build context to the registry, running it with Compose, and a container an AI coding agent works in.
 - [any-language/ci-cd](docs/engineering/any-language/ci-cd/) — CI and CD on GitHub Actions: what a job holds, which event starts it, the stages and the one required check, an artifact built once and deployed to production on a person's decision, and a pipeline that keeps its secrets out of the repository.
 - [react/architecture](docs/engineering/react/architecture/) — the format of a React application, its tree, where state and server data live, and the library for each job.
@@ -70,7 +71,7 @@ What it does not do:
 
 - It is not a standard. The practices are one author's choices: change or drop any rule in your copy.
 - It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself. The two sync skills in `skills/` bring in new commits only when you run them.
-- It has no examples in languages other than Python and TypeScript, apart from the configuration files they run with (YAML, TOML, Dockerfiles and the like) and the Node.js scripts of one test bench, in JavaScript.
+- It has no examples in languages other than Python and TypeScript, apart from configuration files (YAML, TOML, Dockerfiles and the like), SQL, shell commands and scripts, and short HTML, CSS, HTTP and JavaScript snippets.
 - It is not an official Anthropic project, and Anthropic does not endorse it.
 
 ## Why it is useful
