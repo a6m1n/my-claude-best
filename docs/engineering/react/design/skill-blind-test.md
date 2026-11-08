@@ -1,9 +1,11 @@
 # Blind test of design skills
 
-**Not run yet.** This file describes a test that nobody has run. Every step was read in its
-owner's documentation or source on 2026-10-29, at Claude Code 2.1.312, Playwright 1.64.1 and
-@axe-core/playwright 4.14.0, and none of it was tried. A step that rests on behaviour no owner
-documents is marked *not yet tried*; the pilot of section 4 settles each one before the full
+**The full test has not run yet.** One pilot ran, judged in the open by one person; its result
+is a personal opinion in [skill-blind-test-pilot.md](skill-blind-test-pilot.md), and it did not
+record which *not yet tried* steps it settled. Every step was
+read in its owner's documentation or source on 2026-10-29, at Claude Code 2.1.312, Playwright
+1.64.1 and @axe-core/playwright 4.14.0, and none of it was tried before that pilot. A step that
+rests on behaviour no owner documents is marked *not yet tried*; the pilot of section 4 settles each one before the full
 test. A person runs the test later, from a Claude Code session started in a terminal of their
 own, with the bench files in [blind-test-example.md](blind-test-example.md): the session prepares
 the files, runs the bench and reads the results, and every arm runs in Claude Code, as `claude -p`
@@ -479,7 +481,8 @@ that must always hold at the top of `SKILL.md`, and every other file behind a po
 **Your result.** Once the count is done, paste the two tables `count-wins.mjs` prints into the
 bench's `results.md` ([blind-test-example.md](blind-test-example.md), "The results table"), with
 the date of the count and the number of judges. `results.md` is the one record of the result; this
-file holds none. Not run yet.
+file holds none. The full test has not run yet; one pilot's result, judged in the open, is in
+[skill-blind-test-pilot.md](skill-blind-test-pilot.md).
 
 Then update the lines in your copies that say no test with human raters exists;
 `grep -rn -i -E 'human raters|rated by people|people rated|no published test' docs/engineering/react/design/`
