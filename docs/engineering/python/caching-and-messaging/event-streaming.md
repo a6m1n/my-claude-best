@@ -233,7 +233,7 @@ def build_producer(
             "bootstrap.servers": bootstrap_servers,
             # Kafka runs without security unless asked (event-streaming.md section 14).
             "security.protocol": "SASL_SSL",
-            "sasl.mechanism": "SCRAM-SHA-512",  # the mechanism your cluster accepts
+            "sasl.mechanism": "SCRAM-SHA-512",  # The mechanism your cluster accepts.
             "sasl.username": username,
             "sasl.password": password.get_secret_value(),
             # librdkafka leaves it off; without it a retry can write a second copy
@@ -401,7 +401,7 @@ def build_consumer(
             "bootstrap.servers": bootstrap_servers,
             "group.id": group_id,
             "security.protocol": "SASL_SSL",
-            "sasl.mechanism": "SCRAM-SHA-512",  # the mechanism your cluster accepts
+            "sasl.mechanism": "SCRAM-SHA-512",  # The mechanism your cluster accepts.
             "sasl.username": username,
             "sasl.password": password.get_secret_value(),
             # The protocol is set, so a library upgrade cannot change what the
@@ -703,7 +703,7 @@ when this file does. Meanings and defaults are librdkafka 2.16.0's [26].
 | Field | What it means | Set it when | Leave it out when |
 |---|---|---|---|
 | `acks` (producer) | How many in-sync replicas must hold a write before the broker answers. Default `-1`, the same as `all`. With fewer in sync than the topic's `min.insync.replicas`, the write fails [26]. With `0` the "Broker does not send any response/ack to client" [26], so never lower it for an event that must not be lost. | Always, the default's value included ([delivery.md](delivery.md) section 5): `all` (section 4). | Never. |
-| `enable.idempotence` (producer) | One copy of each send, in the order sent; turns on `acks=all` and the retries for you. Default `false` [26]. | Always, as `True` (section 4). | No case found. |
+| `enable.idempotence` (producer) | One copy of each send, in the order sent; turns on `acks=all` and the retries for you. Default `false` [26]. | Always, as `True` (section 4). | Never. |
 | `message.timeout.ms` (producer) | The longest a produced message waits for delivery, retries included; after it the delivery report carries an error. Default 300000 ms; 0 is infinite [26]. | Always, the default's value included ([delivery.md](delivery.md) section 5), as in section 4. | Never. |
 | `retries` (producer) | How many times librdkafka retries a failing send; an alias of `message.send.max.retries`. Default 2147483647; with idempotence it must stay above 0 [26]. | Always, the default's value included ([delivery.md](delivery.md) section 5), as in section 4. | Never. |
 | `enable.auto.commit` (consumer) | Commits the stored offsets in the background, every `auto.commit.interval.ms` (5000 ms by default). Default `true` [26]. | Always, the default's value included ([delivery.md](delivery.md) section 5): `True`, with `enable.auto.offset.store=False` (section 6); `False` when the code commits each event itself with `commit()` (section 13). | Never. |

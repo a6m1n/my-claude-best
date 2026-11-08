@@ -75,10 +75,11 @@ Only the files this consumer touches. Every folder under `src/` and `tests/` has
 │   │   ├── config.py               Settings: gains billing_prefetch_count
 │   │   ├── schemas.py              Currency, EventId, OrderId, RoutingKey: shared types
 │   │   ├── database.py             connect_database, as outbox-relay-example.md shows it
-│   │   └── rabbitmq_client.py      open_event_exchange, BROKER_ERRORS, as it shows them
+│   │   └── rabbitmq_client.py      gains the consumer's channel and the declarations
 │   ├── billing/
 │   │   └── charge_order/
 │   │       ├── schemas.py          ChargeOutcome
+│   │       ├── consts.py           CONSUMER: billing's key in processed_message
 │   │       ├── errors.py           ChargeNotRecordedError
 │   │       ├── repository.py       the claim of an event, and the charge row
 │   │       └── usecase.py          ChargeOrder: both in one transaction
@@ -149,7 +150,8 @@ in every environment, so it keeps a default ([python.md](../language/python.md) 
 prefetch count of 0 stops the start instead of turning the limit off, because the rule sits on the
 field.
 
-The two clients are the shared ones of `core/`, built once by the worker's `main()`
+The two clients are the shared ones of `core/`. The worker's `main()` builds each connection at
+startup through its client's one connect function
 ([file-structure.md](../../any-language/file-structure/file-structure.md) section 4):
 
 - `connect_database(host, port, name, user, password)` in `src/acme/core/database.py`, shown in
@@ -160,10 +162,49 @@ The two clients are the shared ones of `core/`, built once by the worker's `main
 - `src/acme/core/rabbitmq_client.py`: `connect_rabbitmq`, which opens one robust connection over
   TLS as the application's own user ([message-brokers.md](message-brokers.md) sections 5 and 15),
   `open_event_exchange`, which declares the durable topic exchange `acme.events`, and
-  `BROKER_ERRORS`, the errors that mean the broker did not get what was sent. The last two are in
-  [outbox-relay-example.md](outbox-relay-example.md) section 5.
+  `BROKER_ERRORS`, the errors that mean the broker did not get what was sent. `open_event_exchange` is in
+  [message-brokers.md](message-brokers.md) section 8, `BROKER_ERRORS` in
+  [outbox-relay-example.md](outbox-relay-example.md) section 5. The consumer's channel and the
+  declarations of billing's queues go through the same client; section 4 shows what it gains.
 
 ## 4. The queues and the broker's policy
+
+`src/acme/core/rabbitmq_client.py`, what billing's consumer adds. The file's docstring, its
+imports, `connect_rabbitmq` and the functions of
+[outbox-relay-example.md](outbox-relay-example.md) section 5 are cut with `...`; its
+`aio_pika.abc` import gains `AbstractQueue`. The bodies of `open_consumer_channel` and
+`declare_quorum_queue` are [message-brokers.md](message-brokers.md) section 7's, cut with `...`.
+
+```python
+...
+
+
+async def open_consumer_channel(
+    connection: AbstractRobustConnection, prefetch_count: int
+) -> AbstractChannel:
+    ...  # message-brokers.md section 7
+
+
+async def declare_quorum_queue(channel: AbstractChannel, name: str) -> AbstractQueue:
+    ...  # message-brokers.md section 7
+
+
+async def declare_dead_letter_exchange(
+    channel: AbstractChannel, name: str
+) -> AbstractExchange:
+    return await channel.declare_exchange(
+        name,
+        aio_pika.ExchangeType.FANOUT,
+        # aio-pika defaults to False, and a lost exchange drops every dead letter
+        # (message-brokers.md section 8).
+        durable=True,
+    )
+```
+
+It is good because every channel and every declaration goes through the one client
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 4): a queue it
+declares is a durable quorum queue, a dead-letter exchange is durable, and a consumer's channel
+has its prefetch, so a second consumer cannot leave one of them out.
 
 `src/acme/worker/handlers_charge_order.py`, first part: the imports of the whole file, its names,
 and the function that declares billing's queues.
@@ -174,7 +215,9 @@ and the function that declares billing's queues.
 import logging
 from typing import Final
 
-import aio_pika
+# aio-pika's own abstract types, a departure from readability.md section 6, which
+# annotates with the concrete class: aio-pika's calls return these types, so a
+# concrete annotation would need a cast at each call. The cost: none found.
 from aio_pika.abc import (
     AbstractIncomingMessage,
     AbstractQueue,
@@ -183,7 +226,13 @@ from aio_pika.abc import (
 from pydantic import ValidationError
 
 from acme.billing.charge_order.usecase import ChargeOrder
-from acme.core.rabbitmq_client import BROKER_ERRORS, open_event_exchange
+from acme.core.rabbitmq_client import (
+    BROKER_ERRORS,
+    declare_dead_letter_exchange,
+    declare_quorum_queue,
+    open_consumer_channel,
+    open_event_exchange,
+)
 from acme.core.schemas import RoutingKey
 from acme.worker.errors import ConsumerStoppedError
 from acme.worker.schemas import OrderPlaced
@@ -200,22 +249,16 @@ BILLING_DEAD_LETTER_QUEUE: Final = "billing.order_placed.dead-letter"
 async def open_billing_queue(
     connection: AbstractRobustConnection, prefetch_count: int
 ) -> AbstractQueue:
-    # A channel of its own: a channel is never shared (message-brokers.md section 5).
-    channel = await connection.channel()
-
-    # Per consumer, and never 0: aio-pika's default of 0 means no limit
-    # (message-brokers.md section 9).
-    await channel.set_qos(prefetch_count=prefetch_count)
+    # The one client opens the channel and declares (file-structure.md section 4);
+    # the adapter keeps billing's names and bindings, and iterates, acks and rejects
+    # (file-structure.md section 5).
+    channel = await open_consumer_channel(connection, prefetch_count)
 
     # Declared before the queue takes a message: under at-most-once, a message
     # dead-lettered to an exchange that does not exist yet is dropped; under the
     # policy's at-least-once, the queue keeps it and retries until the exchange exists.
-    dead_letters = await channel.declare_exchange(
-        BILLING_DEAD_LETTER_EXCHANGE,
-        aio_pika.ExchangeType.FANOUT,
-        # aio-pika defaults to False, and a lost exchange drops every dead letter
-        # (message-brokers.md section 8).
-        durable=True,
+    dead_letters = await declare_dead_letter_exchange(
+        channel, BILLING_DEAD_LETTER_EXCHANGE
     )
 
     # No delivery limit or dead-letter target of its own, a departure from the check
@@ -223,21 +266,13 @@ async def open_billing_queue(
     # person sends a dead letter back by publishing it again, never by rejecting it
     # with requeue; a dead-letter target here would loop. The cost: a message rejected
     # with requeue here is dropped at the broker's default limit.
-    dead_letter_queue = await channel.declare_queue(
-        BILLING_DEAD_LETTER_QUEUE,
-        durable=True,  # Quorum queues are always durable; aio-pika defaults to False.
-        arguments={"x-queue-type": "quorum"},  # A policy cannot set the type.
-    )
+    dead_letter_queue = await declare_quorum_queue(channel, BILLING_DEAD_LETTER_QUEUE)
 
     await dead_letter_queue.bind(dead_letters)
 
     events = await open_event_exchange(channel)
 
-    queue = await channel.declare_queue(
-        BILLING_QUEUE,
-        durable=True,  # Quorum queues are always durable; aio-pika defaults to False.
-        arguments={"x-queue-type": "quorum"},  # A policy cannot set the type.
-    )
+    queue = await declare_quorum_queue(channel, BILLING_QUEUE)
 
     # Only OrderPlaced reaches this queue's parser: the exchange is a topic
     # (message-brokers.md section 6).
@@ -500,21 +535,28 @@ class ChargeOutcome(StrEnum):
     ALREADY_CHARGED = "already_charged"
 ```
 
+`src/acme/billing/charge_order/consts.py`
+
+```python
+"""The named values of charging an order."""
+
+from typing import Final
+
+# This consumer's key in processed_message: each consumer of an event keeps its own row
+# (delivery.md section 3).
+CONSUMER: Final = "billing.charge_order"
+```
+
 `src/acme/billing/charge_order/repository.py`
 
 ```python
 """The queries of charging an order: the claim of an event, and the charge row."""
 
-from typing import Final
-
 from psycopg import AsyncConnection
 from psycopg.rows import TupleRow
 
+from acme.billing.charge_order.consts import CONSUMER
 from acme.core.schemas import Currency, EventId, OrderId
-
-# This consumer's key in processed_message: each consumer of an event keeps its own row
-# (delivery.md section 3).
-CONSUMER: Final = "billing.charge_order"
 
 
 async def claim_event(conn: AsyncConnection[TupleRow], event_id: EventId) -> bool:
@@ -573,6 +615,9 @@ from acme.billing.charge_order.schemas import ChargeOutcome
 from acme.core.schemas import Currency, EventId, OrderId
 
 
+# A class, a departure from python.md section 2, whose use case is a function: it
+# holds the connection the adapter builds at startup, so the loop calls run once per
+# message. The cost: one more name per use case.
 class ChargeOrder:
     def __init__(self, conn: AsyncConnection[TupleRow]) -> None:
         # The connection comes from connect_database, so it is in autocommit: the block
@@ -624,8 +669,9 @@ It is good because the id row and the charge run in one `transaction()` block, s
 leave an id without its charge, which would skip the redelivered copy, or a charge without its id,
 which would charge it again ([delivery.md](delivery.md) section 3). `ON CONFLICT DO NOTHING` tells
 a copy by its row count and leaves the transaction usable, where a caught unique violation would
-leave it failed. The queries live in `repository.py` and the `if` in `usecase.py`
-([file-structure.md](../../any-language/file-structure/file-structure.md) section 3). That `if` is
+leave it failed. The queries live in `repository.py`, the consumer's key in `consts.py` and the
+`if` in `usecase.py` ([file-structure.md](../../any-language/file-structure/file-structure.md)
+section 3). That `if` is
 the idempotency guarantee that [python.md](../language/python.md) section 2, "Where it stops
 holding", condition 3 keeps inside the function, not a business rule, so no rule file asks it.
 `run` returns which path it took, as a value of a closed set, and receives its connection instead
@@ -717,8 +763,10 @@ async def on_order_placed(
             "Order event returned for a retry: charging order %s failed",
             event.order_id,
             extra={"message_id": message_id},
-            # The traceback, at WARNING: logger.exception would log at ERROR. It also
-            # keeps ruff's BLE001 quiet on the broad except.
+            # The traceback at WARNING, a departure from logging.md section 5, which
+            # logs an unexpected failure with logger.exception, at ERROR: section 4
+            # keeps ERROR "Never for a step that will be retried". It also keeps
+            # ruff's BLE001 quiet on the broad except. The cost: none found.
             exc_info=True,
         )
 
@@ -811,8 +859,20 @@ and `relay_database`, and the relay's own lines are
 async def run_worker(settings: Settings) -> None:
     ...  # stop and its SIGTERM handler, rabbitmq and relay_database
 
+    # Billing's own broker connection, apart from the relay's publishing one: flow
+    # control on a publishing connection then never holds billing's acks
+    # (message-brokers.md section 5, file-structure.md section 4).
+    billing_rabbitmq = await connect_rabbitmq(
+        host=settings.rabbitmq_host,
+        port=settings.rabbitmq_port,
+        user=settings.rabbitmq_user,
+        password=settings.rabbitmq_password,
+        vhost=settings.rabbitmq_vhost,
+    )
+
     # Billing's own connection: a charge never runs inside the relay's transaction, nor
-    # the relay's batch inside a charge (delivery.md section 3).
+    # the relay's batch inside a charge (delivery.md section 3, file-structure.md
+    # section 4).
     billing_database = await connect_database(
         host=settings.database_host,
         port=settings.database_port,
@@ -821,10 +881,10 @@ async def run_worker(settings: Settings) -> None:
         password=settings.database_password,
     )
 
-    async with rabbitmq, relay_database, billing_database:
-        # On the relay's connection, against RabbitMQ's advice of separate connections:
-        # section 10 declares that departure and its cost.
-        queue = await open_billing_queue(rabbitmq, settings.billing_prefetch_count)
+    async with rabbitmq, relay_database, billing_rabbitmq, billing_database:
+        queue = await open_billing_queue(
+            billing_rabbitmq, settings.billing_prefetch_count
+        )
 
         async with asyncio.TaskGroup() as tasks:
             # A consumer that cannot go on raises: the group then cancels the relay and
@@ -842,15 +902,19 @@ async def run_worker(settings: Settings) -> None:
 
 It is good because billing gets a database connection and a channel of its own, so no charge
 ever runs inside the relay's transaction ([message-brokers.md](message-brokers.md) section 5).
-Each client is built once and handed to what calls it: the connection to the use case, the use
-case to the loop ([file-structure.md](../../any-language/file-structure/file-structure.md)
-sections 4 and 5). The consumer runs as a task beside the relay. On SIGTERM the relay finishes
-its batch and returns, and the consumer is cancelled; a task group treats a task cancelled from
-outside as done, not as an error [17]. The group then ends normally, the iterator returns its
-buffered messages, and leaving the `async with` closes the three connections. A batch whose
-confirm the broker holds back under a resource alarm does not finish: the stop then ends with the
-kill after the grace period, and the relay's transaction rolls back with its rows still in the
-outbox ([outbox-relay-example.md](outbox-relay-example.md) section 11).
+Its broker connection is its own too, because RabbitMQ recommends "that, when possible,
+publishers and consumers use separate connections" [27]: under a resource alarm the broker stops
+reading every connection that publishes [28], and billing's acks on the relay's connection would
+stop with it. Each connection is built by its client's one connect function and handed to what
+calls it: the connection to the use case, the use case to the loop
+([file-structure.md](../../any-language/file-structure/file-structure.md) sections 4 and 5). The
+consumer runs as a task beside the relay. On SIGTERM the relay finishes its batch and returns,
+and the consumer is cancelled; a task group treats a task cancelled from outside as done, not as
+an error [17]. The group then ends normally, the iterator returns its buffered messages, and
+leaving the `async with` closes the four connections. A batch whose confirm the broker holds back
+under a resource alarm does not finish: the stop then ends with the kill after the grace period,
+and the relay's transaction rolls back with its rows still in the outbox
+([outbox-relay-example.md](outbox-relay-example.md) section 11).
 [images.md](../../any-language/docker/images.md) section 6 says what happens without a SIGTERM
 handler: the container is killed ten seconds later, in the middle of a message. The consumer
 also ends alone in one case: the iterator stops when the channel has not come back within 60
@@ -1078,13 +1142,20 @@ from aio_pika import IncomingMessage
 
 EVENT_ID: Final = UUID("6f1c2b9e-4d3a-4e8f-9b7c-1a2d3e4f5a6b")
 ORDER_ID: Final = UUID("0c9d8e7f-6a5b-4c3d-8e2f-1a0b9c8d7e6f")
+# Only the body leaking into the log can put this text there (assertions.md section 6).
+UNPARSEABLE_CURRENCY: Final = "not-a-currency"
 
 
 def an_order_placed_body(
-    *, currency: str = "EUR", amount_minor: int | str = 4999
+    *,
+    # A bare str on purpose: the tests write currencies OrderPlaced refuses
+    # (python.md section 3). The cost: a typo in a valid currency passes the checker.
+    currency: str = "EUR",
+    amount_minor: int | str = 4999,
 ) -> bytes:
-    """Build the body the outbox relay publishes; a test sets only the field it is
-    about, and may pass a value OrderPlaced refuses.
+    """Build the body the outbox relay publishes.
+
+    A test sets only the field it is about, and may pass a value OrderPlaced refuses.
     """
     return json.dumps(
         {
@@ -1106,7 +1177,8 @@ def a_delivery(body: bytes) -> NonCallableMagicMock:
 
 It is good because one file builds the body the relay publishes and the delivery that carries it,
 so each test sets only the field it is about, and a change to the body's shape is one edit here
-([layout.md](../testing/layout.md) section 7).
+([layout.md](../testing/layout.md) section 7). `UNPARSEABLE_CURRENCY`, the currency both leak
+checks look for in the log, sits here too, because both test files use it.
 
 `tests/unit/worker/handlers_charge_order/test_on_order_placed.py`
 
@@ -1114,7 +1186,6 @@ so each test sets only the field it is about, and a change to the body's shape i
 """The handler of one order event, with its use case and its message stood in for."""
 
 import logging
-from typing import Final
 from unittest.mock import call
 
 import pytest
@@ -1124,13 +1195,11 @@ from acme.worker.errors import ConsumerStoppedError
 from acme.worker.handlers_charge_order import on_order_placed
 from tests.support.builders_order_placed import (
     EVENT_ID,
+    UNPARSEABLE_CURRENCY,
     a_delivery,
     an_order_placed_body,
 )
 from tests.support.fake_charge_order import FakeChargeOrder
-
-# Only the body leaking into the log can put this text there (assertions.md section 6).
-UNPARSEABLE_CURRENCY: Final = "not-a-currency"
 
 
 class TestOnOrderPlaced:
@@ -1260,7 +1329,7 @@ class TestOnOrderPlaced:
 
 import logging
 from types import TracebackType
-from typing import Final, Self, override
+from typing import Self, override
 from unittest.mock import NonCallableMagicMock, call, create_autospec
 
 import pytest
@@ -1270,11 +1339,12 @@ from aio_pika.queue import Queue, QueueIterator
 
 from acme.worker.errors import ConsumerStoppedError
 from acme.worker.handlers_charge_order import consume_order_events
-from tests.support.builders_order_placed import a_delivery, an_order_placed_body
+from tests.support.builders_order_placed import (
+    UNPARSEABLE_CURRENCY,
+    a_delivery,
+    an_order_placed_body,
+)
 from tests.support.fake_charge_order import FakeChargeOrder
-
-# Only the body leaking into the log can put this text there (assertions.md section 6).
-UNPARSEABLE_CURRENCY: Final = "not-a-currency"
 
 
 class FakeMessages(QueueIterator):
@@ -1441,14 +1511,9 @@ test, and only this one, turns red.
   rejected message from the dead-letter queue. The cost: nothing checks that the policy's pattern
   matches the queue's name, that a reject reaches the dead-letter queue, or that the delivery
   limit counts a reject.
-- **One broker connection carries the relay's publishes and billing's acks.** Billing's queue
-  opens its channel on the relay's `rabbitmq` connection (section 8), while RabbitMQ recommends
-  "that, when possible, publishers and consumers use separate connections" [27]. The cost: flow
-  control on the relay's publishing slows billing's acks, and under a resource alarm the broker
-  stops reading every connection that publishes [28], so billing's acks stop until it clears. A
-  failure of either duty also stops the other through the task group. The way out is billing's
-  consumer in a worker process of its own, which gets its own connection by
-  [message-brokers.md](message-brokers.md) section 5.
+- **One process runs the relay and billing's consumer.** A failure of either duty stops the
+  other through the task group (section 8). The way out is billing's consumer in a worker process
+  of its own.
 - **The queue is bound before the relay's first publish.** `run_worker` declares and binds
   billing's queue before it starts the relay (section 8). The risk is a relay in a process without
   billing's declaration: what an event that no queue takes does to the relay is

@@ -29,7 +29,7 @@ For example, the git practice needs this one line in your `CLAUDE.md`:
 
 With this line in your `CLAUDE.md`, the agent opens `git.md` before its first git command, and its commit titles take one form, such as `fix(orders): reject an empty cart`.
 
-It is for teams that write code with an AI coding agent. The code examples are in Python, in TypeScript for the React practices and for a labelled React case, and in JavaScript for the Node.js scripts of one test bench. The practices are Markdown, so there is nothing to build or install. Every name in the examples is invented.
+It is for teams that write code with an AI coding agent. The code examples are in Python, and in TypeScript for the React practices and for a labelled React case, with configuration files (YAML, TOML, Dockerfiles and the like), SQL, shell commands and scripts, and short HTML, CSS, HTTP and JavaScript snippets beside them. The practices are Markdown, so there is nothing to build or install. Every name in the examples is invented.
 
 The practices sit in group folders: `any-language/` for the ones whose rules work in any language (their code examples are in Python, apart from a part labelled as one language's case, such as a React case), `python/` for the ones written for Python, and `react/` for the ones written for a React application. [docs/engineering/CLAUDE.md](docs/engineering/CLAUDE.md) says how a practice's group is picked. In the order to read them:
 
@@ -71,7 +71,7 @@ What it does not do:
 
 - It is not a standard. The practices are one author's choices: change or drop any rule in your copy.
 - It is not a package or a plugin. A practice is copied, not installed, and a copied folder does not update itself. The two sync skills in `skills/` bring in new commits only when you run them.
-- It has no examples in languages other than Python and TypeScript, apart from the configuration files they run with (YAML, TOML, Dockerfiles and the like), a few SQL tables and queries, and the Node.js scripts of one test bench, in JavaScript.
+- It has no examples in languages other than Python and TypeScript, apart from configuration files (YAML, TOML, Dockerfiles and the like), SQL, shell commands and scripts, and short HTML, CSS, HTTP and JavaScript snippets.
 - It is not an official Anthropic project, and Anthropic does not endorse it.
 
 ## Why it is useful

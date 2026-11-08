@@ -612,7 +612,7 @@ personal data in messages, are [delivery.md](delivery.md) section 10.
 
 The client for Temporal Cloud, which the worker's `main.py` builds once from three `Settings`
 fields; on a self-hosted service it passes `tls=TLSConfig(...)` with the client certificate
-instead (the bullet above):
+instead (the bullet on a self-hosted Temporal Service, above):
 
 ```python
 # src/acme/core/temporal_client.py

@@ -55,12 +55,7 @@ Redis, RabbitMQ and Kafka can each pass a message from one service to another, s
 | RabbitMQ | A "messaging and streaming broker" [5] | A queue is a point-to-point channel, "which ensures that only one receiver will receive a particular message" [6]. A RabbitMQ stream is "an append-only log of messages that can be repeatedly read until they expire" [7]. |
 | Kafka | "an event streaming platform" [8] | Events "can be read as often as needed", and "events are not deleted after consumption" [8]. |
 
-Pick the file by the job, not by the product:
-
-- a copy of data kept to answer faster: [caching.md](caching.md), which also covers Valkey;
-- work the same application does later: [task-queues.md](task-queues.md);
-- messages between services, each to one consumer, or one copy to each subscriber: this file;
-- events that several readers read and read again: [event-streaming.md](event-streaming.md).
+Which file holds which job is [README.md](README.md), "Which job is yours".
 
 ## 3. When a service needs no broker of its own
 
@@ -93,19 +88,22 @@ Named once, and not described here:
 
 A connection to RabbitMQ carries channels, and a channel is the session the work runs on. RabbitMQ builds both to live long: channel leaks and a high rate of opening and closing channels "eventually lead to node exhaustion of resources" [25].
 
-- **Open one connection per process, at startup, in the one client of the broker, and keep it open.** RabbitMQ's guides "assume long-lived connections (a new connection is not opened per protocol operation) for efficiency" [26], and tell publishers "Prefer long lived connections when possible" [27]. The client lives in `core/rabbitmq_client.py`, and the adapter builds it once ([file-structure.md](../../any-language/file-structure/file-structure.md) section 4). aio-pika's docs find one connection, which carries many channels over one socket, "is sufficient for most applications", and add a pool only when that connection saturates [28].
+- **Open one long-lived connection per process for each direction it uses, at startup, in the one client of the broker, and keep each open: a process that both publishes and consumes opens one of each.** RabbitMQ's guides "assume long-lived connections (a new connection is not opened per protocol operation) for efficiency" [26], and tell publishers "Prefer long lived connections when possible" [27]. Its connections guide recommends "that, when possible, publishers and consumers use separate connections so that consumers are isolated from potential flow control that may be applied to publishing connections, affecting manual consumer acknowledgements" [26]. The client lives in `core/rabbitmq_client.py`, and the adapter opens each connection at startup through the client's one connect function ([file-structure.md](../../any-language/file-structure/file-structure.md) section 4). aio-pika's docs find one connection, which carries many channels over one socket, "is sufficient for most applications", and add a pool only when that connection saturates [28].
 - **Give each consumer its own channel, keep the number of channels small, and never share a channel between threads.** RabbitMQ's channel guide starts from one channel per thread, process or coroutine, and finds that "most applications can use a single digit number of channels per connection" [25]. Its publishers guide calls publishing from several threads on one channel unsafe [27].
 - **In async code, connect with `aio_pika.connect_robust`, and treat a message you held when the connection dropped as one that will come again.** `connect_robust` reconnects and restores the state it had, consumers included [17]. But "Reconnecting with `connect_robust()` does not make an old message valid on the replacement channel" [28]. Its `ack()` then raises `ChannelInvalidStateError`, RabbitMQ requeues the delivery, and the consumer receives it again [28], so the work must be safe to repeat ([delivery.md](delivery.md) section 3).
 - **In sync code with pika, keep each connection in the thread that opened it.** pika's adapters "are not thread-safe. Each connection instance is confined to the thread that created it" [29]. The one call another thread may make is `add_callback_threadsafe`, which runs a callback on the connection's own thread [29]. A worker thread that finishes a message hands its `basic_ack` to the connection thread that way, and never calls it itself. pika 1.5's `pika.Connection` "exposes a blocking API that is safe to call from any number of threads simultaneously" [29].
 
-The connection, in `src/acme/core/rabbitmq_client.py`. The worker's `main()` reads the values from the settings class ([python.md](../language/python.md) section 5, [settings-example.md](../language/settings-example.md)) and calls it once:
+The connection, in `src/acme/core/rabbitmq_client.py`. The worker's `main()` reads the values from the settings class ([python.md](../language/python.md) section 5, [settings-example.md](../language/settings-example.md)) and calls it once for each connection it opens:
 
 ```python
-"""The one way into RabbitMQ: every connection and every publish goes through here."""
+"""The one way into RabbitMQ: every connection, channel, declaration and publish."""
 
 import ssl
 
 import aio_pika
+# aio-pika's own abstract types, a departure from readability.md section 6, which
+# annotates with the concrete class: aio-pika's calls return these types, so a
+# concrete annotation would need a cast at each call. The cost: none found.
 from aio_pika.abc import AbstractRobustConnection
 from pydantic import SecretStr
 
@@ -153,16 +151,47 @@ A queue that lives on one node loses its messages with that node. The old replic
 
 Where quorum queues fit less, RabbitMQ lists temporary queues (transient or exclusive, or a high rate of declaring and deleting), the lowest possible latency, data safety that is not a priority, very long backlogs of 5 million messages or more, and large fanouts; for the last two it points to streams [1]. Its use-case section adds that "Stock tickers, instant messaging systems and RPC reply queues benefit less or not at all from use of quorum queues" [1]. A quorum queue also refuses a channel-wide prefetch (section 9).
 
-Billing's queue for order events, in the worker adapter's `src/acme/worker/handlers_charge_order.py` ([file-structure.md](../../any-language/file-structure/file-structure.md) section 5). The worker's `main()` passes the prefetch count from the settings class. `open_event_exchange`, which declares the durable topic exchange `acme.events`, is in section 8; billing's dead-letter exchange and its queue, and the import of `aio_pika` they need, are [consumer-example.md](consumer-example.md) section 4's, cut with `...`:
+The consumer side of the one client, in the same `src/acme/core/rabbitmq_client.py` as the connection in section 5. The file's imports gain `AbstractChannel` and `AbstractQueue` from `aio_pika.abc`. `declare_dead_letter_exchange`, which declares a durable fanout exchange for one queue's dead letters, is [consumer-example.md](consumer-example.md) section 4's, left out here:
+
+```python
+async def open_consumer_channel(
+    connection: AbstractRobustConnection, prefetch_count: int
+) -> AbstractChannel:
+    # A channel of its own: a channel is never shared (message-brokers.md section 5).
+    channel = await connection.channel()
+
+    # Per consumer, and never 0: aio-pika's default of 0 means no limit
+    # (message-brokers.md section 9).
+    await channel.set_qos(prefetch_count=prefetch_count)
+
+    return channel
+
+
+async def declare_quorum_queue(channel: AbstractChannel, name: str) -> AbstractQueue:
+    return await channel.declare_queue(
+        name,
+        durable=True,  # Quorum queues are always durable; aio-pika defaults to False.
+        arguments={"x-queue-type": "quorum"},  # A policy cannot set the type.
+    )
+```
+
+Billing's queue for order events, in the worker adapter's `src/acme/worker/handlers_charge_order.py` ([file-structure.md](../../any-language/file-structure/file-structure.md) section 5). The worker's `main()` passes billing's own connection (section 5) and the prefetch count from the settings class. `open_event_exchange`, which declares the durable topic exchange `acme.events`, is in section 8; billing's dead-letter exchange and its queue, and the import of `declare_dead_letter_exchange` they need, are [consumer-example.md](consumer-example.md) section 4's, cut with `...`:
 
 ```python
 """The worker's way into charge_order: billing's queues and its message handler."""
 
 from typing import Final
 
+# aio-pika's own abstract types, a departure from readability.md section 6, which
+# annotates with the concrete class: aio-pika's calls return these types, so a
+# concrete annotation would need a cast at each call. The cost: none found.
 from aio_pika.abc import AbstractQueue, AbstractRobustConnection
 
-from acme.core.rabbitmq_client import open_event_exchange
+from acme.core.rabbitmq_client import (
+    declare_quorum_queue,
+    open_consumer_channel,
+    open_event_exchange,
+)
 from acme.core.schemas import RoutingKey
 
 BILLING_QUEUE: Final = "billing.order_placed"
@@ -171,27 +200,16 @@ BILLING_QUEUE: Final = "billing.order_placed"
 async def open_billing_queue(
     connection: AbstractRobustConnection, prefetch_count: int
 ) -> AbstractQueue:
-    # A channel of its own: a channel is never shared (message-brokers.md section 5).
-    channel = await connection.channel()
-
-    # Per consumer, and never 0: aio-pika's default of 0 means no limit
-    # (message-brokers.md section 9).
-    await channel.set_qos(prefetch_count=prefetch_count)
+    # The one client opens the channel and declares (file-structure.md section 4);
+    # the adapter keeps billing's names and bindings, and iterates, acks and rejects
+    # (file-structure.md section 5).
+    channel = await open_consumer_channel(connection, prefetch_count)
 
     ...  # Billing's dead-letter exchange and its queue: consumer-example.md section 4
 
     events = await open_event_exchange(channel)
 
-    queue = await channel.declare_queue(
-        BILLING_QUEUE,
-        durable=True,  # Quorum queues are always durable; aio-pika defaults to False.
-        arguments={
-            "x-queue-type": "quorum",  # A policy cannot set the type.
-            # RabbitMQ's default, 30 minutes, written: a delivery held longer goes
-            # back to the queue (message-brokers.md section 9).
-            "x-consumer-timeout": 1_800_000,
-        },
-    )
+    queue = await declare_quorum_queue(channel, BILLING_QUEUE)
 
     # Only OrderPlaced reaches this queue's parser: the exchange is a topic
     # (message-brokers.md section 6).
@@ -200,7 +218,7 @@ async def open_billing_queue(
     return queue
 ```
 
-It is good because the queue survives the loss of a node and of the subscriber: it is a named, durable quorum queue bound to the topic exchange by the key of the one event billing reads, so the events wait while billing is down. The key is the `RoutingKey` member the outbox relay publishes `OrderPlaced` with, not a bare `str` ([python.md](../language/python.md) section 3). Each line a copier might drop names its reason. The `durable` flag means the queue survives a broker restart, and `declare_queue` defaults it to `False` [30]. The consumer timeout is written at its default, so a reader can check the handler's longest run against it ([delivery.md](delivery.md) section 5). The dead-letter exchange and the delivery limit come from a policy the change ships, which [consumer-example.md](consumer-example.md) section 4 shows.
+It is good because the queue survives the loss of a node and of the subscriber: it is a named, durable quorum queue bound to the topic exchange by the key of the one event billing reads, so the events wait while billing is down. The queue's type, its `durable` flag and the channel's prefetch are written once, in the one client, so a second subscriber's queue cannot leave them out ([file-structure.md](../../any-language/file-structure/file-structure.md) section 4). The key is the `RoutingKey` member the outbox relay publishes `OrderPlaced` with, not a bare `str` ([python.md](../language/python.md) section 3). Each line a copier might drop names its reason. The `durable` flag means the queue survives a broker restart, and `declare_queue` defaults it to `False` [30]. The consumer timeout, the dead-letter exchange and the delivery limit all come from the policy [consumer-example.md](consumer-example.md) section 4 ships, each written at its value there ([delivery.md](delivery.md) section 5).
 
 ## 8. Publishing: confirms and persistent messages
 
@@ -215,19 +233,29 @@ Without a confirm, `publish` returns as soon as the message is written to the so
 - **Publish only what the database committed**, through the outbox of [delivery.md](delivery.md) section 4.
 - **Declare the exchange durable.** aio-pika's `durable` makes the exchange survive a broker restart, and its default is `False` [30].
 
-The publisher side, in the same `src/acme/core/rabbitmq_client.py` as the connection in section 5. The file's imports gain `Final` from `typing`, `UUID` from `uuid`, `AbstractChannel` and `AbstractExchange` from `aio_pika.abc`, and `RoutingKey` from `acme.core.schemas`. The worker's `main()` opens the channel once, with `connection.channel(publisher_confirms=True, on_return_raises=True)`, and passes it in; [outbox-relay-example.md](outbox-relay-example.md) section 8 shows that line:
+The publisher side, in the same `src/acme/core/rabbitmq_client.py` as the connection in section 5. The file's imports gain `Final` from `typing`, `AbstractExchange` from `aio_pika.abc`, `PublishError` from `aio_pika.exceptions`, `EventId` and `RoutingKey` from `acme.core.schemas`, and `EventNotPublishedError` and `EventReturnedError` from `acme.core.errors`. Those two errors, and `BROKER_ERRORS`, the errors that mean the broker did not get what was sent, are [outbox-relay-example.md](outbox-relay-example.md) section 5's, left out here. The worker's `main()` opens the publishing channel once, with `open_publishing_channel`, and passes it in; [outbox-relay-example.md](outbox-relay-example.md) section 8 shows that line:
 
 ```python
 EVENTS_EXCHANGE: Final = "acme.events"
 
 
+async def open_publishing_channel(
+    connection: AbstractRobustConnection,
+) -> AbstractChannel:
+    # Confirms are on, and a returned message raises: publish_event then returns
+    # only after the broker's ack, and a message no queue takes is an error the
+    # caller sees (message-brokers.md section 8).
+    return await connection.channel(publisher_confirms=True, on_return_raises=True)
+
+
 async def open_event_exchange(channel: AbstractChannel) -> AbstractExchange:
     return await channel.declare_exchange(
         EVENTS_EXCHANGE,
-        # Topic: each subscriber binds its queue to the keys it wants
-        # (message-brokers.md section 6).
+        # Topic: each subscriber binds its queue to the keys it wants, such as
+        # orders.order_placed (message-brokers.md section 6).
         aio_pika.ExchangeType.TOPIC,
-        # Durable: aio-pika's default would lose the exchange when the broker restarts.
+        # Durable: aio-pika's default would lose the exchange when the broker restarts
+        # (message-brokers.md section 8).
         durable=True,
     )
 
@@ -236,7 +264,7 @@ async def publish_event(
     exchange: AbstractExchange,
     *,
     routing_key: RoutingKey,
-    message_id: UUID,
+    message_id: EventId,
     body: bytes,
 ) -> None:
     message = aio_pika.Message(
@@ -246,20 +274,40 @@ async def publish_event(
         # the same id in the body, a departure from delivery.md section 3 that the
         # outbox table declares (outbox-relay-example.md section 3).
         message_id=str(message_id),
-        # A dead-lettered copy keeps this mode; it survives a restart if persistent.
+        # Not aio-pika's default: a dead-lettered copy survives a restart only if it
+        # is persistent (message-brokers.md section 8).
         delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
     )
 
-    # On a channel with confirms and on_return_raises=True, this returns after the
-    # broker's ack, and a nack or a returned message raises. mandatory=True is
-    # aio-pika's default, written out: without it a message no queue takes is
-    # dropped and still confirmed (message-brokers.md section 8). The broker's
-    # errors leave here as they are: the caller wraps them, a departure its use
-    # case declares (outbox-relay-example.md section 7).
-    await exchange.publish(message, routing_key=routing_key, mandatory=True)
+    try:
+        # On a channel from open_publishing_channel, this returns after the broker's
+        # ack, and a nack or a returned message raises. mandatory=True is aio-pika's
+        # default, written out: without it a message no queue takes is dropped and
+        # still confirmed (message-brokers.md section 8).
+        await exchange.publish(
+            message,
+            routing_key=routing_key,
+            mandatory=True,
+            # No limit on purpose: under a broker alarm the batch waits
+            # (outbox-relay-example.md section 11).
+            timeout=None,
+        )
+    except PublishError as error:
+        # Returned: no queue is bound to the event's key, and only a person can
+        # bind one. The error is raised from None, for the reason below.
+        raise EventReturnedError(
+            message_id, broker_error=type(error).__name__
+        ) from None
+    except BROKER_ERRORS as error:
+        # The client's own error, as logging.md section 10 asks of the one client.
+        # From None: the broker's error can hold the message, body included; the
+        # event id is all the log needs.
+        raise EventNotPublishedError(
+            message_id, broker_error=type(error).__name__
+        ) from None
 ```
 
-It is good because `publish_event` returns only when the broker has taken the message into a queue, and a refusal or a returned message is an exception the caller sees, not a silent loss. The message carries the id a consumer needs to drop a duplicate, and it is persistent. The caller passes the routing key and the body already encoded from the event's model, which lives in the module's `schemas.py` ([python.md](../language/python.md) section 4). The key is a `RoutingKey`, a closed set declared in `core/schemas.py`, because an event name is a closed set and never a bare `str` ([python.md](../language/python.md) section 3). The caller that runs it is the outbox relay of [delivery.md](delivery.md) section 4, not a request handler.
+It is good because `publish_event` returns only when the broker has taken the message into a queue, and a refusal or a returned message is the client's own error, not a silent loss. Both errors carry the event's id and the broker error's class, and are raised `from None`, because the broker's error keeps the message it is about [49] and a traceback would print it ([logging.md](../logging/logging.md) section 10). The channel's two flags sit in `open_publishing_channel`, in the same file as the publish that relies on them. The message carries the id a consumer needs to drop a duplicate, and it is persistent. The caller passes the routing key and the body already encoded from the event's model, which lives in the module's `schemas.py` ([python.md](../language/python.md) section 4). The key is a `RoutingKey`, a closed set declared in `core/schemas.py`, because an event name is a closed set and never a bare `str` ([python.md](../language/python.md) section 3). The caller that runs it is the outbox relay of [delivery.md](delivery.md) section 4, not a request handler.
 
 ## 9. Consuming: manual acknowledgements and prefetch
 
@@ -334,20 +382,20 @@ On SQS, deleting a message does the job of the acknowledgement. A received messa
 
 The delivery limit, delayed retry, the dead-letter exchange, at-least-once dead-lettering and the SQS redrive policy are in the table of [delivery.md](delivery.md) section 6.
 
+The tools require none of these; this practice requires every row whose "Leave it out when" reads Never ([delivery.md](delivery.md) section 5).
+
 | Field | What it means | Set it when | Leave it out when |
 |---|---|---|---|
 | `x-queue-type: quorum` (queue argument) | The replicated, durable queue type. The default is classic, and a policy cannot set it [1]. | Always, on a work queue or a subscriber's queue. | The queue is temporary or exclusive, the lowest latency matters more than safety, or it holds a very long backlog or feeds a large fanout, where a stream fits better [1]. |
 | `durable=True` (queue and exchange) | The queue or the exchange survives a broker restart. aio-pika's default is `False` [30]. | Always on a quorum queue, which is always durable [1], and on the exchange it is bound to. | A temporary queue that should go with its consumer, such as the tutorial's exclusive queue [32]. |
-| `prefetch_count` (aio-pika `set_qos`, pika `basic_qos`) | The most unacknowledged messages one consumer holds. 0, the default of both clients, means no limit [38], [39], [35]. | Always, from the settings class (section 9). | The research found no case. |
+| `prefetch_count` (aio-pika `set_qos`, pika `basic_qos`) | The most unacknowledged messages one consumer holds. 0, the default of both clients, means no limit [38], [39], [35]. | Always, from the settings class (section 9). | Never. |
 | `no_ack=False` (aio-pika `consume()`, `iterator()`), `auto_ack=False` (pika `basic_consume`) | Manual acknowledgement: the broker keeps each message until the consumer settles it. `False` is the default of both [30], [35]. | Always, the default's value included ([delivery.md](delivery.md) section 5). | Never. |
-| `x-consumer-timeout` (queue argument), `consumer-timeout` (policy key) | How long, in milliseconds, a consumer may hold a delivery before RabbitMQ takes it back; 30 minutes by default, and from RabbitMQ 4.3 only quorum queues support it [37], [1]. | Always, the default's value included ([delivery.md](delivery.md) section 5): above the longest run of the handler (section 9). | Never. |
+| `consumer-timeout` (policy key), or `x-consumer-timeout` (queue argument) | How long, in milliseconds, a consumer may hold a delivery before RabbitMQ takes it back; 30 minutes by default, and from RabbitMQ 4.3 only quorum queues support it [37], [1]. The practice sets the policy key, in the policy [consumer-example.md](consumer-example.md) section 4 ships, because RabbitMQ says hardcoded queue arguments "cannot be updated without redeploying applications and deleting the queue before it can be redeclared, while policies can be updated at any moment" [52]. | Always, the default's value included ([delivery.md](delivery.md) section 5): above the longest run of the handler (section 9). | Never. |
 | `publisher_confirms=True` (aio-pika `channel()`), `confirm_delivery()` (pika) | The broker confirms each message it took. aio-pika turns it on by default; pika needs the call [30], [35]. | Always, the default's value included ([delivery.md](delivery.md) section 5): `True` for a message that must arrive; `publisher_confirms=False` on a channel that runs AMQP transactions [28]; in pika, `confirm_delivery()` on every channel without transactions. | Never. |
-| `mandatory=True` (aio-pika `publish`), `on_return_raises=True` (aio-pika `channel()`) | A message no queue takes comes back to the publisher, and `publish` raises `PublishError` for it. `mandatory` defaults to `True`, `on_return_raises` to `False` [48], [39]. | Always, for a message the publisher deletes or forgets once it is sent (section 8). | The research found no case for a message that must arrive. |
-| `delivery_mode=DeliveryMode.PERSISTENT` (message) | The message is persistent, and a dead-lettered copy keeps that mode [1]. | Every message that must survive a restart, in its queue or its dead-letter queue. | The research found no case for a message that must arrive. |
-| `message_id` (message) | The id a consumer drops a second copy by ([delivery.md](delivery.md) section 3). | Always. | The research found no case. |
+| `mandatory=True` (aio-pika `publish`), `on_return_raises=True` (aio-pika `channel()`) | A message no queue takes comes back to the publisher, and `publish` raises `PublishError` for it. `mandatory` defaults to `True`, `on_return_raises` to `False` [48], [39]. | Always, for a message the publisher deletes or forgets once it is sent (section 8). | Never. |
+| `delivery_mode=DeliveryMode.PERSISTENT` (message) | The message is persistent, and a dead-lettered copy keeps that mode [1]. | Every message that must survive a restart, in its queue or its dead-letter queue. | Never. |
+| `message_id` (message) | The id a consumer drops a second copy by ([delivery.md](delivery.md) section 3). | Always. | Never. |
 | `VisibilityTimeout` (SQS queue attribute) | How long a received message stays hidden [40]; its default and cap are in [delivery.md](delivery.md) section 5. | Always, the default's value included ([delivery.md](delivery.md) section 5): longer than the longest run of the handler. | Never. |
-
-Required on RabbitMQ: the queue type, `durable`, the prefetch count, manual acknowledgement, the consumer timeout, publisher confirms, mandatory publishing with returns raised, the persistent delivery mode and the message id; the dead-letter exchange and the delivery limit are required by [delivery.md](delivery.md) section 6. Required on SQS: the visibility timeout; the redrive policy is required by [delivery.md](delivery.md) section 6.
 
 ## 12. Common mistakes
 
@@ -396,10 +444,11 @@ This section covers four threats: someone who reads or changes the traffic betwe
 ## 16. Checks
 
 - `grep -rnE "no_ack=True|auto_ack=True" src/` prints nothing (section 9).
-- `grep -rnE "set_qos|basic_qos" src/` shows one line for each consumer's channel, and none of them passes `prefetch_count=0` or a global flag (section 9).
+- `grep -rnE "set_qos|basic_qos" src/` shows no line that passes a global flag (section 9).
+- At review, for each `open_consumer_channel(` call: does it pass a prefetch count from the settings class, whose field has `gt=0` (section 9)?
 - `grep -rnE "[\"']guest[\"']" src/` prints nothing: no `guest` login in the code (section 15).
 - At review, for each queue the code declares: does it pass `"x-queue-type": "quorum"` and `durable=True` (section 7)?
-- At review, for each queue the code declares: does it have a dead-letter target and a written delivery limit, in its arguments or in a policy the change ships ([delivery.md](delivery.md) section 6)?
+- At review, for each queue the code declares: [delivery.md](delivery.md) section 6's dead-letter check.
 - At review, for each producer user on a shared topic exchange: do its topic permissions let it write only its own routing keys (section 15)?
 - Tests: a unit test hands the code a fake publisher that records what it was given ([fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 3); an integration test runs a real RabbitMQ in testcontainers ([libraries.md](../testing/libraries.md) section 2).
 
@@ -456,3 +505,4 @@ Checked 2026-10-29 unless a line ends with — checked <YYYY-MM-DD>.
 - [49] aiormq — `aiormq/exceptions.py`, 7.2.4 — https://github.com/mosquito/aiormq/blob/7.2.4/aiormq/exceptions.py
 - [50] aiormq — `aiormq/channel.py`, 7.2.4 — https://github.com/mosquito/aiormq/blob/7.2.4/aiormq/channel.py
 - [51] GitHub — aio-pika contributors (REST API) — https://api.github.com/repos/mosquito/aio-pika/contributors — checked 2026-10-30
+- [52] RabbitMQ — Dead Letter Exchanges, docs version 4.4 — https://www.rabbitmq.com/docs/dlx

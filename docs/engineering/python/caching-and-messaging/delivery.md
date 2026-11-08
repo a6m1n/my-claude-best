@@ -162,8 +162,8 @@ How to build it:
    arrive, that is while the message can sit in its queue, in its dead-letter queue (section 6), or
    in a topic a consumer may read again. Then delete older rows in batches.
 
-The use case, its result type and its query; the imports, the payment query and the `OrderPaid`
-model are left out:
+The use case, its result type, the consumer's key and its query; the imports, the payment query
+and the `OrderPaid` model are left out:
 
 ```python
 # src/acme/billing/record_payment/schemas.py
@@ -176,11 +176,13 @@ class PaymentOutcome(StrEnum):
 ```
 
 ```python
-# src/acme/billing/record_payment/repository.py
+# src/acme/billing/record_payment/consts.py
 # processed_message keeps one row per consumer and message (delivery.md section 3).
 CONSUMER: Final = "billing.record_payment"
+```
 
-
+```python
+# src/acme/billing/record_payment/repository.py
 async def claim_message(conn: AsyncConnection[TupleRow], message_id: UUID) -> bool:
     """Record the message id; False when this consumer has processed it already."""
     cursor = await conn.execute(
@@ -189,6 +191,7 @@ async def claim_message(conn: AsyncConnection[TupleRow], message_id: UUID) -> bo
         " ON CONFLICT DO NOTHING",
         (CONSUMER, message_id),
     )
+
     return cursor.rowcount == 1
 ```
 
@@ -211,7 +214,8 @@ async def record_payment(
 The adapter acknowledges only after the use case returns:
 [message-brokers.md](message-brokers.md) section 9 shows it for aio-pika and section 10 for SQS,
 [event-streaming.md](event-streaming.md) section 6 for Kafka, and
-[consumer-example.md](consumer-example.md) in full.
+[consumer-example.md](consumer-example.md), a complete consumer with other names, which takes the
+id from the message body, a departure it declares.
 
 Why this is good: the id insert and the payment run in one `transaction()` block, which commits
 when the block ends [16]. The acknowledgement comes after that block, so every crash
@@ -219,8 +223,8 @@ leads to a redelivery that the id row absorbs. The connection must be in autocom
 connection that already has a transaction open, the same block is only a savepoint and commits
 nothing [16], and the acknowledgement would then come before the commit. Both paths return a
 `PaymentOutcome`, so a skipped copy reads differently from a recorded payment
-([python.md](../language/python.md) section 2). The query lives in `repository.py`, the `if` in
-`usecase.py` and the result type in `schemas.py`, as
+([python.md](../language/python.md) section 2). The query lives in `repository.py`, the consumer's
+key in `consts.py`, the `if` in `usecase.py` and the result type in `schemas.py`, as
 [file-structure.md](../../any-language/file-structure/file-structure.md) section 3 puts them.
 
 When you judge a library that says it removes duplicates for you, ask four questions. Each comes
@@ -351,7 +355,7 @@ simpler of the two ways: one more process, and no server you do not already run.
    every consumer must be idempotent (section 3); AWS gives the same advice [21].
 
 The claim query and one pass of the relay; the imports, the broker client, the row type, the
-`BATCH_SIZE` constant, the `take_relay_lock` query (`SELECT pg_try_advisory_xact_lock(%s)` with the
+`RelayOutcome` enum of the batch's three paths, the `BATCH_SIZE` constant, the `take_relay_lock` query (`SELECT pg_try_advisory_xact_lock(%s)` with the
 relay's key), the `delete_rows` query and the loop that calls `relay_batch` are left out:
 
 ```sql
@@ -363,11 +367,13 @@ FOR UPDATE SKIP LOCKED   -- A second relay skips these rows instead of sending t
 ```
 
 ```python
-async def relay_batch(conn: AsyncConnection[TupleRow], broker: BrokerClient) -> int:
+async def relay_batch(
+    conn: AsyncConnection[TupleRow], broker: BrokerClient
+) -> RelayOutcome:
     async with conn.transaction():
         # One relay at a time keeps the order (step 4); the lock ends with the block.
         if not await repository.take_relay_lock(conn):
-            return 0
+            return RelayOutcome.LOCKED
 
         rows = await repository.claim_batch(conn, limit=BATCH_SIZE)
 
@@ -379,14 +385,20 @@ async def relay_batch(conn: AsyncConnection[TupleRow], broker: BrokerClient) -> 
         # never loses it.
         await repository.delete_rows(conn, [row.id for row in rows])
 
-    return len(rows)
+    if not rows:
+        return RelayOutcome.EMPTY
+
+    return RelayOutcome.SENT
 ```
 
 Why this is good: the rows stay locked and in the table until the broker has taken every one, so
 any failure leaves them to be sent again, and the duplicate this can cause is the one section 3
 handles. A second relay finds the advisory lock taken and sends nothing, so the rows leave in the
-order step 4 asks for. The cost is a transaction that stays open while the batch is sent, so keep `BATCH_SIZE`
-small. A full relay is in [outbox-relay-example.md](outbox-relay-example.md).
+order step 4 asks for. `relay_batch` returns which path it took, so a lock another relay holds
+reads differently from an empty outbox ([python.md](../language/python.md) section 2). The cost is
+a transaction that stays open while the batch is sent, so keep `BATCH_SIZE` small. A full relay is
+in [outbox-relay-example.md](outbox-relay-example.md); it deletes by `position`, the column the
+claim sorts on, where this snippet deletes by the unique `id`.
 
 ### The relay: log tailing with Debezium
 
@@ -649,11 +661,10 @@ one consumer in one repository, the model in the code is the contract.
 Parse every message into a model at the edge, as [python.md](../language/python.md) section 4
 says.
 
-**Give a consumer's message model `extra="ignore"`, with a comment that names the producer as
-the owner of the format.** Why: a `BACKWARD` change may remove a field [50], so the messages still
+**Give a consumer's message model `extra="ignore"`.** Why: a `BACKWARD` change may remove a field [50], so the messages still
 in the queue carry a field the new model lacks, and a model with `extra="forbid"` would reject
 them all into the dead-letter queue. [python.md](../language/python.md) section 4 keeps `ignore`
-for a format another party owns, and asks for that comment.
+for a format another party owns, with the comment its check asks for.
 
 **Change a message's schema only in compatible steps, and deploy the two sides in the order its
 mode asks.** Why: during a deploy, old and new code read the same messages. Confluent's Schema

@@ -105,7 +105,7 @@ What to notice:
   when it has data of its own. A module that stores nothing has no `models.py`; a module that calls
   no model has no prompts. No folder holds an empty file kept for symmetry.
 - **`core/` has one file per external system.** Timeouts, retries, tracing and spend limits for that
-  system live there once, and every call through it gets them. One instance of each client is built
+  system live there once, and every call through it gets them. Each client's connections are built
   once at startup by each adapter, in `api/app.py` and `cli/main.py`, and handed in as a parameter
   ([python.md](../../python/language/python.md) section 2).
 - **The adapters hold no business rule.** Each decodes a request, calls one `usecase.py`, encodes

@@ -69,21 +69,23 @@ Only the files this example touches. Every folder under `src/` and `tests/` has 
 │   ├── core/
 │   │   ├── config.py               Settings: the fields of section 4
 │   │   ├── database.py             connect_database: the one way into PostgreSQL
-│   │   ├── rabbitmq_client.py      open_event_exchange, publish_event, BROKER_ERRORS
+│   │   ├── errors.py               EventNotPublishedError, EventReturnedError
+│   │   ├── rabbitmq_client.py      open_publishing_channel, open_event_exchange, publish_event
 │   │   └── schemas.py              Currency, EventId, OrderId, RoutingKey: shared types
 │   ├── orders/
 │   │   ├── place_order/
 │   │   │   ├── schemas.py          OrderPlaced: the event billing parses
+│   │   │   ├── consts.py           AGGREGATE_TYPE, EVENT_TYPE: the routing key's two halves
 │   │   │   ├── repository.py       the order row and its outbox row
 │   │   │   └── usecase.py          PlaceOrder: both rows in one transaction
 │   │   └── relay_outbox/
 │   │       ├── schemas.py          OutboxRow, and RelayOutcome: which path one batch took
-│   │       ├── errors.py           EventNotPublishedError, EventReturnedError
+│   │       ├── consts.py           RELAY_LOCK_KEY: the relay's advisory lock
 │   │       ├── repository.py       the relay's lock, the claim and the delete
 │   │       └── usecase.py          RelayOutbox: one batch in one transaction
 │   └── worker/
 │       ├── handlers_relay_outbox.py   relay_until_stopped: the poll loop
-│       └── main.py                    builds each client once, runs the loop
+│       └── main.py                    builds the clients, runs the loop
 └── tests/
     ├── integration/
     │   ├── conftest.py             one Postgres container per run
@@ -255,20 +257,22 @@ drop. Without it, a query run outside a block leaves a transaction open, and eve
 
 `src/acme/core/rabbitmq_client.py`. The file's docstring, its other imports and `connect_rabbitmq`
 are [message-brokers.md](message-brokers.md) section 5's, cut with `...`. This is what the outbox
-adds:
+adds. `EVENTS_EXCHANGE`, the bodies of `open_publishing_channel`, `open_event_exchange` and
+`publish_event`, and the imports only those bodies need are
+[message-brokers.md](message-brokers.md) section 8's, cut with `...`:
 
 ```python
 from typing import Final
-from uuid import UUID
 
+# aio-pika's own abstract types, a departure from readability.md section 6, which
+# annotates with the concrete class: aio-pika's calls return these types, so a
+# concrete annotation would need a cast at each call. The cost: none found.
 from aio_pika.abc import AbstractChannel, AbstractExchange
 from aio_pika.exceptions import AMQPError, ChannelInvalidStateError
 
-from acme.core.schemas import RoutingKey
+from acme.core.schemas import EventId, RoutingKey
 
 ...
-
-EVENTS_EXCHANGE: Final = "acme.events"
 
 # A publish, an ack or a reject raises these when the broker did not get it: a nack, a
 # returned message, a lost connection, or a closed channel, which aiormq raises as a
@@ -278,51 +282,56 @@ EVENTS_EXCHANGE: Final = "acme.events"
 BROKER_ERRORS: Final = (AMQPError, ChannelInvalidStateError)
 
 
+async def open_publishing_channel(
+    connection: AbstractRobustConnection,
+) -> AbstractChannel:
+    ...  # message-brokers.md section 8
+
+
 async def open_event_exchange(channel: AbstractChannel) -> AbstractExchange:
-    return await channel.declare_exchange(
-        EVENTS_EXCHANGE,
-        # Topic: each subscriber binds its queue to the keys it wants, such as
-        # orders.order_placed (message-brokers.md section 6).
-        aio_pika.ExchangeType.TOPIC,
-        # Durable: aio-pika's default would lose the exchange when the broker restarts
-        # (message-brokers.md section 8).
-        durable=True,
-    )
+    ...  # message-brokers.md section 8
 
 
 async def publish_event(
     exchange: AbstractExchange,
     *,
     routing_key: RoutingKey,
-    message_id: UUID,
+    message_id: EventId,
     body: bytes,
 ) -> None:
-    message = aio_pika.Message(
-        body,
-        content_type="application/json",
-        # The broker and the log lines carry this id; consumers drop a second copy by
-        # the same id in the body, a departure from delivery.md section 3 that the
-        # outbox table declares (outbox-relay-example.md section 3).
-        message_id=str(message_id),
-        # Not aio-pika's default: a dead-lettered copy survives a restart only if it
-        # is persistent (message-brokers.md section 8).
-        delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
-    )
+    ...  # message-brokers.md section 8
+```
 
-    # On the channel main() opens, with confirms and on_return_raises=True, this
-    # returns after the broker's ack, and a nack or a returned message raises.
-    # mandatory=True is aio-pika's default, written out: without it a message no
-    # queue takes is dropped and still confirmed (message-brokers.md section 8).
-    # The broker's errors leave here as they are: the caller wraps them, a
-    # departure its use case declares (outbox-relay-example.md section 7).
-    await exchange.publish(message, routing_key=routing_key, mandatory=True)
+`src/acme/core/errors.py`, the two errors of a publish the broker did not take:
+
+```python
+"""The errors the core clients raise, which every module may catch."""
+
+from acme.core.schemas import EventId
+
+
+class EventNotPublishedError(Exception):
+    """The broker did not take an event; the caller still holds it."""
+
+    def __init__(self, event_id: EventId, broker_error: str) -> None:
+        super().__init__(f"Event {event_id} was not published: {broker_error}")
+        self.event_id = event_id
+        self.broker_error = broker_error
+
+
+class EventReturnedError(EventNotPublishedError):
+    """No queue is bound to the event's key, so the broker sent the event back."""
 ```
 
 What `publish_event` guarantees, and why its key is a `RoutingKey`, is
 [message-brokers.md](message-brokers.md) section 8's; its one caller is the relay. It is good
-because `BROKER_ERRORS` names the errors that mean the broker did not get what was sent, so the
-relay catches those and lets a bug through; billing's consumer catches the same errors around its
-ack and reject ([consumer-example.md](consumer-example.md) section 7). aio-pika raises
+because `BROKER_ERRORS` names the errors that mean the broker did not get what was sent, so
+`publish_event` turns those into its own error and lets a bug through; billing's consumer catches
+the same errors around its ack and reject ([consumer-example.md](consumer-example.md) section 7).
+The two errors sit in `core/errors.py`, because the client in `core/` raises them and `core/`
+imports no module ([file-structure.md](../../any-language/file-structure/file-structure.md)
+section 4). The channel's two flags sit in `open_publishing_channel`, beside the publish that
+relies on them. aio-pika raises
 `DeliveryError` when the broker answers with a nack, and `PublishError`, a `DeliveryError` too,
 for a returned message on a channel opened with `on_return_raises=True` [3], [4]. aiormq defines
 `ChannelInvalidStateError` as a `RuntimeError` [4], so an `except AMQPError` alone would let a
@@ -369,25 +378,34 @@ the amount is a whole number of minor units above zero. The event carries ids an
 personal data, so nothing in it has to be erased from queues later ([delivery.md](delivery.md)
 section 10).
 
-`src/acme/orders/place_order/repository.py`:
+`src/acme/orders/place_order/consts.py`:
 
 ```python
-"""The queries of placing an order: the order row and its outbox row."""
+"""The named values of placing an order."""
 
 from typing import Final
 
-from psycopg import AsyncConnection
-from psycopg.rows import TupleRow
-from psycopg.types.json import Jsonb
-
-from acme.core.schemas import Currency, OrderId, RoutingKey
-from acme.orders.place_order.schemas import OrderPlaced
+from acme.core.schemas import RoutingKey
 
 # The relay routes on aggregatetype.type, so this event goes out as
 # orders.order_placed, the key billing's queue is bound to. Both halves are taken
 # from RoutingKey, the key's one declaration (python.md section 3).
 AGGREGATE_TYPE: Final = RoutingKey.ORDER_PLACED.partition(".")[0]
 EVENT_TYPE: Final = RoutingKey.ORDER_PLACED.partition(".")[2]
+```
+
+`src/acme/orders/place_order/repository.py`:
+
+```python
+"""The queries of placing an order: the order row and its outbox row."""
+
+from psycopg import AsyncConnection
+from psycopg.rows import TupleRow
+from psycopg.types.json import Jsonb
+
+from acme.core.schemas import Currency, OrderId
+from acme.orders.place_order.consts import AGGREGATE_TYPE, EVENT_TYPE
+from acme.orders.place_order.schemas import OrderPlaced
 
 
 async def insert_order(
@@ -421,9 +439,9 @@ async def insert_order_placed(
 ```
 
 It is good because each query is one function, and every value goes in as a parameter, never
-formatted into the SQL. The two names that make up the routing key are constants next to the one
-query that writes them ([file-structure.md](../../any-language/file-structure/file-structure.md)
-section 3). The outbox keeps the key in two columns ([delivery.md](delivery.md) section 4), and
+formatted into the SQL. The two names that make up the routing key are named values of the
+module, so they sit in its `consts.py`, apart from the queries
+([file-structure.md](../../any-language/file-structure/file-structure.md) section 3). The outbox keeps the key in two columns ([delivery.md](delivery.md) section 4), and
 both are taken from `RoutingKey`, the key's one declaration, so the key is never spelt a second
 time ([python.md](../language/python.md) section 3). psycopg dumps an enum with a mix-in type,
 such as this `StrEnum`, by its mix-in type, so the currency is stored as its string, and a dict
@@ -442,6 +460,7 @@ from acme.orders.place_order import repository
 from acme.orders.place_order.schemas import OrderPlaced
 
 
+# A class, not a function: the departure consumer-example.md section 6 declares.
 class PlaceOrder:
     def __init__(self, conn: AsyncConnection[TupleRow]) -> None:
         self._conn = conn
@@ -517,25 +536,15 @@ class RelayOutcome(StrEnum):
     LOCKED = "locked"
 ```
 
-`src/acme/orders/relay_outbox/errors.py`:
+`src/acme/orders/relay_outbox/consts.py`:
 
 ```python
-"""The errors of a batch the broker did not take."""
+"""The named values of the relay."""
 
-from acme.core.schemas import EventId
+from typing import Final
 
-
-class EventNotPublishedError(Exception):
-    """The broker did not take an event, so its whole batch stays in the outbox."""
-
-    def __init__(self, event_id: EventId, broker_error: str) -> None:
-        super().__init__(f"Event {event_id} was not published: {broker_error}")
-        self.event_id = event_id
-        self.broker_error = broker_error
-
-
-class EventReturnedError(EventNotPublishedError):
-    """No queue is bound to the event's key, so the broker sent the event back."""
+# The key can be any bigint that no other advisory lock in this database uses.
+RELAY_LOCK_KEY: Final = 7_241_001
 ```
 
 `src/acme/orders/relay_outbox/repository.py`:
@@ -543,17 +552,14 @@ class EventReturnedError(EventNotPublishedError):
 ```python
 """The relay's queries: its lock, the claim of a batch and the delete."""
 
-from typing import Final
 from uuid import UUID
 
 from psycopg import AsyncConnection
 from psycopg.rows import TupleRow, kwargs_row
 
 from acme.core.schemas import EventId, RoutingKey
+from acme.orders.relay_outbox.consts import RELAY_LOCK_KEY
 from acme.orders.relay_outbox.schemas import OutboxRow
-
-# The key can be any bigint that no other advisory lock in this database uses.
-RELAY_LOCK_KEY: Final = 7_241_001
 
 
 async def take_relay_lock(conn: AsyncConnection[TupleRow]) -> bool:
@@ -617,17 +623,19 @@ async def delete_rows(conn: AsyncConnection[TupleRow], positions: list[int]) -> 
 ```python
 """Send the outbox to the broker, one batch at a time, in the order it was written."""
 
+# aio-pika's own abstract types, a departure from readability.md section 6, which
+# annotates with the concrete class: aio-pika's calls return these types, so a
+# concrete annotation would need a cast at each call. The cost: none found.
 from aio_pika.abc import AbstractExchange
-from aio_pika.exceptions import PublishError
 from psycopg import AsyncConnection
 from psycopg.rows import TupleRow
 
-from acme.core.rabbitmq_client import BROKER_ERRORS, publish_event
+from acme.core.rabbitmq_client import publish_event
 from acme.orders.relay_outbox import repository
-from acme.orders.relay_outbox.errors import EventNotPublishedError, EventReturnedError
-from acme.orders.relay_outbox.schemas import OutboxRow, RelayOutcome
+from acme.orders.relay_outbox.schemas import RelayOutcome
 
 
+# A class, not a function: the departure consumer-example.md section 6 declares.
 class RelayOutbox:
     def __init__(
         self,
@@ -658,7 +666,12 @@ class RelayOutbox:
             rows = await repository.claim_batch(self._conn, limit=self._batch_size)
 
             for row in rows:
-                await self._publish(row)
+                await publish_event(
+                    self._exchange,
+                    routing_key=row.routing_key,
+                    message_id=row.event_id,
+                    body=row.payload.encode(),
+                )
 
             # After every confirm: a crash before the commit sends the batch again,
             # never loses it (delivery.md section 4).
@@ -668,31 +681,6 @@ class RelayOutbox:
             return RelayOutcome.EMPTY
 
         return RelayOutcome.SENT
-
-    async def _publish(self, row: OutboxRow) -> None:
-        try:
-            await publish_event(
-                self._exchange,
-                routing_key=row.routing_key,
-                message_id=row.event_id,
-                body=row.payload.encode(),
-            )
-        except PublishError as error:
-            # Returned: no queue is bound to the event's key, and only a person can
-            # bind one. The error is raised from None, for the reason below.
-            raise EventReturnedError(
-                row.event_id, broker_error=type(error).__name__
-            ) from None
-        except BROKER_ERRORS as error:
-            # A departure from logging.md section 10, where the one client raises
-            # its own safe error: the relay is publish_event's one caller, and its
-            # error adds the event id. The cost: a second caller of publish_event
-            # must wrap the broker's errors the same way. From None: the broker's
-            # error can hold the message, body included; the event id is all the log
-            # needs.
-            raise EventNotPublishedError(
-                row.event_id, broker_error=type(error).__name__
-            ) from None
 ```
 
 It is good because:
@@ -722,12 +710,13 @@ It is good because:
   `ValueError`, and the worker stops before anything is sent
   ([python.md](../language/python.md) section 3). The delete passes a Python list, which psycopg
   sends as an array for `= ANY()`, and which works for an empty batch too [5].
-- **The broker's error becomes one module error with the event's id**, raised and not logged, so
-  the loop, which decides what happens next, logs it once ([logging.md](../logging/logging.md)
-  section 5). A returned event becomes `EventReturnedError`, a kind of it the loop logs with a
-  line of its own (section 8). `raise ... from None` drops the broker's error: a `DeliveryError`
-  keeps the message it is about in its `message` attribute [4], and aiormq's delivered message
-  holds the body [10].
+- **The broker's refusal reaches the relay as the client's own error with the event's id.**
+  `publish_event` raises it (section 5), and `run` lets it go without logging it, so the loop,
+  which decides what happens next, logs it once ([logging.md](../logging/logging.md) section 5). A
+  returned event is `EventReturnedError`, a kind of it the loop logs with a line of its own
+  (section 8). The client raises both `from None`, which drops the broker's error: a
+  `DeliveryError` keeps the message it is about in its `message` attribute [4], and aiormq's
+  delivered message holds the body [10].
 
 ## 8. The loop and the worker's entry point
 
@@ -740,7 +729,7 @@ import asyncio
 import contextlib
 import logging
 
-from acme.orders.relay_outbox.errors import EventNotPublishedError, EventReturnedError
+from acme.core.errors import EventNotPublishedError, EventReturnedError
 from acme.orders.relay_outbox.schemas import RelayOutcome
 from acme.orders.relay_outbox.usecase import RelayOutbox
 
@@ -814,11 +803,12 @@ It is good because:
   rolls back, and the rows wait for the next start.
 
 `src/acme/worker/main.py`, as the relay needs it. [consumer-example.md](consumer-example.md)
-section 8 adds billing's consumer to `run_worker`: a third connection in the `async with`, and the
-relay's statements inside a task group beside the consumer.
+section 8 adds billing's consumer to `run_worker`: two more connections in the `async with`,
+billing's broker connection and its database connection, and the relay's statements inside a task
+group beside the consumer.
 
 ```python
-"""The worker process: builds each client once, then runs until SIGTERM."""
+"""The worker process: builds its clients at startup, then runs until SIGTERM."""
 
 import asyncio
 import logging
@@ -832,7 +822,11 @@ from pydantic import SecretStr
 from acme.core.config import Settings
 from acme.core.database import connect_database
 from acme.core.logging import build_logging_config
-from acme.core.rabbitmq_client import connect_rabbitmq, open_event_exchange
+from acme.core.rabbitmq_client import (
+    connect_rabbitmq,
+    open_event_exchange,
+    open_publishing_channel,
+)
 from acme.orders.relay_outbox.usecase import RelayOutbox
 from acme.worker.handlers_relay_outbox import relay_until_stopped
 
@@ -851,6 +845,8 @@ def main() -> None:
     except Exception:
         # CRITICAL, with the traceback: the worker cannot go on and exits, and this
         # line, not raw stderr, is what a restart's alert reads (logging.md section 4).
+        # A stuck connection's CancelledError, a BaseException, passes this except
+        # and reaches raw stderr instead (outbox-relay-example.md section 11).
         logger.critical("Worker stopped: it cannot go on", exc_info=True)
         sys.exit(1)
 
@@ -881,10 +877,7 @@ async def run_worker(settings: Settings) -> None:
     )
 
     async with rabbitmq, relay_database:
-        # Confirms are on, and a returned message raises: publish_event returns only
-        # after the broker's ack, and an event no queue takes stays in the outbox
-        # (message-brokers.md section 8).
-        channel = await rabbitmq.channel(publisher_confirms=True, on_return_raises=True)
+        channel = await open_publishing_channel(rabbitmq)
 
         relay = RelayOutbox(
             relay_database,
@@ -920,20 +913,26 @@ It is good because:
 
 - **`main()` builds `Settings` first and applies the logging config before anything logs**
   ([python.md](../language/python.md) section 5, [logging.md](../logging/logging.md) section 2).
-  `run_worker` turns the settings into clients, each built once at startup and handed in
-  ([file-structure.md](../../any-language/file-structure/file-structure.md) sections 4 and 5).
+  `run_worker` turns the settings into clients, each built at startup by its one connect function
+  and handed in ([file-structure.md](../../any-language/file-structure/file-structure.md)
+  sections 4 and 5).
 - **The worker logs its start and the error that ends it.** The start is one `INFO` line with the
   service's version and every setting that is not a `SecretStr`, built from the class, so a field
   added later joins the line with no edit and a secret never does
-  ([logging.md](../logging/logging.md) sections 4 and 10). An error that leaves `asyncio.run` is
-  one `CRITICAL` line with its traceback before the exit code 1
-  ([logging.md](../logging/logging.md) section 4). Each
-  designed stop of the worker then reaches the log store through the logging config, with its
-  level, instead of as raw lines on stderr that an alert on the level never sees.
+  ([logging.md](../logging/logging.md) sections 4 and 10). An `Exception` that leaves
+  `asyncio.run` is one `CRITICAL` line with its traceback before the exit code 1
+  ([logging.md](../logging/logging.md) section 4). Three stops leave no `CRITICAL` line: the
+  `asyncio.CancelledError` of a stuck connection, a `BaseException` that passes
+  `except Exception` and leaves its traceback on raw stderr, the kill after the grace period
+  during a resource alarm (section 11), and any kill from outside, such as an out-of-memory kill.
+  Each other `Exception` that ends the worker reaches the log store
+  through the logging config, with its level, instead of as raw lines on stderr that an alert on
+  the level never sees.
 - **The relay has a database connection and a channel of its own**
   ([message-brokers.md](message-brokers.md) section 5), so the consumer's work never runs inside
-  the relay's transaction. The channel raises on a returned message, which a channel does not do
-  by default [14], [3], so an event no queue takes is not counted as sent.
+  the relay's transaction. The channel comes from `open_publishing_channel` and raises on a
+  returned message, which a channel does not do by default [14], [3], so an event no queue takes
+  is not counted as sent.
 - **A container stop ends the process cleanly.** The stop sends SIGTERM, and
   `loop.add_signal_handler` lets the handler set `stop` from inside the event loop [12]. The loop
   finishes the batch it is sending, and leaving the `async with` closes the broker connection and
@@ -1212,10 +1211,10 @@ from psycopg import AsyncConnection
 from psycopg.rows import TupleRow
 from testcontainers.community.postgres import PostgresContainer
 
+from acme.core.errors import EventNotPublishedError
 from acme.core.schemas import Currency, EventId, OrderId
 from acme.orders.place_order.schemas import OrderPlaced
 from acme.orders.place_order.usecase import PlaceOrder
-from acme.orders.relay_outbox.errors import EventNotPublishedError
 from acme.orders.relay_outbox.repository import take_relay_lock
 from acme.orders.relay_outbox.schemas import RelayOutcome
 from acme.orders.relay_outbox.usecase import RelayOutbox
@@ -1394,7 +1393,7 @@ class TestRelayOutbox:
     async def test_an_event_sent_on_a_closed_channel_stays_in_the_outbox(
         self, database: AsyncConnection[TupleRow]
     ) -> None:
-        """A closed channel's error is not an AMQPError; a relay that missed it would
+        """A closed channel's error is not an AMQPError; a client that missed it would
         end the worker instead of keeping the batch for the next poll.
         """
         await place_an_order(database)
@@ -1500,8 +1499,8 @@ import asyncio
 from typing import Final, Literal, override
 from uuid import UUID
 
+from acme.core.errors import EventNotPublishedError
 from acme.core.schemas import EventId
-from acme.orders.relay_outbox.errors import EventNotPublishedError
 from acme.orders.relay_outbox.schemas import RelayOutcome
 from acme.orders.relay_outbox.usecase import RelayOutbox
 from acme.worker.handlers_relay_outbox import relay_until_stopped

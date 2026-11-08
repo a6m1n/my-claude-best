@@ -355,8 +355,9 @@ a summary leaves three traces, and nothing in them shows that they answered one 
   a request that has already answered, and Langfuse users report the last span overwriting the
   trace's name and output (discussion #11127). A task started with `asyncio.create_task` is
   different: it copies the request's context, so its spans stay in the request's trace, even after
-  the root has closed; work that must outlive the response goes through `BackgroundTasks` or a
-  worker instead.
+  the root has closed; work that runs after the response goes through `BackgroundTasks` or a
+  worker instead, whichever [task-queues.md](../caching-and-messaging/task-queues.md) section 2
+  picks for it.
 - **Run blocking work inside a request with `asyncio.to_thread`,** which copies the context. A bare
   `loop.run_in_executor` does not, and the model calls it makes start traces of their own.
 - **Shut the trace client down when the service stops,** from the app's lifespan, so the spans

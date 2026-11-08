@@ -79,7 +79,8 @@ orchestration such as Airflow, Dagster or Prefect, brokers built around Java's J
   and late runs, and a run still going when the next one is due. Read it before you add or change a
   scheduled job.
 - [consumer-example.md](consumer-example.md) — one RabbitMQ consumer that charges an order once per
-  event: it records the message id in the same transaction as the charge and acknowledges the
+  event: it records the event's id, taken from the message body, in the same transaction as the
+  charge and acknowledges the
   message after the commit. Read it when you write a service's first consumer.
 - [outbox-relay-example.md](outbox-relay-example.md) — an order and its outbox row written in one
   transaction, and the relay that publishes each row with publisher confirms and deletes it after
@@ -99,38 +100,42 @@ orchestration such as Airflow, Dagster or Prefect, brokers built around Java's J
    [logging.md](../logging/logging.md) sections 4, 5, 7, 8, 10 and 12 (the level of a retry, one
    line where an error is handled, the request id a worker does not have, the root span of a
    worker's job, what never goes into a log, an OpenTelemetry instrumentation in the same
-   process),
+   process) and [logging/setup-example.md](../logging/setup-example.md) (the logging config a
+   process applies),
    [fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 3 and
    [libraries.md](../testing/libraries.md) section 2 (a fake that records what was sent, a real
-   broker or cache in testcontainers),
+   broker or cache in testcontainers), the other testing files the examples' tests follow
+   ([layout.md](../testing/layout.md), [what-to-test.md](../testing/what-to-test.md),
+   [assertions.md](../testing/assertions.md), [fixtures.md](../testing/fixtures.md),
+   [test-structure.md](../testing/test-structure.md),
+   [running-tests.md](../testing/running-tests.md) and
+   [suite-example.md](../testing/suite-example.md)),
    [file-structure.md](../../any-language/file-structure/file-structure.md) sections 3 to 5 (a
-   module's files, one client per outside system, one adapter folder per way in),
+   module's files, one client per outside system, one adapter folder per way in) and
+   [layout-example.md](../../any-language/file-structure/layout-example.md) section 3 (the import
+   contracts a new domain or adapter joins),
    [readability.md](../../any-language/readability/readability.md) section 6 (every input in the
    signature),
    [backend-for-frontend.md](../../any-language/backend-for-frontend/backend-for-frontend.md)
-   section 2 (the session store, and the lock around a token refresh), and
-   [ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4 (a scheduled CI workflow).
+   section 2 (the session store, and the lock around a token refresh),
+   [ci-cd/pipeline.md](../../any-language/ci-cd/pipeline.md) section 4 (a scheduled CI workflow),
+   [docker/images.md](../../any-language/docker/images.md) section 6 (a container stopped without
+   a SIGTERM handler), and [static-checks/setup-example.md](../static-checks/setup-example.md) (the
+   Python version the examples are written for).
    Copy those practices too, or point each link at the rule your project follows instead.
 4. Existing code takes two of the answers in
    [refactoring.md](../../any-language/refactoring/refactoring.md) section 7. Most rules reach old
-   code when a change touches it, as section 2 of that file describes. Four groups exist because
-   the old way loses work, repeats it, leaks data or lets someone run code, so they reach all code
-   by a date, as its section 6 says: a consumer that acknowledges before its work commits
-   ([delivery.md](delivery.md) section 3), unless [delivery.md](delivery.md) section 12's case
-   applies; a message whose loss does harm, sent from inside a transaction or after it with no
-   outbox row ([delivery.md](delivery.md) section 4,
-   [task-queues.md](task-queues.md) section 4); a broker connection without TLS, a credential
-   shared between applications, a Kafka cluster with `allow.everyone.if.no.acl.found` on, or a
-   message body in a log line ([delivery.md](delivery.md) section 10), an SQS queue policy whose
-   Principal is `*`, or a producer user with no topic permissions on a shared topic exchange
-   ([message-brokers.md](message-brokers.md) section 15), or a Temporal client without TLS
-   ([durable-workflows.md](durable-workflows.md) section 13); and a cached value or a task message
-   decoded with pickle ([caching.md](caching.md) section 6, [task-queues.md](task-queues.md)
-   section 12), an APScheduler job table that more than the scheduler may write
-   ([scheduled-jobs.md](scheduled-jobs.md) section 13), a DBOS system database that more than the
-   DBOS application may write ([durable-workflows.md](durable-workflows.md) section 13), or a
-   cache client, or a task queue's broker client on Redis or Valkey, without TLS or an ACL user
-   ([caching.md](caching.md) section 14, [task-queues.md](task-queues.md) section 12).
+   code when a change touches it, as section 2 of that file describes. Four groups reach all code
+   by a date, as its section 6 says, because the old way loses work, leaks data or lets someone
+   run code. The team that copies the folder sets that date, and the change that adopts the
+   practice, or its tracking issue, names it:
+
+   | Group | Why it reaches old code | Rule |
+   |---|---|---|
+   | A consumer that acknowledges before its work commits, unless [delivery.md](delivery.md) section 12's case applies | A crash loses the message. | [delivery.md](delivery.md) section 3 |
+   | A message whose loss does harm, sent from inside a transaction, or after it with no outbox row | A crash loses the message, or it goes out for a change that rolled back. | [delivery.md](delivery.md) section 4, [task-queues.md](task-queues.md) section 4 |
+   | A broker connection without TLS, a credential shared between applications, a Kafka cluster with `allow.everyone.if.no.acl.found` on, a message body in a log line, an SQS queue policy whose Principal is `*`, a producer user with no topic permissions on a shared topic exchange, or a Temporal client without TLS | Someone reads or changes messages on the network or in a log, or a leaked or shared credential reaches more than its service needs. | [delivery.md](delivery.md) section 10, [message-brokers.md](message-brokers.md) section 15, [durable-workflows.md](durable-workflows.md) section 13 |
+   | A cached value or a task message decoded with pickle, an APScheduler job table or a DBOS system database that more than its owner may write, or a cache client, or a task queue's broker client on Redis or Valkey, without TLS or an ACL user | Whoever can write the stored data can run code in the service; a client without TLS sends its password in clear text. | [caching.md](caching.md) sections 6 and 14, [task-queues.md](task-queues.md) section 12, [scheduled-jobs.md](scheduled-jobs.md) section 13, [durable-workflows.md](durable-workflows.md) section 13 |
 
 ## The points to adapt
 
@@ -140,9 +145,7 @@ stops doing the job. Within that shape, these are your choices.
 
 - **The tool for each job.** Each job file names at most two picks beside the simpler way, with
   its reasons; in scheduled-jobs.md the task queue's own scheduler is one pick, whichever queue the
-  service runs: [caching.md](caching.md) section 2 (Valkey for a new shared cache and Redis where it
-  already runs; against Valkey, valkey-py in new code and redis-py where the code already uses it),
-  [task-queues.md](task-queues.md) section 3, [message-brokers.md](message-brokers.md) section 4,
+  service runs: [caching.md](caching.md) section 2, [task-queues.md](task-queues.md) section 3, [message-brokers.md](message-brokers.md) section 4,
   [event-streaming.md](event-streaming.md) section 3, [durable-workflows.md](durable-workflows.md)
   section 3 and [scheduled-jobs.md](scheduled-jobs.md) section 2. A team on another broker or
   another cloud keeps [delivery.md](delivery.md) and writes its own tool parts.
@@ -157,9 +160,7 @@ stops doing the job. Within that shape, these are your choices.
   the folder.
 - **The names in the examples.** The package `acme`, its paths under `src/acme/` and the event and
   exchange names are placeholders: use your own. The `outbox` table uses the column names
-  Debezium's outbox router reads by default; a table with other names works with log tailing when
-  the router's `table.field.event.*` and `route.by.field` options name them
-  ([delivery.md](delivery.md) section 4).
+  Debezium's outbox router reads by default ([delivery.md](delivery.md) section 4).
 - **The values the files leave to you.** How long to keep the ids of processed messages
   ([delivery.md](delivery.md) section 3 gives its reasoning, not a rule), the expiry of each cached
   value ([caching.md](caching.md) section 4), and the answer to a late or an overlapping scheduled

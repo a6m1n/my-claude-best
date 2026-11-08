@@ -429,13 +429,13 @@ from acme.core.schemas import ReindexOrder, TaskName
 # (python.md section 4).
 @shared_task(name=TaskName.REINDEX_ORDER, pydantic=True)
 def reindex_order(command: ReindexOrder) -> None:
-    ...  # call the reindex_order use case with its clients (see below)
+    ...  # Call the reindex_order use case with its clients (see below).
 ```
 
 It is good because the message becomes a typed model at the edge, so no code past this line sees
-raw input; `ReindexOrder`, in `core/schemas.py` (section 4), sets `extra="ignore"`, with a
-comment that names the module that sends it, as [delivery.md](delivery.md) section 8 asks of
-every message model, and it holds only the
+raw input; `ReindexOrder`, in `core/schemas.py` (section 4), sets `extra="ignore"`, with the
+comment [python.md](../language/python.md) section 4's check asks for;
+[delivery.md](delivery.md) section 8 says why a consumer's model ignores. The model holds only the
 order id, so the use case reads the order itself. A module sends the task by name through its
 client in `core/`: "If the task isn't registered in the current process you can use send_task()
 to call the task by name instead" [55]. Where the clients come from: Celery builds a task once

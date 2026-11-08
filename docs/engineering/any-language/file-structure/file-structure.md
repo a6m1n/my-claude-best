@@ -150,7 +150,10 @@ Check: for every file, "this file holds only ___" has one answer, and the file n
   on: the class every call to that system goes through, so timeouts, retries, tracing and spend
   limits are written once. A second path to the same system is a bug waiting for the day the first
   one gains a limit. One instance is built at startup by the adapter (section 5) and handed in as a
-  parameter ([python.md](../../python/language/python.md) section 2). A client whose SDK keeps one
+  parameter ([python.md](../../python/language/python.md) section 2). A client that needs more
+  than one connection, such as one for each direction a system's practice asks for or one for each
+  transaction that runs at the same time, opens each one through its one connect function, and the
+  adapter hands each to the code that uses it. A client whose SDK keeps one
   process-wide instance that its own integrations read, such as Langfuse's `get_client()`, is
   configured once at startup by the adapter and read from the SDK, only inside its one client
   file: a handle passed in would add nothing. Code outside the application, such as `evals/`
@@ -181,8 +184,8 @@ the right HTTP codes" (Percival and Gregory, *Architecture Patterns with Python*
 
 An adapter folder holds:
 
-- `main.py`, the process entry point, and the file that builds the app and one instance of each
-  client, once, and wires its parts (`app.py`, `server.py`, or `main.py` itself in a command-line
+- `main.py`, the process entry point, and the file that builds the app and each client's
+  connections, once, and wires its parts (`app.py`, `server.py`, or `main.py` itself in a command-line
   adapter);
 - **one file per module it offers**, named for the role and the module: `routes_<module>.py`,
   `commands_<module>.py`, `handlers_<module>.py`;

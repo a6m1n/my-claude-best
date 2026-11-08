@@ -118,8 +118,10 @@ once and does not describe them: their late-run and overlap settings are not cov
   scheduled time on each Job it creates, in the annotation
   `batch.kubernetes.io/cronjob-scheduled-timestamp` [1]. A Celery beat entry has fields for the
   task, its schedule, `args`, `kwargs`, `options` and `relative`, and none for the time the run was
-  due [2]. A Celery task therefore works its period out from the clock when it runs, and the
-  deadline in section 6 limits how late that clock can be.
+  due [2]. A Celery task therefore works its period out from the clock when it runs; the deadline
+  in section 6 sets how far back beat looks when it decides whether a run is due. Celery is the
+  one exception to this rule, and its cost is that a run sent after midnight works out the wrong
+  day.
 
 A Procrastinate periodic task written this way, in the adapter that holds the worker's handlers.
 The use case's own dependencies, such as its repository, are left out. In Procrastinate a task
@@ -291,13 +293,15 @@ from acme.core.schemas import TaskName
 def build_daily_report() -> None:
     """Build the report for the day before the run."""
     # Beat passes no due time, so the clock is read once, here; the deadline in
-    # main.py bounds how late it can be (scheduled-jobs.md sections 4 and 6).
+    # main.py sets how far back beat looks for a due run (scheduled-jobs.md
+    # sections 4 and 6). The cost: a run sent after midnight builds the wrong day.
     report_day = datetime.now(UTC).date() - timedelta(days=1)
     usecase.build_daily_report(report_day)
 ```
 
 It is good because the zone is written down where a Django setting cannot move it, and the
-deadline is a choice made for this job, not the default that sends every past-due run at once.
+deadline is a choice made for this job, not the default, None, under which a past-due entry runs
+immediately, however late, and only one time.
 The schedule sits in the worker's entry point, read by the one beat process of section 3, and it
 is this job's only scheduler. Beat names the task by its `TaskName` member, a closed set and never
 a bare `str` ([python.md](../language/python.md) section 3), and the task is a plain `def`,
@@ -380,7 +384,7 @@ are required [1]; the table lists the settings that decide the questions of sect
 | Setting | What it means | Set it when | Leave it out when |
 |---|---|---|---|
 | Celery `timezone` | The zone for periodic schedules; `"UTC"` by default, Django's `TIME_ZONE` in a Django project [13], [2] | Always, to `"UTC"` (section 5) | Never |
-| Celery `beat_cron_starting_deadline` | Seconds beat looks back for a due crontab run; None sends every past-due cron run at once [13] | Always, the default's value included ([delivery.md](delivery.md) section 5): the seconds after which a late crontab run is useless, or `None` when every missed run should still run once when beat comes back | Never |
+| Celery `beat_cron_starting_deadline` | Seconds beat looks back for a due crontab run; with None, a past-due cron entry runs immediately, however late [13], and only one time (section 6) | Always, the default's value included ([delivery.md](delivery.md) section 5): the seconds after which a late crontab run is useless, or `None` when a missed run should still run, once, when beat comes back | Never |
 | Kubernetes `.spec.timeZone` | The zone of `.spec.schedule`; the controller's local zone by default [1] | Always, to `"Etc/UTC"` (section 5) | Never |
 | Kubernetes `.spec.startingDeadlineSeconds` | How late a Job may start; no deadline by default [1] | Always ([delivery.md](delivery.md) section 5): the seconds after which a late run is useless. For a frequent job that must run at least once, a deadline rather than none, large but shorter than 100 runs of its schedule, because with no deadline more than 100 missed schedules stop the Job from starting [1] | Never |
 | Kubernetes `.spec.jobTemplate.spec.backoffLimit` | Retries of a failed Job's Pods before the Job counts as failed; 6 by default, each after an exponential back-off delay "(10s, 20s, 40s ...) capped at ten minutes" [24] | Always, the default's value included ([delivery.md](delivery.md) section 5): each retry runs the command again, so it stays idempotent (section 4) | Never |
