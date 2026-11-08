@@ -5,8 +5,8 @@ meet, and how to design it with Claude Code: the product and brand modes with th
 behind them, how much expression a screen carries, the feedback and states a user sees, native
 elements and focus, and, for every screen an agent builds, a concrete spec, a way to see the result
 and a reviewer other than the author. It also covers how to pick the tool and the skill for a design
-job, how to get a brand page from Claude Code that does not look like the model's default, and how
-to test design skills blind on your own briefs.
+job, how to get a brand page from Claude Code that does not look like the model's default, and one
+person's test of design skills.
 
 **Navigation**
 
@@ -18,9 +18,8 @@ to test design skills blind on your own briefs.
 where it stops holding: [visual-design.md](visual-design.md) section 12, [ux.md](ux.md) section 10,
 [accessibility.md](accessibility.md) section 13,
 [designing-with-claude-code.md](designing-with-claude-code.md) section 9,
-[choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 10,
-[brand-pages.md](brand-pages.md) section 10 and [skill-blind-test.md](skill-blind-test.md)
-section 10.
+[choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 10
+and [brand-pages.md](brand-pages.md) section 10.
 
 ## What is here
 
@@ -48,12 +47,8 @@ section 10.
   does not look like the model's default: the direction before the code, the defaults to avoid with
   a replacement each, real copy, photos and fonts with their licences, the build order and the
   render check. Read it before you ask Claude Code for a brand page.
-- [skill-blind-test.md](skill-blind-test.md) — how to test design skills against no skill on your
-  own briefs, with the pages judged blind by people: the arms, the bench, the headless runs, the
-  screenshots, the pick, and when the result justifies a skill of your own. Read it before you adopt
-  a design skill for a team, or when you want to know whether one helps.
-- [skill-test-result.md](skill-test-result.md) — the result of that test, judged by one person:
-  the scores, a note per skill and how far to trust them. A personal opinion, not a rule. Read it
+- [skill-test-result.md](skill-test-result.md) — one person's test of seven design skills and no
+  skill on one brief: the scores, a note per skill and how far to trust them. A personal opinion, not a rule. Read it
   when you choose a design skill.
 - [design-brief-example.md](design-brief-example.md) — one worked case, the invoices screen: the
   design lines of `CLAUDE.md`, the brief, the reviewer's checklist, and the code that meets them,
@@ -61,9 +56,6 @@ section 10.
   screen.
 - [brand-direction-example.md](brand-direction-example.md) — one direction file for a brand page and
   the brief that points to it. Read it when you fix the direction of a new brand page.
-- [blind-test-example.md](blind-test-example.md) — the files of one test bench: the briefs, the
-  runner, the screenshot and contrast script, the blind key and the judging sheet. Read it when you
-  set up the blind test.
 
 How to tell whether a screen works for the people who use it, and what to measure once it is live,
 is the [ux-evaluation](../../any-language/ux-evaluation/README.md) practice.
@@ -77,8 +69,7 @@ is the [ux-evaluation](../../any-language/ux-evaluation/README.md) practice.
    `docs/engineering/react/design/README.md` and the file it routes to for that work, and
    `docs/engineering/react/design/design-brief-example.md` when you write the brief for a screen,
    `docs/engineering/react/design/brand-direction-example.md` when you fix the direction of a brand
-   page, `docs/engineering/react/design/blind-test-example.md` when you set up a blind test of
-   design skills. The check: every colour, radius and space the change adds is a token role, a step
+   page. The check: every colour, radius and space the change adds is a token role, a step
    of the scale or one of the two exceptions (`visual-design.md` sections 3 and 6), the closing
    summary says which steps of the manual accessibility pass were run (`accessibility.md` section
    11), someone other than the author of the screen answered its review checklist

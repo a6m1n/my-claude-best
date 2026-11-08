@@ -28,8 +28,8 @@ Brand pages are in brand mode: what that mode changes, and which floors still ho
 [visual-design.md](visual-design.md) sections 2 and 12. The spec, the brief and the verify loop
 for any screen are [designing-with-claude-code.md](designing-with-claude-code.md) sections 3, 4
 and 6; this file adds what a brand page needs on top of them. How each design skill sets a
-direction is [choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 8, and whether
-any skill beats no skill on your own briefs is [skill-blind-test.md](skill-blind-test.md). Images
+direction is [choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 8, and one
+person's test of seven skills on a landing page is [skill-test-result.md](skill-test-result.md). Images
 and fonts on the first screen are [performance.md](../performance/performance.md) section 5.
 [brand-direction-example.md](brand-direction-example.md) shows a direction file, its theme file
 and the brief that points to both.
@@ -336,8 +336,8 @@ file.
 - **Choose a skill by how it sets the direction and checks the page,** as
   [choosing-tools-and-skills.md](choosing-tools-and-skills.md) section 8 compares them; what it runs
   on your machine is section 6 of the same file. Whether to install a skill or copy its parts into
-  one of your own is decided by the blind test ([skill-blind-test.md](skill-blind-test.md) section
-  7).
+  one of your own is decided by a test
+  on your own pages.
 
 ## 9. Common mistakes
 
@@ -408,7 +408,7 @@ in [brand-direction-example.md](brand-direction-example.md).
 Not covered yet, because the research found no source:
 
 - A test with human raters of any design skill, or any method here, against none on brand pages;
-  [skill-blind-test.md](skill-blind-test.md) describes one to run.
+  [skill-test-result.md](skill-test-result.md) records one person's test, a personal opinion.
 - Whether the rules in a design skill's reference files reach the page on Opus or Sonnet: the one
   measurement used a small skill not about design [17], and the design skill was measured
   on Haiku only [18].

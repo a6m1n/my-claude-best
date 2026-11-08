@@ -144,8 +144,7 @@ repo is what gets fixed, the way `docs/engineering/any-language/refactoring/refa
   design tool, or review such a change, read `docs/engineering/react/design/README.md` and the file
   it routes to for that work, and `docs/engineering/react/design/design-brief-example.md` when you
   write the brief for a screen, `docs/engineering/react/design/brand-direction-example.md` when you
-  fix the direction of a brand page, `docs/engineering/react/design/blind-test-example.md` when you
-  set up a blind test of design skills. The check: every colour, radius and space the change adds is
+  fix the direction of a brand page. The check: every colour, radius and space the change adds is
   a token role, a step of the scale or one of the two exceptions (`visual-design.md` sections 3 and
   6), the closing summary says which steps of the manual accessibility pass were run
   (`accessibility.md` section 11), someone other than the author of the screen answered its review

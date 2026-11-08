@@ -1,8 +1,7 @@
 # The skill test result: a personal opinion
 
-**Personal opinion, not a rule.** This page records the result of the test in
-[skill-blind-test.md](skill-blind-test.md), run by the author of this library and judged by the
-same person. The scores say how much one person liked each page, not how good a skill is in
+**Personal opinion, not a rule.** This page records one test of design skills, run by the
+author of this library and judged by the same person. The scores say how much one person liked each page, not how good a skill is in
 general. Nothing in the other files of this practice rests on this page, and no rule here comes
 from it.
 
@@ -44,12 +43,12 @@ An earlier, quicker look, mostly at the landing pages, gave the "First look" col
 - **The brief fixed the copy and the section titles,** word for word. That alone explains much
   of what the first look showed: many pages had the same sections with the same titles.
 - **No photos.** The brief had none, so every arm worked without them.
-- **The runs used my own Claude Code login, not a token** (section 11).
+- **The runs used my own Claude Code login, not a token**.
 - **Requests between sessions.** Every arm had three follow-up sessions on my requests before
   the scores, so the pages are not what a skill builds alone from the brief.
 - **Only the two winners went on, after the scores.** hallmark and taste-skill-classics then got
   seven more sessions (eleven in all, the last one not finished), the later ones at high effort
-  with subagents and web tools. Every skill of the bench, and other skills not about design, were
+  with subagents and web tools. Every skill of the test, and other skills not about design, were
   copied into those two runs, and both called the `impeccable` skill. Those later pages are not
   the work of one skill, and they were not scored.
 
