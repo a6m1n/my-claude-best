@@ -245,7 +245,8 @@ class JobsClient:
         # configure_task takes the task by name, so core/ imports no worker code
         # (file-structure.md section 2).
         deferrer = self._app.configure_task(task, connection=conn)
-        # On the caller's connection: the job row commits or rolls back with its data.
+        # On the caller's connection: the job row commits or rolls back with its data
+        # (section 4).
         # mode="json": the job's arguments are stored as JSON, so ids and amounts go
         # in as the strings the task parses back.
         await deferrer.defer_async(**arguments.model_dump(mode="json"))
@@ -366,7 +367,8 @@ app = Celery("acme")
 @app.on_after_configure.connect
 def configure_worker(sender: Celery, **kwargs: object) -> None:
     sender.conf.update(
-        # Ack after the task returns, so a dead worker means a rerun, not a lost task.
+        # Ack after the task returns, so a dead worker means a rerun, not a lost task
+        # (section 5).
         task_acks_late=True,
         # Off, the default: on, a task that kills its worker comes back for ever,
         # unless the queue dead-letters it after a set number of deliveries
@@ -375,14 +377,16 @@ def configure_worker(sender: Celery, **kwargs: object) -> None:
         # On, the default, written: a task that fails or times out is acknowledged,
         # not redelivered; its own retry options retry it (task-queues.md section 5).
         task_acks_on_failure_or_timeout=True,
-        # Reserve one message per process, so no message waits behind a long task.
+        # Reserve one message per process, so no message waits behind a long task
+        # (section 6).
         worker_prefetch_multiplier=1,
-        # At 9 minutes the task gets SoftTimeLimitExceeded, so it can clean up in time.
+        # At 9 minutes the task gets SoftTimeLimitExceeded, so it can clean up in time
+        # (section 6).
         task_soft_time_limit=540,
-        # At 10 minutes the worker process is killed and replaced.
+        # At 10 minutes the worker process is killed and replaced (section 6).
         task_time_limit=600,
         # No caller reads these results; a task whose caller does
-        # sets ignore_result=False.
+        # sets ignore_result=False (section 7).
         task_ignore_result=True,
         # JSON only, the default: pickle would run code for anyone who can write to
         # the broker (task-queues.md section 12).
@@ -477,7 +481,8 @@ REINDEX_TIMEOUT_SECONDS: Final = 540
 async def reindex_order(payload: str) -> None:
     # A message is outside data: parse it once, here (python.md section 4).
     command = ReindexOrder.model_validate_json(payload)
-    # The docs do not say how time_limit reaches a coroutine, so bound the work here.
+    # The docs do not say how time_limit reaches a coroutine, so bound the work here
+    # (section 6).
     async with asyncio.timeout(REINDEX_TIMEOUT_SECONDS):
         await usecase.reindex_order(command)
 ```

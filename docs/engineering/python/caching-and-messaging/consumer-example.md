@@ -150,7 +150,7 @@ in every environment, so it keeps a default ([python.md](../language/python.md) 
 prefetch count of 0 stops the start instead of turning the limit off, because the rule sits on the
 field.
 
-The two clients are the shared ones of `core/`. The worker's `main()` builds each connection at
+The two clients are the shared ones of `core/`. The worker's `run_worker` builds each connection at
 startup through its client's one connect function
 ([file-structure.md](../../any-language/file-structure/file-structure.md) section 4):
 
@@ -250,8 +250,7 @@ async def open_billing_queue(
     connection: AbstractRobustConnection, prefetch_count: int
 ) -> AbstractQueue:
     # The one client opens the channel and declares (file-structure.md section 4);
-    # the adapter keeps billing's names and bindings, and iterates, acks and rejects
-    # (file-structure.md section 5).
+    # the adapter binds, iterates, acks and rejects on the objects it returns.
     channel = await open_consumer_channel(connection, prefetch_count)
 
     # Declared before the queue takes a message: under at-most-once, a message
@@ -819,7 +818,7 @@ charge, the handler decides the same thing, and `exc_info=True` keeps the traceb
 catch cancellation, since `asyncio.CancelledError` is a subclass of `BaseException` and not of
 `Exception` [11], so a worker stopped mid-message leaves the message to the broker
 ([logging.md](../logging/logging.md) section 5). The loop catches `BROKER_ERRORS` around the
-settle calls for the same reason the relay catches it around a publish: aiormq raises
+settle calls for the same reason `publish_event` catches it around a publish: aiormq raises
 `ChannelInvalidStateError` for an ack or a reject on a closed channel [12], and that error is not
 an `AMQPError` ([outbox-relay-example.md](outbox-relay-example.md) section 5). It logs that case at
 `WARNING`, as the relay logs a refused batch: the broker recovers by itself, and someone should
@@ -900,8 +899,10 @@ async def run_worker(settings: Settings) -> None:
             consuming.cancel()
 ```
 
-It is good because billing gets a database connection and a channel of its own, so no charge
-ever runs inside the relay's transaction ([message-brokers.md](message-brokers.md) section 5).
+It is good because billing gets a database connection of its own, so no charge ever runs inside
+the relay's transaction ([delivery.md](delivery.md) section 3,
+[file-structure.md](../../any-language/file-structure/file-structure.md) section 4), and a channel
+of its own ([message-brokers.md](message-brokers.md) section 5).
 Its broker connection is its own too, because RabbitMQ recommends "that, when possible,
 publishers and consumers use separate connections" [27]: under a resource alarm the broker stops
 reading every connection that publishes [28], and billing's acks on the relay's connection would

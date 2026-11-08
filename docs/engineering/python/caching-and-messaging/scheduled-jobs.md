@@ -119,9 +119,9 @@ once and does not describe them: their late-run and overlap settings are not cov
   `batch.kubernetes.io/cronjob-scheduled-timestamp` [1]. A Celery beat entry has fields for the
   task, its schedule, `args`, `kwargs`, `options` and `relative`, and none for the time the run was
   due [2]. A Celery task therefore works its period out from the clock when it runs; the deadline
-  in section 6 sets how far back beat looks when it decides whether a run is due. Celery is the
-  one exception to this rule, and its cost is that a run sent after midnight works out the wrong
-  day.
+  in section 6 sets how far back beat looks when it decides whether a run is due. Celery is an
+  exception to this rule, and its cost is that a run that starts on a later day than the day it
+  was due works out the wrong day.
 
 A Procrastinate periodic task written this way, in the adapter that holds the worker's handlers.
 The use case's own dependencies, such as its repository, are left out. In Procrastinate a task
@@ -294,7 +294,8 @@ def build_daily_report() -> None:
     """Build the report for the day before the run."""
     # Beat passes no due time, so the clock is read once, here; the deadline in
     # main.py sets how far back beat looks for a due run (scheduled-jobs.md
-    # sections 4 and 6). The cost: a run sent after midnight builds the wrong day.
+    # sections 4 and 6). The cost: a run that starts on a later day than it was
+    # due builds the wrong day.
     report_day = datetime.now(UTC).date() - timedelta(days=1)
     usecase.build_daily_report(report_day)
 ```

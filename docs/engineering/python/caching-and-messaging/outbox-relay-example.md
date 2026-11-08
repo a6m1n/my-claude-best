@@ -49,7 +49,7 @@ Check the simpler ways first. Each of them makes this example too much:
 The relay is code you write, because no mature Python outbox library exists yet;
 [delivery.md](delivery.md) section 4, "Choosing a library", gives the questions to judge one by.
 
-Left out of the example: the HTTP route that calls `PlaceOrder`, the function that opens the
+Left out of the example: the HTTP route that calls `place_order`, the function that opens the
 RabbitMQ connection ([message-brokers.md](message-brokers.md) section 5 shows it), the logging
 config ([setup-example.md](../logging/setup-example.md) shows it), the migration tool, and the TLS
 settings of the database connection. Each block below names what it cuts.
@@ -77,7 +77,7 @@ Only the files this example touches. Every folder under `src/` and `tests/` has 
 │   │   │   ├── schemas.py          OrderPlaced: the event billing parses
 │   │   │   ├── consts.py           AGGREGATE_TYPE, EVENT_TYPE: the routing key's two halves
 │   │   │   ├── repository.py       the order row and its outbox row
-│   │   │   └── usecase.py          PlaceOrder: both rows in one transaction
+│   │   │   └── usecase.py          place_order: both rows in one transaction
 │   │   └── relay_outbox/
 │   │       ├── schemas.py          OutboxRow, and RelayOutcome: which path one batch took
 │   │       ├── consts.py           RELAY_LOCK_KEY: the relay's advisory lock
@@ -158,7 +158,7 @@ It is good because each column has one job, and its reason sits at the line. Not
 `position`, and the claim depends on that: PostgreSQL warns that a `SELECT` with `ORDER BY` and a
 locking clause can return rows out of order when the sort column is changed while the `SELECT`
 waits for a lock [1]. `id` is `UNIQUE`, so one event never gets two rows, and a second insert of
-the same event fails; the third test of `PlaceOrder` in section 10 relies on that. The names are
+the same event fails; the third test of `place_order` in section 10 relies on that. The names are
 the ones Debezium's outbox router expects ([delivery.md](delivery.md) section 4), so a team that
 starts running Debezium keeps the table and drops the relay.
 
@@ -460,37 +460,32 @@ from acme.orders.place_order import repository
 from acme.orders.place_order.schemas import OrderPlaced
 
 
-# A class, not a function: the departure consumer-example.md section 6 declares.
-class PlaceOrder:
-    def __init__(self, conn: AsyncConnection[TupleRow]) -> None:
-        self._conn = conn
+async def place_order(
+    conn: AsyncConnection[TupleRow],
+    *,
+    order_id: OrderId,
+    event_id: EventId,
+    amount_minor: int,
+    currency: Currency,
+) -> None:
+    event = OrderPlaced(
+        event_id=event_id,
+        order_id=order_id,
+        amount_minor=amount_minor,
+        currency=currency,
+    )
 
-    async def run(
-        self,
-        *,
-        order_id: OrderId,
-        event_id: EventId,
-        amount_minor: int,
-        currency: Currency,
-    ) -> None:
-        event = OrderPlaced(
-            event_id=event_id,
+    # One transaction: the order and its event commit together, or neither does
+    # (delivery.md section 4).
+    async with conn.transaction():
+        await repository.insert_order(
+            conn,
             order_id=order_id,
             amount_minor=amount_minor,
             currency=currency,
         )
 
-        # One transaction: the order and its event commit together, or neither does
-        # (delivery.md section 4).
-        async with self._conn.transaction():
-            await repository.insert_order(
-                self._conn,
-                order_id=order_id,
-                amount_minor=amount_minor,
-                currency=currency,
-            )
-
-            await repository.insert_order_placed(self._conn, event)
+        await repository.insert_order_placed(conn, event)
 ```
 
 It is good because the order row and the outbox row are written in one `transaction()` block on an
@@ -635,7 +630,9 @@ from acme.orders.relay_outbox import repository
 from acme.orders.relay_outbox.schemas import RelayOutcome
 
 
-# A class, not a function: the departure consumer-example.md section 6 declares.
+# A class, a departure from python.md section 2, whose use case is a function: it
+# holds the connection and the exchange the worker builds at startup, so the
+# loop calls run once per poll. The cost: one more name per use case.
 class RelayOutbox:
     def __init__(
         self,
@@ -847,6 +844,9 @@ def main() -> None:
         # line, not raw stderr, is what a restart's alert reads (logging.md section 4).
         # A stuck connection's CancelledError, a BaseException, passes this except
         # and reaches raw stderr instead (outbox-relay-example.md section 11).
+        # A departure from logging.md section 5, which logs an unexpected failure
+        # with logger.exception, at ERROR: section 4 puts the stop of a process at
+        # CRITICAL. The cost: none found.
         logger.critical("Worker stopped: it cannot go on", exc_info=True)
         sys.exit(1)
 
@@ -921,16 +921,17 @@ It is good because:
   added later joins the line with no edit and a secret never does
   ([logging.md](../logging/logging.md) sections 4 and 10). An `Exception` that leaves
   `asyncio.run` is one `CRITICAL` line with its traceback before the exit code 1
-  ([logging.md](../logging/logging.md) section 4). Three stops leave no `CRITICAL` line: the
-  `asyncio.CancelledError` of a stuck connection, a `BaseException` that passes
-  `except Exception` and leaves its traceback on raw stderr, the kill after the grace period
-  during a resource alarm (section 11), and any kill from outside, such as an out-of-memory kill.
-  Each other `Exception` that ends the worker reaches the log store
+  ([logging.md](../logging/logging.md) section 4). Two kinds of stop leave no `CRITICAL` line: a
+  `BaseException` that passes `except Exception`, such as the `asyncio.CancelledError` of a stuck
+  connection, which leaves its traceback on raw stderr; and a kill from outside, such as the kill
+  after the grace period during a resource alarm (section 11) or an out-of-memory kill. Every
+  `Exception` that ends the worker reaches the log store
   through the logging config, with its level, instead of as raw lines on stderr that an alert on
   the level never sees.
-- **The relay has a database connection and a channel of its own**
-  ([message-brokers.md](message-brokers.md) section 5), so the consumer's work never runs inside
-  the relay's transaction. The channel comes from `open_publishing_channel` and raises on a
+- **The relay has a database connection and a channel of its own.** Its own database connection
+  keeps the consumer's work out of the relay's transaction ([delivery.md](delivery.md) section 3,
+  [file-structure.md](../../any-language/file-structure/file-structure.md) section 4), and its own
+  channel follows [message-brokers.md](message-brokers.md) section 5. The channel comes from `open_publishing_channel` and raises on a
   returned message, which a channel does not do by default [14], [3], so an event no queue takes
   is not counted as sent.
 - **A container stop ends the process cleanly.** The stop sends SIGTERM, and
@@ -1070,7 +1071,7 @@ from psycopg.rows import TupleRow
 from pydantic import ValidationError
 
 from acme.core.schemas import Currency, EventId, OrderId
-from acme.orders.place_order.usecase import PlaceOrder
+from acme.orders.place_order.usecase import place_order
 
 ORDER_ID: Final = OrderId(UUID("6f1c2b8e-0d4a-4c1e-9b7a-3e5f2a1d0c01"))
 SECOND_ORDER_ID: Final = OrderId(UUID("6f1c2b8e-0d4a-4c1e-9b7a-3e5f2a1d0c02"))
@@ -1100,7 +1101,8 @@ class TestPlaceOrder:
     async def test_a_placed_order_is_stored(
         self, database: AsyncConnection[TupleRow]
     ) -> None:
-        await PlaceOrder(database).run(
+        await place_order(
+            database,
             order_id=ORDER_ID,
             event_id=EVENT_ID,
             amount_minor=AMOUNT_MINOR,
@@ -1118,7 +1120,8 @@ class TestPlaceOrder:
         change here sends the event where billing does not listen, or in a shape it
         rejects.
         """
-        await PlaceOrder(database).run(
+        await place_order(
+            database,
             order_id=ORDER_ID,
             event_id=EVENT_ID,
             amount_minor=AMOUNT_MINOR,
@@ -1144,7 +1147,8 @@ class TestPlaceOrder:
         self, database: AsyncConnection[TupleRow]
     ) -> None:
         """An order stored without its event would never be charged."""
-        await PlaceOrder(database).run(
+        await place_order(
+            database,
             order_id=ORDER_ID,
             event_id=EVENT_ID,
             amount_minor=AMOUNT_MINOR,
@@ -1155,7 +1159,8 @@ class TestPlaceOrder:
         # PostgreSQL names that constraint outbox_id_key; a refused order row would
         # name orders_pkey instead.
         with pytest.raises(UniqueViolation, match="outbox_id_key"):
-            await PlaceOrder(database).run(
+            await place_order(
+                database,
                 order_id=SECOND_ORDER_ID,
                 event_id=EVENT_ID,
                 amount_minor=AMOUNT_MINOR,
@@ -1171,7 +1176,8 @@ class TestPlaceOrder:
         its event, so nobody would charge it.
         """
         with pytest.raises(ValidationError, match="amount_minor"):
-            await PlaceOrder(database).run(
+            await place_order(
+                database,
                 order_id=ORDER_ID,
                 event_id=EVENT_ID,
                 amount_minor=0,
@@ -1181,7 +1187,7 @@ class TestPlaceOrder:
         assert (await stored_orders(database), await outbox_rows(database)) == ([], [])
 ```
 
-It is good because each test pins one promise of the use case through its public `run`
+It is good because each test pins one promise of the use case through its public `place_order`
 ([fakes-and-boundaries.md](../testing/fakes-and-boundaries.md) section 5), and compares exact
 values ([assertions.md](../testing/assertions.md) sections 1 and 2). The second test pins the whole
 outbox row, which both the relay and billing read, and its docstring opens with `Pins:`
@@ -1214,7 +1220,7 @@ from testcontainers.community.postgres import PostgresContainer
 from acme.core.errors import EventNotPublishedError
 from acme.core.schemas import Currency, EventId, OrderId
 from acme.orders.place_order.schemas import OrderPlaced
-from acme.orders.place_order.usecase import PlaceOrder
+from acme.orders.place_order.usecase import place_order
 from acme.orders.relay_outbox.repository import take_relay_lock
 from acme.orders.relay_outbox.schemas import RelayOutcome
 from acme.orders.relay_outbox.usecase import RelayOutbox
@@ -1327,7 +1333,8 @@ class LockCheckingExchange(FakeExchange):
 
 async def place_an_order(conn: AsyncConnection[TupleRow]) -> None:
     """Write AN_ORDER_PLACED to the outbox the way the application does."""
-    await PlaceOrder(conn).run(
+    await place_order(
+        conn,
         order_id=ORDER_ID,
         event_id=EVENT_ID,
         amount_minor=AN_ORDER_PLACED.amount_minor,
@@ -1484,7 +1491,7 @@ It is good because:
   an empty outbox reported as sent, a relay that catches the broker's error and deletes the batch
   anyway, a `BROKER_ERRORS` without `ChannelInvalidStateError`, a wrong routing key or a missing
   `message_id`, a removed lock check, and a lock taken outside the batch's transaction.
-- **The rows come from `PlaceOrder`, the real writer**, so the relay is tested on rows as the
+- **The rows come from `place_order`, the real writer**, so the relay is tested on rows as the
   application writes them. The body is compared after parsing, because `jsonb` keeps its own layout
   of the JSON, and the bytes are not the guarantee: what billing parses is.
 - **`second_connection` is a fixture of this file**, the one file that asks for it

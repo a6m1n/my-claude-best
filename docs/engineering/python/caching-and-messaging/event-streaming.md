@@ -225,17 +225,25 @@ EVENT_ID_HEADER: Final = "id"
 DeliveryCallback: TypeAlias = Callable[[KafkaError | None, Message], None]
 
 
+def connection_settings(
+    bootstrap_servers: str, username: str, password: SecretStr
+) -> dict[str, str]:
+    return {
+        "bootstrap.servers": bootstrap_servers,
+        # Kafka runs without security unless asked (event-streaming.md section 14).
+        "security.protocol": "SASL_SSL",
+        "sasl.mechanism": "SCRAM-SHA-512",  # The mechanism your cluster accepts.
+        "sasl.username": username,
+        "sasl.password": password.get_secret_value(),
+    }
+
+
 def build_producer(
     bootstrap_servers: str, username: str, password: SecretStr
 ) -> Producer:
     return Producer(
         {
-            "bootstrap.servers": bootstrap_servers,
-            # Kafka runs without security unless asked (event-streaming.md section 14).
-            "security.protocol": "SASL_SSL",
-            "sasl.mechanism": "SCRAM-SHA-512",  # The mechanism your cluster accepts.
-            "sasl.username": username,
-            "sasl.password": password.get_secret_value(),
+            **connection_settings(bootstrap_servers, username, password),
             # librdkafka leaves it off; without it a retry can write a second copy
             # (event-streaming.md section 4).
             "enable.idempotence": True,
@@ -393,24 +401,24 @@ The consumer is built beside the producer in `src/acme/core/kafka_client.py`, wh
 `Consumer` from `confluent_kafka`:
 
 ```python
+# A second builder, a departure from file-structure.md section 4's one connect
+# function: confluent-kafka has one class per direction. The cost: none found,
+# since both take their connection settings from connection_settings.
 def build_consumer(
     bootstrap_servers: str, group_id: str, username: str, password: SecretStr
 ) -> Consumer:
     return Consumer(
         {
-            "bootstrap.servers": bootstrap_servers,
+            **connection_settings(bootstrap_servers, username, password),
             "group.id": group_id,
-            "security.protocol": "SASL_SSL",
-            "sasl.mechanism": "SCRAM-SHA-512",  # The mechanism your cluster accepts.
-            "sasl.username": username,
-            "sasl.password": password.get_secret_value(),
             # The protocol is set, so a library upgrade cannot change what the
             # rebalance callbacks receive (event-streaming.md section 7).
             "group.protocol": "classic",
             # The default stores an offset before the work, and a crash then skips
             # the event (event-streaming.md section 6).
             "enable.auto.offset.store": False,
-            # The client commits what the loop stored, every 5 s and on close.
+            # The client commits what the loop stored, every 5 s and on close
+            # (event-streaming.md section 6).
             "enable.auto.commit": True,
             # The default, 5 s, written: after a crash the next owner re-reads at most
             # 5 s of stored events (event-streaming.md section 7).

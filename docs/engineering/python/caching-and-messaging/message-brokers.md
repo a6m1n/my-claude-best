@@ -93,7 +93,7 @@ A connection to RabbitMQ carries channels, and a channel is the session the work
 - **In async code, connect with `aio_pika.connect_robust`, and treat a message you held when the connection dropped as one that will come again.** `connect_robust` reconnects and restores the state it had, consumers included [17]. But "Reconnecting with `connect_robust()` does not make an old message valid on the replacement channel" [28]. Its `ack()` then raises `ChannelInvalidStateError`, RabbitMQ requeues the delivery, and the consumer receives it again [28], so the work must be safe to repeat ([delivery.md](delivery.md) section 3).
 - **In sync code with pika, keep each connection in the thread that opened it.** pika's adapters "are not thread-safe. Each connection instance is confined to the thread that created it" [29]. The one call another thread may make is `add_callback_threadsafe`, which runs a callback on the connection's own thread [29]. A worker thread that finishes a message hands its `basic_ack` to the connection thread that way, and never calls it itself. pika 1.5's `pika.Connection` "exposes a blocking API that is safe to call from any number of threads simultaneously" [29].
 
-The connection, in `src/acme/core/rabbitmq_client.py`. The worker's `main()` reads the values from the settings class ([python.md](../language/python.md) section 5, [settings-example.md](../language/settings-example.md)) and calls it once for each connection it opens:
+The connection, in `src/acme/core/rabbitmq_client.py`. The worker's `run_worker` reads the values from the settings class ([python.md](../language/python.md) section 5, [settings-example.md](../language/settings-example.md)) and calls it once for each connection it opens:
 
 ```python
 """The one way into RabbitMQ: every connection, channel, declaration and publish."""
@@ -116,7 +116,8 @@ async def connect_rabbitmq(
     tls = ssl.create_default_context()
     tls.minimum_version = ssl.TLSVersion.TLSv1_2
 
-    # Every value is passed: aio-pika falls back to guest/guest without TLS.
+    # Every value is passed: aio-pika falls back to guest/guest without TLS
+    # (section 15).
     return await aio_pika.connect_robust(
         host=host,
         port=port,
@@ -170,12 +171,14 @@ async def open_consumer_channel(
 async def declare_quorum_queue(channel: AbstractChannel, name: str) -> AbstractQueue:
     return await channel.declare_queue(
         name,
-        durable=True,  # Quorum queues are always durable; aio-pika defaults to False.
-        arguments={"x-queue-type": "quorum"},  # A policy cannot set the type.
+        # Quorum queues are always durable; aio-pika defaults to False (section 7).
+        durable=True,
+        # A policy cannot set the type (section 7).
+        arguments={"x-queue-type": "quorum"},
     )
 ```
 
-Billing's queue for order events, in the worker adapter's `src/acme/worker/handlers_charge_order.py` ([file-structure.md](../../any-language/file-structure/file-structure.md) section 5). The worker's `main()` passes billing's own connection (section 5) and the prefetch count from the settings class. `open_event_exchange`, which declares the durable topic exchange `acme.events`, is in section 8; billing's dead-letter exchange and its queue, and the import of `declare_dead_letter_exchange` they need, are [consumer-example.md](consumer-example.md) section 4's, cut with `...`:
+Billing's queue for order events, in the worker adapter's `src/acme/worker/handlers_charge_order.py` ([file-structure.md](../../any-language/file-structure/file-structure.md) section 5). The worker's `run_worker` passes billing's own connection (section 5) and the prefetch count from the settings class. `open_event_exchange`, which declares the durable topic exchange `acme.events`, is in section 8; billing's dead-letter exchange and its queue, and the import of `declare_dead_letter_exchange` they need, are [consumer-example.md](consumer-example.md) section 4's, cut with `...`:
 
 ```python
 """The worker's way into charge_order: billing's queues and its message handler."""
@@ -201,8 +204,7 @@ async def open_billing_queue(
     connection: AbstractRobustConnection, prefetch_count: int
 ) -> AbstractQueue:
     # The one client opens the channel and declares (file-structure.md section 4);
-    # the adapter keeps billing's names and bindings, and iterates, acks and rejects
-    # (file-structure.md section 5).
+    # the adapter binds, iterates, acks and rejects on the objects it returns.
     channel = await open_consumer_channel(connection, prefetch_count)
 
     ...  # Billing's dead-letter exchange and its queue: consumer-example.md section 4
@@ -233,7 +235,7 @@ Without a confirm, `publish` returns as soon as the message is written to the so
 - **Publish only what the database committed**, through the outbox of [delivery.md](delivery.md) section 4.
 - **Declare the exchange durable.** aio-pika's `durable` makes the exchange survive a broker restart, and its default is `False` [30].
 
-The publisher side, in the same `src/acme/core/rabbitmq_client.py` as the connection in section 5. The file's imports gain `Final` from `typing`, `AbstractExchange` from `aio_pika.abc`, `PublishError` from `aio_pika.exceptions`, `EventId` and `RoutingKey` from `acme.core.schemas`, and `EventNotPublishedError` and `EventReturnedError` from `acme.core.errors`. Those two errors, and `BROKER_ERRORS`, the errors that mean the broker did not get what was sent, are [outbox-relay-example.md](outbox-relay-example.md) section 5's, left out here. The worker's `main()` opens the publishing channel once, with `open_publishing_channel`, and passes it in; [outbox-relay-example.md](outbox-relay-example.md) section 8 shows that line:
+The publisher side, in the same `src/acme/core/rabbitmq_client.py` as the connection in section 5. The file's imports gain `Final` from `typing`, `AbstractExchange` from `aio_pika.abc`, `PublishError` from `aio_pika.exceptions`, `EventId` and `RoutingKey` from `acme.core.schemas`, and `EventNotPublishedError` and `EventReturnedError` from `acme.core.errors`. Those two errors, and `BROKER_ERRORS`, the errors that mean the broker did not get what was sent, are [outbox-relay-example.md](outbox-relay-example.md) section 5's, left out here. The worker's `run_worker` opens the publishing channel once, with `open_publishing_channel`, and passes it in; [outbox-relay-example.md](outbox-relay-example.md) section 8 shows that line:
 
 ```python
 EVENTS_EXCHANGE: Final = "acme.events"
@@ -288,8 +290,8 @@ async def publish_event(
             message,
             routing_key=routing_key,
             mandatory=True,
-            # No limit on purpose: under a broker alarm the batch waits
-            # (outbox-relay-example.md section 11).
+            # Written, as delivery.md section 5 asks: no limit, so under a broker alarm
+            # the batch waits (section 11).
             timeout=None,
         )
     except PublishError as error:
@@ -337,10 +339,10 @@ async def on_order_placed(
     if event is None:
         ...  # One INFO line with the message id, never the error's text
 
-        # No retry can fix the body: the dead-letter exchange takes it at once.
-        # Outside the except block: a reject that failed inside it would carry the
-        # ValidationError, and the body in its text, as its context (logging.md
-        # section 10).
+        # No retry can fix the body: the dead-letter exchange takes it at once
+        # (section 9). Outside the except block: a reject that failed inside it would
+        # carry the ValidationError, and the body in its text, as its context
+        # (logging.md section 10).
         await message.reject(requeue=False)
 
         return
@@ -393,6 +395,7 @@ The tools require none of these; this practice requires every row whose "Leave i
 | `consumer-timeout` (policy key), or `x-consumer-timeout` (queue argument) | How long, in milliseconds, a consumer may hold a delivery before RabbitMQ takes it back; 30 minutes by default, and from RabbitMQ 4.3 only quorum queues support it [37], [1]. The practice sets the policy key, in the policy [consumer-example.md](consumer-example.md) section 4 ships, because RabbitMQ says hardcoded queue arguments "cannot be updated without redeploying applications and deleting the queue before it can be redeclared, while policies can be updated at any moment" [52]. | Always, the default's value included ([delivery.md](delivery.md) section 5): above the longest run of the handler (section 9). | Never. |
 | `publisher_confirms=True` (aio-pika `channel()`), `confirm_delivery()` (pika) | The broker confirms each message it took. aio-pika turns it on by default; pika needs the call [30], [35]. | Always, the default's value included ([delivery.md](delivery.md) section 5): `True` for a message that must arrive; `publisher_confirms=False` on a channel that runs AMQP transactions [28]; in pika, `confirm_delivery()` on every channel without transactions. | Never. |
 | `mandatory=True` (aio-pika `publish`), `on_return_raises=True` (aio-pika `channel()`) | A message no queue takes comes back to the publisher, and `publish` raises `PublishError` for it. `mandatory` defaults to `True`, `on_return_raises` to `False` [48], [39]. | Always, for a message the publisher deletes or forgets once it is sent (section 8). | Never. |
+| `timeout` (aio-pika `publish`) | How many seconds `publish` may take, the wait for the broker's confirm included, before it gives up. The default is `None`, no limit [48]. | Always, the default's value included ([delivery.md](delivery.md) section 5): `None` for the outbox relay, whose batch waits out a broker alarm; a number of seconds only where the caller handles the error it raises. | Never. |
 | `delivery_mode=DeliveryMode.PERSISTENT` (message) | The message is persistent, and a dead-lettered copy keeps that mode [1]. | Every message that must survive a restart, in its queue or its dead-letter queue. | Never. |
 | `message_id` (message) | The id a consumer drops a second copy by ([delivery.md](delivery.md) section 3). | Always. | Never. |
 | `VisibilityTimeout` (SQS queue attribute) | How long a received message stays hidden [40]; its default and cap are in [delivery.md](delivery.md) section 5. | Always, the default's value included ([delivery.md](delivery.md) section 5): longer than the longest run of the handler. | Never. |
