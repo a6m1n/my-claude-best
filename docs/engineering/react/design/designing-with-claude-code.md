@@ -36,9 +36,8 @@ Which way to run a design job (a canvas, a Figma file, code in the repository or
 and which design skill fits which case, is
 [choosing-tools-and-skills.md](choosing-tools-and-skills.md). A brand or marketing page, where the
 look itself carries the message, is
-[brand-pages.md](brand-pages.md). To learn which design skill does best on your own brief before you
-adopt one, [skill-blind-test.md](skill-blind-test.md) runs each skill on the same brief and has a
-person pick the best page without knowing which skill made it. Whether people can use the screen is
+[brand-pages.md](brand-pages.md). One person's test of seven design skills on one
+brief is [skill-test-result.md](skill-test-result.md), a personal opinion. Whether people can use the screen is
 [evaluation.md](../../any-language/ux-evaluation/evaluation.md); its section 11 says what a model can
 and cannot judge when it reviews a screen for usability.
 Distrust a line that carries a read date six months after that date, until it is read again; the
@@ -142,7 +141,7 @@ file, and the code it is told to follow. A brief (section 4) adds what is partic
   worse (the Fable 5 guide), and a skill a model wrote for itself scored below none. Tokens and
   components come first; a skill comes after, if a test on your screens keeps it. What the spec
   holds before a skill joins it is [choosing-tools-and-skills.md](choosing-tools-and-skills.md)
-  section 4; the test itself is [skill-blind-test.md](skill-blind-test.md).
+  section 4.
 
 ## 4. The brief for one screen
 

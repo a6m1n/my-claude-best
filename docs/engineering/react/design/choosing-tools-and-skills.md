@@ -34,8 +34,8 @@ the model reads is [designing-with-claude-code.md](designing-with-claude-code.md
 tool's row, with its status, is section 5 there; the verify loop is section 6, and trust in plugins
 in general is section 7. Product mode and brand mode are [visual-design.md](visual-design.md)
 section 2. The page techniques that work with or without a skill are
-[brand-pages.md](brand-pages.md). How to test a skill against no skill on your own briefs is
-[skill-blind-test.md](skill-blind-test.md) section 2.
+[brand-pages.md](brand-pages.md). One person's test of seven skills against no skill is
+[skill-test-result.md](skill-test-result.md), a personal opinion.
 
 **When you need this file, and when not.** You need it when the job is more than one more screen
 inside an existing theme: the look is still open, a designer wants a Figma file, the team wants a
@@ -68,7 +68,7 @@ says when.
 Not covered yet:
 
 - A test with human raters of any design skill against no skill. None was found;
-  [skill-blind-test.md](skill-blind-test.md) describes how to run one on your own briefs.
+  [skill-test-result.md](skill-test-result.md) records one person's test, a personal opinion.
 - Whether the rules in a design skill's reference files reach the page on current Opus and Sonnet
   models. The one measurement is of one small skill that is not a design skill [5].
 - What writing to a Figma canvas will cost after its beta. Figma says only that it "will eventually
@@ -138,8 +138,7 @@ model judge: the skills scored about the same as no skill on average, and higher
 the web-design settings, at several times the tokens [1]. It did not find that skills never help,
 and it did not find that they help in general. No test with human raters was found. So this
 practice treats every design skill as an option, kept only when a test on your own briefs, with an
-arm that has no skill, keeps it; [skill-blind-test.md](skill-blind-test.md) section 2 describes
-that test. The case for a skill as the default is under section 11.
+arm that has no skill, keeps it. The case for a skill as the default is under section 11.
 
 ## 4. Before a skill: the spec comes first
 
@@ -153,7 +152,7 @@ that test. The case for a skill as the default is under section 11.
   unless it clarifies structure, state, or brand intent", and sends the agent to the company's own
   components and accessibility rules [31].
 - **Add a skill only when a test on your own screens keeps it**, with an arm that has no skill next
-  to it ([skill-blind-test.md](skill-blind-test.md) section 2). Run the test again when the project
+  to it. Run the test again when the project
   moves to a new model: the Fable 5 guide says skills written for earlier models can make that
   model's output worse ([designing-with-claude-code.md](designing-with-claude-code.md) section 2).
 - **Run one skill that sets the look at a time.** With two, a test cannot tell which one helped.
@@ -366,8 +365,7 @@ avoid is [brand-pages.md](brand-pages.md) section 4.
   stays available (section 2).
 - **A run nobody watches.** A skill that asks questions stops or guesses: Impeccable's new work
   asks you to lock a direction [70], and huashu-design waits for a pick unless told to skip [58].
-  `/design` is off by default in `-p` runs, the Agent SDK and the GitHub Action [3]. How a test run
-  avoids waiting is [skill-blind-test.md](skill-blind-test.md) section 4.
+  `/design` is off by default in `-p` runs, the Agent SDK and the GitHub Action [3].
 - **A new model.** The results in section 3 come from the models of their day, Claude Opus 4.6
   among them [1], and the Fable 5 guide warns that skills written for earlier models can make
   output worse ([designing-with-claude-code.md](designing-with-claude-code.md) section 2). Test
