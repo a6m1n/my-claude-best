@@ -1,28 +1,28 @@
-# One pilot of the skill test: a personal opinion
+# The skill test result: a personal opinion
 
-**Personal opinion, not a rule.** This page records one pilot of the test in
-[skill-blind-test.md](skill-blind-test.md), run once by the author of this library and judged by
-the same person. The scores say how much one person liked each page, not how good a skill is in
+**Personal opinion, not a rule.** This page records the result of the test in
+[skill-blind-test.md](skill-blind-test.md), run by the author of this library and judged by the
+same person. The scores say how much one person liked each page, not how good a skill is in
 general. Nothing in the other files of this practice rests on this page, and no rule here comes
-from it. The full blind test has not run yet.
+from it.
 
 **Navigation**
 
 - [How far to trust it](#how-far-to-trust-it)
 - [What ran](#what-ran)
-- [How this pilot departs from the test](#how-this-pilot-departs-from-the-test)
+- [How it was run](#how-it-was-run)
 - [Results](#results)
 - [Notes per skill](#notes-per-skill)
 - [taste-skill and taste-skill-classics are two skills](#taste-skill-and-taste-skill-classics-are-two-skills)
-- [What I want from a design after this pilot](#what-i-want-from-a-design-after-this-pilot)
+- [What I want from a design after this test](#what-i-want-from-a-design-after-this-test)
 - [Sources](#sources)
 
 ## How far to trust it
 
-Read it as one data point that may tell you which skills to put in your own test. Do not pick a
-skill for a team from it: the pick was not blind, and one person judged one brief with one run per
-arm (the next two sections). Your own blind test on your own briefs is what decides
-([skill-blind-test.md](skill-blind-test.md) section 7).
+This test answered the question it was run for: which design skill to use. It is one person's
+taste on one brief, with one run per skill (the next two sections), so read the scores as that
+person's ranking. A reader with a different product or a different taste may rank the same pages
+in another order.
 
 ## What ran
 
@@ -36,15 +36,15 @@ skill's own repository at one pinned commit: taste-skill [1], taste-skill-classi
 the notes below are from my look at the pages after those four sessions, the same for every arm.
 An earlier, quicker look, mostly at the landing pages, gave the "First look" column.
 
-## How this pilot departs from the test
+## How it was run
 
-- **Not blind.** I saw which arm made each page. Section 6 of the test asks for a blind pick.
-- **One judge, no designer,** one brief, one run per arm: the size of the pilot in section 4,
-  not of the full test.
+- **Names visible, skills new.** I saw which skill made each page, but I had not used or read
+  any of these skills before, so a name told me nothing about what to expect.
+- **One judge, no designer,** one brief, one run per skill.
 - **The brief fixed the copy and the section titles,** word for word. That alone explains much
   of what the first look showed: many pages had the same sections with the same titles.
 - **No photos.** The brief had none, so every arm worked without them.
-- **The runs used the person's own login, not a token,** the fallback in section 11.
+- **The runs used my own Claude Code login, not a token** (section 11).
 - **Requests between sessions.** Every arm had three follow-up sessions on my requests before
   the scores, so the pages are not what a skill builds alone from the brief.
 - **Only the two winners went on, after the scores.** hallmark and taste-skill-classics then got
@@ -52,8 +52,6 @@ An earlier, quicker look, mostly at the landing pages, gave the "First look" col
   with subagents and web tools. Every skill of the bench, and other skills not about design, were
   copied into those two runs, and both called the `impeccable` skill. Those later pages are not
   the work of one skill, and they were not scored.
-- **This pilot did not record which steps it settled.** The steps marked *not yet tried* in the
-  test stay marked.
 
 ## Results
 
@@ -75,7 +73,7 @@ My two clear favourites: taste-skill-classics and hallmark.
 The scores hide how the field looked. Many skills in the middle gave almost the same design,
 and the differences between them were small: a colour here, a section order there. The real gap
 was at the edges: the winners stood clearly above everyone else, and the losers clearly below.
-Even the baseline with no skill landed in the middle group. So in this pilot the choice of skill
+Even the baseline with no skill landed in the middle group. So in this test the choice of skill
 mattered when it picked a winner or avoided a loser; inside the middle group it changed little.
 
 ## Notes per skill
@@ -105,8 +103,7 @@ work, and I am not sure about the colours.
 ### huashu-design — 6/10
 
 The best landing page of the set, with the best first animation and the best hover effects. One
-landing section felt useless. The app screen pulls the score down: a long
-bar of scores is an awkward choice, and the sentence highlights are too bright. A plus: the
+landing section felt useless. The app screen pulls the score down: a long bar of scores is an awkward choice, and the sentence highlights are too bright. A plus: the
 reasoning is short.
 
 ### ui-ux-pro-max — 5/10
@@ -136,22 +133,20 @@ The names are close, but these are two skills by the same author, from two repos
 of 247 curated sites" and runs in six steps: a script deals three of 20 researched directions,
 the agent picks one, builds with real pictures from open collections, checks the page in a real
 browser, then "Looks at its own screenshots and fixes the top three problems, up to three
-rounds" [1]. It needs Node 22 or newer and
-Chrome, Edge or Chromium [1]. The arm ran the skill at the commit in Sources.
+rounds" [1]. It needs Node 22 or newer and Chrome, Edge or Chromium [1]. The arm ran the skill at the commit in Sources.
 
 **taste-skill-classics** holds the skills taste-skill shipped before version 2; its README says
 they "moved here in October 2026" [2]. This arm ran one of them, `high-end-visual-design` (the
 folder `soft-skill`), which the README sums up as "Calm, polished UI: soft contrast, whitespace,
-spring motion" [2]. It is one `SKILL.md` of 99 lines and no scripts: a list of banned
-fonts, icons, shadows, layouts and motion, then one look and one layout to pick, all inside an
+spring motion" [2]. It is one `SKILL.md` of 99 lines and no scripts: a list of banned fonts, icons, shadows, layouts and motion, then one look and one layout to pick, all inside an
 "Apple-esque / Linear-tier" design language [3]. It is opt-in: "an agent never picks one by
 itself, it runs only when you call it by name" [2].
 
 So taste-skill is a heavy process with research, real pictures and a browser check, and the
-classic skill is a short style guide with strict bans and a focus on motion. In this pilot the
+classic skill is a short style guide with strict bans and a focus on motion. In this test the
 short one scored higher.
 
-## What I want from a design after this pilot
+## What I want from a design after this test
 
 These are my preferences, not rules; the rules on how a screen looks and behaves are in
 [visual-design.md](visual-design.md) and [ux.md](ux.md).

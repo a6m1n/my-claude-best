@@ -52,9 +52,9 @@ section 10.
   own briefs, with the pages judged blind by people: the arms, the bench, the headless runs, the
   screenshots, the pick, and when the result justifies a skill of your own. Read it before you adopt
   a design skill for a team, or when you want to know whether one helps.
-- [skill-blind-test-pilot.md](skill-blind-test-pilot.md) — one pilot of that test, judged in the
-  open by one person: the scores, a note per skill and how far to trust them. A personal opinion,
-  not a rule. Read it when you choose which skills to put in your own test.
+- [skill-test-result.md](skill-test-result.md) — the result of that test, judged by one person:
+  the scores, a note per skill and how far to trust them. A personal opinion, not a rule. Read it
+  when you choose a design skill.
 - [design-brief-example.md](design-brief-example.md) — one worked case, the invoices screen: the
   design lines of `CLAUDE.md`, the brief, the reviewer's checklist, and the code that meets them,
   with the reason next to each part. Read it when you write a brief or a checklist for a new

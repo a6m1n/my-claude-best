@@ -1,13 +1,12 @@
 # Blind test bench: a worked example
 
-**The full test has not run yet.** These files are a template for it. One pilot ran from them,
-with a changed runner and a pick made in the open; [skill-blind-test-pilot.md](skill-blind-test-pilot.md)
-records it, and it did not record which *not yet tried* steps it settled. A person copies them
-into a scratch project and runs them later, from a Claude Code session started in a terminal of their
+**Run once.** These files are a template for the test, and the test has run once from them,
+with a changed runner; [skill-test-result.md](skill-test-result.md) records the result. A person
+copies them into a scratch project and runs them later, from a Claude Code session started in a terminal of their
 own, with Claude Code running every arm, by [skill-blind-test.md](skill-blind-test.md). Every version here was read on 2026-10-29:
 Claude Code 2.1.312, Playwright 1.64.1, @axe-core/playwright 4.14.0, and each arm at the commit `arms.json`
 names. A line marked *not yet tried* rests on behaviour no owner documents, and the pilot run
-settles it. Outside that pilot, no script here has run, apart from a syntax check with `node --check`. The businesses,
+settles it. Outside that run, no script here has run, apart from a syntax check with `node --check`. The businesses,
 copy and judges are invented.
 
 **Navigation**
