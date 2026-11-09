@@ -72,6 +72,9 @@ What it leaves out on purpose, and where that lives:
   [prompt-engineering.md](../prompt-engineering/prompt-engineering.md) section 8.
 - Self-consistency as a prompting technique: not covered by this practice.
 - What a record keeps about the people in it: [decisions.md](decisions.md) section 10.
+- Who on the team answers for the changes an agent makes, and what a team keeps in its way of
+  working when agents take part:
+  [ai-agents.md](../development-approaches/ai-agents.md) sections 1 and 4.
 - Security: section 8 maps each threat the research found to the rule that stops it.
 
 Not covered yet, because the research found no source it could read (section 10 gives the detail):
