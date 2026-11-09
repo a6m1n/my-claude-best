@@ -105,19 +105,20 @@ The files:
 1. Copy this folder into your repository at `docs/engineering/any-language/project-management/`,
    so the path in step 2 and the links to other practices in step 4 still work.
 2. Add one line to your `CLAUDE.md` or `AGENTS.md`: "Before you open a project, write or change
-   its charter, plan, scope, schedule, WBS, risk register, stakeholder register or RACI matrix, make
-   or record a decision that is hard to undo, write a status update, write, triage, split or move a
-   Jira work item, fill its fields or comment on one, set up a board or a space, plan a release or
-   its rollback, open or run an incident or roll a release back, agree an SLA, or plan or run a team
-   meeting, read `docs/engineering/any-language/project-management/README.md` and the files it
-   routes to for that work."
+   its charter, plan, scope, schedule, WBS, risk register, stakeholder register or RACI matrix, name
+   who decides a decision and write its decision-log entry, write a status update, write, triage,
+   split or move a Jira work item, fill its fields or comment on one, set up a board or a space,
+   plan a release or its rollback, open or run an incident or roll a release back, agree an SLA, or
+   plan or run a team meeting, read `docs/engineering/any-language/project-management/README.md`
+   and the files it routes to for that work."
    Without it an agent never opens the folder.
 3. Set Jira and the team's pages up once, before the first project, as step 1 of
    [adoption-guide.md](adoption-guide.md) says, so the first sprint does not wait for admin work.
 4. The practice links [git.md](../git/git.md) for the branch, commit and pull request names,
    [refactoring.md](../refactoring/refactoring.md) for how existing code adopts a rule,
-   [delivery.md](../ci-cd/delivery.md) for how a pipeline runs continuous deployment, and the
-   [development-approaches](../development-approaches/README.md) folder, which
+   [delivery.md](../ci-cd/delivery.md) for how a pipeline runs continuous deployment,
+   [decisions.md](../decision-making/decisions.md) for how a decision is prepared, closed and
+   recorded, and the [development-approaches](../development-approaches/README.md) folder, which
    [life-cycle.md](life-cycle.md) links for who chooses the way of working, contracts and hybrids.
    Copy those folders too, or replace each link with your own rule for that topic, so no link in
    this folder points at a file your repository does not have.

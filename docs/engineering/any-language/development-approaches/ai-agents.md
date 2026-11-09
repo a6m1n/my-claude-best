@@ -59,6 +59,8 @@ What this file leaves out, and where it lives:
   integration and delivery: [release.md](../project-management/release.md) section 5.
 - Picking predictive, adaptive or hybrid, and Scrum or Kanban:
   [life-cycle.md](../project-management/life-cycle.md) section 4.
+- What an agent may decide on its own, how its limits are enforced, and when it brings a decision
+  back to a person: [agents.md](../decision-making/agents.md) sections 2 to 5.
 
 What the research for this file could not settle is listed in section 6.
 
