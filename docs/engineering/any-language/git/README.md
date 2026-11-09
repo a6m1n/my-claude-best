@@ -21,8 +21,9 @@ flowchart TD
 ## What is here
 
 - [git.md](git.md) — the rules: branches, commits, pull requests, merging, force push,
-  conflicts, several agents, the project README and the navigation block that opens a README
-  or a long rules file. Read it before any git operation.
+  conflicts, several agents and closing a working tree after its pull request, the project
+  README and the navigation block that opens a README or a long rules file. Read it before
+  any git operation.
 - [commit-example.md](commit-example.md) — four good commit messages and three bad ones, each
   with the reason; each bad one names the good one that fixes it. Read it when you write a
   commit message.
@@ -55,10 +56,12 @@ flowchart TD
 ## The point to adapt
 
 Merge-only landing is the decision to make for yourself. The rest of `git.md` works the same
-under any landing method.
+under any landing method, except steps 4, 6 and 7 of the closing steps in section 8, which assume
+merge commits.
 
-To change it, edit `git.md` section 5, the merge-method setting it names, and
-`allowed_merge_methods` in `ruleset-example.md`. The other examples stay as they are.
+To change it, edit `git.md` section 5, the merge-method setting it names,
+`allowed_merge_methods` in `ruleset-example.md`, and steps 4, 6 and 7 of the closing steps in
+`git.md` section 8. The other examples stay as they are.
 If you switch to squash merging, delete the branch after every merge and never reuse it, or
 the same conflicts come back the next time it is merged. The "every commit keeps its SHA"
 argument in that section stops holding as well. Squash merging also folds a pull request's

@@ -11,6 +11,7 @@
 - [7. Conflicts when syncing](#7-conflicts-when-syncing)
 - [8. Several agents or people in one repository](#8-several-agents-or-people-in-one-repository)
 - [9. Project README, and what goes where](#9-project-readme-and-what-goes-where)
+- [Sources](#sources)
 
 ## 1. Purpose and the one rule
 
@@ -147,6 +148,10 @@ Repository configuration:
 - "Require linear history": off. It forbids merge commits.
 - Require a pull request for `main`, and block direct pushes. Use a ruleset in a new
   repository, or branch protection where that is already set up.
+- Delete head branches after merge: on. GitHub and GitLab have it as a repository or project
+  setting [12], [13]; Bitbucket Cloud has it off by default, and the person who merges can still
+  clear it for one pull request [14]. Section 8's steps to close a working tree check that the
+  branch is gone.
 
 A GitHub ruleset for `main` and the default branch, with the reason for each part, is in
 [ruleset-example.md](ruleset-example.md).
@@ -160,7 +165,9 @@ outside a pull request.
 The rule is about effect, not about a flag: **any push that is not a fast-forward of the
 remote branch is forbidden.** That covers `--force`, `--force-with-lease`, a `+` in the
 refspec, deleting a branch and pushing it again, and GitHub's "Update with rebase" button,
-which rewrites the branch it updates.
+which rewrites the branch it updates. Deleting the head branch of a pull request that has
+merged replaces no history on `main`, so it is allowed; section 8 says when, in its steps to
+close a working tree.
 
 Why: pushed history is other people's base. Replace it and everyone who fetched it repairs
 their own history by hand, while every link into the old commits goes dead.
@@ -276,6 +283,119 @@ as the normal case.
 
 Check: `git show --stat HEAD` after your commit lists only files you changed.
 
+### Closing a working tree after its pull request
+
+These steps are for a session that worked in a linked working tree and opened a pull request
+from it. Work done in the main checkout skips steps 1, 2 and 5, because there is no tree to
+empty or remove, and runs `git switch main` before step 6, because git will not delete the
+branch that is checked out; the other steps still apply. An agent in a container with its own
+clone is outside these steps: [agent-containers.md](../docker/agent-containers.md) section 7 says how its
+work comes back, and its git-ignored files go with the clone.
+
+The order matters because of one fact: `git worktree remove` refuses a tree with untracked or
+changed files, but git-ignored files do not stop it, and it deletes them with the tree [1], [2].
+Notes, plans and reports an agent keeps in an ignored folder are often their only copy, and
+tools can remove the tree at merge time without asking: `gh pr merge --delete-branch` removes a
+linked tree that has the merged branch checked out [3], and the Claude Code desktop app can
+delete a session's untracked files without asking when a pull request it opened merges and the
+only changes are untracked files [4]. A tree can also go earlier: Claude Code asks whether to
+keep or remove the tree when a session exits, and its periodic sweep removes a background
+session's tree that holds only pushed commits and ignored files [6]. Anthropic's changelog
+records fixes for lost gitignored output in its own worktree cleanup [5].
+
+In the steps, `<tree>` is the path of the linked working tree, `<folder>` is a listed record
+folder, and `<file>` a listed record file, both relative to the repository root.
+
+1. The agent in the tree commits and pushes its work and opens the pull request (section 4).
+   Then it lists the git-ignored files with
+   `git ls-files --others --ignored --exclude-standard --directory`, which prints each wholly
+   ignored folder once, and marks the entries that hold records (notes, plans, reports) and the
+   ones it leaves out as rebuildable (installed packages, build output, caches). It hands the
+   list back instead of moving the files, because most agent sandboxes stop a session from
+   writing outside its own tree without an approval: Claude Code blocks its file-editing tools
+   from the main checkout in a worktree session it isolated, and shell writes there fall under
+   the user's permissions [6]; Codex asks for approval to edit outside its workspace [7];
+   Cursor's terminal sandbox does the same [8]. The agent sends the person one message with the
+   pull request link, the tree path and the branch name, the list, the step 2 commands filled in
+   for each record path, and the order: do not merge before step 2 is done, and answer keep when
+   the session exits; after the merge, steps 4 to 8 run in the main checkout, by the person or
+   by a session started there, never from inside the tree.
+2. Before the merge, a person or a session in the main checkout first runs the same listing
+   again on the tree, `git -C <tree> ls-files --others --ignored --exclude-standard --directory`,
+   because the agent may have written files after step 1. Each record folder on it is copied to
+   the same relative path in the main checkout. For each such folder, run
+   `diff -rq <tree>/<folder> <folder> | grep '^File'`. Any line it prints is a file that exists
+   in both places with different content, or a file that faces a folder: stop and ask. A
+   destination folder that does not exist yet has nothing to collide with. Then copy with
+   `cp -R <tree>/<folder>/. <folder>/`. A listed file is handled the same way:
+   `cmp <tree>/<file> <file>` prints a line when both exist and differ (stop and ask), then
+   `cp <tree>/<file> <file>`. Do not use a copy that skips existing files, such as
+   `cp -n` or `rsync --ignore-existing`: it skips a file that already exists without saying so,
+   so the tree's newer version is lost.
+3. A person merges the pull request (section 5).
+4. In the main checkout, run `git fetch --prune origin`, so that `origin/<branch>` disappears
+   once the platform deleted the branch. Then run
+   `git merge-base --is-ancestor <branch> origin/main`. Exit status 0 means the branch is in
+   `main`. The check holds because section 5 lands with merge commits; after a squash or rebase
+   merge it fails, since the branch's own commits never reach `main` [9]. Status 1 stops the
+   procedure: do not run steps 5 to 7, and ask the branch's owner. Status 1 means the branch is
+   not in `main`: not merged yet, closed without a merge, or merged by squash or rebase. Status
+   128 means the branch no longer exists. If `git worktree list` no longer shows `<tree>`, a
+   merge tool removed both: check on the pull request page that it was merged, skip steps 5 and
+   6, and go to step 7. Otherwise stop and ask the owner. Records that step 2 did not copy are
+   lost; say so in the work item.
+5. First run the Check below, and copy any record it shows as in step 2. Then, in the main
+   checkout, run `git worktree remove <tree>`, never with `--force`, because
+   `--force` deletes the very files git refused to delete. A refusal means the tree holds
+   untracked or changed files, holds a submodule, or is locked [1]. Locked: a session may still
+   be running in it, since Claude Code locks the trees it creates while its agent runs [6];
+   confirm that the session has ended, run `git worktree unlock <tree>`, and remove it again.
+   Untracked or changed files: stop, show `git status` from the tree, and let its owner choose:
+   commit the files, move them, or delete them. Jesse Vincent's skill for finishing a branch
+   takes the same stance, because such files "exist nowhere else" [10]. If a tree was deleted by
+   hand instead, `git worktree prune` removes what git still records about it [1].
+6. In the main checkout, run `git merge-base --is-ancestor <branch> origin/main && git branch -D <branch>`.
+   Git refuses to delete a branch that a tree has checked out, which is why the tree goes first.
+   `-D` runs only when the check proves every commit of the branch is in `origin/main`, and `-d`
+   is no proof here, because while `origin/<branch>` exists it compares the branch with that
+   upstream, not with `main` [11], [17].
+7. Check that the remote branch is gone: `git ls-remote --exit-code --heads origin <branch>`
+   exits with status 2 when it is. If it is still there, because the setting is off or a rule
+   blocked it, the person who merged runs
+   `git merge-base --is-ancestor origin/<branch> origin/main && git push origin --delete <branch>`
+   [15], so merged branches do not pile up on the remote and the name is free again. A non-zero
+   status means the branch gained commits after the merge: stop and ask its owner. If the push is
+   rejected, a rule protects the branch: leave it, and say so in the work item. Section 6 allows
+   this delete, because the pull request has merged.
+8. Move the work item when [jira-workflow.md](../project-management/jira-workflow.md) section 2
+   says, which can be later than the merge. A branch with no ticket key has no work item to move.
+
+Where the records live while the work runs is a choice, and no source settles it for a project's
+own records: git and GitHub say nothing about it, and no agent vendor says where a project should
+keep them. Claude Code keeps its own plans and memory outside every tree by default [19].
+No practitioner pattern has two independent sources. The steps above take the first way below,
+because it works with every agent.
+
+| Way | Gains | Costs |
+|---|---|---|
+| Inside the tree, rescued in step 2 (default) | Every agent can write there, the tree stays isolated, and the records sit next to the branch they describe. | Step 2 can be forgotten, or come after a tool already removed the tree; two copies of a file can drift apart. |
+| Outside the tree from the start | Nothing to rescue, and no cleanup can reach the records. | Most sandboxes block it until a folder is added on purpose, which weakens the isolation; parallel sessions write into one folder. |
+
+A third way, committing the records to the branch, needs no rescue, but puts them on `main` with
+the change and into its review; a project that git-ignores its records folder has chosen not to
+do that. Jesse Vincent's skill offers it only as one of three choices for files left in a tree
+[10].
+
+Take the second way only where the agent's own settings let it write to that folder: Aider sets
+no path limit on its edits [16], Codex takes an extra writable folder with `--add-dir` [18], and
+so does Claude Code, with `--add-dir` or `permissions.additionalDirectories` [19].
+Steps 1 and 2 and the Check still apply to every other git-ignored file in the tree.
+
+Check: right before `git worktree remove`, run the step 2 listing again. For each record folder,
+`diff -rq <tree>/<folder> <folder> | grep -e '^File' -e '^Only in <tree>'` prints nothing, and
+`cmp` for each record file prints nothing, or the owner of each printed file said to drop it.
+A `No such file or directory` line means that record was never copied: copy it as in step 2.
+
 ## 9. Project README, and what goes where
 
 `README.md` is for people. It answers, in this order:
@@ -335,3 +455,27 @@ A full example is in [readme-example.md](readme-example.md), with the reason beh
 
 The agent-facing file (`CLAUDE.md` or `AGENTS.md`) is a different document for a different
 reader. Read [claude-md.md](../../../claude-code/claude-md.md) when you write or edit one.
+
+## Sources
+
+Checked 2026-11-06 unless a line ends with — checked <YYYY-MM-DD>.
+
+- [1] git — git-worktree, 2.56.0 — https://git-scm.com/docs/git-worktree
+- [2] git — builtin/worktree.c, `check_clean_worktree` — https://github.com/git/git/blob/master/builtin/worktree.c
+- [3] GitHub — GitHub CLI, `pkg/cmd/pr/merge/merge.go`, v2.103.3 — https://github.com/cli/cli/blob/v2.103.3/pkg/cmd/pr/merge/merge.go
+- [4] Anthropic — Claude Code docs: Desktop — https://code.claude.com/docs/en/desktop
+- [5] Anthropic — Claude Code changelog, entries 2.1.143 and 2.1.153 — https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md
+- [6] Anthropic — Claude Code docs: Worktrees — https://code.claude.com/docs/en/worktrees
+- [7] OpenAI — Codex docs: Agent approvals and security — https://learn.chatgpt.com/docs/agent-approvals-security
+- [8] Cursor — Cursor docs: Run modes — https://cursor.com/docs/agent/security/run-modes
+- [9] GitHub — About pull request merges — https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/about-pull-request-merges
+- [10] Jesse Vincent — finishing-a-development-branch (superpowers v6.3.0, 2026; opinion) — https://github.com/obra/superpowers/blob/v6.3.0/skills/finishing-a-development-branch/SKILL.md
+- [11] git — git-branch, 2.56.0 — https://git-scm.com/docs/git-branch
+- [12] GitHub — Managing the automatic deletion of branches — https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-the-automatic-deletion-of-branches
+- [13] GitLab — Project settings: delete the source branch on merge by default, 19.5 — https://gitlab.com/gitlab-org/gitlab/-/blob/19-5-stable-ee/doc/user/project/settings/_index.md
+- [14] Atlassian — Bitbucket Cloud: Branch a repository — https://support.atlassian.com/bitbucket-cloud/docs/branch-a-repository/
+- [15] git — git-push, 2.55.0 — https://git-scm.com/docs/git-push
+- [16] Aider — `aider/coders/base_coder.py`, `allowed_to_edit` — https://github.com/Aider-AI/aider/blob/main/aider/coders/base_coder.py
+- [17] git — builtin/branch.c, `branch_merged` — https://github.com/git/git/blob/master/builtin/branch.c
+- [18] OpenAI — Codex docs: Developer commands (CLI global flags) — https://learn.chatgpt.com/docs/developer-commands?surface=cli
+- [19] Anthropic — Claude Code docs: Settings reference — https://code.claude.com/docs/en/settings-reference

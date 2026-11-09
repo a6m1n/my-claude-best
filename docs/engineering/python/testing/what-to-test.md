@@ -159,6 +159,9 @@ analyzed could lose their whole body with no test turning red (Vera-Pérez et al
 project). The guard is seeing the test fail (Freeman and Pryce; Seemann); Fucci et al. found that
 test-first order itself had no important effect.
 
+Test-first work as one practice of Extreme Programming, the view that holds in any language, is in
+[extreme-programming.md](../../any-language/development-approaches/extreme-programming.md).
+
 ## 5. Where it stops holding
 
 - **A library you maintain.** Its mechanics are your code: they earn tests.
