@@ -20,9 +20,11 @@ to do with an item that will not finish. What a work item holds and how big it i
 
 Give every status one written entry condition and one written exit condition. The reason: the
 Kanban Guide asks for "explicit policies about how work items can flow through each state from
-started to finished", and says policies should be "sparse, simple, well-defined, visible, always
-applied, readily changeable". A status with no written condition means something different to each
-person who moves an item into it.
+started to finished", and Kanban University's guide to the Kanban Method says policies should be
+sparse, simple, well-defined, visible, always applied and "readily changeable by those providing
+the service". A status with no written condition means something different to each person who moves
+an item into it. The two guides define Kanban differently
+([kanban.md](../development-approaches/kanban.md) section 1).
 
 Jira sorts the parts like this:
 
@@ -408,7 +410,7 @@ says why, and criterion 3 appears in exactly one of them.
 - Atlassian Community threads ["Canceled remain unresolved"](https://community.atlassian.com/forums/Jira-questions/Canceled-remain-quot-unresolved-quot/qaq-p/1754420), ["Multiple Done statuses vs Resolution"](https://community.atlassian.com/forums/Jira-questions/Multiple-quot-Done-quot-statuses-vs-quot-Resolution-quot-best/qaq-p/3169604) and ["Cancelled issues dragged on from sprint to sprint"](https://community.atlassian.com/t5/Jira-Software-questions/Cancelled-issues-dragged-on-from-sprint-to-sprint/qaq-p/1019310), undated or 2025 and later: a cancelled item stays unresolved without a resolution. Anecdotes, so the check in section 5 is to open one item in your own workflow.
 - [Schwaber and Sutherland, The Scrum Guide](https://scrumguides.org/scrum-guide.html), November 2020: Definition of Done, the Increment, impediments, an item that misses the Definition of Done.
 - [Kanban Guide](https://kanbanguides.org/english/), version 2025.5, read 2026-10-06: explicit policies, unblocking blocked work.
-- [Kanban University, Kanban Guide](https://kanban.university/kanban-guide/), 2021: policies "sparse, simple, well-defined, visible, always applied, readily changeable".
+- [Kanban University, The Official Guide to the Kanban Method](https://kanban.university/wp-content/uploads/2023/04/The-Official-Kanban-Guide_A4.pdf), 2022, read 2026-10-30: policies "readily changeable by those providing the service", in the list under "Make Policies Explicit".
 - [PMI Lexicon of Project Management Terms, version 5.0](https://www.pmi.org/-/media/pmi/documents/registered/pdf/pmbok-standards/pmi-lexicon-pm-terms.pdf), January 2026: impediment, also known as a blocker.
 - [Google, "Speed of code reviews"](https://google.github.io/eng-practices/review/reviewer/speed.html), eng-practices, undated: one business day.
 - [Steelman, "What's wrong with having a Blocked column"](https://prokanban.org/blog/whats-wrong-with-having-a-blocked-column), ProKanban, 2025-04-09.

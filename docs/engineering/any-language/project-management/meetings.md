@@ -136,6 +136,9 @@ it, and the subtasks the Developers add when they split an item
 ([jira-work-item-types.md](jira-work-item-types.md) section 3). Pick only items that were refined: an item
 that "can be Done by the Scrum Team within one Sprint" is ready for selection (section 6).
 
+What a Sprint Planning checks for the team's development approach is listed in
+[development-approaches/README.md](../development-approaches/README.md#what-is-here), "What is here".
+
 ## 5. Daily Scrum
 
 Hold it every working day, 15 minutes, for the Developers, at the same time and place. All three
@@ -272,6 +275,9 @@ not Done move to the next sprint or the backlog list, and their status does not 
 ([jira-workflow.md](jira-workflow.md) section 7, which also covers a partly done item). The
 timebox is in section 2.
 
+What a Sprint Review checks for the team's development approach is listed in
+[development-approaches/README.md](../development-approaches/README.md#what-is-here), "What is here".
+
 ## 8. Sprint Retrospective
 
 Hold it after the review and before the next Sprint Planning. The Scrum Guide's retrospective
@@ -305,6 +311,9 @@ their voice heard". So the facilitator calls on people who have not yet spoken.
 
 The project's final retrospective, at Closure, is in [life-cycle.md](life-cycle.md) section 2.
 
+What a Sprint Retrospective checks for the team's development approach is listed in
+[development-approaches/README.md](../development-approaches/README.md#what-is-here), "What is here".
+
 ## 9. A team without sprints
 
 The Kanban Guide prescribes no meetings. It says: "There is no requirement, however, to wait for a
@@ -317,6 +326,9 @@ low. The reasons: the daily review keeps the age of items visible, the retrospec
 the team works, and refining on need keeps the Backlog from growing stale. Where the Kanban Guide
 lists no cadence, the team picks it, and writes it down, so the cadence does not depend on anyone's
 memory. When a team should work without sprints is in [life-cycle.md](life-cycle.md) section 4.
+
+What a team without sprints checks for its development approach is listed in
+[development-approaches/README.md](../development-approaches/README.md#what-is-here), "What is here".
 
 ## 10. PRINCE2 and PMBOK: reports, not meetings
 

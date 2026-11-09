@@ -386,8 +386,9 @@ for two weeks, the same bug sits inside a large pull request with three other ch
 release waits for all of them.
 
 **Ask** the team: what must be true before we call a work item Done? How many items can one person
-hold at once before work slows down? Can we agree a Sprint Goal every two weeks, or does our work
-arrive unplanned?
+hold at once before work slows down? Can we agree a Sprint Goal every two weeks and keep it, with
+capacity held for the interrupts our history lets us predict ([life-cycle.md](life-cycle.md)
+section 4)?
 
 **You end with** the Definition of Done, the work-in-progress limits, the sprint length or the flow,
 and the meetings in the team's calendar.
@@ -526,8 +527,9 @@ every open risk handed over, lessons with owners, and closed epics.
 
 A running project cannot stop for a month to write documents, and it should not change everything
 at once: a team that gets ten new rules in one week cannot tell which one helped, and it starts to
-see the whole practice as paperwork. Kanban University's Kanban Method starts any change with
-"Start with what you do now", and says "Kanban is not a big bang transformation". Elizabeth Harrin,
+see the whole practice as paperwork. The Official Guide to the Kanban Method (Kanban University,
+2022) starts any change with "Start with what you do now", and says "Kanban is not a big bang
+transformation". Elizabeth Harrin,
 writing on taking over a project, advises the same: match "what you are trying to do and the
 standards to which you want to do it to the company culture", and improve step by step. PMI's PM
 Network asks the question to put to every change: "before reconfiguring the work breakdown structure
@@ -826,8 +828,8 @@ is done no decision reads it, so archive it ([principles.md](principles.md) sect
   PMI, 2026: the tasks, with no order among them.
 - [The Scrum Guide](https://scrumguides.org/scrum-guide.html), November 2020: "Scrum wraps around
   existing practices or renders them unnecessary."
-- Kanban University, ["The Official Guide to The Kanban Method"](https://kanban.university/kanban-guide/),
-  undated, read 2026-10-07: "Start with what you do now"; "Kanban is not a big bang transformation".
+- Kanban University, [The Official Guide to the Kanban Method](https://kanban.university/wp-content/uploads/2023/04/The-Official-Kanban-Guide_A4.pdf),
+  2022, read 2026-10-30: "Start with what you do now"; "Kanban is not a big bang transformation".
 - Atlassian Team Playbook, ["Roles and responsibilities"](https://www.atlassian.com/team-playbook/plays/roles-and-responsibilities)
   and ["Working agreements"](https://www.atlassian.com/team-playbook/plays/working-agreements),
   undated, read 2026-10-07.
