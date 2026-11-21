@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>debate-loop: how it works</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">&larr; All skill designs</a>
+  <h1>debate-loop</h1>
+  <p class="tagline">Reviews a document, plan, prompt or skill in rounds. Several reviewers with different focus find problems, one agent fixes them and another checks the fixes. The run counts as done only when the text does what you asked for.</p>
+  <span class="command">/debate-loop plan.md goal="a rollout plan the on-call team can follow at 3 a.m."</span>
+
+  <nav class="toc">
+    <a href="#problem">The problem</a>
+    <a href="#fit">When to use it</a>
+    <a href="#run">How a run goes</a>
+    <a href="#reviewers">Which reviewers run</a>
+    <a href="#priorities">MUST, SHOULD, NICE</a>
+    <a href="#asked">What you are asked</a>
+    <a href="#roles">Who does what</a>
+    <a href="#different">What makes it different</a>
+  </nav>
+
+  <section id="problem">
+    <h2>The problem it solves</h2>
+    <p class="lead">You ask Claude to "review this plan and fix it". The plan comes back looking better, and you cannot tell whether it is. The skill is built against four ways such a review can go wrong.</p>
+    <div class="pairs">
+      <div class="pair">
+        <div class="without"><span class="label">Ask once and hope</span><b>It checks its own idea of the answer.</b> The same session wrote the plan and now judges it.</div>
+        <div class="with"><span class="label">debate-loop</span>A separate agent first turns your ask into 3–6 yes/no checks. The review is measured against them.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Ask once and hope</span><b>It looks in the same places every time.</b> A second review finds and misses the same things.</div>
+        <div class="with"><span class="label">debate-loop</span>Two to four reviewers, each with a different focus, none sees the others. After a serious fix, reviewers with a new focus check again.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Ask once and hope</span><b>Fixes break other parts.</b> Two fixes that are each fine contradict each other.</div>
+        <div class="with"><span class="label">debate-loop</span>One agent makes only the agreed fixes; a different agent checks each fix and looks for anything broken.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Ask once and hope</span><b>It polishes words, not substance.</b> Nicer sentences; nobody asked whether the plan still solves the problem.</div>
+        <div class="with"><span class="label">debate-loop</span>Every problem found names the yes/no check it hurts. The run counts as done only when all checks are yes.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fit">
+    <h2>When to use it, and when not</h2>
+    <div class="fit">
+      <div class="yes">
+        <h3>Use it for</h3>
+        <ul>
+          <li>A document, plan, skill, prompt or agent definition that others will rely on.</li>
+          <li>A choice already made, when you want to know whether it was right ("is this the right library?").</li>
+          <li>A text that changed a lot at once, where one review is likely to miss things.</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>Not for</h3>
+        <ul>
+          <li>A short or low-stakes text.<span class="instead">Read it yourself. Each round runs 2–4 reviewers, an editor and a verifier.</span></li>
+          <li>Every decision is yours, point by point.<span class="instead">A review where each open point comes to you with options.</span></li>
+          <li>Can it be broken or abused?<span class="instead">An adversarial (red team) review.</span></li>
+          <li>You need a plan written, not reviewed.<span class="instead">Write the plan first, then run this loop on it.</span></li>
+          <li>A code change that has to be built and tested.<span class="instead">A build loop that runs the project's tests.</span></li>
+          <li>A codebase you have not mapped yet.<span class="instead">Map it first with <a href="../decompose-and-delegate/index.html">decompose-and-delegate</a>.</span></li>
+          <li>An image or other binary file.<span class="instead">The skill stops on binary files.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>How a run goes</h2>
+    <p class="lead">The diagram follows the skill's own phases (0 to 6). Each box is coloured by who does the step, and each arrow has a number: the list under the diagram says what happens on it.</p>
+    <div class="legend">
+      <span class="chip you">You</span>
+      <span class="chip main">Main session (your conversation)</span>
+      <span class="chip agent">Agent, fresh context</span>
+      <span class="chip check">Independent check</span>
+      <span class="chip stop">Stop</span>
+      <span class="chip" style="color: var(--accent)">Orange arrow: back into the loop</span>
+    </div>
+    <div class="diagram">
+<svg viewBox="0 0 1215 1310" role="img" aria-labelledby="dl-title"><title id="dl-title">How a debate-loop run goes, arrow by arrow</title>
+<defs><marker id="dl-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="dl-ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow loop" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<path class="dg-edge " d="M510,72 L510,100" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M510,156 L510,184" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M510,240 L510,272" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M510,336 L510,370" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M340,388 L270,376" marker-start="url(#dl-ah)" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M340,420 L300,420 L300,446 L270,446" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M150,472 L150,514 L340,514" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M510,434 L510,486" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M510,542 L510,578" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M510,642 L510,670" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M345,710 L270,710" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M510,750 L510,780" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M345,822 L270,822" marker-end="url(#dl-ah)"/>
+<path class="dg-edge loop" d="M150,792 L150,770 L312,770 L312,530 L340,530" marker-end="url(#dl-ahl)"/>
+<path class="dg-edge " d="M675,822 L800,822" marker-end="url(#dl-ah)"/>
+<path class="dg-edge loop" d="M905,786 L905,304 L680,304" marker-end="url(#dl-ahl)"/>
+<path class="dg-edge " d="M905,858 L905,900" marker-end="url(#dl-ah)"/>
+<path class="dg-edge loop" d="M960,900 L960,842" marker-end="url(#dl-ahl)"/>
+<path class="dg-edge " d="M1010,822 L1046,822 L1046,1030 L1020,1030" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M905,960 L905,1004" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M510,864 L510,900" marker-end="url(#dl-ah)"/>
+<path class="dg-edge loop" d="M680,930 L760,930 L760,822" marker-end="url(#dl-ahl)"/>
+<path class="dg-edge " d="M510,960 L510,1002" marker-end="url(#dl-ah)"/>
+<path class="dg-edge " d="M335,1046 L270,1046" marker-end="url(#dl-ah)"/>
+<path class="dg-edge loop" d="M30,1046 L12,1046 L12,304 L340,304" marker-end="url(#dl-ahl)"/>
+<path class="dg-edge " d="M510,1090 L510,1128" marker-end="url(#dl-ah)"/>
+<path class="dg-edge dash" d="M510,1180 L510,1228" marker-end="url(#dl-ah)"/>
+<path class="dg-edge dash" d="M150,1076 L150,1258 L340,1258" marker-end="url(#dl-ah)"/>
+<g class="dg-node you"><rect x="340" y="20" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="43">You start the run</text><text class="dg-sub" x="510.0" y="59">/debate-loop plan.md goal=&quot;…&quot;</text></g>
+<g class="dg-node main"><rect x="340" y="100" width="340" height="56" rx="9"/><text class="dg-title" x="510.0" y="125">Set up · phases 0–1</text><text class="dg-sub" x="510.0" y="141">picks 2–4 lenses (what each reviewer looks for)</text></g>
+<g class="dg-node agent"><rect x="340" y="184" width="340" height="56" rx="9"/><text class="dg-title" x="510.0" y="209">Goal writer</text><text class="dg-sub" x="510.0" y="225">turns your ask into 3–6 yes/no checks</text></g>
+<g class="dg-node agent"><rect x="340" y="272" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="293">Round N · phase 2</text><text class="dg-sub" x="510.0" y="309">2–4 reviewers at once, one lens each,</text><text class="dg-sub" x="510.0" y="325">none sees the others</text></g>
+<g class="dg-node main"><rect x="340" y="370" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="391">Sort the findings · phase 3</text><text class="dg-sub" x="510.0" y="407">fix · reject with a reason · join repeats ·</text><text class="dg-sub" x="510.0" y="423">ask you · list low-priority ones for the report</text></g>
+<g class="dg-node agent"><rect x="30" y="350" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="373">Fact-check helper</text><text class="dg-sub" x="150.0" y="389">reads the code, returns file:line</text></g>
+<g class="dg-node you"><rect x="30" y="420" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="443">You pick A or B</text><text class="dg-sub" x="150.0" y="459">only for a real trade-off</text></g>
+<g class="dg-node agent"><rect x="340" y="486" width="340" height="56" rx="9"/><text class="dg-title" x="510.0" y="511">Editor · phase 4</text><text class="dg-sub" x="510.0" y="527">makes only the accepted fixes</text></g>
+<g class="dg-node check"><rect x="340" y="578" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="599">Verifier · phase 5</text><text class="dg-sub" x="510.0" y="615">is each fix in? did anything break?</text><text class="dg-sub" x="510.0" y="631">which yes/no checks are met?</text></g>
+<g class="dg-node main"><polygon points="510.0,670 675,710.0 510.0,750 345,710.0"/><text class="dg-title" x="510.0" y="707">Phase 6: stop for your decision?</text><text class="dg-sub" x="510.0" y="723">conflict, no progress, or a deep flaw</text></g>
+<g class="dg-node stop"><rect x="30" y="684" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="707">Stop · you decide</text><text class="dg-sub" x="150.0" y="723">you see what conflicts or repeats</text></g>
+<g class="dg-node main"><polygon points="510.0,780 675,822.0 510.0,864 345,822.0"/><text class="dg-title" x="510.0" y="819">Anything left to fix?</text><text class="dg-sub" x="510.0" y="835">at the priority this run fixes</text></g>
+<g class="dg-node agent"><rect x="30" y="792" width="240" height="60" rx="9"/><text class="dg-title" x="150.0" y="811">Quick fix pass</text><text class="dg-sub" x="150.0" y="827">the editor fixes the verifier&#x27;s own</text><text class="dg-sub" x="150.0" y="843">findings; not a new round</text></g>
+<g class="dg-node main"><polygon points="905.0,786 1010,822.0 905.0,858 800,822.0"/><text class="dg-title" x="905.0" y="827">Rounds left?</text></g>
+<g class="dg-node you"><rect x="790" y="900" width="230" height="60" rx="9"/><text class="dg-title" x="905.0" y="919">You: more rounds?</text><text class="dg-sub" x="905.0" y="935">asked once, in writing,</text><text class="dg-sub" x="905.0" y="951">only while still improving</text></g>
+<g class="dg-node stop"><rect x="790" y="1004" width="230" height="52" rx="9"/><text class="dg-title" x="905.0" y="1027">Stop · round limit</text><text class="dg-sub" x="905.0" y="1043">open items go to the report</text></g>
+<g class="dg-node agent"><rect x="340" y="900" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="927">Goal check</text><text class="dg-sub" x="510.0" y="943">a new goal writer answers each yes/no check</text></g>
+<g class="dg-node main"><polygon points="510.0,1002 685,1046.0 510.0,1090 335,1046.0"/><text class="dg-title" x="510.0" y="1043">A MUST fixed in this run,</text><text class="dg-sub" x="510.0" y="1059">and no fresh-eyes round yet?</text></g>
+<g class="dg-node agent"><rect x="30" y="1016" width="240" height="60" rx="9"/><text class="dg-title" x="150.0" y="1035">Fresh-eyes round</text><text class="dg-sub" x="150.0" y="1051">2–3 lenses not used yet; reviewers</text><text class="dg-sub" x="150.0" y="1067">see no earlier findings</text></g>
+<g class="dg-node done"><rect x="340" y="1128" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="1151">Done · final report</text><text class="dg-sub" x="510.0" y="1167">fixed, pushed back, backlog</text></g>
+<g class="dg-node check"><rect x="340" y="1228" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="1247">Look back</text><text class="dg-sub" x="510.0" y="1263">which lens missed it, and a proposed</text><text class="dg-sub" x="510.0" y="1279">skill change, never applied silently</text></g>
+<g class="dg-badge"><circle cx="510" cy="86" r="10"/><text x="510" y="86">1</text></g>
+<g class="dg-badge"><circle cx="510" cy="170" r="10"/><text x="510" y="170">2</text></g>
+<g class="dg-badge"><circle cx="510" cy="256" r="10"/><text x="510" y="256">3</text></g>
+<g class="dg-badge"><circle cx="510" cy="353" r="10"/><text x="510" y="353">4</text></g>
+<g class="dg-badge"><circle cx="305" cy="382" r="10"/><text x="305" y="382">5</text></g>
+<g class="dg-badge"><circle cx="300" cy="433" r="10"/><text x="300" y="433">6</text></g>
+<g class="dg-badge"><circle cx="150" cy="493" r="10"/><text x="150" y="493">7</text></g>
+<g class="dg-badge"><circle cx="510" cy="460" r="10"/><text x="510" y="460">8</text></g>
+<g class="dg-badge"><circle cx="510" cy="560" r="10"/><text x="510" y="560">9</text></g>
+<g class="dg-badge"><circle cx="510" cy="656" r="10"/><text x="510" y="656">10</text></g>
+<text class="dg-label" x="318" y="700">yes</text>
+<g class="dg-badge"><circle cx="290" cy="710" r="10"/><text x="290" y="710">11</text></g>
+<text class="dg-label" x="526" y="770">no</text>
+<g class="dg-badge"><circle cx="510" cy="765" r="10"/><text x="510" y="765">12</text></g>
+<text class="dg-label" x="36" y="870">only the verifier&#x27;s own findings</text>
+<g class="dg-badge"><circle cx="318" cy="822" r="10"/><text x="318" y="822">13</text></g>
+<g class="dg-badge"><circle cx="312" cy="650" r="10"/><text x="312" y="650">14</text></g>
+<text class="dg-label" x="728" y="812">yes</text>
+<g class="dg-badge"><circle cx="705" cy="822" r="10"/><text x="705" y="822">15</text></g>
+<text class="dg-label" x="915" y="700">yes: next round</text>
+<g class="dg-badge"><circle cx="905" cy="560" r="10"/><text x="905" y="560">16</text></g>
+<text class="dg-label" x="918" y="884">no</text>
+<g class="dg-badge"><circle cx="905" cy="879" r="10"/><text x="905" y="879">17</text></g>
+<text class="dg-label" x="970" y="876">yes</text>
+<g class="dg-badge"><circle cx="960" cy="871" r="10"/><text x="960" y="871">19</text></g>
+<text class="dg-label" x="1058" y="935">a round would not help</text>
+<g class="dg-badge"><circle cx="1046" cy="930" r="10"/><text x="1046" y="930">18</text></g>
+<text class="dg-label" x="918" y="986">no</text>
+<g class="dg-badge"><circle cx="905" cy="982" r="10"/><text x="905" y="982">20</text></g>
+<text class="dg-label" x="526" y="888">no</text>
+<g class="dg-badge"><circle cx="510" cy="882" r="10"/><text x="510" y="882">21</text></g>
+<text class="dg-label" x="688" y="922">not met</text>
+<g class="dg-badge"><circle cx="760" cy="882" r="10"/><text x="760" y="882">22</text></g>
+<text class="dg-label" x="526" y="986">all met</text>
+<g class="dg-badge"><circle cx="510" cy="981" r="10"/><text x="510" y="981">23</text></g>
+<text class="dg-label" x="318" y="1036">yes</text>
+<g class="dg-badge"><circle cx="300" cy="1046" r="10"/><text x="300" y="1046">24</text></g>
+<g class="dg-badge"><circle cx="12" cy="700" r="10"/><text x="12" y="700">25</text></g>
+<text class="dg-label" x="526" y="1114">no</text>
+<g class="dg-badge"><circle cx="510" cy="1109" r="10"/><text x="510" y="1109">26</text></g>
+<text class="dg-label" x="526" y="1209">defect found later</text>
+<g class="dg-badge"><circle cx="510" cy="1204" r="10"/><text x="510" y="1204">27</text></g>
+<text class="dg-label" x="160" y="1250">that round fixes a MUST</text>
+<g class="dg-badge"><circle cx="150" cy="1170" r="10"/><text x="150" y="1170">28</text></g>
+</svg>
+    </div>
+    <div class="arrows">
+<h3>Start</h3><ol>
+<li value="1"><span class="n">1</span><span>You start the run with the file and the goal in your own words.</span></li>
+<li value="2"><span class="n">2</span><span>Setup picks 2–4 lenses that fit this kind of text (a lens is one reviewer's focus, for example accuracy or security) and hands your ask to the goal writer, an agent. The goal writer reads your ask first and the text last, so the text does not shape its idea of good.</span></li>
+<li value="3"><span class="n">3</span><span>The yes/no checks are printed before any reviewer runs, for example "Does every step say who runs it?" or "Can the rollback be done without the person who wrote it?". Round 1 starts.</span></li>
+</ol>
+<h3>Each round</h3><ol>
+<li value="4"><span class="n">4</span><span>Each reviewer returns its findings. A finding has a quote, the check it hurts, a fix and a priority: MUST (the text fails its goal), SHOULD (a real cost) or NICE (could be better). Example from a completeness reviewer: "Step 5 restores the database, but no step stops the app from saving new data first." MUST.</span></li>
+<li value="5"><span class="n">5</span><span>When a finding depends on a fact in the code, a helper agent checks it and returns the answer with <code>file:line</code>. The main session (your own Claude Code conversation) does not read the code itself.</span></li>
+<li value="6"><span class="n">6</span><span>A real trade-off that no rule settles goes to you, once per round. The round waits for you.</span></li>
+<li value="7"><span class="n">7</span><span>Your answer turns each such finding into "fix it" or "reject it".</span></li>
+<li value="8"><span class="n">8</span><span>Accepted findings go to the editor word for word. Findings from several reviewers about the same problem are joined into one. A rejected finding needs a cited reason. A finding below the fix line (the lowest priority this run fixes, set by <code>fix=</code>; only MUST by default) goes to the backlog: it is listed in the final report and not fixed now.</span></li>
+<li value="9"><span class="n">9</span><span>The editor's change log goes to a verifier, a fresh agent that wrote none of the changes. The editor hands back any fix it finds unclear instead of guessing; the main session decides it, asks you (as in arrow 6), or leaves it open for the verifier and the next round.</span></li>
+<li value="10"><span class="n">10</span><span>The verifier's report goes to the decision step, phase 6.</span></li>
+</ol>
+<h3>Decide: stop, fix more, or go again</h3><ol>
+<li value="11"><span class="n">11</span><span>Reviewers want opposite fixes, the same findings came back twice in a row (no progress), or the verifier calls it a fundamental problem that only you can decide: the run stops and shows you what conflicts or repeats, and you decide.</span></li>
+<li value="12"><span class="n">12</span><span>Otherwise the main session looks at what is still open.</span></li>
+<li value="13"><span class="n">13</span><span>Only the verifier's own new findings are open: the main session may run a quick fix pass, where the editor fixes them without a new review round. This happens at most once per round.</span></li>
+<li value="14"><span class="n">14</span><span>The pass reuses the editor (phase 4). When the editor had to write new text, a fresh verifier checks just those lines, then the run returns to the phase 6 decision. The pass never ends the run as done.</span></li>
+<li value="15"><span class="n">15</span><span>Findings at the priority this run fixes are still open: is a round left? There are two rounds by default; <code>rounds=</code> sets up to five.</span></li>
+<li value="16"><span class="n">16</span><span>Yes: the next round starts. Reviewers get the earlier findings and decisions, but read them only after their own pass, so they do not just look where earlier rounds looked.</span></li>
+<li value="17"><span class="n">17</span><span>No round left, and the last round still fixed things: the skill asks you once, in writing, for more rounds, with options and a recommendation.</span></li>
+<li value="18"><span class="n">18</span><span>No round left, and another round would not help (the last round fixed nothing), or you were already asked once: the run stops at the round limit without asking. The open findings go to the final report.</span></li>
+<li value="19"><span class="n">19</span><span>You say yes: the round limit goes up, the run goes back to "Rounds left?", and the next round starts.</span></li>
+<li value="20"><span class="n">20</span><span>You say no: the run stops, and the open findings go to the final report.</span></li>
+</ol>
+<h3>Before &quot;done&quot;</h3><ol>
+<li value="21"><span class="n">21</span><span>Nothing is left to fix: before calling the run done, a goal check runs.</span></li>
+<li value="22"><span class="n">22</span><span>A yes/no check is not met: it becomes a MUST finding and goes back into the loop, as a next round or, at the limit, a request for more rounds. At the limit you are asked even if the last round fixed nothing. A check that only you can answer is put to you instead.</span></li>
+<li value="23"><span class="n">23</span><span>All checks are met: one more question.</span></li>
+<li value="24"><span class="n">24</span><span>A MUST finding (the text fails its goal) was fixed during this run, and no fresh-eyes round has run yet. The reviewers who found it may keep missing the same kind of thing, so new ones look.</span></li>
+<li value="25"><span class="n">25</span><span>The fresh-eyes round is a normal round with 2–3 lenses not used yet, and its reviewers get no earlier findings. Inside the round limit it runs on its own; at the limit it needs your yes, and a no ends the run as done, marked unconfirmed. If the round finds nothing above the fix line, the run is done straight away.</span></li>
+<li value="26"><span class="n">26</span><span>Otherwise the run is done. The final report lists what was fixed, what was pushed back, and the backlog.</span></li>
+<li value="27"><span class="n">27</span><span>A defect found after "done" starts a look back: the editor fixes the defect, a table records which lens should have caught it and why, and a change to the skill is proposed. The skill itself is never changed without your yes.</span></li>
+<li value="28"><span class="n">28</span><span>A MUST found and fixed in the fresh-eyes round starts the same look back.</span></li>
+</ol>
+</div>
+  </section>
+
+  <section id="reviewers">
+    <h2>Which reviewers run</h2>
+    <p class="lead">The skill picks two to four from the kind of text. Each one asks one question. You can pick the reviewers yourself. A lens is one reviewer's focus: <code>lens=accuracy,failure-modes,security</code>.</p>
+    <table>
+      <thead><tr><th>Text</th><th>Reviewer</th><th>The question it asks</th></tr></thead>
+      <tbody>
+        <tr><td>Document</td><td>Accuracy</td><td>Is every fact true, and does every example do what it claims?</td></tr>
+        <tr><td></td><td>Clarity</td><td>Can the intended reader follow it without guessing?</td></tr>
+        <tr><td>Plan</td><td>Completeness</td><td>Does doing every step finish the job?</td></tr>
+        <tr><td></td><td>Feasibility</td><td>Does each step fit the code as it is today?</td></tr>
+        <tr><td></td><td>Failure modes</td><td>What happens when a step fails, runs twice or finds nothing?</td></tr>
+        <tr><td></td><td>Operability</td><td>Who runs it later: what happens when a write fails, on the first run, and who is alerted?</td></tr>
+        <tr><td></td><td>Scope fit</td><td>Is anything here that the goal does not need?</td></tr>
+        <tr><td></td><td>Alternatives</td><td>Was there a better option, and does the plan say why it lost? (added when the question is a choice, or in a later round)</td></tr>
+        <tr><td>Code</td><td>Code quality</td><td>Does it follow the project's rules, and is it correct?</td></tr>
+        <tr><td></td><td>Architecture</td><td>Is it built right: timeouts, retries, layers, patterns?</td></tr>
+        <tr><td></td><td>Security (only when you name it)</td><td>Input checks, secrets, injection</td></tr>
+        <tr><td>Prompt</td><td>Prompt engineering</td><td>Are instructions clear, separated and free of contradictions?</td></tr>
+        <tr><td>Skill or agent</td><td>Project fit, format</td><td>Does it match the project, and is its header block (frontmatter) valid?</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="priorities">
+    <h2>MUST, SHOULD, NICE: what gets fixed</h2>
+    <p class="lead">Every problem gets a priority. <code>fix=</code> sets how far down the list the fixes go. Problems below the line are listed in the final report, not thrown away.</p>
+    <table>
+      <thead><tr><th>Priority</th><th>Means</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><span class="prio must">MUST</span></td><td>The text fails its goal or says something wrong</td><td>The rollback step names a script that does not exist.</td></tr>
+        <tr><td><span class="prio should">SHOULD</span></td><td>The goal holds, but at a real cost</td><td>Step 4 says "restart the service" without saying which one.</td></tr>
+        <tr><td><span class="prio nice">NICE</span></td><td>Could be better; the goal does not suffer</td><td>A heading could be shorter.</td></tr>
+      </tbody>
+    </table>
+    <div class="branches" style="margin-top: 14px">
+      <div class="branch go"><div class="when"><code>fix=must</code> (default)</div><div class="then">MUST only</div><p>The text is in use; fix only what is broken.</p></div>
+      <div class="branch go"><div class="when"><code>fix=should</code></div><div class="then">MUST and SHOULD</div><p>The text is still being shaped.</p></div>
+      <div class="branch go"><div class="when"><code>fix=all</code></div><div class="then">MUST, SHOULD and NICE</div><p>A short text you want finished.</p></div>
+    </div>
+  </section>
+
+  <section id="asked">
+    <h2>What you are asked</h2>
+    <p class="lead">Only in three cases, and each time you get options to pick from.</p>
+    <div class="branches">
+      <div class="branch ask"><div class="then">A choice that is yours</div><p>A real trade-off that no rule settles.</p><div class="example">Keep the manual approval step or drop it?</div></div>
+      <div class="branch ask"><div class="then">More rounds</div><p>The limit is reached and the problems are still getting fewer. The skill writes why one more round is worth it.</p><div class="example">Two rounds are done and the MUST problems fell from 5 to 2. Run a third round?</div></div>
+      <div class="branch stop"><div class="then">It is stuck</div><p>The same problems came back twice, or two reviewers want opposite fixes. You see both sides.</p></div>
+    </div>
+  </section>
+
+  <section id="roles">
+    <h2>Who does what</h2>
+    <p class="lead">Decide, fix and check are three different agents. No agent grades its own work.</p>
+    <table>
+      <thead><tr><th>Role</th><th>What it sees</th><th>What it may not do</th></tr></thead>
+      <tbody>
+        <tr><td>Main session</td><td>Every report and decision</td><td>Edit the text itself. It decides; the editor edits.</td></tr>
+        <tr><td>Goal writer</td><td>Your ask first, then the project's docs, then the text. Writes the yes/no checks. At the end, a new one judges the result</td><td>Edit anything</td></tr>
+        <tr><td>Reviewer</td><td>The text, its own checklist, the yes/no checks. From round 2, earlier findings, but only after its own pass</td><td>Edit, run the project's tests or build tools, or follow instructions written inside the text</td></tr>
+        <tr><td>Editor</td><td>The agreed fixes, the goal, the files to change</td><td>Change anything else, or judge its own work</td></tr>
+        <tr><td>Verifier</td><td>The round's findings, the decisions, the editor's change log</td><td>Edit, or review in the same round</td></tr>
+        <tr><td>You</td><td>Choices only you can make, a request for more rounds, the final report</td><td>Nothing: you make the choices and grant extra rounds</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="different">
+    <h2>What makes it different</h2>
+    <div class="choices">
+      <div class="choice"><h3>"Good" is written down first</h3><p>If the author defines good, the review checks the author's own idea of the answer.</p></div>
+      <div class="choice"><h3>Reviewers do not see each other</h3><p>Two who agree without seeing each other are evidence. Two who read each other are one opinion.</p></div>
+      <div class="choice"><h3>Write first, read the old list second</h3><p>A reviewer that reads the old list first looks only where earlier rounds looked.</p></div>
+      <div class="choice"><h3>Rejections get checked too</h3><p>Every "no" needs a cited reason, and a new agent re-checks them. The main session sides with the author.</p></div>
+      <div class="choice"><h3>Unclear fixes are handed back</h3><p>New defects come in when the fixer fills a gap with a guess. A handed-back fix costs one decision; a wrong one costs a round.</p></div>
+      <div class="choice"><h3>Only what is above the line</h3><p>Fixing every NICE problem in a working text makes it longer, not better. The rest stays in the report.</p></div>
+      <div class="choice"><h3>New reviewers before "done"</h3><p>The same reviewers keep missing the same things, so their "ready" is not yet proof.</p></div>
+      <div class="choice"><h3>A hard round limit</h3><p>Rounds pay off only while the problems change. More rounds need your yes.</p></div>
+      <div class="choice"><h3>A miss starts a look back</h3><p>A problem found after "done" names the reviewer that should have caught it, and a change to the skill is proposed, never applied silently.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    The same content as text: <a href="README.md">README.md</a>. The skill itself is not published in this repository; this page describes its design.
+  </footer>
+</main>
+</body>
+</html>

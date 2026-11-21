@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meta-thinking: how it works</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">&larr; All skill designs</a>
+  <h1>meta-thinking</h1>
+  <p class="tagline">Thinks a large task through before any work starts: one independent agent proposes a route, and you are asked only what the code cannot answer.</p>
+  <span class="command">/meta-thinking add CSV and PDF export of the monthly reports</span>
+
+  <nav class="toc">
+    <a href="#problem">The problem</a>
+    <a href="#fit">When to use it</a>
+    <a href="#run">How a run goes</a>
+    <a href="#plan">What the assessment holds</a>
+    <a href="#asked">What you are asked</a>
+    <a href="#different">What makes it different</a>
+  </nav>
+
+  <section id="problem">
+    <h2>The problem it solves</h2>
+    <p class="lead">You give Claude a large task, "add CSV and PDF export of the monthly reports", and it starts editing at once. Halfway through you find out what nobody said out loud: export for whom, which PDF library, does the URL become public? Now the fix costs a rewrite. The skill rests on one premise: a large task rarely goes wrong because the code is bad. It goes wrong in one of the ways below. The studies behind this premise are in the skill's <a href="../../skills/meta-thinking/README.md#the-problem-it-solves">README</a>.</p>
+    <div class="pairs">
+      <div class="pair">
+        <div class="without"><span class="label">Start editing at once</span><b>A requirement is missing.</b> Nobody said it out loud, and you find out halfway.</div>
+        <div class="with"><span class="label">meta-thinking</span>You get at most three questions, once, before work starts. Each is a real decision. A question the repository can answer is looked up, not asked.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Start editing at once</span><b>A scope edge reads two ways.</b> Nobody notices until the work is done.</div>
+        <div class="with"><span class="label">meta-thinking</span>The plan names the goal, what to decide now and what is out of scope.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Start editing at once</span><b>A name or a format cannot be changed cheaply later.</b> A new public URL is one example.</div>
+        <div class="with"><span class="label">meta-thinking</span>A hard-to-undo decision is a signal to use the skill, and the plan names what to decide now.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Start editing at once</span><b>Two approaches work, and the agent silently picked one.</b></div>
+        <div class="with"><span class="label">meta-thinking</span>One recommended route, one line for each option it rejected, and you pick the route.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Start editing at once</span><b>A plan step on a small task costs more than it gives.</b></div>
+        <div class="with"><span class="label">meta-thinking</span>The step is short, skips small tasks, and puts in front of you only the decisions that are yours.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fit">
+    <h2>When to use it, and when not</h2>
+    <p class="lead">Use it on a task that spans several parts, or cannot be said as one change in one sentence, and at least one of these signals holds.</p>
+    <table>
+      <thead><tr><th>Signal</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>A requirement is missing or reads two ways</td><td>"Add export": to where, for whom, in which format?</td></tr>
+        <tr><td>Two approaches both work and differ in something you care about</td><td>A PDF library, or render HTML to PDF</td></tr>
+        <tr><td>A decision is hard to undo</td><td>A new public URL that scripts and bookmarks will depend on</td></tr>
+        <tr><td>The area is new to the project</td><td>The first background job in an app that has none</td></tr>
+        <tr><td>The result cannot be checked quickly</td><td>A change whose effect shows only in next month's report</td></tr>
+      </tbody>
+    </table>
+    <div class="fit" style="margin-top: 14px">
+      <div class="yes">
+        <h3>Use it for</h3>
+        <ul>
+          <li>A large task that spans several parts, or cannot be said as one change in one sentence, where at least one signal in the table holds.</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>Not for</h3>
+        <ul>
+          <li>A small or clear task with one obvious route.<span class="instead">Just do it. The skill's first check skips it anyway.</span></li>
+          <li>One scoped change ("fix X and add a test").<span class="instead">Make the change.</span></li>
+          <li>The route is clear, the requirements are not.<span class="instead">A requirements interview.</span></li>
+          <li>A route is already chosen and you need a plan by file.<span class="instead">An implementation plan.</span></li>
+          <li>A question about how existing code works.<span class="instead"><a href="../decompose-and-delegate/index.html">decompose-and-delegate</a>.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>How a run goes</h2>
+    <p class="lead">You run <code>/meta-thinking add CSV and PDF export of the monthly reports</code>, or Claude offers it at the start of a large task and waits for your yes. The diagram follows the skill's own steps (0 to 6). Each box is coloured by who does the step, and each arrow has a number: the list under the diagram says what happens on it.</p>
+    <div class="legend">
+      <span class="chip you">You</span>
+      <span class="chip main">Main session (your conversation)</span>
+      <span class="chip agent">Agent, fresh context, read-only</span>
+      <span class="chip check">Check</span>
+      <span class="chip stop">Stop</span>
+      <span class="chip" style="color: var(--accent)">Orange arrow: back into the loop</span>
+    </div>
+    <div class="diagram">
+<svg viewBox="0 0 1060 1230" role="img" aria-labelledby="mt-title"><title id="mt-title">How a meta-thinking run goes, arrow by arrow</title>
+<defs><marker id="mt-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="mt-ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow loop" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<path class="dg-edge " d="M510,84 L510,128" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M335,180 L270,180" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M405,201 L405,262 L270,262" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M510,232 L510,290" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M685,180 L745,180 L745,322 L680,322" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M510,354 L510,390" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M340,422 L270,422" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M510,454 L510,490" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M340,522 L270,522" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M510,554 L510,590" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M510,654 L510,690" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M510,754 L510,792" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M510,888 L510,920" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M340,1010 L270,1010" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M680,722 L790,722" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M905,754 L905,815 L594,815" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M680,990 L790,990" marker-end="url(#mt-ah)"/>
+<path class="dg-edge loop" d="M850,960 L850,840 L685,840" marker-end="url(#mt-ahl)"/>
+<path class="dg-edge loop" d="M620,920 L620,858" marker-end="url(#mt-ahl)"/>
+<path class="dg-edge " d="M335,840 L270,840" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M340,955 L150,955 L150,892" marker-end="url(#mt-ah)"/>
+<path class="dg-edge loop" d="M270,820 L314,820 L314,630 L340,630" marker-end="url(#mt-ahl)"/>
+<path class="dg-edge loop" d="M230,892 L230,940 L340,940" marker-end="url(#mt-ahl)"/>
+<path class="dg-edge " d="M150,812 L150,770" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M510,1020 L510,1060" marker-end="url(#mt-ah)"/>
+<path class="dg-edge " d="M510,1124 L510,1160" marker-end="url(#mt-ah)"/>
+<path class="dg-edge dash" d="M340,1186 L12,1186 L12,52 L340,52" marker-end="url(#mt-ah)"/>
+<g class="dg-node you"><rect x="340" y="20" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="41">You hand Claude a large task</text><text class="dg-sub" x="510.0" y="57">/meta-thinking add CSV and PDF export…</text><text class="dg-sub" x="510.0" y="73">or you say yes when Claude offers it</text></g>
+<g class="dg-node main"><polygon points="510.0,128 685,180.0 510.0,232 335,180.0"/><text class="dg-title" x="510.0" y="169">Should it run? · step 0</text><text class="dg-sub" x="510.0" y="185">a large task, a warning sign holds,</text><text class="dg-sub" x="510.0" y="201">and no other skill fits better?</text></g>
+<g class="dg-node main"><rect x="340" y="290" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="311">Collect the facts · step 1</text><text class="dg-sub" x="510.0" y="327">your words, decisions made, limits as</text><text class="dg-sub" x="510.0" y="343">MUST / NEVER lines, files to read, skills</text></g>
+<g class="dg-node agent"><rect x="340" y="390" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="411">Assessor · step 2</text><text class="dg-sub" x="510.0" y="427">a fresh read-only agent studies the task</text><text class="dg-sub" x="510.0" y="443">and writes a 7-part assessment of it</text></g>
+<g class="dg-node check"><rect x="340" y="490" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="511">Check the assessment · step 3</text><text class="dg-sub" x="510.0" y="527">all 7 parts, real files and skills, limits kept,</text><text class="dg-sub" x="510.0" y="543">no estimates; a wrong fact fixed and marked</text></g>
+<g class="dg-node main"><rect x="340" y="590" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="611">Save and present · step 4</text><text class="dg-sub" x="510.0" y="627">meta-thinking.md, opened with one line:</text><text class="dg-sub" x="510.0" y="643">the route and the decision you must make</text></g>
+<g class="dg-node you"><rect x="340" y="690" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="711">Your answers · step 4</text><text class="dg-sub" x="510.0" y="727">up to 3 questions, skipped when none;</text><text class="dg-sub" x="510.0" y="743">more than 3 open: interview first?</text></g>
+<g class="dg-node main"><polygon points="510.0,792 685,840.0 510.0,888 335,840.0"/><text class="dg-title" x="510.0" y="837">Does it change the route?</text><text class="dg-sub" x="510.0" y="853">each answer is saved in the file first</text></g>
+<g class="dg-node you"><rect x="340" y="920" width="340" height="100" rx="9"/><text class="dg-title" x="510.0" y="951">You pick the route</text><text class="dg-sub" x="510.0" y="967">recommended · a full alternative ·</text><text class="dg-sub" x="510.0" y="983">research first · show alternatives ·</text><text class="dg-sub" x="510.0" y="999">stop here, or your own words</text></g>
+<g class="dg-node main"><rect x="340" y="1060" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="1081">Hand-off note and task list · step 6</text><text class="dg-sub" x="510.0" y="1097">at most 8 lines: goal, route, limits, first</text><text class="dg-sub" x="510.0" y="1113">steps, stop signs, open questions, next skill</text></g>
+<g class="dg-node done"><rect x="340" y="1160" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="1183">Hand step 1 to its skill</text><text class="dg-sub" x="510.0" y="1199">e.g. a planning skill; meta-thinking ends</text></g>
+<g class="dg-node stop"><rect x="30" y="154" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="177">Skip · no offer</text><text class="dg-sub" x="150.0" y="193">small or clear: Claude just does it</text></g>
+<g class="dg-node main"><rect x="30" y="236" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="259">Hand to another skill</text><text class="dg-sub" x="150.0" y="275">the one made for that kind of work</text></g>
+<g class="dg-node stop"><rect x="30" y="396" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="419">Stop · no assessor</text><text class="dg-sub" x="150.0" y="435">agent not installed, or it failed to start</text></g>
+<g class="dg-node stop"><rect x="30" y="496" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="519">Stop · problem shown</text><text class="dg-sub" x="150.0" y="535">file kept; you choose a re-run</text></g>
+<g class="dg-node stop"><rect x="30" y="690" width="240" height="80" rx="9"/><text class="dg-title" x="150.0" y="711">Stop · limit reached</text><text class="dg-sub" x="150.0" y="727">interview, research or alternatives</text><text class="dg-sub" x="150.0" y="743">asked twice, or still no route</text><text class="dg-sub" x="150.0" y="759">after the new assessment</text></g>
+<g class="dg-node agent"><rect x="30" y="812" width="240" height="80" rx="9"/><text class="dg-title" x="150.0" y="833">Assessor again</text><text class="dg-sub" x="150.0" y="849">runs once more with your input,</text><text class="dg-sub" x="150.0" y="865">or writes alternatives in full;</text><text class="dg-sub" x="150.0" y="881">at most once for each reason</text></g>
+<g class="dg-node stop"><rect x="30" y="984" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="1007">Stop · no route chosen</text><text class="dg-sub" x="150.0" y="1023">file kept, no hand-off</text></g>
+<g class="dg-node you"><rect x="790" y="690" width="230" height="64" rx="9"/><text class="dg-title" x="905.0" y="711">Requirements interview</text><text class="dg-sub" x="905.0" y="727">the open decisions, one by one,</text><text class="dg-sub" x="905.0" y="743">then a decisions summary</text></g>
+<g class="dg-node main"><rect x="790" y="960" width="230" height="60" rx="9"/><text class="dg-title" x="905.0" y="979">Research first</text><text class="dg-sub" x="905.0" y="995">only the listed web questions,</text><text class="dg-sub" x="905.0" y="1011">in one run</text></g>
+<g class="dg-badge"><circle cx="510" cy="106" r="10"/><text x="510" y="106">1</text></g>
+<text class="dg-label" x="304" y="171">no</text>
+<g class="dg-badge"><circle cx="290" cy="180" r="10"/><text x="290" y="180">2</text></g>
+<text class="dg-label" x="278" y="254">another skill&#x27;s job</text>
+<g class="dg-badge"><circle cx="405" cy="232" r="10"/><text x="405" y="232">3</text></g>
+<text class="dg-label" x="526" y="266">yes</text>
+<g class="dg-badge"><circle cx="510" cy="261" r="10"/><text x="510" y="261">4</text></g>
+<text class="dg-label" x="694" y="171">no, but you named it</text>
+<g class="dg-badge"><circle cx="745" cy="251" r="10"/><text x="745" y="251">5</text></g>
+<g class="dg-badge"><circle cx="510" cy="372" r="10"/><text x="510" y="372">6</text></g>
+<text class="dg-label" x="276" y="444">fails</text>
+<g class="dg-badge"><circle cx="318" cy="422" r="10"/><text x="318" y="422">7</text></g>
+<g class="dg-badge"><circle cx="510" cy="472" r="10"/><text x="510" y="472">8</text></g>
+<text class="dg-label" x="276" y="544">can&#x27;t fix</text>
+<g class="dg-badge"><circle cx="318" cy="522" r="10"/><text x="318" y="522">9</text></g>
+<text class="dg-label" x="526" y="577">passes</text>
+<g class="dg-badge"><circle cx="510" cy="572" r="10"/><text x="510" y="572">10</text></g>
+<g class="dg-badge"><circle cx="510" cy="672" r="10"/><text x="510" y="672">11</text></g>
+<text class="dg-label" x="526" y="778">your answers</text>
+<g class="dg-badge"><circle cx="510" cy="773" r="10"/><text x="510" y="773">12</text></g>
+<text class="dg-label" x="526" y="909">no</text>
+<g class="dg-badge"><circle cx="510" cy="904" r="10"/><text x="510" y="904">13</text></g>
+<text class="dg-label" x="276" y="1031">stop</text>
+<g class="dg-badge"><circle cx="318" cy="1010" r="10"/><text x="318" y="1010">14</text></g>
+<text class="dg-label" x="694" y="744">interview first</text>
+<g class="dg-badge"><circle cx="735" cy="722" r="10"/><text x="735" y="722">15</text></g>
+<text class="dg-label" x="922" y="790">decisions summary</text>
+<g class="dg-badge"><circle cx="905" cy="785" r="10"/><text x="905" y="785">16</text></g>
+<text class="dg-label" x="692" y="1040">Research first, or you ask for it</text>
+<g class="dg-badge"><circle cx="735" cy="990" r="10"/><text x="735" y="990">17</text></g>
+<text class="dg-label" x="869" y="905">findings</text>
+<g class="dg-badge"><circle cx="850" cy="900" r="10"/><text x="850" y="900">18</text></g>
+<text class="dg-label" x="638" y="894">anything else in your own words</text>
+<g class="dg-badge"><circle cx="620" cy="889" r="10"/><text x="620" y="889">19</text></g>
+<text class="dg-label" x="302" y="831">yes</text>
+<g class="dg-badge"><circle cx="290" cy="840" r="10"/><text x="290" y="840">20</text></g>
+<text class="dg-label" x="160" y="972">Show alternatives</text>
+<g class="dg-badge"><circle cx="150" cy="924" r="10"/><text x="150" y="924">21</text></g>
+<text class="dg-label" x="190" y="664">passes the check</text>
+<g class="dg-badge"><circle cx="314" cy="725" r="10"/><text x="314" y="725">22</text></g>
+<text class="dg-label" x="244" y="919">fails the check</text>
+<g class="dg-badge"><circle cx="230" cy="916" r="10"/><text x="230" y="916">23</text></g>
+<text class="dg-label" x="170" y="786">an extra asked twice,</text>
+<g class="dg-badge"><circle cx="150" cy="791" r="10"/><text x="150" y="791">24</text></g>
+<text class="dg-label" x="526" y="1045">a route chosen</text>
+<g class="dg-badge"><circle cx="510" cy="1040" r="10"/><text x="510" y="1040">25</text></g>
+<g class="dg-badge"><circle cx="510" cy="1142" r="10"/><text x="510" y="1142">26</text></g>
+<text class="dg-label" x="40" y="1178">a stop sign shows up later</text>
+<g class="dg-badge"><circle cx="12" cy="620" r="10"/><text x="12" y="620">27</text></g>
+<text class="dg-label" x="170" y="801">or still no route</text>
+</svg>
+    </div>
+<div class="arrows">
+<h3>The gate (step 0)</h3><ol>
+<li value="1"><span class="n">1</span><span>You give the task: <code>/meta-thinking &lt;the task&gt;</code>, <code>/meta-thinking</code> alone to use the conversation so far, or a yes when Claude offers the skill. With no task anywhere, Claude first asks you once what it is.</span></li>
+<li value="2"><span class="n">2</span><span>The task is small or clear: it stays in one part and can be said as one change in one sentence, or none of the five warning signs holds (a requirement is missing or reads two ways; two good approaches differ in something you care about; a choice on the way is hard to undo; the area is new to the project; the result cannot be checked quickly). When Claude only tests whether to offer the skill, it offers nothing, prints nothing and does the task without it.</span></li>
+<li value="3"><span class="n">3</span><span>The task is a job for another kind of skill: one scoped change, a ticket you want run end to end, unclear requirements on an obvious route, a route already chosen that needs a plan by file, or a question about how code works. It goes to the session's skill for that work; when there is none, the main session (your own Claude Code conversation) does it.</span></li>
+<li value="4"><span class="n">4</span><span>The task is large and at least one warning sign holds. The skill prints its verdict, for example <code>[meta-thinking] gate: run — signals a, c</code> (a: a requirement is missing, c: a decision that is hard to undo).</span></li>
+<li value="5"><span class="n">5</span><span>You named the skill yourself, but the gate would not run it: it runs anyway and prints <code>[meta-thinking] gate: run (would skip: &lt;reason&gt;)</code>, so you can stop it.</span></li>
+</ol>
+<h3>The assessment (steps 1 to 3)</h3><ol>
+<li value="6"><span class="n">6</span><span>The main session writes the brief for the assessor: your words as you wrote them, the decisions already made, each constraint as one <code>MUST</code> or <code>NEVER</code> line with its source (for example <code>NEVER change the current URLs</code>), the files to read as paths, and the skills in the session. It leaves out its own opinion of the answer and reads no code itself.</span></li>
+<li value="7"><span class="n">7</span><span>The assessor's agent type is not installed, or the start fails for another reason: the run stops and says why. There is no fallback agent, because one that could edit, go to the web or start other agents would not be this step.</span></li>
+<li value="8"><span class="n">8</span><span>One agent with an empty context, which can only read, studies the brief and the repository and returns the assessment in seven parts (listed below). An empty answer still goes to the check.</span></li>
+<li value="9"><span class="n">9</span><span>A defect the main session cannot fix in place with a marked note (arrow 10 shows those notes): a missing part, a route with no steps, more questions, steps or routes than allowed, a text over its 200-line limit, or a second full route with no reason given. The skill shows what came back, names the defect, keeps the file and stops; you choose whether to run it again. It never trims or re-ranks the assessment itself.</span></li>
+<li value="10"><span class="n">10</span><span>The assessment passes. On the way, a wrong path is fixed in place and marked <code>[corrected: …]</code> or <code>[not found]</code>, a skill the session does not have is marked <code>[no such skill]</code>, a question the repository can answer is looked up and marked <code>[answered: …]</code>, and any success, time or token estimate is struck out.</span></li>
+</ol>
+<h3>Your review (step 4)</h3><ol>
+<li value="11"><span class="n">11</span><span>The assessment is saved as <code>meta-thinking.md</code> in the task's folder, or in the session's scratchpad, which lasts only for the session (it tells you the path). It is shown, opened by one plain line: the recommended route and the decision you must make. Then part 3's questions are asked, the recommended option first. With no questions, this step is skipped.</span></li>
+<li value="12"><span class="n">12</span><span>Each answer is written under the heading <code>Decided:</code> in the file, one line each, for example <code>answer 1 → B: render the HTML page to PDF — you, question 1</code>. A question you leave unanswered goes under <code>Open:</code> and stays open; the skill never decides it for you.</span></li>
+<li value="13"><span class="n">13</span><span>A shown route still stands: the route question asks you to pick it. The options are the recommended route, each full alternative route shown, <code>Research first</code> when there are web questions, <code>Show alternatives</code> when no full alternative is shown yet, and <code>Stop here</code> when there is room (at most four options).</span></li>
+<li value="14"><span class="n">14</span><span>You pick <code>Stop here</code>, say no in your own words, or give no answer: the run stops with no route chosen. The file stays, and nothing is handed on.</span></li>
+</ol>
+<h3>Extras: only when you ask, at most once each (step 5)</h3><ol>
+<li value="15"><span class="n">15</span><span>With more than three open decisions, the questions get one more: "Go through the open decisions one by one first?" A yes (<code>Grill first</code>) starts a requirements interview, with the session's interview skill or with the main session asking one decision per message. You can also ask for it in your own words when you answer the route question.</span></li>
+<li value="16"><span class="n">16</span><span>The decisions summary comes back. A decision you skipped or left on its default goes under <code>Open:</code>, not <code>Decided:</code>.</span></li>
+<li value="17"><span class="n">17</span><span><code>Research first</code>, or a request for research in your own words, looks up only the web questions in part 4, in one run, with the session's web research skill or the main session's own web tools. With no web questions listed, your request becomes the one question.</span></li>
+<li value="18"><span class="n">18</span><span>The findings come back, each with its source.</span></li>
+<li value="19"><span class="n">19</span><span>Any other answer you write in your own words to the route question is handled like an answer to the questions.</span></li>
+<li value="20"><span class="n">20</span><span>The answer, finding or decision changes the route: no shown route survives your answers, or a finding or decision meets a route's <code>wrong if:</code> line (each route names what would prove it wrong) or an item's "would change the route" note. The assessor runs again, with the new input added to its brief.</span></li>
+<li value="21"><span class="n">21</span><span><code>Show alternatives</code>: the assessor runs again and writes up to two of the one-line alternatives as full routes, the ones you named or else the first two. The recommended route stays first.</span></li>
+<li value="22"><span class="n">22</span><span>The new assessment passes the same check as arrow 10 and is saved as the next numbered file, such as <code>meta-thinking-2.md</code>, with the <code>Decided:</code> lines carried over; earlier files stay. Its new questions are asked first.</span></li>
+<li value="23"><span class="n">23</span><span>The new assessment fails the check, or the agent errors: the previous file stays, the skill names the defect and asks the route question again without the option that caused it. When your answers caused it, no shown route is left, and the run stops as in arrow 14.</span></li>
+<li value="24"><span class="n">24</span><span>Each extra (the interview, the research, the full alternatives) runs at most once, and your answers start at most one new assessment. Once an extra has run, the route question no longer offers it. A second request for the same extra, or a new assessment that still leaves no route standing, stops the run and names the reason.</span></li>
+</ol>
+<h3>The hand-off (step 6)</h3><ol>
+<li value="25"><span class="n">25</span><span>You pick a route. The main session writes a hand-off note (the skill calls it a backbrief) at the end of the file, at most 8 lines: the goal, the chosen route, the constraints as <code>MUST</code> or <code>NEVER</code> lines, the first two steps, the stop signs (the skill calls them stop triggers: two or three things that, seen during the work, mean "stop and think again"), <code>Open:</code> with every unanswered question, and the next skill. The route's steps go into the task list in order, plus one standing task that watches the stop signs, so they survive a long session.</span></li>
+<li value="26"><span class="n">26</span><span>The first step goes to the skill it names, for example a planning skill for the plan by file, with only that step as its task, the hand-off note and the file path as context, and the <code>Decided:</code> lines as decisions already made. A step with no skill runs in the main session. Before a step closes, its report is checked against the stop signs. From here the next skill's own rules apply, and meta-thinking ends.</span></li>
+<li value="27"><span class="n">27</span><span>A stop sign shows up during the work, for example the chosen PDF library cannot break pages in a table: the work stops and the skill runs again with the new facts and the old file. This re-run counts as accepted, so Claude does not offer it first.</span></li>
+</ol>
+</div>
+  </section>
+
+  <section id="plan">
+    <h2>What the assessment holds</h2>
+    <p class="lead">The fresh agent writes an assessment with seven parts.</p>
+    <div class="card">
+      <ol>
+        <li>The goal, what to decide now, what is out of scope, and the limits as <code>MUST</code> / <code>NEVER</code> lines.</li>
+        <li>What is known, and what is only assumed.</li>
+        <li>At most three questions for you.</li>
+        <li>At most three things to look up on the web.</li>
+        <li>One recommended route of at most seven steps, each with what to do, why, how to check it and which skill does it.</li>
+        <li>One line per option it rejected.</li>
+        <li>Two or three signs during the work that mean "stop and think again".</li>
+      </ol>
+      <p class="out"><b>Never:</b> the skill never writes code, a plan by file or a ticket, and gives no chance of success, time or token estimate.</p>
+    </div>
+  </section>
+
+  <section id="asked">
+    <h2>What you are asked</h2>
+    <p class="lead">At most three questions, once. Each is a real decision with two or three options and a recommendation. You also pick one route; the plan recommends one.</p>
+    <div class="branches">
+      <div class="branch ask"><div class="then">A real decision</div><p>Two or three options and a recommendation.</p><div class="example">PDF export: a PDF library (more control, one more dependency) or render the HTML page to PDF (reuses the screen, harder to page-break)? Recommended: the HTML route, because the report screen already exists.</div></div>
+      <div class="branch go"><div class="then">Looked up, not asked</div><p>A question the repository can answer is looked up.</p></div>
+      <div class="branch stop"><div class="then">Left open stays open</div><p>A question you leave open stays open. The skill never decides it for you.</p></div>
+    </div>
+  </section>
+
+  <section id="different">
+    <h2>What makes it different</h2>
+    <p class="lead">Each reason rests on findings listed in the skill's <a href="../../skills/meta-thinking/research-basis.md">research basis</a>.</p>
+    <div class="choices">
+      <div class="choice"><h3>A first check that skips small or clear tasks</h3><p>Planning costs a little on tasks the agent would solve anyway.</p></div>
+      <div class="choice"><h3>A separate agent with a fresh context</h3><p>Its brief carries your words, never the main session's favourite answer, so it does not inherit the session's first guess.</p></div>
+      <div class="choice"><h3>Constraints written as MUST and NEVER lines</h3><p>Vague constraints get lost when work passes from one agent to another; plain rules survive.</p></div>
+      <div class="choice"><h3>At most three questions, each a real decision</h3><p>You answer only what the code cannot.</p></div>
+      <div class="choice"><h3>One recommended route, the others in one line each</h3><p>A full second route shows up only for a hard-to-undo choice, a fork a cheap test can decide, or when you ask.</p></div>
+      <div class="choice"><h3>The goal restated, and the steps in the task list</h3><p>The doer says the intent back before starting, and the steps survive a long session.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    The same content as text: <a href="README.md">README.md</a>. The skill is published at <a href="../../skills/meta-thinking/README.md">../../skills/meta-thinking/README.md</a>; its <a href="../../skills/meta-thinking/README.md#install">Install</a> section says how to copy it and its agent into your setup.
+  </footer>
+</main>
+</body>
+</html>

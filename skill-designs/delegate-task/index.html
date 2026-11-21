@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>delegate-task: how it works</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">&larr; All skill designs</a>
+  <h1>delegate-task</h1>
+  <p class="tagline">Hands one decided task to a background agent. The agent has its own helpers, its own copy of the repository and its own branch. The skill checks the result against git before it believes the report.</p>
+  <span class="command">/delegate-task review pull request 42</span>
+
+  <nav class="toc">
+    <a href="#problem">The problem</a>
+    <a href="#fit">When to use it</a>
+    <a href="#run">How a run goes</a>
+    <a href="#report">What the report holds</a>
+    <a href="#checked">How the result is checked</a>
+    <a href="#asked">What you are asked</a>
+    <a href="#roles">Who does what</a>
+    <a href="#different">What makes it different</a>
+  </nav>
+
+  <section id="problem">
+    <h2>The problem it solves</h2>
+    <p class="lead">Some tasks are long but already decided: review a pull request end to end, apply ten fixes you agreed on, build a feature from a finished design. Run in your conversation, such a task fills it with diffs, test output and file reads, and you cannot do anything else while it runs. Handed to an agent the usual way, it can come back with "Done, all tests pass", and you cannot tell whether that is true. The skill is built against three ways such a hand-off can go wrong.</p>
+    <div class="pairs">
+      <div class="pair">
+        <div class="without"><span class="label">Hand it off and hope</span><b>Your conversation fills up.</b> The work's own reading pushes out what you were thinking about.</div>
+        <div class="with"><span class="label">delegate-task</span>Your conversation is kept for decisions and checking. One orchestrator agent gets the work.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Hand it off and hope</span><b>"Done" is a claim.</b> An agent's report says what it believes it did, not what git shows.</div>
+        <div class="with"><span class="label">delegate-task</span>Nothing counts as done until git and the checks agree with the report.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Hand it off and hope</span><b>Questions stop the work, or get guessed.</b> A background agent cannot ask you, so it stops on the first open point or picks an answer for you.</div>
+        <div class="with"><span class="label">delegate-task</span>Open decisions are settled with you before the start. A question that comes up later is answered from written rules, or written into the report for you.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fit">
+    <h2>When to use it, and when not</h2>
+    <div class="fit">
+      <div class="yes">
+        <h3>Use it when all three hold</h3>
+        <ul>
+          <li>There is a reason to use an agent: the task would fill your conversation, it should run beside other work, or it needs an independent check.<span class="instead">Example: a full pull request review with several reviewers.</span></li>
+          <li>Every decision it needs is already made.<span class="instead">Example: apply the twelve fixes agreed in yesterday's review.</span></li>
+          <li>Its result can be checked with commands.<span class="instead">Example: tests, linters, <code>git log</code> on the branch.</span></li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>Not for</h3>
+        <ul>
+          <li>A question with a short answer.<span class="instead">Ask one agent directly, or answer it yourself.</span></li>
+          <li>You want to know how the code works.<span class="instead"><a href="../decompose-and-delegate/index.html">decompose-and-delegate</a>: agents return answers and change nothing.</span></li>
+          <li>One change you want to build and watch in your conversation.<span class="instead">A build loop that runs in the conversation.</span></li>
+          <li>The work needs you while it runs, or decisions are still open.<span class="instead">Decide first, or keep the work in your conversation. A background agent cannot ask you.</span></li>
+          <li>Nothing a command could check.<span class="instead">Do it yourself: nothing can show whether the report is true.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>How a run goes</h2>
+    <p class="lead">You run <code>/delegate-task review pull request 42</code>. The diagram follows the skill's own steps. Each box is coloured by who does the step, and each arrow has a number: the list under the diagram says what happens on it.</p>
+    <div class="legend">
+      <span class="chip you">You</span>
+      <span class="chip main">Main session (your conversation)</span>
+      <span class="chip agent">Agent</span>
+      <span class="chip check">Independent check</span>
+      <span class="chip stop">Stop</span>
+      <span class="chip" style="color: var(--accent)">Orange arrow: back into the loop</span>
+    </div>
+    <div class="diagram">
+<svg viewBox="0 0 1075 1760" role="img" aria-labelledby="dt-title"><title id="dt-title">How a delegate-task run goes, arrow by arrow</title>
+<defs><marker id="dt-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="dt-ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow loop" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<path class="dg-edge " d="M510,72 L510,100" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M335,142 L270,142" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,184 L510,212" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,268 L510,296" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M340,326 L270,326" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,356 L510,386" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M335,428 L270,428" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,470 L510,496" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,560 L510,584" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,644 L510,676" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M680,692 L790,692" marker-end="url(#dt-ah)"/>
+<path class="dg-edge loop" d="M790,718 L680,718" marker-end="url(#dt-ahl)"/>
+<path class="dg-edge " d="M905,732 L905,762" marker-end="url(#dt-ah)"/>
+<path class="dg-edge loop" d="M790,790 L680,790" marker-end="url(#dt-ahl)"/>
+<path class="dg-edge " d="M905,818 L905,848" marker-end="url(#dt-ah)"/>
+<path class="dg-edge loop" d="M790,876 L680,876" marker-end="url(#dt-ahl)"/>
+<path class="dg-edge " d="M905,904 L905,934" marker-end="url(#dt-ah)"/>
+<path class="dg-edge loop" d="M790,962 L680,962" marker-end="url(#dt-ahl)"/>
+<path class="dg-edge " d="M905,990 L905,1048 L680,1048" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,986 L510,1020" marker-end="url(#dt-ah)"/>
+<path class="dg-edge dash" d="M340,966 L310,966 L310,1120 L340,1120" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,1076 L510,1106" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M340,1146 L270,1146" marker-end="url(#dt-ah)"/>
+<path class="dg-edge loop" d="M270,1172 L340,1172" marker-end="url(#dt-ahl)"/>
+<path class="dg-edge loop" d="M680,1136 L1050,1136 L1050,428 L685,428" marker-end="url(#dt-ahl)"/>
+<path class="dg-edge " d="M510,1186 L510,1220" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,1300 L510,1334" marker-end="url(#dt-ah)"/>
+<path class="dg-edge loop" d="M345,1376 L12,1376 L12,374 L470,374 L470,396" marker-end="url(#dt-ahl)"/>
+<path class="dg-edge " d="M510,1418 L510,1452" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,1504 L510,1538" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M510,1642 L510,1676" marker-end="url(#dt-ah)"/>
+<path class="dg-edge " d="M295,1590 L270,1590" marker-end="url(#dt-ah)"/>
+<g class="dg-node you"><rect x="340" y="20" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="43">You start the run</text><text class="dg-sub" x="510.0" y="59">/delegate-task review pull request 42</text></g>
+<g class="dg-node main"><polygon points="510.0,100 685,142.0 510.0,184 335,142.0"/><text class="dg-title" x="510.0" y="139">Should an agent do this task?</text><text class="dg-sub" x="510.0" y="155">a reason, all decided, checkable result</text></g>
+<g class="dg-node main"><rect x="340" y="212" width="340" height="56" rx="9"/><text class="dg-title" x="510.0" y="237">Decide first</text><text class="dg-sub" x="510.0" y="253">you answer open questions; research runs now</text></g>
+<g class="dg-node main"><rect x="340" y="296" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="315">Working copy and run folder</text><text class="dg-sub" x="510.0" y="331">a git worktree on the task&#x27;s branch,</text><text class="dg-sub" x="510.0" y="347">a folder for the brief, report and audit</text></g>
+<g class="dg-node main"><polygon points="510.0,386 685,428.0 510.0,470 335,428.0"/><text class="dg-title" x="510.0" y="425">Room for all its agents?</text><text class="dg-sub" x="510.0" y="441">the limit is active and every agent fits</text></g>
+<g class="dg-node main"><rect x="340" y="496" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="517">Write the brief</text><text class="dg-sub" x="510.0" y="533">the agent&#x27;s instructions, from a template;</text><text class="dg-sub" x="510.0" y="549">it always lists the checks to run</text></g>
+<g class="dg-node main"><rect x="340" y="584" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="603">Start it in the background</text><text class="dg-sub" x="510.0" y="619">one orchestrator (the lead agent);</text><text class="dg-sub" x="510.0" y="635">you keep working</text></g>
+<g class="dg-node agent"><rect x="340" y="676" width="340" height="310" rx="9"/><text class="dg-title" x="510.0" y="788">Orchestrator runs the task</text><text class="dg-sub" x="510.0" y="804">in its own copy, with its own helpers</text><text class="dg-sub" x="510.0" y="820">commits and pushes to its own branch</text><text class="dg-sub" x="510.0" y="836">never merges, never downloads files</text><text class="dg-sub" x="510.0" y="852"></text><text class="dg-sub" x="510.0" y="868">a point no decision covers:</text><text class="dg-sub" x="510.0" y="884">it asks in this order  →</text></g>
+<g class="dg-node agent"><rect x="340" y="1020" width="340" height="56" rx="9"/><text class="dg-title" x="510.0" y="1045">The agent&#x27;s report</text><text class="dg-sub" x="510.0" y="1061">set sections; the last line is &quot;End of report.&quot;</text></g>
+<g class="dg-node check"><rect x="340" y="1106" width="340" height="80" rx="9"/><text class="dg-title" x="510.0" y="1135">Save and check the report</text><text class="dg-sub" x="510.0" y="1151">save it word for word, then run 12 checks</text><text class="dg-sub" x="510.0" y="1167">against git, test results and the run folder</text></g>
+<g class="dg-node main"><rect x="340" y="1220" width="340" height="80" rx="9"/><text class="dg-title" x="510.0" y="1241">Questions for you</text><text class="dg-sub" x="510.0" y="1257">those a written rule answers are decided</text><text class="dg-sub" x="510.0" y="1273">the rest come to you, one per message</text><text class="dg-sub" x="510.0" y="1289">review: post &quot;ready&quot; or &quot;not ready&quot; to merge</text></g>
+<g class="dg-node main"><polygon points="510.0,1334 675,1376.0 510.0,1418 345,1376.0"/><text class="dg-title" x="510.0" y="1373">Does the task need more work</text><text class="dg-sub" x="510.0" y="1389">after a pause or a restart?</text></g>
+<g class="dg-node main"><rect x="340" y="1452" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="1475">Remove the worktree</text><text class="dg-sub" x="510.0" y="1491">after the audit</text></g>
+<g class="dg-node you"><polygon points="510.0,1538 725,1590.0 510.0,1642 295,1590.0"/><text class="dg-title" x="510.0" y="1579">Did you say &quot;merge it&quot;</text><text class="dg-sub" x="510.0" y="1595">for this pull request, in this chat?</text><text class="dg-sub" x="510.0" y="1611">a review comment does not count</text></g>
+<g class="dg-node done"><rect x="340" y="1676" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="1695">Merge, then clean up</text><text class="dg-sub" x="510.0" y="1711">branches built on each other merge lowest first;</text><text class="dg-sub" x="510.0" y="1727">then large run files and the branch are removed</text></g>
+<g class="dg-node stop"><rect x="30" y="116" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="139">Do it in this session</text><text class="dg-sub" x="150.0" y="155">no agent for this task</text></g>
+<g class="dg-node stop"><rect x="30" y="294" width="240" height="64" rx="9"/><text class="dg-title" x="150.0" y="315">Stop: merge conflict</text><text class="dg-sub" x="150.0" y="331">review only: the base branch does</text><text class="dg-sub" x="150.0" y="347">not merge into the pull request</text></g>
+<g class="dg-node stop"><rect x="30" y="402" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="425">Start nothing</text><text class="dg-sub" x="150.0" y="441">fix the setting or wait for room</text></g>
+<g class="dg-node main"><rect x="30" y="1126" width="240" height="60" rx="9"/><text class="dg-title" x="150.0" y="1145">Fix it in this session</text><text class="dg-sub" x="150.0" y="1161">a failed check is fixed here,</text><text class="dg-sub" x="150.0" y="1177">then checked again</text></g>
+<g class="dg-node stop"><rect x="30" y="1564" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="1587">Nothing merges</text><text class="dg-sub" x="150.0" y="1603">the branch and pull request stay open</text></g>
+<g class="dg-node agent"><rect x="790" y="676" width="230" height="56" rx="9"/><text class="dg-title" x="905.0" y="701">1 · Rules and advisor model</text><text class="dg-sub" x="905.0" y="717">may it decide this alone?</text></g>
+<g class="dg-node agent"><rect x="790" y="762" width="230" height="56" rx="9"/><text class="dg-title" x="905.0" y="787">2 · Question-answering agent</text><text class="dg-sub" x="905.0" y="803">one agent per open question</text></g>
+<g class="dg-node agent"><rect x="790" y="848" width="230" height="56" rx="9"/><text class="dg-title" x="905.0" y="873">3 · Advisor answers for you</text><text class="dg-sub" x="905.0" y="889">only what the project rules allow</text></g>
+<g class="dg-node agent"><rect x="790" y="934" width="230" height="56" rx="9"/><text class="dg-title" x="905.0" y="959">4 · Into the report, for you</text><text class="dg-sub" x="905.0" y="975">temporary answer, or that part stops</text></g>
+<g class="dg-badge"><circle cx="510" cy="86" r="10"/><text x="510" y="86">1</text></g>
+<text class="dg-label" x="275" y="134">no</text>
+<g class="dg-badge"><circle cx="305" cy="142" r="10"/><text x="305" y="142">2</text></g>
+<text class="dg-label" x="526" y="203">yes</text>
+<g class="dg-badge"><circle cx="510" cy="198" r="10"/><text x="510" y="198">3</text></g>
+<g class="dg-badge"><circle cx="510" cy="282" r="10"/><text x="510" y="282">4</text></g>
+<g class="dg-badge"><circle cx="305" cy="326" r="10"/><text x="305" y="326">5</text></g>
+<g class="dg-badge"><circle cx="510" cy="371" r="10"/><text x="510" y="371">6</text></g>
+<text class="dg-label" x="275" y="420">no</text>
+<g class="dg-badge"><circle cx="305" cy="428" r="10"/><text x="305" y="428">7</text></g>
+<text class="dg-label" x="526" y="488">yes</text>
+<g class="dg-badge"><circle cx="510" cy="483" r="10"/><text x="510" y="483">8</text></g>
+<g class="dg-badge"><circle cx="510" cy="572" r="10"/><text x="510" y="572">9</text></g>
+<g class="dg-badge"><circle cx="510" cy="660" r="10"/><text x="510" y="660">10</text></g>
+<text class="dg-label" x="716" y="686">open point</text>
+<g class="dg-badge"><circle cx="700" cy="692" r="10"/><text x="700" y="692">11</text></g>
+<text class="dg-label" x="716" y="712">settled</text>
+<g class="dg-badge"><circle cx="700" cy="718" r="10"/><text x="700" y="718">12</text></g>
+<text class="dg-label" x="920" y="751">left open</text>
+<g class="dg-badge"><circle cx="905" cy="747" r="10"/><text x="905" y="747">13</text></g>
+<text class="dg-label" x="716" y="770">settled,</text><text class="dg-label" x="716" y="784">with proof</text>
+<g class="dg-badge"><circle cx="700" cy="790" r="10"/><text x="700" y="790">14</text></g>
+<text class="dg-label" x="920" y="837">for you</text>
+<g class="dg-badge"><circle cx="905" cy="833" r="10"/><text x="905" y="833">15</text></g>
+<text class="dg-label" x="716" y="870">answered</text>
+<g class="dg-badge"><circle cx="700" cy="876" r="10"/><text x="700" y="876">16</text></g>
+<text class="dg-label" x="920" y="923">any other</text>
+<g class="dg-badge"><circle cx="905" cy="919" r="10"/><text x="905" y="919">17</text></g>
+<text class="dg-label" x="716" y="956">go on</text>
+<g class="dg-badge"><circle cx="700" cy="962" r="10"/><text x="700" y="962">18</text></g>
+<text class="dg-label" x="920" y="1023">must wait for you</text>
+<g class="dg-badge"><circle cx="905" cy="1019" r="10"/><text x="905" y="1019">19</text></g>
+<text class="dg-label" x="526" y="1008">done</text>
+<g class="dg-badge"><circle cx="510" cy="1003" r="10"/><text x="510" y="1003">20</text></g>
+<text class="dg-label" x="205" y="1044">failed or froze</text>
+<g class="dg-badge"><circle cx="310" cy="1040" r="10"/><text x="310" y="1040">21</text></g>
+<g class="dg-badge"><circle cx="510" cy="1091" r="10"/><text x="510" y="1091">22</text></g>
+<g class="dg-badge"><circle cx="305" cy="1146" r="10"/><text x="305" y="1146">23</text></g>
+<g class="dg-badge"><circle cx="305" cy="1172" r="10"/><text x="305" y="1172">24</text></g>
+<text class="dg-label" x="700" y="1128">fail: a fresh orchestrator</text>
+<g class="dg-badge"><circle cx="880" cy="1136" r="10"/><text x="880" y="1136">25</text></g>
+<text class="dg-label" x="526" y="1208">pass</text>
+<g class="dg-badge"><circle cx="510" cy="1203" r="10"/><text x="510" y="1203">26</text></g>
+<g class="dg-badge"><circle cx="510" cy="1317" r="10"/><text x="510" y="1317">27</text></g>
+<text class="dg-label" x="30" y="1366">yes: a fresh orchestrator</text>
+<g class="dg-badge"><circle cx="200" cy="1376" r="10"/><text x="200" y="1376">28</text></g>
+<text class="dg-label" x="526" y="1440">no</text>
+<g class="dg-badge"><circle cx="510" cy="1435" r="10"/><text x="510" y="1435">29</text></g>
+<g class="dg-badge"><circle cx="510" cy="1521" r="10"/><text x="510" y="1521">30</text></g>
+<text class="dg-label" x="526" y="1664">yes</text>
+<g class="dg-badge"><circle cx="510" cy="1659" r="10"/><text x="510" y="1659">31</text></g>
+<text class="dg-label" x="276" y="1612">not yet</text>
+<g class="dg-badge"><circle cx="282" cy="1590" r="10"/><text x="282" y="1590">32</text></g>
+</svg>
+    </div>
+<div class="arrows">
+<h3>Before the start</h3><ol>
+<li value="1"><span class="n">1</span><span>You name the task. When the task has a skill of its own, you name that skill too: a review of pull request 42, applying agreed fixes, or a build from a finished design note. Before anything starts, the skill asks whether a background agent should do this task at all. This check (the gate) looks at three things: there is a reason to use an agent, every decision the task needs is already made, and commands (the tests, the type checker) can check the result.</span></li>
+<li value="2"><span class="n">2</span><span>One of the three fails: no agent starts, and the main session does the task in your conversation.</span></li>
+<li value="3"><span class="n">3</span><span>All three hold. The skill says in one line which reason it is: the task would fill your conversation, it runs beside other work, or it needs an independent check. A project may route every pull request review through this skill; then a review always passes the gate. Every open decision is now put to you, before any agent starts. Example: "The fixes touch the public API. Add them to the same pull request or open a new one?" Web research or a design note (the written result of a design step) the task needs is also done now, and what it gave goes into the brief.</span></li>
+<li value="4"><span class="n">4</span><span>The skill makes a separate working copy of the repository (a git worktree) on the task's own branch, and a run folder for the brief (the instruction file the agent reads), the report and the audit (the record of the 12 checks of arrow 22). It uses plain git, so it can name the branch and its base. When that task skill makes its own copy (a review does), the skill uses that copy instead.</span></li>
+<li value="5"><span class="n">5</span><span>Review only: before the start, the main session (your own Claude Code conversation) merges the base branch into the pull request's branch, so the review sees what will land. When that merge has a conflict, it is aborted and the run stops there.</span></li>
+</ol>
+<h3>Count the agents</h3><ol>
+<li value="6"><span class="n">6</span><span>Claude Code can limit how many agents run at once, and the skill expects the project's settings to set that limit. Two Claude Code settings change how that limit works, so the skill first checks the settings files: both must be off, and the agents it plans must fit under the limit. To check that, it adds up every agent already running (a running orchestrator counts with every helper its brief allows), the new orchestrator, and every helper its brief lets it start.</span></li>
+<li value="7"><span class="n">7</span><span>One of those settings is on, or the total goes over the limit: nothing starts. The run can start once the setting is off or enough agents have finished.</span></li>
+<li value="8"><span class="n">8</span><span>Both hold. The brief is written: a file in the run folder, copied from a template with every field filled. It holds the task and why it matters, what is in and out of bounds, the decisions it must not reopen, what it may and may not do, the helpers with their models, the checks to run (never "none"), and the exact shape of its report. For a task you asked for, it quotes your words.</span></li>
+</ol>
+<h3>Start</h3><ol>
+<li value="9"><span class="n">9</span><span>One orchestrator (the lead agent that runs the task) starts in the background with a three-line prompt: its role, the path of the brief, and the list of its helpers. A line in the run folder records the start, the worktree, the number of agents it may use and the branch's commit at the start. Your conversation goes on with other work. The skill does not poll the agent; it waits for the finish notice. Stay where you can answer: the skill expects the agent's permission prompts to appear in your conversation.</span></li>
+<li value="10"><span class="n">10</span><span>The orchestrator works in its own copy with its own helpers, commits and pushes only to its own branch, and never merges or downloads a file. It cannot ask you anything.</span></li>
+</ol>
+<h3>While it runs: the order for a question</h3><ol>
+<li value="11"><span class="n">11</span><span>It meets a point that no decision covers. First it reads the project's written rules and asks the advisor what it may decide alone. The advisor is a Claude Code tool: it sends the agent's whole conversation to a second model and returns its advice. A small decision, such as the name of a test helper, usually ends here.</span></li>
+<li value="12"><span class="n">12</span><span>They settle it: the orchestrator decides and goes on.</span></li>
+<li value="13"><span class="n">13</span><span>They leave it open: one question-answering agent gets the point. It answers one open point from the evidence and the written rules, and says either that the point is settled, with its proof, or that it is yours to decide.</span></li>
+<li value="14"><span class="n">14</span><span>The agent settles it: the orchestrator acts on the answer and posts it as a comment on the pull request, so the pull request keeps the history of the decision.</span></li>
+<li value="15"><span class="n">15</span><span>The agent says the point is yours to decide: it goes to the advisor again, now answering in your place.</span></li>
+<li value="16"><span class="n">16</span><span>The advisor may answer for you only the few kinds of point the project's written rules allow, for example which library package to use, and only when the answer changes no plan and not how the product works. The advisor names a source for its answer, the work goes on, and the report lists each such point under "Decided without you".</span></li>
+<li value="17"><span class="n">17</span><span>Every other point is written under "Questions for you" in the report.</span></li>
+<li value="18"><span class="n">18</span><span>Most such points get a working answer: a temporary answer the orchestrator uses so it can go on, while the question waits for you in the report. Example: "Should a failed upload keep its file for a retry?" gets the working answer "delete it, since the user uploads again anyway".</span></li>
+<li value="19"><span class="n">19</span><span>A few kinds get no working answer: a merge, a new dependency, a decision the brief left open that is hard to undo, a design question no design note covers. Only the work that depends on them stops. The rest of the task goes on, and the point waits for you in the report. In a review, points the review keeps for you end the run.</span></li>
+<li value="20"><span class="n">20</span><span>The task is done, or stopped: the orchestrator returns the report in a fixed shape. Every section is present, with "none" where it is empty, and the last line is <code>End of report.</code></span></li>
+<li value="21"><span class="n">21</span><span>When the agent failed, was killed or froze, there is no report. A frozen run is found by the time of the last line in each agent's transcript, not by its status. The skill stops the orchestrator first, then its helpers: a helper that stops sends its lead a notice, and that notice can start a stopped lead again. The audit then runs on git and the run folder alone.</span></li>
+</ol>
+<h3>After it ends: save and audit</h3><ol>
+<li value="22"><span class="n">22</span><span>The report is saved word for word into the run folder. A report without <code>End of report.</code> was cut short and is copied by hand from the agent's transcript; the agent is never asked to send it again. Then 12 checks test what the report claims against git, against the task's checks run again at the final commit (the tests, CI), and against the run folder. Example: the commits the report names must be exactly the new commits on the branch (see <a href="#checked">How the result is checked</a>).</span></li>
+<li value="23"><span class="n">23</span><span>A check failed: the task is not done. The main session can fix it in your conversation. A secret found in the pushed work comes to you first, before any new commit.</span></li>
+<li value="24"><span class="n">24</span><span>The failed check is run again after the fix.</span></li>
+<li value="25"><span class="n">25</span><span>Or a fresh orchestrator is briefed from the run folder, with the failed items (or the work a dead agent lost) as its task and a new run folder so the first report stays, and is counted against the limit again before it starts. Either way, the closing message still comes to you. It names each failed check and who takes it, and for a review the comment on the pull request says "Not ready to merge".</span></li>
+<li value="26"><span class="n">26</span><span>All checks pass. A question in the report that a written rule, a record or a practice already answers is decided, and listed with the words that answered it. This does not apply to the kinds that always come to you, such as a merge or a new dependency. The rest come to you one per message, each with options and a recommendation. For a review, the main session also runs the end-to-end tests itself when the pull request changes what they cover, since the agent may be unable to run them, and posts one comment on the pull request: "Ready to merge" with the commit and each check's result, or "Not ready to merge" with what is still needed and who gives it.</span></li>
+</ol>
+<h3>Continue, clean up, merge</h3><ol>
+<li value="27"><span class="n">27</span><span>Is work still left? For example, your answers need more changes, or a restart or a long pause cut the run short.</span></li>
+<li value="28"><span class="n">28</span><span>Yes: a fresh orchestrator is briefed from the run folder, and is counted against the limit again before it starts. The old one is not resumed: the skill's reason is that a resumed agent carries its whole history.</span></li>
+<li value="29"><span class="n">29</span><span>No: the skill removes the worktree itself, since it counts on nothing else to clean up a worktree made with plain git.</span></li>
+<li value="30"><span class="n">30</span><span>The orchestrator never merges. A merge needs you to type, in this conversation, that this pull request may merge. The review's "Ready to merge" comment is not that permission.</span></li>
+<li value="31"><span class="n">31</span><span>You said it may merge: the main session merges. When branches build on each other (each pull request's base is the branch below it), the lowest merges first, and each one only after you say that pull request may merge. Before an upper one merges, its base is moved to the main branch, the branch is synced, and the type checker, the tests and a search for removed names pass before the merge commit is pushed. After the merge, the run folders lose their large files (the reports, audits and decisions stay), and the merged branch is deleted.</span></li>
+<li value="32"><span class="n">32</span><span>You have not said it may merge yet, or there is no pull request: nothing merges; the branch and the pull request stay open.</span></li>
+</ol>
+</div>
+  </section>
+
+  <section id="report">
+    <h2>What the report holds</h2>
+    <p class="lead">The orchestrator's report always has the same sections, in this order, with "none" where one is empty.</p>
+    <table>
+      <thead><tr><th>Section</th><th>What it says</th></tr></thead>
+      <tbody>
+        <tr><td>Status</td><td>Done, partly done, or not done, and why</td></tr>
+        <tr><td>Branch, Commits</td><td>The branch and every commit it made</td></tr>
+        <tr><td>Checks</td><td>Each check the brief named, and its result</td></tr>
+        <tr><td>Limits, Not covered</td><td>What the checks it ran do not prove, and which parts of the task it did not reach</td></tr>
+        <tr><td>NOT RUN</td><td>Every step or helper that did not run</td></tr>
+        <tr><td>Deviations from the brief</td><td>Where it did something other than the brief said</td></tr>
+        <tr><td>Next</td><td>What it would do next</td></tr>
+        <tr><td>Decided without you</td><td>Each point it settled without you (by a written rule, by the question resolver, or by an advisor model acting for you), with what it rests on</td></tr>
+        <tr><td>Questions for you</td><td>What no rule answered</td></tr>
+      </tbody>
+    </table>
+    <p class="lead" style="margin-top: 14px">The last line is always <code>End of report.</code>, so a report cut short is easy to spot.</p>
+  </section>
+
+  <section id="checked">
+    <h2>How the result is checked</h2>
+    <p class="lead">The report is the agent's claim. Each item below checks it against something the agent cannot write.</p>
+    <table>
+      <thead><tr><th>Check</th><th>Against</th></tr></thead>
+      <tbody>
+        <tr><td>The commits in the report are the commits on the branch, and no others</td><td><code>git log</code> on the pushed branch</td></tr>
+        <tr><td>Each commit is on the agent's own branch, under the repository's identity</td><td><code>git log</code> author and committer</td></tr>
+        <tr><td>No merge, no rewritten history, the pull request still open</td><td><code>git log --merges</code>, an ancestry check, the pull request state</td></tr>
+        <tr><td>Nothing left uncommitted, nothing written into your main checkout</td><td><code>git status</code> in both copies</td></tr>
+        <tr><td>Nothing downloaded from the internet</td><td>The commands in the agents' transcripts</td></tr>
+        <tr><td>Every changed file is inside the brief's bounds</td><td>The full diff, read</td></tr>
+        <tr><td>The checks pass at the last commit</td><td>The checks run again, or CI on the pushed commit</td></tr>
+        <tr><td>Every part of the task is in a commit or under "Not covered"</td><td>The brief against the diff</td></tr>
+        <tr><td>No personal data or secret left the machine</td><td>A search over the diff, the commit messages and the posted comments</td></tr>
+      </tbody>
+    </table>
+    <p class="lead" style="margin-top: 14px">These rows group the checks that compare the report with git, the diff and the checks; the other three are saving the report whole, passing the gaps to you, and removing the worktree.</p>
+    <p class="lead">A failed check means the task is not done: it is fixed in your conversation, or a fresh orchestrator gets the failed items as its task.</p>
+  </section>
+
+  <section id="asked">
+    <h2>What you are asked</h2>
+    <p class="lead">At two moments, and for one act that is only yours. While the agent runs, it cannot ask you anything, but its permission prompts still appear in your conversation.</p>
+    <div class="branches">
+      <div class="branch ask"><div class="when">Before the start</div><div class="then">Every decision the task still needs</div><div class="example">The fixes touch the public API. Add them to the same pull request or open a new one?</div></div>
+      <div class="branch ask"><div class="when">After the end</div><div class="then">Only what no rule answered</div><p>Questions that no written rule, earlier decision or practice answered, one per message, each with options and a recommendation.</p></div>
+      <div class="branch stop"><div class="when">The merge</div><div class="then">Only on your words</div><p>The orchestrator never merges. A merge needs your words in the conversation.</p></div>
+    </div>
+  </section>
+
+  <section id="roles">
+    <h2>Who does what</h2>
+    <table>
+      <thead><tr><th>Role</th><th>What it does</th><th>What it may not do</th></tr></thead>
+      <tbody>
+        <tr><td>Main session</td><td>Decides, writes the brief, counts the agents, checks the report, talks to you</td><td>Take the report as true before the check</td></tr>
+        <tr><td>Orchestrator</td><td>Runs the whole task with its own helpers in its own copy; commits and pushes to its own branch; may open and comment on its own pull request</td><td>Merge, force-push, push to the default branch or another branch, download files</td></tr>
+        <tr><td>Helpers</td><td>The work the task's own procedure gives them (reviewers, fixers, checkers)</td><td>Go past what the orchestrator's brief allows</td></tr>
+        <tr><td>Question resolver</td><td>Answers one open question from the evidence and the rules</td><td>Decide a question that only you can decide</td></tr>
+        <tr><td>You</td><td>Decisions before the start, open questions after the end, the merge</td><td>Nothing: you decide what no rule decides</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="different">
+    <h2>What makes it different</h2>
+    <div class="choices">
+      <div class="choice"><h3>Only decided tasks go out</h3><p>A background agent cannot ask you. An open decision would either stop it or get guessed.</p></div>
+      <div class="choice"><h3>One orchestrator per task, with its own helpers</h3><p>Your conversation keeps one line of contact and one report, however many agents the task needs.</p></div>
+      <div class="choice"><h3>A separate copy on its own branch</h3><p>The agent's work cannot mix with yours or with another agent's.</p></div>
+      <div class="choice"><h3>Agents counted before the start</h3><p>A task that starts helpers of its own can cross the limit on agents running at once without anyone noticing.</p></div>
+      <div class="choice"><h3>The brief is a file, written from a template</h3><p>The same fields every time, and the run folder keeps what the agent was told.</p></div>
+      <div class="choice"><h3>A report with fixed sections and a closing line</h3><p>Empty sections say "none", so silence never reads as "fine", and a cut report shows.</p></div>
+      <div class="choice"><h3>The report is checked against git and the checks</h3><p>"Done" counts only when the branch, the diff and a check run say so.</p></div>
+      <div class="choice"><h3>Questions filtered before they reach you</h3><p>A written rule, an earlier decision or a resolver answers what it can; you see the rest.</p></div>
+      <div class="choice"><h3>A fresh orchestrator rather than a resumed one</h3><p>A resumed agent carries its whole history; a fresh one starts from the run folder's records.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    The same content as text: <a href="README.md">README.md</a>. The skill itself is not published in this repository; this page describes its design in general terms, so you can build a hand-off of your own or judge whether one would help you.
+  </footer>
+</main>
+</body>
+</html>

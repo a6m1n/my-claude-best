@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>create-ticket-v3: how it works</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">&larr; All skill designs</a>
+  <h1>create-ticket-v3</h1>
+  <p class="tagline">Turns a few lines of notes into a Jira ticket fast: usually one user story, or a bug, a task or an epic. When the notes hold several separate items, it offers to split them, and on request it drafts several tickets at once. You see every draft and every field before anything is written, and only your yes creates it.</p>
+  <span class="command">/create-ticket-v3 members can't see which loans are due soon, they find out only from the fine. also the renew button is grey on mobile. sam can take it</span>
+
+  <nav class="toc">
+    <a href="#problem">The problem</a>
+    <a href="#fit">When to use it</a>
+    <a href="#run">How a run goes</a>
+    <a href="#types">Which type it picks</a>
+    <a href="#split">When it offers a split</a>
+    <a href="#batches">The three batch kinds</a>
+    <a href="#fields">Which fields it fills</a>
+    <a href="#asked">What you are asked</a>
+    <a href="#roles">Who does what</a>
+    <a href="#different">What makes it different</a>
+  </nav>
+
+  <section id="problem">
+    <h2>The problem it solves</h2>
+    <p class="lead">You paste a few lines into the chat and ask Claude for a ticket. A ticket comes back, and you cannot tell which parts came from your notes. The skill is built against five ways such a ticket can go wrong.</p>
+    <div class="pairs">
+      <div class="pair">
+        <div class="without"><span class="label">Ask for a ticket</span><b>It invents what the notes do not say.</b> A number in a criterion, a cause for a bug, a reason nobody gave.</div>
+        <div class="with"><span class="label">create-ticket-v3</span>Every sentence needs a source in the notes, the code or Jira. A missing fact is named under Flags, never guessed.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Ask for a ticket</span><b>It writes a plan instead of a ticket.</b> Implementation steps and sub-tasks fill the body.</div>
+        <div class="with"><span class="label">create-ticket-v3</span>The ticket states the result, never the route. The skill leaves the breakdown to the developers who take the ticket; sub-tasks are drafted only when you list them.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Ask for a ticket</span><b>Fields are filled in silence.</b> A priority or an assignee appears with no word about where it came from.</div>
+        <div class="with"><span class="label">create-ticket-v3</span>A numbered list shows every field with its source. A value it must not guess becomes a numbered question.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Ask for a ticket</span><b>It gets the size wrong.</b> Two separate pieces of work land in one ticket, or one result is cut into tickets by its steps or layers.</div>
+        <div class="with"><span class="label">create-ticket-v3</span>Items that stand on their own are offered as a split on one line. The parts of one result stay one ticket.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Ask for a ticket</span><b>It writes to Jira before you looked.</b> Or it reads "looks fine, but…" as a yes.</div>
+        <div class="with"><span class="label">create-ticket-v3</span>Nothing is written before a clear yes with no question open. Any other reply shows the whole preview again.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fit">
+    <h2>When to use it, and when not</h2>
+    <div class="fit">
+      <div class="yes">
+        <h3>Use it for</h3>
+        <ul>
+          <li>A few lines of notes, in any language, that should become one story, bug or task, fast.</li>
+          <li>Notes that hold several separate items, such as a bug and a new feature, which you want as separate tickets in one pass.</li>
+          <li>An epic, an epic and its stories, or new stories under an epic that already exists.</li>
+          <li>The sub-tasks you name, under a new or an existing story, task or bug.</li>
+          <li>A ticket where you want to see every field and where its value came from before it exists.</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>Not for</h3>
+        <ul>
+          <li>A change to an issue that already exists.<span class="instead">Edit it in Jira. The skill stops on this ask.</span></li>
+          <li>Work that needs a plan, research or a review first.<span class="instead">Do that work first. The skill writes no plan and does no deep research.</span></li>
+          <li>Sub-tasks proposed for you.<span class="instead">Leave them to the team that takes the ticket. The skill drafts only the sub-tasks you list by name.</span></li>
+          <li>An epic broken into stories for you.<span class="instead">List the stories yourself, one line each, or leave them to refinement. The skill never invents stories.</span></li>
+          <li>No Jira Cloud site reachable through the Atlassian MCP.<span class="instead">Connect it first. Without it the skill drafts, but cannot create.</span></li>
+          <li>You already have the full ticket text and every field value, and want it sent as written.<span class="instead">Create it in Jira's own form. The skill rewrites the body into the shape of its type and shows a preview first.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>How a run goes</h2>
+    <p class="lead">You run <code>/create-ticket-v3 members can't see which loans are due soon, they find out only from the fine. also the renew button is grey on mobile. sam can take it</code>. These notes hold two separate items, a new result and a failure, so the preview will offer to split them. The diagram follows the skill's own steps (1 to 6). Each box is coloured by who does the step, and each arrow has a number: the list under the diagram says what happens on it.</p>
+    <div class="legend">
+      <span class="chip you">You</span>
+      <span class="chip main">Main session (your conversation)</span>
+      <span class="chip agent">Agent, fresh context</span>
+      <span class="chip stop">Stop</span>
+      <span class="chip" style="color: var(--accent)">Orange arrow: back into the loop</span>
+      <span class="chip" style="color: var(--muted)">Dashed arrow: optional, only on your word</span>
+    </div>
+    <div class="diagram">
+<svg viewBox="0 0 1060 1414" role="img" aria-labelledby="ct-title"><title id="ct-title">How a create-ticket-v3 run goes, arrow by arrow</title>
+<defs><marker id="ct-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="ct-ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow loop" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<path class="dg-edge " d="M510,72 L510,102" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M335,142 L270,142" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M510,182 L510,214" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M510,270 L510,302" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M680,322 L790,322" marker-end="url(#ct-ah)"/>
+<path class="dg-edge loop" d="M790,356 L680,356" marker-end="url(#ct-ahl)"/>
+<path class="dg-edge " d="M510,374 L510,408" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M680,446 L790,446" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M905,406 L905,374" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M820,486 L820,508 L640,508 L640,530" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M510,484 L510,530" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M340,562 L270,562" marker-start="url(#ct-ah)" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M680,562 L790,562" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M510,594 L510,628" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M680,652 L905,652 L905,740" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M510,700 L510,736" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M510,808 L510,838" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M905,804 L905,896 L623,896" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M510,926 L510,1044" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M345,882 L270,882" marker-end="url(#ct-ah)"/>
+<path class="dg-edge loop" d="M150,842 L150,790 L340,790" marker-end="url(#ct-ahl)"/>
+<path class="dg-edge " d="M440,907 L440,988 L270,988" marker-end="url(#ct-ah)"/>
+<path class="dg-edge loop" d="M30,988 L14,988 L14,764 L340,764" marker-end="url(#ct-ahl)"/>
+<path class="dg-edge loop" d="M675,882 L730,882 L730,790 L680,790" marker-end="url(#ct-ahl)"/>
+<path class="dg-edge " d="M580,907 L580,978 L790,978" marker-start="url(#ct-ah)" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M510,1116 L510,1140" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M510,1220 L510,1252" marker-end="url(#ct-ah)"/>
+<path class="dg-edge " d="M345,1180 L270,1180" marker-end="url(#ct-ah)"/>
+<path class="dg-edge loop" d="M150,1148 L150,1036" marker-end="url(#ct-ahl)"/>
+<path class="dg-edge dash" d="M510,1304 L510,1346" marker-end="url(#ct-ah)"/>
+<g class="dg-node you"><rect x="340" y="20" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="43">You start the run</text><text class="dg-sub" x="510.0" y="59">/create-ticket-v3 &lt;your notes&gt;</text></g>
+<g class="dg-node main"><polygon points="510.0,102 685,142.0 510.0,182 335,142.0"/><text class="dg-title" x="510.0" y="139">Do the notes ask to change</text><text class="dg-sub" x="510.0" y="155">an issue that already exists?</text></g>
+<g class="dg-node stop"><rect x="30" y="116" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="139">Stop · not a new issue</text><text class="dg-sub" x="150.0" y="155">it only creates; one line says so</text></g>
+<g class="dg-node main"><rect x="340" y="214" width="340" height="56" rx="9"/><text class="dg-title" x="510.0" y="239">Find the Jira project · step 1</text><text class="dg-sub" x="510.0" y="255">the Jira site and the project key; no question yet</text></g>
+<g class="dg-node main"><rect x="340" y="302" width="340" height="72" rx="9"/><text class="dg-title" x="510.0" y="327">Read the notes · step 2</text><text class="dg-sub" x="510.0" y="343">pick the type, look for separate</text><text class="dg-sub" x="510.0" y="359">items, list what is missing</text></g>
+<g class="dg-node you"><rect x="790" y="278" width="230" height="96" rx="9"/><text class="dg-title" x="905.0" y="299">You add what is missing</text><text class="dg-sub" x="905.0" y="315">the notes do not say what is wrong</text><text class="dg-sub" x="905.0" y="331">or needed, or you ask for items</text><text class="dg-sub" x="905.0" y="347">under ABC-12 (an existing epic)</text><text class="dg-sub" x="905.0" y="363">but name none</text></g>
+<g class="dg-node main"><polygon points="510.0,408 680,446.0 510.0,484 340,446.0"/><text class="dg-title" x="510.0" y="443">Did you ask for several</text><text class="dg-sub" x="510.0" y="459">tickets at once (a batch)?</text></g>
+<g class="dg-node main"><rect x="790" y="406" width="230" height="80" rx="9"/><text class="dg-title" x="905.0" y="427">Batch · three kinds</text><text class="dg-sub" x="905.0" y="443">an epic and its stories,</text><text class="dg-sub" x="905.0" y="459">several tickets, or the</text><text class="dg-sub" x="905.0" y="475">sub-tasks you list</text></g>
+<g class="dg-node main"><rect x="340" y="530" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="551">Gather context · step 3</text><text class="dg-sub" x="510.0" y="567">reads Jira: work types, fields, defaults,</text><text class="dg-sub" x="510.0" y="583">people; fills each field by a fixed rule</text></g>
+<g class="dg-node agent"><rect x="30" y="530" width="240" height="64" rx="9"/><text class="dg-title" x="150.0" y="551">Code scout (optional)</text><text class="dg-sub" x="150.0" y="567">runs only if the code holds a</text><text class="dg-sub" x="150.0" y="583">missing fact; returns it with file:line</text></g>
+<g class="dg-node stop"><rect x="790" y="530" width="230" height="64" rx="9"/><text class="dg-title" x="905.0" y="551">Stop · no such work type</text><text class="dg-sub" x="905.0" y="567">the project has no epic type, or</text><text class="dg-sub" x="905.0" y="583">no sub-task type for your sub-tasks</text></g>
+<g class="dg-node main"><rect x="340" y="628" width="340" height="72" rx="9"/><text class="dg-title" x="510.0" y="653">Draft, then check once · step 4</text><text class="dg-sub" x="510.0" y="669">what result is wanted, not how to build it:</text><text class="dg-sub" x="510.0" y="685">no plan, no sub-tasks it invents; one self-check</text></g>
+<g class="dg-node agent"><rect x="790" y="740" width="230" height="64" rx="9"/><text class="dg-title" x="905.0" y="761">Search for duplicates</text><text class="dg-sub" x="905.0" y="777">a read-only agent in the background</text><text class="dg-sub" x="905.0" y="793">finds the same or related issues</text></g>
+<g class="dg-node main"><rect x="340" y="736" width="340" height="72" rx="9"/><text class="dg-title" x="510.0" y="761">Preview · step 5</text><text class="dg-sub" x="510.0" y="777">the ticket draft, then numbered fields</text><text class="dg-sub" x="510.0" y="793">and questions, and a split offer if needed</text></g>
+<g class="dg-node you"><polygon points="510.0,838 675,882.0 510.0,926 345,882.0"/><text class="dg-title" x="510.0" y="887">What did you reply?</text></g>
+<g class="dg-node main"><rect x="30" y="842" width="240" height="80" rx="9"/><text class="dg-title" x="150.0" y="863">Answer to the split offer</text><text class="dg-sub" x="150.0" y="879">&#x27;split&#x27;: one ticket per item;</text><text class="dg-sub" x="150.0" y="895">&#x27;epic&#x27;: a new epic over them;</text><text class="dg-sub" x="150.0" y="911">&#x27;one ticket&#x27;: the rest are not created</text></g>
+<g class="dg-node main"><rect x="30" y="952" width="240" height="84" rx="9"/><text class="dg-title" x="150.0" y="975">Apply your change</text><text class="dg-sub" x="150.0" y="991">&#x27;3 High&#x27; sets field 3 to High;</text><text class="dg-sub" x="150.0" y="1007">&#x27;S2 drop&#x27; removes batch item S2;</text><text class="dg-sub" x="150.0" y="1023">nothing left to create: stop</text></g>
+<g class="dg-node main"><rect x="790" y="952" width="230" height="52" rx="9"/><text class="dg-title" x="905.0" y="975">Ask what to change</text><text class="dg-sub" x="905.0" y="991">an unclear reply is never a yes</text></g>
+<g class="dg-node main"><rect x="340" y="1044" width="340" height="72" rx="9"/><text class="dg-title" x="510.0" y="1069">Create · step 6</text><text class="dg-sub" x="510.0" y="1085">through the Atlassian MCP; a batch:</text><text class="dg-sub" x="510.0" y="1101">the parent first, then S1, S2, …</text></g>
+<g class="dg-node main"><polygon points="510.0,1140 675,1180.0 510.0,1220 345,1180.0"/><text class="dg-title" x="510.0" y="1177">Did Jira return a key</text><text class="dg-sub" x="510.0" y="1193">for every issue?</text></g>
+<g class="dg-node stop"><rect x="30" y="1148" width="240" height="64" rx="9"/><text class="dg-title" x="150.0" y="1169">Creating failed · waits for you</text><text class="dg-sub" x="150.0" y="1185">Jira&#x27;s error as it is;</text><text class="dg-sub" x="150.0" y="1201">no key: may exist, no retry</text></g>
+<g class="dg-node done"><rect x="340" y="1252" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="1275">Done · Created LIB-482</text><text class="dg-sub" x="510.0" y="1291">the key and the link; a batch lists every key</text></g>
+<g class="dg-node main"><rect x="340" y="1346" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="1369">Link on your word</text><text class="dg-sub" x="510.0" y="1385">&#x27;link 1&#x27; adds a Duplicate or Relates link</text></g>
+<g class="dg-badge"><circle cx="510" cy="87" r="10"/><text x="510" y="87">1</text></g>
+<text class="dg-label" x="276" y="130">yes</text>
+<g class="dg-badge"><circle cx="300" cy="142" r="10"/><text x="300" y="142">2</text></g>
+<text class="dg-label" x="526" y="203">no</text>
+<g class="dg-badge"><circle cx="510" cy="198" r="10"/><text x="510" y="198">3</text></g>
+<g class="dg-badge"><circle cx="510" cy="286" r="10"/><text x="510" y="286">4</text></g>
+<text class="dg-label" x="690" y="293">no problem</text>
+<text class="dg-label" x="690" y="310">stated</text>
+<g class="dg-badge"><circle cx="760" cy="322" r="10"/><text x="760" y="322">5</text></g>
+<g class="dg-badge"><circle cx="735" cy="356" r="10"/><text x="735" y="356">6</text></g>
+<g class="dg-badge"><circle cx="510" cy="391" r="10"/><text x="510" y="391">7</text></g>
+<text class="dg-label" x="700" y="436">yes</text>
+<g class="dg-badge"><circle cx="760" cy="446" r="10"/><text x="760" y="446">8</text></g>
+<text class="dg-label" text-anchor="end" x="888" y="386">under an existing parent,</text>
+<text class="dg-label" text-anchor="end" x="888" y="400">no items named</text>
+<g class="dg-badge"><circle cx="905" cy="390" r="10"/><text x="905" y="390">9</text></g>
+<g class="dg-badge"><circle cx="730" cy="508" r="10"/><text x="730" y="508">10</text></g>
+<text class="dg-label" x="526" y="520">no: one ticket</text>
+<g class="dg-badge"><circle cx="510" cy="507" r="10"/><text x="510" y="507">11</text></g>
+<g class="dg-badge"><circle cx="305" cy="562" r="10"/><text x="305" y="562">12</text></g>
+<text class="dg-label" x="686" y="584">type missing</text>
+<g class="dg-badge"><circle cx="760" cy="562" r="10"/><text x="760" y="562">13</text></g>
+<g class="dg-badge"><circle cx="510" cy="611" r="10"/><text x="510" y="611">14</text></g>
+<text class="dg-label" x="690" y="644">if Jira is connected</text>
+<g class="dg-badge"><circle cx="905" cy="696" r="10"/><text x="905" y="696">15</text></g>
+<g class="dg-badge"><circle cx="510" cy="718" r="10"/><text x="510" y="718">16</text></g>
+<g class="dg-badge"><circle cx="510" cy="823" r="10"/><text x="510" y="823">17</text></g>
+<text class="dg-label" x="918" y="866">found issues</text>
+<g class="dg-badge"><circle cx="905" cy="840" r="10"/><text x="905" y="840">18</text></g>
+<text class="dg-label" x="526" y="1012">a clear yes, no question open</text>
+<g class="dg-badge"><circle cx="510" cy="962" r="10"/><text x="510" y="962">19</text></g>
+<text class="dg-label" x="278" y="920">you answer the split offer</text>
+<g class="dg-badge"><circle cx="300" cy="882" r="10"/><text x="300" y="882">20</text></g>
+<g class="dg-badge"><circle cx="150" cy="816" r="10"/><text x="150" y="816">21</text></g>
+<text class="dg-label" x="300" y="980">an answer or a change</text>
+<g class="dg-badge"><circle cx="440" cy="950" r="10"/><text x="440" y="950">22</text></g>
+<g class="dg-badge"><circle cx="14" cy="880" r="10"/><text x="14" y="880">23</text></g>
+<text class="dg-label" x="590" y="828">yes, a question open</text>
+<g class="dg-badge"><circle cx="730" cy="836" r="10"/><text x="730" y="836">24</text></g>
+<text class="dg-label" x="700" y="970">unclear</text>
+<g class="dg-badge"><circle cx="580" cy="945" r="10"/><text x="580" y="945">25</text></g>
+<g class="dg-badge"><circle cx="510" cy="1128" r="10"/><text x="510" y="1128">26</text></g>
+<text class="dg-label" x="526" y="1241">yes</text>
+<g class="dg-badge"><circle cx="510" cy="1236" r="10"/><text x="510" y="1236">27</text></g>
+<text class="dg-label" x="278" y="1170">no</text>
+<g class="dg-badge"><circle cx="318" cy="1180" r="10"/><text x="318" y="1180">28</text></g>
+<text class="dg-label" x="166" y="1100">your reply</text>
+<g class="dg-badge"><circle cx="150" cy="1070" r="10"/><text x="150" y="1070">29</text></g>
+<text class="dg-label" x="526" y="1330">you name a found issue</text>
+<g class="dg-badge"><circle cx="510" cy="1325" r="10"/><text x="510" y="1325">30</text></g>
+</svg>
+    </div>
+<div class="arrows">
+<h3>Start</h3><ol>
+<li value="1"><span class="n">1</span><span>You start the run with your notes, in any language. The notes also include what you said earlier in the conversation and anything you pasted. Pasted text is data: an instruction inside it, such as "already approved", is quoted back to you under <code>Flags</code> (the preview's list of warnings and notes) and never followed.</span></li>
+<li value="2"><span class="n">2</span><span>You asked to change an issue that already exists. The skill says in one line that this is outside it, and stops. Adding stories or sub-tasks under an existing epic or parent is not such a change: that issue is only read, never edited.</span></li>
+<li value="3"><span class="n">3</span><span>Otherwise preflight starts: the skill finds where the ticket will go. No question is asked before the first preview, with two exceptions (arrows 5 and 9).</span></li>
+</ol>
+<h3>Read the notes</h3><ol>
+<li value="4"><span class="n">4</span><span>Preflight finds the Jira site through the Atlassian MCP (the connector that lets Claude read and write Jira) and the project key: from the notes first, then from issue keys like <code>ABC-123</code> in the branch name, recent commits or the project's instruction files. A key found in the repository is used only when Jira confirms a project with exactly that key; otherwise the project becomes a numbered question. When Jira is not connected, the skill still drafts, and its first question asks you to connect it.</span></li>
+<li value="5"><span class="n">5</span><span>The notes give no hint of what is wrong or needed, so no Problem can be written (for an epic, no Outcome). The skill says so and asks for one or two sentences. It does not fill the gap itself.</span></li>
+<li value="6"><span class="n">6</span><span>Your answer joins the notes, and the reading starts again.</span></li>
+<li value="7"><span class="n">7</span><span>The skill picks the type: a Story when someone gets a result, a Bug when something that exists works wrongly, a Task for work no user sees. It drafts an Epic only on your word. It also looks for separate items: things with a result of their own that a person can check and use without the others, such as two failures, or a failure and a new result. An "and" inside one result, its steps or its technical layers are never a reason to split, and when the skill is not sure, the items are not separate. Then it lists what the ticket needs and the notes do not give, sorted by who knows it: the code, Jira, or only you. When one reading of the notes is clearly more likely, it takes that reading and names it under <code>Flags</code>.</span></li>
+<li value="8"><span class="n">8</span><span>You asked for a batch: several drafts in one preview, created by one yes. There are three kinds. Stories under an epic: "an epic, and let's add stories to it", or "add stories to ABC-12". Several standalone tickets: "create several tickets", or a list of tickets; this is a split, drafted at once with no <code>Split:</code> line (the line under a draft that offers to make separate tickets). Sub-tasks you list by name: "story X with sub-tasks A, B", or "add sub-tasks to ABC-7". "Create an epic" alone makes the epic and nothing more.</span></li>
+<li value="9"><span class="n">9</span><span>The batch goes under an existing epic or parent such as ABC-12, and your notes name no items. The skill reads ABC-12 first, then asks for the list, one line each, before any preview. It never invents stories or sub-tasks.</span></li>
+<li value="10"><span class="n">10</span><span>Each item takes its type by the same rules as a single ticket (arrow 7), or from your word. A child sits exactly one level below its parent: an epic holds stories, tasks and bugs, and a story, task or bug holds sub-tasks. "Story X with tasks A, B" therefore means sub-tasks. When you ask for a structure that breaks this rule, the skill drafts the closest one that fits (a Task under a Story becomes a sub-task, a sub-task under an epic becomes a Task) and says so under <code>Flags</code>. You asked for several tickets but the notes hold one result: it drafts one ticket and asks for your list of tickets, or 'one ticket'. It never cuts one result into parts itself. With a new epic or parent and no items named, it drafts the parent and asks for the list as a numbered question in the preview.</span></li>
+<li value="11"><span class="n">11</span><span>Otherwise the run makes one ticket, an epic included when you asked for one.</span></li>
+</ol>
+<h3>Gather and draft</h3><ol>
+<li value="12"><span class="n">12</span><span>The skill reads Jira itself: the work types the project offers with their levels, every field of each drafted type with its default and allowed values, the person the notes name, and you as the current user. One code scout (an agent with a fresh context) runs only when three things hold: the session is inside the repository the ticket is about, a fact is missing that the code holds, and that fact changes what the ticket says. It is read-only, stops after about ten tool calls, and returns facts with <code>file:line</code>, for example "the account page lists loans without due dates — <code>web/account/loans.tsx:27</code>". There is never a second scout. When it fails, the ticket is written from the notes alone.</span></li>
+<li value="13"><span class="n">13</span><span>The project has no epic type, so it cannot hold an epic or a story batch, or it has no sub-task type and you asked for sub-tasks. The skill says so in one line and stops. For any other type the project lacks, it drafts with the closest type it offers and asks about it.</span></li>
+<li value="14"><span class="n">14</span><span>The draft is in English whatever language the notes use; a label or an error text the product shows stays as shown, in quotes. Then one check, with no agent and no loop: one role and one goal (one "As a … I want …"), and a second clearly separate item stays out of the draft (on the <code>Split:</code> line, as its own batch item, or under <code>Flags</code>); a "so that" reason from the notes, or none and a flag; criteria a person can check as yes or no, with a number only when the notes give one; at most five criteria, or a flag "may be too big for one story". An epic is checked for one outcome and one to three "Done when" signals instead. In a batch, every title must differ from its siblings by its result.</span></li>
+<li value="15"><span class="n">15</span><span>In the same turn, when Jira is connected and the project is known, an agent starts in the background to look for duplicate or related issues. It runs at most two Jira searches and never writes. The preview does not wait for it. When the draft has a <code>Split:</code> line, or the run is a split, the one search covers every item, and each candidate names the item it matches. A later 'split' needs no second search.</span></li>
+<li value="16"><span class="n">16</span><span>The preview shows the draft between two horizontal lines and nothing else there. It opens with <code>Type:</code>, then <code>Summary:</code>, then the body. A batch shows the parent (a new one in full, an existing one as one line), then the list of titles such as <code>S1. [Story] Member sees which loans are due soon</code>, then each item's body. Under the second line come the <code>Split:</code> line when the notes hold separate items, the numbered <code>Fields</code>, each with where its value came from, the numbered <code>Questions</code>, <code>Flags</code>, <code>Empty sections</code> (a new epic only), the <code>Context</code> line (what was read), and the closing line. The labels follow your language; the ticket stays in English.</span></li>
+<li value="17"><span class="n">17</span><span>The skill stops and waits for you.</span></li>
+<li value="18"><span class="n">18</span><span>When the search finds candidates, a short message lists them: "1. S1 — LIB-310 — Show due dates on the loans list — To Do — related — same account page, due dates only. Say which to link (for example 'link 1'), or ignore this." For a single ticket, a 'link 1' works like a change: the next preview shows it as a <code>Links</code> line, so your yes covers it. In a batch, links wait until the issues exist. When nothing is found, nothing is said.</span></li>
+</ol>
+<h3>Your reply</h3><ol>
+<li value="19"><span class="n">19</span><span>A clear yes ("yes", "create", "ok", "go") with no question open creates what the preview showed. A field line you did not change counts as accepted. A yes to a preview with a <code>Split:</code> line creates only the draft (S1): the other items on the line are not created. Silence or a new topic is never a yes.</span></li>
+<li value="20"><span class="n">20</span><span>You answer the <code>Split:</code> line: 'split', 'epic' when the line offers it, or 'one ticket'.</span></li>
+<li value="21"><span class="n">21</span><span>'split' brings a split: the draft as S1, then each other item in its full shape. 'epic' brings a story batch: a new epic drafted from the notes, with the items as its children; a Bug stays a Bug. 'one ticket' drops the line and names each other item under <code>Flags</code> as <code>Bug "Renew button is grey on mobile": not in this ticket and not created; reply 'split' to add it</code>. Jira is read first for any type not read yet, and nothing is created in the same turn.</span></li>
+<li value="22"><span class="n">22</span><span>An answer or a change: by number ("10 Central", "3 High"), by item id ("S2 drop", "S3 Task", "S4" with a new title), new text, another type, site or project.</span></li>
+<li value="23"><span class="n">23</span><span>The skill applies it, reads Jira again when a type, the site, the project or a batch's parent changed, and shows the full preview again. It never creates in the same turn. Item ids are numbered again from S1. Dropping every story or sub-task leaves the new parent as a single ticket; under an existing parent it leaves nothing to create, so the skill says so and stops. Dropping all tickets of a split but one leaves a single ticket.</span></li>
+<li value="24"><span class="n">24</span><span>A yes while a question is still open brings the full preview again, with the question still open. Nothing is created.</span></li>
+<li value="25"><span class="n">25</span><span>A reply the skill cannot read as a yes or a change: it asks what to change, and your answer comes back to the same choice.</span></li>
+</ol>
+<h3>Create</h3><ol>
+<li value="26"><span class="n">26</span><span>The skill creates the issue through the Atlassian MCP with exactly what the preview showed, and sends only fields that have a value. A batch creates the new epic or parent first, when it has one, then each item in S order with that key as its parent; in a split, each ticket takes the parent the notes name, or none. An existing epic or parent is never edited.</span></li>
+<li value="27"><span class="n">27</span><span>Jira returned a key for every call. One line: <code>Created LIB-482: &lt;link&gt;</code>. After a yes to a preview with a <code>Split:</code> line it adds <code>· not created: S2 [Bug] Renew button is grey on mobile</code>. A story batch: <code>Created PAY-40: &lt;link&gt; · stories: PAY-41, PAY-42, PAY-43</code>. A split: <code>Created S1 LIB-510: &lt;link&gt; · S2 LIB-511: &lt;link&gt;</code>.</span></li>
+<li value="28"><span class="n">28</span><span>A call failed. Either Jira rejected it, and the skill shows Jira's exact error, changes nothing itself and asks for the value Jira wants; or the call timed out or returned no key, and the issue may exist, so the skill does not retry and gives the summary to search for. A batch stops at the first failed call and reports what was created and what was not. A single ticket with no key ends here.</span></li>
+<li value="29"><span class="n">29</span><span>Your reply brings a new preview: after a rejection, the value you give; in a batch, the items not yet created (one item left of a split shows as a single ticket). An item that returned no key stays out until you say "not there". When the new epic or parent itself returned no key, the skill first asks for its key, or "not there". A reply that drops the rest ends the run. Only a new yes creates anything.</span></li>
+<li value="30"><span class="n">30</span><span>After the issue exists, you can link a found issue: "link 1", or after a batch "link 1 to LIB-511". The skill first checks that the site offers the link type, then adds Duplicate or Relates. It never links on silence.</span></li>
+</ol>
+</div>
+  </section>
+
+  <section id="types">
+    <h2>Which type it picks</h2>
+    <p class="lead">The type decides the shape of the body. The draft opens with a <code>Type:</code> line above the Summary, and line 2 of <code>Fields</code> repeats the type with its reason, so one reply changes both: <code>2 Bug</code>.</p>
+    <table>
+      <thead><tr><th>The notes describe</th><th>Type</th><th>The body</th></tr></thead>
+      <tbody>
+        <tr><td>A result someone will get, an end user or a colleague</td><td>Story (the usual case)</td><td>User story ("As a … I want … so that …"), Problem, two or three acceptance criteria</td></tr>
+        <tr><td>Something that exists and works wrongly</td><td>Bug</td><td>Problem, Steps to reproduce (only when the notes or the code scout give them), Expected result, Actual result</td></tr>
+        <tr><td>Work no user sees: an upgrade, a clean-up, a question to answer in a time limit</td><td>Task</td><td>Problem, one to three acceptance criteria</td></tr>
+        <tr><td>One large outcome over several sprints</td><td>Epic, only when you ask</td><td>Problem, Outcome, Done when; Scope, Out of scope and Stories only when the notes give them</td></tr>
+      </tbody>
+    </table>
+    <ul>
+      <li><b>An epic only on your word.</b> When the notes look like one big result, the skill drafts the closest other type. When the project has an epic type, line 2 of <code>Fields</code> then ends with "this looks like an epic — reply '2 Epic' to draft it as one".</li>
+      <li><b>Two types fit equally.</b> It drafts the one higher in the table (a Story before a Bug) and asks about the other.</li>
+      <li><b>The project lacks the type.</b> It drafts with the closest type the project offers and asks. With no epic type there is no epic and no story batch, and with no sub-task type no sub-tasks: the skill says so and stops.</li>
+      <li><b>A child sits one level below its parent.</b> An epic holds stories, tasks and bugs; a story, task or bug holds sub-tasks. A Task under a Story becomes a sub-task, and a sub-task under an epic becomes a Task, with a line under <code>Flags</code>.</li>
+    </ul>
+    <p>Items of a story batch or a sub-task batch are shorter, because the parent already gives the reason:</p>
+    <table>
+      <thead><tr><th>Item</th><th>Its body</th></tr></thead>
+      <tbody>
+        <tr><td>A story in a batch</td><td>The user story and two criteria</td></tr>
+        <tr><td>A task in a batch</td><td>One or two sentences of Problem, one or two criteria</td></tr>
+        <tr><td>A sub-task</td><td>One or two sentences: what is done and what it is for; no criteria, no headings</td></tr>
+        <tr><td>A bug in any batch</td><td>The full Bug shape: Problem, Steps to reproduce, Expected result, Actual result</td></tr>
+        <tr><td>A ticket in a split</td><td>Its full shape, because no epic gives the reason</td></tr>
+      </tbody>
+    </table>
+    <p>Every Summary is a short statement with a verb, in the notes' own words, so a search finds it: "Member sees which loans are due soon", never "Loan due dates".</p>
+  </section>
+
+  <section id="split">
+    <h2>When it offers a split</h2>
+    <p class="lead">An item is separate when it has a result of its own that a person can check and use without the other items. When the notes clearly hold two or more, the single-ticket preview drafts the one you asked for (or the first) and names the others on a <code>Split:</code> line, each with its type and a ready title.</p>
+    <table>
+      <thead><tr><th>The notes hold</th><th>The split it offers</th></tr></thead>
+      <tbody>
+        <tr><td>Two or more failures of something that exists</td><td>One Bug each</td></tr>
+        <tr><td>A failure of something that exists, and a new result</td><td>A Bug and a Story (or a Task)</td></tr>
+        <tr><td>Results for different roles, or with different reasons</td><td>One Story each</td></tr>
+        <tr><td>Work no user sees that the other items do not need</td><td>A Task next to them</td></tr>
+      </tbody>
+    </table>
+    <p>These never start a split, so the notes stay one ticket: an "and", "or" or "also" inside one result; the steps, paths, rules or data variants of one result; technical layers, and technical work the result needs; a part that gives nothing of value alone; a result that is only big (that gets the epic hint); a defect in work not done yet. When the skill is not sure, the items are not separate.</p>
+    <div class="example">Split: the notes hold 2 separate items: S1 [Story] Member sees which loans are due soon (this draft); S2 [Bug] Renew button is grey on mobile. Reply 'split' to draft them as 2 tickets.</div>
+    <table>
+      <thead><tr><th>Your reply</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>yes</td><td>Only the draft (S1) is created. The result line names the items that were not created.</td></tr>
+        <tr><td>split</td><td>The next preview is a split: S1 and every other item in its full shape.</td></tr>
+        <tr><td>epic</td><td>Offered only when the items serve one need and the project has an epic type. The next preview is a new epic with the items under it; a Bug stays a Bug.</td></tr>
+        <tr><td>one ticket</td><td>The <code>Split:</code> line goes, and each other item is named under <code>Flags</code>, with "reply 'split' to add it".</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="batches">
+    <h2>The three batch kinds</h2>
+    <p class="lead">A batch is several drafts in one preview, created by one yes. It starts only from your request or from your 'split' or 'epic' reply. The items carry the ids <code>S1</code>, <code>S2</code>, … so you can change one with <code>S2 drop</code> or <code>S3 Task</code>.</p>
+    <table>
+      <thead><tr><th>Kind</th><th>Starts when you say</th><th>What the preview holds</th><th>Created in this order</th></tr></thead>
+      <tbody>
+        <tr><td>Story batch</td><td>"an epic, and let's add stories to it", "add stories to ABC-12", or 'epic' to the split offer</td><td>A new epic in full, or <code>Epic: ABC-12 — … (exists; not changed)</code>; then the stories</td><td>The new epic, then each story with the epic as parent</td></tr>
+        <tr><td>Split</td><td>"create several tickets", a list of tickets, or 'split' to the split offer</td><td>The tickets, each in its full shape; no parent of their own</td><td>Each ticket in S order</td></tr>
+        <tr><td>Sub-task batch</td><td>"story X with sub-tasks A, B", "add sub-tasks to ABC-7", or tasks you name under a story, task or bug</td><td>A new parent in full, or <code>Parent: ABC-7 — … (exists; not changed)</code>; then only the sub-tasks you listed</td><td>The new parent, then each sub-task under it</td></tr>
+      </tbody>
+    </table>
+    <p>The titles come first, as one list (<code>S1. [Story] Member pays a fine by card on the account page</code>), so you read what each item delivers before any body. A batch stops at the first call Jira rejects or that returns no key, and reports what was created and what was not.</p>
+  </section>
+
+  <section id="fields">
+    <h2>Which fields it fills</h2>
+    <p class="lead">Each field gets its value by one rule, and the preview shows the value with its source. A value the skill cannot fill and must not guess becomes a numbered question.</p>
+    <table>
+      <thead><tr><th>Field</th><th>Where the value comes from</th><th>When it stays empty or becomes a question</th></tr></thead>
+      <tbody>
+        <tr><td>Project</td><td>The notes, or issue keys in the branch, the commits or the instruction files, confirmed by Jira</td><td>No key found, or Jira has no project with that key: a question</td></tr>
+        <tr><td>Type</td><td>What the notes describe (the type table), or your word</td><td>Two types fit equally: the one higher in the table, and a question about the other</td></tr>
+        <tr><td>Priority</td><td>The urgency the notes state, mapped to Jira's allowed values; otherwise Jira's default</td><td>Neither: a question</td></tr>
+        <tr><td>Assignee</td><td>The person the notes name, when exactly one Jira account matches; when the notes name nobody, you</td><td>Several or no matches: a question with the matches</td></tr>
+        <tr><td>Component</td><td>A component whose description clearly matches the ticket</td><td><code>not set</code></td></tr>
+        <tr><td>Labels, Fix version</td><td>Only the notes (in a story or sub-task batch, also the parent)</td><td><code>not set</code></td></tr>
+        <tr><td>Parent</td><td>Only the epic or issue the notes name; in a story or sub-task batch, the batch's parent</td><td><code>not set</code></td></tr>
+        <tr><td>Fields Jira requires</td><td>Jira's default value</td><td>No default: a question with Jira's options</td></tr>
+        <tr><td>Links</td><td>Only a link you asked for, in a single ticket</td><td>No line</td></tr>
+      </tbody>
+    </table>
+    <p>A preview shows them like this (invented values):</p>
+    <div class="example">Fields:<br>1. Project: LIB (from the repository)<br>2. Type: Story (the notes ask for something a member will be able to see)<br>3. Priority: Medium (Jira default)<br>4. Assignee: not set — question 11<br>5. Component: Member account (matches the component description)<br>...<br>9. Branch (required): not set — question 10<br><br>Questions:<br>10. The project requires the field Branch. Jira lists: Central, North, East.<br>11. "sam" matches two people: Sam Ortiz and Sam Lee. Which one?</div>
+    <p>The questions continue the numbers of the fields, so every number points at one line, and you answer "10 Central, 11 Sam Lee". A line you leave as it is stays.</p>
+    <p>In a batch the list changes shape:</p>
+    <ul>
+      <li><b>Story or sub-task batch.</b> The items inherit the parent's assignee, priority, component, labels and fix version, shown on one line: <code>9. Stories: parent the new epic; each inherits Priority Medium, Assignee Alex Kim (from the epic)</code>. A value you set for one item ends that line as <code>S2 Priority High (your reply)</code>.</li>
+      <li><b>Split.</b> There is no parent to inherit from and no <code>Type</code> line: each ticket's type is its <code>[Story]</code> or <code>[Bug]</code> tag. Each field is given once for all tickets, and a value for one ticket ends the line: <code>2. Priority: Medium (Jira default); S2 High (from the notes: "urgent")</code>.</li>
+    </ul>
+  </section>
+
+  <section id="asked">
+    <h2>What you are asked</h2>
+    <p class="lead">Almost everything is asked in one place: the preview. You answer by number in one reply.</p>
+    <div class="branches">
+      <div class="branch ask"><div class="when">Before the preview</div><div class="then">Only in two cases</div><p>The notes are too thin to say what is wrong, or you asked for stories or sub-tasks under an existing issue without naming them.</p><div class="example">Which stories should go under PAY-40? One line each.</div></div>
+      <div class="branch ask"><div class="when">In the preview</div><div class="then">What it must not guess</div><p>The site or the project, an unclear type, a type the project does not offer, a required field with no default, a name that matches several people or none, the list of stories for a new epic or of sub-tasks for a new parent, the list of tickets when you asked for several but the notes hold one result, a reading of the notes where a wrong guess would describe different work.</p><div class="example">"sam" matches two people: Sam Ortiz and Sam Lee. Which one?</div></div>
+      <div class="branch ask"><div class="when">Separate items</div><div class="then">The split offer</div><p>A plain yes creates only the draft. 'split', 'epic' or 'one ticket' redraws the preview.</p><div class="example">Reply 'split' to draft them as 2 tickets.</div></div>
+      <div class="branch go"><div class="when">To create</div><div class="then">A clear yes</div><p>Only with no question open. Any other reply shows the full preview again.</p></div>
+      <div class="branch ask"><div class="when">Found issues</div><div class="then">Link or ignore</div><p>When the background search finds a similar issue, a short message lists it.</p><div class="example">Say which to link (for example 'link 1'), or ignore this.</div></div>
+    </div>
+  </section>
+
+  <section id="roles">
+    <h2>Who does what</h2>
+    <p class="lead">The main session writes the drafts. At most two agents help, and neither may write to Jira.</p>
+    <table>
+      <thead><tr><th>Role</th><th>What it sees</th><th>What it may not do</th></tr></thead>
+      <tbody>
+        <tr><td>Main session (your conversation)</td><td>Your notes, Jira's projects, fields and people, what the agents return</td><td>Write to Jira before your yes, invent a fact, write a plan, propose sub-tasks</td></tr>
+        <tr><td>Code scout (optional, one per run)</td><td>The repository, and only the facts the ticket is missing</td><td>Edit anything, call Jira, judge the design or propose a fix; there is never a second one</td></tr>
+        <tr><td>Duplicate search (in the background)</td><td>The draft's summary and key terms, or each item's in a split; at most two Jira searches</td><td>Create, edit, comment on, move or link any issue</td></tr>
+        <tr><td>You</td><td>The preview, the questions, the split offer, the found issues</td><td>Nothing is created until you say yes</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="different">
+    <h2>What makes it different</h2>
+    <div class="choices">
+      <div class="choice"><h3>Every value has a source</h3><p>A sentence with no source in the notes, the code or Jira is removed; a missing fact is named under Flags instead of guessed.</p></div>
+      <div class="choice"><h3>The result, never the route</h3><p>The skill assumes that the developers who take the ticket break the work down and size it, so it writes no plan and proposes no sub-tasks. It drafts sub-tasks only when you list them. A fix your notes propose is kept under Proposed solution, marked as your idea.</p></div>
+      <div class="choice"><h3>A split is offered, never made on its own</h3><p>An "and" in the notes is a weak sign of two items, so the skill drafts one ticket and puts the split on one line. A wrong guess costs one ignored line, and 'split' costs one word.</p></div>
+      <div class="choice"><h3>One result stays one ticket</h3><p>The skill assumes that the team slices one result in refinement, close to the sprint that takes it, so it never cuts a result by its steps or layers.</p></div>
+      <div class="choice"><h3>An epic only on your word</h3><p>Where a big story ends and an epic begins is your call, so the skill suggests an epic and lets you decide.</p></div>
+      <div class="choice"><h3>The type opens the draft</h3><p>The type decides the shape of the body, and its numbered line in Fields lets one reply change it.</p></div>
+      <div class="choice"><h3>A child one level below its parent</h3><p>Jira's default levels are epic, then story, task or bug, then sub-task, so a structure that skips a level is redrawn to the closest one that fits.</p></div>
+      <div class="choice"><h3>More than five criteria is a flag</h3><p>A story that needs more than five criteria is likely more than one story, so the skill keeps the five most important and flags it.</p></div>
+      <div class="choice"><h3>A Summary with a verb</h3><p>The Summary is what a board card shows and what a search matches, so it says what the ticket delivers, in the words your notes use.</p></div>
+      <div class="choice"><h3>One preview, numbered lines</h3><p>Every value is visible and every number points at one line, so one reply can answer or change any of them.</p></div>
+      <div class="choice"><h3>A yes creates only what you saw</h3><p>Silence approves the values, never the create, and any change shows the whole preview again.</p></div>
+      <div class="choice"><h3>One pass, not research</h3><p>At most one agent reads the code, and the check runs once. A deeper question belongs before the ticket.</p></div>
+      <div class="choice"><h3>Duplicates in the background</h3><p>The preview never waits for the search, one search covers every item, and a link is made only when you name it.</p></div>
+      <div class="choice"><h3>No retry without a key</h3><p>The issue may already exist, so a retry could create it twice.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    The same content as text: <a href="README.md">README.md</a>. The skill is not published in this repository; this page describes how it works.
+  </footer>
+</main>
+</body>
+</html>

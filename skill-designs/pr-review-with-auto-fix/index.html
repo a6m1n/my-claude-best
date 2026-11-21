@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pr-review-with-auto-fix: how it works</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">&larr; All skill designs</a>
+  <h1>pr-review-with-auto-fix</h1>
+  <p class="tagline">Reviews your own pull request with a team of reviewers. Each takes one part of the change and one kind of problem. The skill checks every finding, fixes what holds up, and proves the fixes by running the project's checks.</p>
+  <span class="command">/pr-review-with-auto-fix 42</span>
+
+  <nav class="toc">
+    <a href="#problem">The problem</a>
+    <a href="#fit">When to use it</a>
+    <a href="#run">How a run goes</a>
+    <a href="#reviewers">Which reviewers run</a>
+    <a href="#priorities">MUST, SHOULD, NICE</a>
+    <a href="#asked">What you are asked</a>
+    <a href="#roles">Who does what</a>
+    <a href="#different">What makes it different</a>
+  </nav>
+
+  <section id="problem">
+    <h2>The problem it solves</h2>
+    <p class="lead">You ask Claude to review a pull request. You get twenty comments and cannot tell which are true. The skill is built against five ways such a review can go wrong.</p>
+    <div class="pairs">
+      <div class="pair">
+        <div class="without"><span class="label">Usual AI review</span><b>Comments without proof.</b> "This can return null": nobody opened the line to check.</div>
+        <div class="with"><span class="label">pr-review-with-auto-fix</span>The lead opens the cited line of every finding, keeps what holds up and rejects the rest.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Usual AI review</span><b>Files nobody read.</b> The reviewer got twenty files, read twelve, and the report does not say which eight it skipped.</div>
+        <div class="with"><span class="label">pr-review-with-auto-fix</span>A command checks that a reviewer or a tool covers every changed file, or names it as not reviewed. For every file, a reviewer writes <code>checked</code> or <code>not reviewed</code>.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Usual AI review</span><b>The description steers the review.</b> The pull request says "small refactor, no behaviour change", and the reviewer believes it.</div>
+        <div class="with"><span class="label">pr-review-with-auto-fix</span>The description is read last. Reviewers write their findings first.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Usual AI review</span><b>"Looks fixed" instead of a test run.</b> The fix is judged by reading, not by running the tests.</div>
+        <div class="with"><span class="label">pr-review-with-auto-fix</span>The project's checks run. Each new test must also fail on the old code.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Usual AI review</span><b>"Clean" when it means "nothing found".</b> You cannot tell a careful review from a quick one.</div>
+        <div class="with"><span class="label">pr-review-with-auto-fix</span>Every report lists what was not checked.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fit">
+    <h2>When to use it, and when not</h2>
+    <div class="fit">
+      <div class="yes">
+        <h3>Use it for</h3>
+        <ul>
+          <li>Right after you open a pull request, before you ask a person to review it.</li>
+          <li>A pull request that touches several areas or risky paths, where one reviewer would skim.</li>
+          <li>A repository with written rules and checks you can run locally. The reviewers judge by those rules, and the fixes are proven by those checks.</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>Not for</h3>
+        <ul>
+          <li>A one-line change.<span class="instead">Read it yourself. Even a run that finds nothing costs a planner, a reviewer and a full check run; a round with fixes adds fixers, a verifier and another check run.</span></li>
+          <li>Someone else's pull request, a fork or a dependency bot.<span class="instead">Nothing yet: the skill stops. Code you do not own needs decisions first: what reviewers may search on the web, and whether to trust instruction files from the other branch.</span></li>
+          <li>You want comments only, with no fixes.<span class="instead">A review that comments and changes nothing.</span></li>
+          <li>You need the pull request written.<span class="instead">A skill that drafts the description, such as <a href="../../skills/pr/SKILL.md">pr</a> in this repository.</span></li>
+          <li>A repository with no written rules and no runnable checks.<span class="instead">A plain review. Without rules the reviewers have nothing to judge by, and without checks nothing proves the fixes.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>How a run goes</h2>
+    <p class="lead">You run <code>/pr-review-with-auto-fix 42</code>, or <code>/pr-review-with-auto-fix</code> alone for the open pull request of your current branch. Every review runs in the background through <a href="../delegate-task/index.html">delegate-task</a>, a skill that hands one task to a background agent and checks its report against git. That agent is the lead, and your own conversation checks the lead's report. The diagram follows the skill's own steps (1 to 10). Each box is coloured by who does the step, and each arrow has a number: the list under the diagram says what happens on it.</p>
+    <div class="legend">
+      <span class="chip you">You</span>
+      <span class="chip main">Lead (the agent that runs the review)</span>
+      <span class="chip agent">Agent, fresh context</span>
+      <span class="chip check">Independent check</span>
+      <span class="chip stop">Stop</span>
+      <span class="chip" style="color: var(--accent)">Orange arrow: back into the loop</span>
+    </div>
+    <div class="diagram">
+<svg viewBox="0 0 1100 1900" role="img" aria-labelledby="pr-title"><title id="pr-title">How a pr-review-with-auto-fix run goes, arrow by arrow</title>
+<defs><marker id="pr-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="pr-ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow loop" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<path class="dg-edge " d="M510,84 L510,106" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M330,150 L270,150" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,194 L510,226" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,290 L510,322" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,386 L510,418" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,482 L510,514" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,578 L510,608" marker-end="url(#pr-ah)"/>
+<path class="dg-edge loop" d="M330,648 L305,648 L305,562 L340,562" marker-end="url(#pr-ahl)"/>
+<path class="dg-edge " d="M510,688 L510,718" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,782 L510,816" marker-end="url(#pr-ah)"/>
+<path class="dg-edge loop" d="M680,848 L720,848 L720,750 L680,750" marker-end="url(#pr-ahl)"/>
+<path class="dg-edge " d="M340,848 L270,848" marker-start="url(#pr-ah)" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,880 L510,908" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M360,944 L150,944 L150,1294" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,980 L510,1008" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M660,1044 L1050,1044 L1050,1538 L680,1538" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,1080 L510,1112" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,1176 L510,1208" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,1272 L510,1298" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M660,1334 L790,1334" marker-end="url(#pr-ah)"/>
+<path class="dg-edge loop" d="M905,1306 L905,1240 L680,1240" marker-end="url(#pr-ahl)"/>
+<path class="dg-edge " d="M360,1334 L270,1334" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,1370 L510,1406" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M340,1438 L200,1438 L200,1374" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,1470 L510,1502" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M340,1538 L100,1538 L100,1374" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,1574 L510,1604" marker-end="url(#pr-ah)"/>
+<path class="dg-edge loop" d="M340,1644 L12,1644 L12,530 L340,530" marker-end="url(#pr-ahl)"/>
+<path class="dg-edge " d="M680,1644 L790,1644" marker-end="url(#pr-ah)"/>
+<path class="dg-edge loop" d="M1020,1624 L1080,1624 L1080,546 L680,546" marker-end="url(#pr-ahl)"/>
+<path class="dg-edge " d="M905,1684 L905,1822 L680,1822" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M510,1684 L510,1790" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M420,1663 L420,1740 L270,1740" marker-end="url(#pr-ah)"/>
+<path class="dg-edge " d="M150,1798 L150,1822 L340,1822" marker-end="url(#pr-ah)"/>
+<path class="dg-edge dash" d="M440,1854 L440,1878 L60,1878 L60,1798" marker-end="url(#pr-ah)"/>
+<g class="dg-node you"><rect x="340" y="20" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="41">You start the review</text><text class="dg-sub" x="510.0" y="57">/pr-review-with-auto-fix 42 starts the lead:</text><text class="dg-sub" x="510.0" y="73">an agent that runs the review in the background</text></g>
+<g class="dg-node main"><polygon points="510.0,106 690,150.0 510.0,194 330,150.0"/><text class="dg-title" x="510.0" y="139">Can the review start?</text><text class="dg-sub" x="510.0" y="155">yours, open, base branch merged in,</text><text class="dg-sub" x="510.0" y="171">no hidden characters?</text></g>
+<g class="dg-node stop"><rect x="30" y="124" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="147">Stop · told in chat</text><text class="dg-sub" x="150.0" y="163">nothing reviewed or posted</text></g>
+<g class="dg-node main"><rect x="340" y="226" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="247">Copy the branch, first check run · step 1</text><text class="dg-sub" x="510.0" y="263">work in a separate copy; run the checks</text><text class="dg-sub" x="510.0" y="279">once to see what fails before the review</text></g>
+<g class="dg-node main"><rect x="340" y="322" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="343">Count the change by commands · step 2</text><text class="dg-sub" x="510.0" y="359">changed files, lines, functions; search the</text><text class="dg-sub" x="510.0" y="375">repo for each renamed or removed word</text></g>
+<g class="dg-node agent"><rect x="340" y="418" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="439">Planner</text><text class="dg-sub" x="510.0" y="455">cuts the change into areas and picks</text><text class="dg-sub" x="510.0" y="471">1–10 reviewers; never sees the changed lines</text></g>
+<g class="dg-node main"><rect x="340" y="514" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="535">Lead checks the plan</text><text class="dg-sub" x="510.0" y="551">may add reviewers for tests, config files and</text><text class="dg-sub" x="510.0" y="567">leftover old names; plans later rounds itself</text></g>
+<g class="dg-node main"><polygon points="510.0,608 690,648.0 510.0,688 330,648.0"/><text class="dg-title" x="510.0" y="645">Does every changed file have</text><text class="dg-sub" x="510.0" y="661">someone who checks it?</text></g>
+<g class="dg-node agent"><rect x="340" y="718" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="739">Reviewers · step 3</text><text class="dg-sub" x="510.0" y="755">1–10, in batches, one focus each; every file</text><text class="dg-sub" x="510.0" y="771">marked checked or not reviewed</text></g>
+<g class="dg-node main"><rect x="340" y="816" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="837">The lead decides each finding · step 4</text><text class="dg-sub" x="510.0" y="853">opens the cited line, then: fix it, reject it</text><text class="dg-sub" x="510.0" y="869">with a reason, note it, or ask you</text></g>
+<g class="dg-node agent"><rect x="30" y="808" width="240" height="80" rx="9"/><text class="dg-title" x="150.0" y="829">Question resolver</text><text class="dg-sub" x="150.0" y="845">a fresh agent answers what it can;</text><text class="dg-sub" x="150.0" y="861">a second model may settle a library</text><text class="dg-sub" x="150.0" y="877">choice; the rest wait in the report</text></g>
+<g class="dg-node main"><polygon points="510.0,908 660,944.0 510.0,980 360,944.0"/><text class="dg-title" x="510.0" y="941">Must the run stop here?</text><text class="dg-sub" x="510.0" y="957">1–3 signs set in the plan</text></g>
+<g class="dg-node main"><polygon points="510.0,1008 660,1044.0 510.0,1080 360,1044.0"/><text class="dg-title" x="510.0" y="1049">Any fix accepted?</text></g>
+<g class="dg-node agent"><rect x="340" y="1112" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="1133">Fixers · step 5</text><text class="dg-sub" x="510.0" y="1149">1–4 agents edit the files; a fix that</text><text class="dg-sub" x="510.0" y="1165">changes behaviour gets a failing test first</text></g>
+<g class="dg-node check"><rect x="340" y="1208" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="1229">Checks · step 6</text><text class="dg-sub" x="510.0" y="1245">the CI steps; each new test must</text><text class="dg-sub" x="510.0" y="1261">also fail on the old code</text></g>
+<g class="dg-node main"><polygon points="510.0,1298 660,1334.0 510.0,1370 360,1334.0"/><text class="dg-title" x="510.0" y="1339">Checks green?</text></g>
+<g class="dg-node agent"><rect x="790" y="1306" width="230" height="56" rx="9"/><text class="dg-title" x="905.0" y="1331">Repair fixer</text><text class="dg-sub" x="905.0" y="1347">one, with the red check&#x27;s output</text></g>
+<g class="dg-node stop"><rect x="30" y="1294" width="240" height="80" rx="9"/><text class="dg-title" x="150.0" y="1315">Stop · comment posted</text><text class="dg-sub" x="150.0" y="1331">the comment says why; the copy</text><text class="dg-sub" x="150.0" y="1347">of the branch usually stays</text><text class="dg-sub" x="150.0" y="1363">for you to look at</text></g>
+<g class="dg-node check"><rect x="340" y="1406" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="1427">Verifier · step 7</text><text class="dg-sub" x="510.0" y="1443">a fresh agent: is each fix real?</text><text class="dg-sub" x="510.0" y="1459">did anything break?</text></g>
+<g class="dg-node main"><rect x="340" y="1502" width="340" height="72" rx="9"/><text class="dg-title" x="510.0" y="1527">Commit and push · step 8</text><text class="dg-sub" x="510.0" y="1543">undo what was not fixed, commit, push;</text><text class="dg-sub" x="510.0" y="1559">one comment, with what was not checked</text></g>
+<g class="dg-node main"><polygon points="510.0,1604 680,1644.0 510.0,1684 340,1644.0"/><text class="dg-title" x="510.0" y="1649">Another round? · step 9</text></g>
+<g class="dg-node you"><rect x="790" y="1604" width="230" height="80" rx="9"/><text class="dg-title" x="905.0" y="1625">You: a third round?</text><text class="dg-sub" x="905.0" y="1641">only when app code changed;</text><text class="dg-sub" x="905.0" y="1657">asked in the report; a yes starts</text><text class="dg-sub" x="905.0" y="1673">a fresh lead</text></g>
+<g class="dg-node main"><rect x="30" y="1718" width="240" height="80" rx="9"/><text class="dg-title" x="150.0" y="1739">After the run · step 10</text><text class="dg-sub" x="150.0" y="1755">the lead&#x27;s own fixes to CI, settings</text><text class="dg-sub" x="150.0" y="1771">and instruction files, or your later</text><text class="dg-sub" x="150.0" y="1787">answers: checked, then committed</text></g>
+<g class="dg-node done"><rect x="340" y="1790" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="1811">Final report</text><text class="dg-sub" x="510.0" y="1827">your conversation checks it and says</text><text class="dg-sub" x="510.0" y="1843">ready or not ready to merge; you merge</text></g>
+<g class="dg-badge"><circle cx="510" cy="95" r="10"/><text x="510" y="95">1</text></g>
+<text class="dg-label" x="282" y="178">no</text>
+<g class="dg-badge"><circle cx="300" cy="150" r="10"/><text x="300" y="150">2</text></g>
+<text class="dg-label" x="526" y="215">yes</text>
+<g class="dg-badge"><circle cx="510" cy="210" r="10"/><text x="510" y="210">3</text></g>
+<g class="dg-badge"><circle cx="510" cy="306" r="10"/><text x="510" y="306">4</text></g>
+<g class="dg-badge"><circle cx="510" cy="402" r="10"/><text x="510" y="402">5</text></g>
+<g class="dg-badge"><circle cx="510" cy="498" r="10"/><text x="510" y="498">6</text></g>
+<g class="dg-badge"><circle cx="510" cy="593" r="10"/><text x="510" y="593">7</text></g>
+<text class="dg-label" x="140" y="672">no: hand the file to a reviewer</text>
+<g class="dg-badge"><circle cx="305" cy="605" r="10"/><text x="305" y="605">8</text></g>
+<text class="dg-label" x="526" y="708">yes</text>
+<g class="dg-badge"><circle cx="510" cy="703" r="10"/><text x="510" y="703">9</text></g>
+<g class="dg-badge"><circle cx="510" cy="799" r="10"/><text x="510" y="799">10</text></g>
+<text class="dg-label" x="740" y="804">a file no reviewer checked</text>
+<g class="dg-badge"><circle cx="720" cy="799" r="10"/><text x="720" y="799">11</text></g>
+<g class="dg-badge"><circle cx="305" cy="848" r="10"/><text x="305" y="848">12</text></g>
+<g class="dg-badge"><circle cx="510" cy="894" r="10"/><text x="510" y="894">13</text></g>
+<text class="dg-label" x="318" y="934">yes</text>
+<g class="dg-badge"><circle cx="150" cy="1120" r="10"/><text x="150" y="1120">14</text></g>
+<text class="dg-label" x="526" y="999">no</text>
+<g class="dg-badge"><circle cx="510" cy="994" r="10"/><text x="510" y="994">15</text></g>
+<text class="dg-label" x="690" y="1034">no: a comment only, no commit</text>
+<g class="dg-badge"><circle cx="1050" cy="1190" r="10"/><text x="1050" y="1190">16</text></g>
+<text class="dg-label" x="526" y="1101">yes</text>
+<g class="dg-badge"><circle cx="510" cy="1096" r="10"/><text x="510" y="1096">17</text></g>
+<g class="dg-badge"><circle cx="510" cy="1192" r="10"/><text x="510" y="1192">18</text></g>
+<g class="dg-badge"><circle cx="510" cy="1285" r="10"/><text x="510" y="1285">19</text></g>
+<text class="dg-label" x="668" y="1324">red once</text>
+<g class="dg-badge"><circle cx="762" cy="1334" r="10"/><text x="762" y="1334">20</text></g>
+<g class="dg-badge"><circle cx="905" cy="1274" r="10"/><text x="905" y="1274">21</text></g>
+<text class="dg-label" x="280" y="1320">red again</text>
+<g class="dg-badge"><circle cx="315" cy="1334" r="10"/><text x="315" y="1334">22</text></g>
+<text class="dg-label" x="526" y="1393">green</text>
+<g class="dg-badge"><circle cx="510" cy="1388" r="10"/><text x="510" y="1388">23</text></g>
+<text class="dg-label" x="120" y="1458">verifier fails, or checks red</text>
+<g class="dg-badge"><circle cx="270" cy="1438" r="10"/><text x="270" y="1438">24</text></g>
+<g class="dg-badge"><circle cx="510" cy="1486" r="10"/><text x="510" y="1486">25</text></g>
+<text class="dg-label" x="108" y="1558">an unplanned file, or the push fails</text>
+<g class="dg-badge"><circle cx="100" cy="1470" r="10"/><text x="100" y="1470">26</text></g>
+<g class="dg-badge"><circle cx="510" cy="1589" r="10"/><text x="510" y="1589">27</text></g>
+<text class="dg-label" x="40" y="1634">yes: round 2</text>
+<g class="dg-badge"><circle cx="12" cy="1100" r="10"/><text x="12" y="1100">28</text></g>
+<text class="dg-label" x="690" y="1699">after round 2, with a MUST fixed</text>
+<g class="dg-badge"><circle cx="735" cy="1644" r="10"/><text x="735" y="1644">29</text></g>
+<text class="dg-label" x="700" y="538">yes: a fresh lead runs round 3</text>
+<g class="dg-badge"><circle cx="1080" cy="800" r="10"/><text x="1080" y="800">30</text></g>
+<text class="dg-label" x="918" y="1768">no: open items go to you</text>
+<g class="dg-badge"><circle cx="905" cy="1744" r="10"/><text x="905" y="1744">31</text></g>
+<text class="dg-label" x="526" y="1741">no</text>
+<g class="dg-badge"><circle cx="510" cy="1736" r="10"/><text x="510" y="1736">32</text></g>
+<text class="dg-label" x="282" y="1760">no, but some fixes wait for the lead</text>
+<g class="dg-badge"><circle cx="420" cy="1702" r="10"/><text x="420" y="1702">33</text></g>
+<text class="dg-label" x="160" y="1848">done, or handed back to you</text>
+<g class="dg-badge"><circle cx="245" cy="1822" r="10"/><text x="245" y="1822">34</text></g>
+<text class="dg-label" x="452" y="1882">later: you answer a question</text>
+<g class="dg-badge"><circle cx="250" cy="1878" r="10"/><text x="250" y="1878">35</text></g>
+<text class="dg-label" x="120" y="1474">after step 8's undo</text>
+<text class="dg-label" x="690" y="1715">or a fix still open</text>
+</svg>
+    </div>
+<div class="arrows">
+<h3>Start</h3><ol>
+<li value="1"><span class="n">1</span><span>You start the run. Before anything is spawned, the lead checks that the pull request is yours, open and not from a fork, that the git identity is set, that Claude Code is new enough, that no copy of the branch is left from an earlier run, that the base branch is already merged into the pull request, and that the diff holds no hidden Unicode characters.</span></li>
+<li value="2"><span class="n">2</span><span>A check fails, for example the pull request comes from a fork: the run stops and the lead says why in chat. Nothing is reviewed and no comment is posted. When the only problem is that the base branch is not merged into the pull request yet, your conversation brings it in and starts a fresh lead.</span></li>
+<li value="3"><span class="n">3</span><span>All checks pass. The lead works in a separate copy of the branch, never in your own folder. It saves the pull request's description and, when the change does something you asked for in chat, your words, so the review can measure the change against them. Then it runs the project's checks once, so it knows which ones already failed before the review.</span></li>
+</ol>
+<h3>Plan the review</h3><ol>
+<li value="4"><span class="n">4</span><span>Commands, not judgment, count the change: the changed files, the lines per file, and the function each change sits in. When the change renames or removes a word, a path or a rule, a search lists every line in the repository that still names it, for example every doc that still names a renamed setting.</span></li>
+<li value="5"><span class="n">5</span><span>The planner gets the lists, the counts, the description as the author's claim and your words, never the changed lines. Often the conversation that runs the review also wrote the change, and a model goes easier on its own work, so who reviews what is decided by an agent that has not seen the lead's reading of it. The planner cuts the change into areas, marks the risky ones (code that takes input from outside, such as an API route, settings, a migration, CI) and picks 1–10 reviewers: one for a small change of one area, more as areas and lines grow. A planner that fails twice is replaced by the lead, which plans by the same rules.</span></li>
+<li value="6"><span class="n">6</span><span>The lead has read the diff and the planner has not, so it may add to the plan, never remove. It adds a reviewer that judges whether each new or changed test is worth keeping, when a test changed; a reviewer that checks config files (a Dockerfile, a CI workflow, the dependency list) against the tool's own documentation; a reviewer that reads every line the search of arrow 4 found and says which ones now contradict the change; and one reviewer for a risk only the diff shows, such as a secret in a settings file. It also writes findings of its own: a changed file that no claim of the description explains, a package nothing uses, a feature or job the change takes on that you did not ask for.</span></li>
+<li value="7"><span class="n">7</span><span>Before any reviewer starts, a shell command makes sure that no changed file is left unread. It compares the list of changed files with the plan. Each file must be handled in one of three ways. Usually a reviewer has the file in its list and reads it in full. A file that a tool writes and a tool checks, such as the lock file of the dependencies, is left to that check: the install step in CI fails when the lock file is wrong, so no reviewer reads it. A file that no reviewer can read, such as an image or a large data file, goes into the report as "not reviewed", with a question for you: does this file belong in the repository?</span></li>
+<li value="8"><span class="n">8</span><span>The command finds a file that none of the three handles. The lead adds it to the list of the reviewer whose part of the change is closest, and runs the command again.</span></li>
+<li value="9"><span class="n">9</span><span>Every changed file is handled, and the reviewers start. One to ten run, in batches, because the lead may run only a set number of agents at once. Each runs in a fresh context, read-only, with one focus on one part, for example security on the login code. Each reads its files in full against the project's rules as they stand on the base branch, so the pull request cannot loosen the rules it is judged by. For every file it writes <code>checked</code> or <code>not reviewed</code>. A reviewer that cannot start, because the limit on agents running at once is reached, is listed as not run, and its files as not reviewed.</span></li>
+</ol>
+<h3>Review and triage</h3><ol>
+<li value="10"><span class="n">10</span><span>The findings go to the lead, and the lead alone decides them. Each finding has a severity: MUST (wrong, breaks at runtime, a security hole or a broken hard rule), SHOULD (works, but at a real cost) or NICE (clarity or style only). The lead opens the cited line of every MUST and SHOULD finding and checks the quote, the rule and how the code would fail. Each finding gets one decision: accept (a fixer applies it), push back (reject it with a reason; the default when unsure), backlog (a NICE item, written down but not tracked after the run), ask you, or "after the run" (a fix with one right form in a CI file, a settings file or an instruction file, which no fixer may touch and the lead makes at the end). Deleting a test needs proof: the lead breaks the code on purpose, and another test must fail.</span></li>
+<li value="11"><span class="n">11</span><span>Before the lead decides any finding, it compares each reviewer's file marks with the files it gave that reviewer. A file with no <code>checked</code> line gets one more reviewer with the same focus, which reads only those files, once. A file that is still unchecked goes into the report as not reviewed. The skill's premise: a reviewer given too many files skims some of them and does not say which.</span></li>
+<li value="12"><span class="n">12</span><span>Before a question is left for you, it goes to the question resolver, a fresh agent that gets the question and its evidence, never the lead's draft answer. It may settle a choice between two fixes that both make sense. What it cannot settle goes to the advisor, a second model that may decide in your place in a few cases, for example a library choice when it names a source. Some kinds always wait for you in the report, with the resolver's answer beside them: a network call, a CI permission, overruling a decision you made.</span></li>
+<li value="13"><span class="n">13</span><span>With every finding decided, the lead checks the stop signs it wrote into the plan: one to three things that, seen in the round, mean "stop and tell you".</span></li>
+<li value="14"><span class="n">14</span><span>A stop sign fires, for example "the change turns off a security check": the lead posts the whole decisions table as the round's comment, and no fixer runs. The copy of the branch is removed when it holds no change, otherwise it stays for you. After you answer, a new run starts at round 1.</span></li>
+<li value="15"><span class="n">15</span><span>No stop sign fired.</span></li>
+</ol>
+<h3>Fix and prove</h3><ol>
+<li value="16"><span class="n">16</span><span>Nothing was accepted: the round goes straight to its comment, with no fixer, no verifier and no commit.</span></li>
+<li value="17"><span class="n">17</span><span>The accepted fixes are split by file into one to four groups, no file in two groups. Each fixer gets the lead's own description of its fixes, not the reviewer's finding, and changes only its files. When a fix changes behaviour, the fixer writes the test first and sees it fail. A fix it cannot apply as written comes back and becomes a push back or a question for you.</span></li>
+<li value="18"><span class="n">18</span><span>The fixers are done; they never touch git.</span></li>
+<li value="19"><span class="n">19</span><span>The lead runs the project's CI steps in their order, plus the slower suites that CI skips on pull requests when the change touches what they test. Each new test for a changed behaviour also runs against the old code in a scratch copy and must fail there. A test that passes there proves nothing: its fix goes back to the lead's decisions in the next round (after the last round, to you). A new test for behaviour the code already had must fail on a small break the lead names; if it does not, its fix is undone and goes the same way.</span></li>
+<li value="20"><span class="n">20</span><span>A check is red that was green at the start: one repair fixer gets the check's output and only the files it names. It is one of the four fixers a round may use.</span></li>
+<li value="21"><span class="n">21</span><span>The checks run again.</span></li>
+<li value="22"><span class="n">22</span><span>Red again, all four fixers already used, or a check fires a stop sign: the run stops before the verifier. Nothing is committed, the comment says which check failed and why, and the copy of the branch stays for you.</span></li>
+<li value="23"><span class="n">23</span><span>All green, or red only where a check was already red at the start. A fresh verifier reads the files on disk, not the fixers' notes, and rates each fix: fixed, partly fixed or not fixed. It also lists regressions (something broke) and slips (small leftovers that break nothing, such as a wording or a blank line; they are named in the comment and not fixed). Its verdict never overrides a red check.</span></li>
+</ol>
+<h3>Verify and land</h3><ol>
+<li value="24"><span class="n">24</span><span>The verifier errors or returns a broken report, or a check turns red after the lead undoes a fix (the undo of arrow 25): the run stops before the commit. No repair fixer runs here, because its edit would land unread.</span></li>
+<li value="25"><span class="n">25</span><span>The lead undoes every fix rated "not fixed" and every regression, then runs the checks again. Partly fixed and not fixed items and the regressions go to the next round (after the last round, to you). Then it checks that every changed file belongs to an accepted fix, checks the git identity, stages file by file, scans for personal data and secrets, commits, pushes to the pull request's branch and posts one comment. The comment never says "clean": its verdict is "fixes verified" or "fixes not verified", and it lists what was not checked.</span></li>
+<li value="26"><span class="n">26</span><span>Something blocks the commit or the push: a changed file that belongs to no accepted fix, a pull request that is no longer open, a branch someone else moved, or a rejected push. A round that moves code between folders commits that move on its own, and a check that fails on that commit alone also blocks the push. The run stops, and the comment says the push did not land.</span></li>
+<li value="27"><span class="n">27</span><span>The comment is posted. The lead decides whether another round runs.</span></li>
+</ol>
+<h3>Next round or stop</h3><ol>
+<li value="28"><span class="n">28</span><span>Round 2 runs in three cases: round 1 left a fix partly done, not done or broken; the verifier asks for another round; or the change is large, 1,000 changed lines or more. The lead plans it itself, with fresh reviewers: a reviewer that found nothing serious does not run again, and the word search runs again on round 1's commits. On a large change every file meets a reviewer with another focus or of another area than in round 1.</span></li>
+<li value="29"><span class="n">29</span><span>Round 2 is done, and it accepted a MUST finding or left a fix open. A third round is possible only when the change touches application code. The lead asks once, in the final report, with the items that would carry over.</span></li>
+<li value="30"><span class="n">30</span><span>You say yes: your conversation starts a fresh lead, which runs round 3 in the same run folder by round 2's rules. What round 3 leaves open goes to you.</span></li>
+<li value="31"><span class="n">31</span><span>You say no: the open items go to you, and the run ends.</span></li>
+<li value="32"><span class="n">32</span><span>No further round runs: round 1 left nothing open and the change is not large, or round 2 is done and no third round is possible. The final report goes to your conversation, which checks it and posts the one comment that says "ready to merge" or "not ready to merge". The skill never merges; you do.</span></li>
+<li value="33"><span class="n">33</span><span>The run ends with fixes kept for the lead ("after the run" in arrow 10): the lead makes them now.</span></li>
+<li value="34"><span class="n">34</span><span>The lead makes the edit in a copy of the branch, runs the checks without a repair fixer, and a fresh verifier reads it. Only green checks and "fixes verified" let the edit land, in a commit of its own with its own comment; otherwise nothing is committed and the items go back to you. A verifier that asks for another round starts none: the report names it.</span></li>
+<li value="35"><span class="n">35</span><span>Later, you answer a question from the report in chat. That edit goes through the same steps as arrow 34: a copy of the branch, the checks, a fresh verifier, then a commit of its own.</span></li>
+</ol>
+</div>
+</section>
+
+  <section id="reviewers">
+    <h2>Which reviewers run</h2>
+    <p class="lead">Each reviewer looks at one part of the change for one kind of problem.</p>
+    <table>
+      <thead><tr><th>Reviewer</th><th>The question it asks</th><th>When it runs</th></tr></thead>
+      <tbody>
+        <tr><td>Architecture</td><td>Is the code in the right place, do imports point the right way, is anything here that nothing needs yet?</td><td>A part has a design to judge</td></tr>
+        <tr><td>Security</td><td>Are inputs checked, secrets kept out, permissions tight, dependencies pinned?</td><td>A part touches a risky path: login, payments, user input</td></tr>
+        <tr><td>Tests</td><td>Is new behaviour tested, and would each test fail if the code broke?</td><td>A part adds behaviour or changes tests</td></tr>
+        <tr><td>Test value</td><td>Does each new test earn its place: keep, rewrite or delete?</td><td>The lead adds it when the change adds or edits a test</td></tr>
+        <tr><td>Consistency</td><td>Do two lines now say opposite things? Does anything point to a renamed or removed name?</td><td>The lead adds it when the word search finds a hit</td></tr>
+        <tr><td>Practices</td><td>Does each file follow the project's own written rules for its kind?</td><td>A kind of file has a written rule</td></tr>
+        <tr><td>Standards</td><td>Do config files match their tool's own docs: manifests, Dockerfiles, CI, env files?</td><td>The lead adds it when such a file changes</td></tr>
+      </tbody>
+    </table>
+    <p class="lead" style="margin-top: 14px">Each reviewer judges by the project's own rules first. When current industry practice says something else, the project rule still decides the finding, and the reviewer adds the industry point as a question for you.</p>
+  </section>
+
+  <section id="priorities">
+    <h2>MUST, SHOULD, NICE: what gets fixed</h2>
+    <p class="lead">Fixed in the run: every MUST and SHOULD finding the lead confirms. Not fixed: NICE items. Each reviewer may file at most three, and they go into the report as a list for later.</p>
+    <table>
+      <thead><tr><th>Priority</th><th>Means</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><span class="prio must">MUST</span></td><td>Wrong, breaks at runtime, a security hole, or a hard project rule broken</td><td>The new endpoint reads the user id from the request body, so anyone can act as anyone.</td></tr>
+        <tr><td><span class="prio should">SHOULD</span></td><td>Works, but at a real cost</td><td>The same query runs once per item in a loop.</td></tr>
+        <tr><td><span class="prio nice">NICE</span></td><td>Could be better, no real cost</td><td>A variable name could be clearer.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="asked">
+    <h2>What you are asked</h2>
+    <p class="lead">Nothing while the run works. Questions go first to a helper agent, the question resolver. It answers from the evidence and the project's rules. Only what it cannot settle reaches you, listed in the report. Typical cases:</p>
+    <div class="branches">
+      <div class="branch ask"><div class="then">A decision only you can make</div><p>A network call, a change to CI permissions, overruling a decision you made earlier, something hard to undo. A library choice may be settled by an advisor model acting for you; the report then lists it as decided without you.</p><div class="example">The fix needs write permission for the CI job. Grant it, or drop the fix?</div></div>
+      <div class="branch ask"><div class="then">Two fixes that both make sense</div><p>No written rule picks one.</p></div>
+      <div class="branch ask"><div class="then">A third round</div><p>On a code change, after round 2 left serious work open.</p></div>
+      <div class="branch ask"><div class="then">The merge</div><p>The skill never merges. You decide after reading the report.</p></div>
+    </div>
+  </section>
+
+  <section id="roles">
+    <h2>Who does what</h2>
+    <table>
+      <thead><tr><th>Role</th><th>What it sees</th><th>What it may not do</th></tr></thead>
+      <tbody>
+        <tr><td>Lead</td><td>Everything: the change, the plan, the reports, the check results</td><td>Hand the decisions to an agent, merge, force-push, or push to the default branch</td></tr>
+        <tr><td>Planner</td><td>File lists, line counts, changed function names, the description as the author's claim, your words</td><td>Read the changed lines, or judge the change</td></tr>
+        <tr><td>Reviewer</td><td>Its files in full and their changes, the base branch's rules. The description only after it drafts its findings</td><td>Edit, run the checks, or put repository content in a web search</td></tr>
+        <tr><td>Test-value reviewer</td><td>The new or changed tests and the code they run. Comments in the tests only in a second pass</td><td>Ask for new tests, or recommend deleting a test that fails</td></tr>
+        <tr><td>Consistency reviewer</td><td>Only the lines the word search found</td><td>Search beyond them, or say which side of a contradiction is right</td></tr>
+        <tr><td>Fixer</td><td>Only the lead's fix text and its file list</td><td>Improvise, touch other files, run git, or weaken a test</td></tr>
+        <tr><td>Verifier</td><td>The files on disk and the accepted findings. The fixers' notes only after its own pass</td><td>Override a red check</td></tr>
+        <tr><td>Question resolver</td><td>One question with its evidence and the rules, never a draft answer</td><td>Settle a question that only you can decide</td></tr>
+        <tr><td>You</td><td>The report, questions only you can answer, the merge</td><td>Nothing: you answer what only you can, allow a third round and decide the merge</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="different">
+    <h2>What makes it different</h2>
+    <div class="choices">
+      <div class="choice"><h3>The planner never reads the changed lines</h3><p>The plan comes from counts and file lists, so the author's framing does not decide who reviews what.</p></div>
+      <div class="choice"><h3>Many narrow reviewers, one focus on one part</h3><p>A narrow scope gets read in full. Each reviewer past the third must cover a new part or risk, so the team grows with the change, not by habit.</p></div>
+      <div class="choice"><h3>A command checks that a reviewer or a tool covers every changed file, or names it as not reviewed</h3><p>Each reviewer marks every file checked or not reviewed, and the check runs before the review starts.</p></div>
+      <div class="choice"><h3>The lead opens the line behind every finding</h3><p>A finding is a claim until someone sees the quote at that line. When unsure, the lead rejects.</p></div>
+      <div class="choice"><h3>Test runs beat opinions</h3><p>The verifier cannot override a red check. A new test must fail on the old code before it counts.</p></div>
+      <div class="choice"><h3>Rules come from the base branch</h3><p>A pull request cannot change the rules it is judged by.</p></div>
+      <div class="choice"><h3>The description is read last</h3><p>Reviewers write their findings first, so "no behaviour change" cannot hide a behaviour change.</p></div>
+      <div class="choice"><h3>Fixers get the lead's words, not the reviewer's</h3><p>The lead has already checked and narrowed the finding.</p></div>
+      <div class="choice"><h3>Deleting a test needs proof</h3><p>Another test has to fail on the same break. A low value rating alone is not enough.</p></div>
+      <div class="choice"><h3>Contradictions are found by search, sides picked by a written rule</h3><p>Two lines that disagree are found by searching the repo for the changed word, not by reading. A written project rule says which line is right. "The newer line wins" is not a rule.</p></div>
+      <div class="choice"><h3>You get only questions nobody else can settle</h3><p>A resolver tries first. A file's path alone is never a reason to ask you.</p></div>
+      <div class="choice"><h3>Every report says what was not checked</h3><p>A reader takes silence as "checked".</p></div>
+    </div>
+  </section>
+
+  <footer>
+    The same content as text: <a href="README.md">README.md</a>. The skill itself is not published in this repository; this page describes its design in general terms, so you can build a review of your own or judge whether one would help you.
+  </footer>
+</main>
+</body>
+</html>
