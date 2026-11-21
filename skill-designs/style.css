@@ -1,0 +1,326 @@
+/* Shared styles for the skill-design pages. No external fonts or scripts, so a page
+   opens offline from the file system. */
+
+:root {
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-2: #f0f0ec;
+  --text: #1d1d1b;
+  --muted: #5d5d58;
+  --line: #d9d9d3;
+  --accent: #b4532a;
+
+  /* One colour per actor, used for the chips and the step markers. */
+  --you: #2f6fb3;
+  --you-bg: #e6eff9;
+  --main: #6b4fa8;
+  --main-bg: #efeaf8;
+  --agent: #2d8063;
+  --agent-bg: #e3f3ec;
+  --check: #a0611b;
+  --check-bg: #f8eedf;
+  --stop: #a23b3b;
+  --stop-bg: #f8e6e6;
+
+  --radius: 10px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1c1e;
+    --surface: #24262a;
+    --surface-2: #2c2f34;
+    --text: #e9e9e6;
+    --muted: #a5a6a2;
+    --line: #3a3d43;
+    --accent: #e58a5f;
+
+    --you: #7fb2ea;
+    --you-bg: #1f3247;
+    --main: #b9a1ec;
+    --main-bg: #30284a;
+    --agent: #74cfa9;
+    --agent-bg: #1c3a2f;
+    --check: #e6b06b;
+    --check-bg: #43331d;
+    --stop: #ee8f8f;
+    --stop-bg: #4a2626;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 var(--font);
+}
+
+main {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+a { color: var(--accent); }
+code { font-family: var(--mono); font-size: 0.92em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+
+/* Header */
+.back { font-size: 14px; color: var(--muted); text-decoration: none; }
+.back:hover { text-decoration: underline; }
+h1 { font-size: 40px; line-height: 1.15; margin: 16px 0 8px; letter-spacing: -0.01em; }
+.tagline { font-size: 20px; color: var(--muted); margin: 0 0 20px; max-width: 760px; }
+.command {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+
+nav.toc { margin: 28px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+nav.toc a {
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 12px;
+  background: var(--surface);
+}
+nav.toc a:hover { border-color: var(--accent); }
+
+/* Sections */
+section { margin-top: 56px; }
+h2 { font-size: 26px; margin: 0 0 6px; }
+.lead { color: var(--muted); margin: 0 0 20px; max-width: 760px; }
+h3 { font-size: 17px; margin: 0 0 6px; }
+
+/* Problem → answer pairs */
+.pairs { display: grid; gap: 12px; }
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.pair > div { padding: 14px 16px; }
+.pair .without { border-right: 1px solid var(--line); }
+.pair .label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+.pair .with .label { color: var(--agent); }
+@media (max-width: 680px) {
+  .pair { grid-template-columns: 1fr; }
+  .pair .without { border-right: 0; border-bottom: 1px solid var(--line); }
+}
+
+/* Actor legend and chips */
+.legend { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 20px; }
+.chip {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+.chip.you { color: var(--you); background: var(--you-bg); }
+.chip.main { color: var(--main); background: var(--main-bg); }
+.chip.agent { color: var(--agent); background: var(--agent-bg); }
+.chip.check { color: var(--check); background: var(--check-bg); }
+.chip.stop { color: var(--stop); background: var(--stop-bg); }
+
+/* The flow: a vertical line of steps */
+.flow { position: relative; padding-left: 0; list-style: none; margin: 0; }
+.step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 14px;
+  padding-bottom: 18px;
+}
+.step::before {
+  /* the connecting line between markers */
+  content: "";
+  position: absolute;
+  left: 21px;
+  top: 44px;
+  bottom: 0;
+  width: 2px;
+  background: var(--line);
+}
+.step:last-child::before { display: none; }
+.marker {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 15px;
+  border: 2px solid currentColor;
+  background: var(--surface);
+}
+.step.you .marker { color: var(--you); }
+.step.main .marker { color: var(--main); }
+.step.agent .marker { color: var(--agent); }
+.step.check .marker { color: var(--check); }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+.card .head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
+.card .head h3 { margin: 0; }
+.card p { margin: 4px 0 0; }
+.card .out { font-size: 14px; color: var(--muted); margin-top: 6px; }
+.card .out b { color: var(--text); font-weight: 600; }
+
+/* A group of steps that repeats */
+.loop {
+  position: relative;
+  border: 2px dashed var(--accent);
+  border-radius: 14px;
+  padding: 34px 14px 6px;
+  margin: 4px 0 22px;
+}
+.loop-title {
+  position: absolute;
+  top: -13px;
+  left: 16px;
+  background: var(--bg);
+  padding: 0 8px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.loop-note {
+  margin: 0 0 12px 58px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.loop-back {
+  margin: 4px 0 10px 58px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Branch points and outcomes */
+.branches { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.branch {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+.branch.go { border-left-color: var(--agent); }
+.branch.again { border-left-color: var(--accent); }
+.branch.stop { border-left-color: var(--stop); }
+.branch.ask { border-left-color: var(--you); }
+.branch .when { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+.branch .then { font-weight: 600; }
+.branch p { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+th { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); background: var(--surface-2); }
+tr:last-child td { border-bottom: 0; }
+td:first-child { font-weight: 600; white-space: nowrap; }
+@media (max-width: 680px) { td:first-child { white-space: normal; } }
+
+/* Design choices */
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.choice { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+.choice h3 { margin-bottom: 6px; }
+.choice p { margin: 0; color: var(--muted); }
+
+/* When to use and when not */
+.fit { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 760px) { .fit { grid-template-columns: 1fr; } }
+.fit > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+.fit .yes h3 { color: var(--agent); }
+.fit .no h3 { color: var(--stop); }
+.fit ul { margin: 8px 0 0; padding-left: 18px; }
+.fit li { margin-bottom: 8px; }
+.fit .instead { display: block; color: var(--muted); font-size: 14px; }
+
+/* A concrete example under a step or a card */
+.example {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-left: 3px solid var(--line);
+  font-size: 14px;
+  color: var(--muted);
+}
+.example::before { content: "Example: "; font-weight: 600; color: var(--text); }
+
+/* Priority badges */
+.prio { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 4px; padding: 1px 8px; }
+.prio.must { color: var(--stop); background: var(--stop-bg); }
+.prio.should { color: var(--check); background: var(--check-bg); }
+.prio.nice { color: var(--agent); background: var(--agent-bg); }
+
+/* Flow diagram drawn as inline SVG */
+.diagram {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  overflow-x: auto;
+}
+.diagram svg { display: block; width: 100%; min-width: 820px; height: auto; }
+.dg-node rect, .dg-node polygon { fill: var(--surface); stroke: var(--line); stroke-width: 2; }
+.dg-node.you rect, .dg-node.you polygon { fill: var(--you-bg); stroke: var(--you); }
+.dg-node.main rect, .dg-node.main polygon { fill: var(--main-bg); stroke: var(--main); }
+.dg-node.agent rect { fill: var(--agent-bg); stroke: var(--agent); }
+.dg-node.check rect { fill: var(--check-bg); stroke: var(--check); }
+.dg-node.stop rect { fill: var(--stop-bg); stroke: var(--stop); }
+.dg-node.done rect { fill: var(--agent-bg); stroke: var(--agent); stroke-width: 3; }
+.dg-title { font: 600 14px var(--font); fill: var(--text); text-anchor: middle; }
+.dg-sub { font: 12.5px var(--font); fill: var(--muted); text-anchor: middle; }
+.dg-edge { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+.dg-edge.loop { stroke: var(--accent); }
+.dg-edge.dash { stroke-dasharray: 5 4; }
+.dg-arrow { fill: var(--muted); }
+.dg-arrow.loop { fill: var(--accent); }
+.dg-badge circle { fill: var(--bg); stroke: var(--text); stroke-width: 1.2; }
+.dg-badge text { font: 700 11px var(--font); fill: var(--text); text-anchor: middle; dominant-baseline: central; }
+.dg-label { font: 600 12px var(--font); fill: var(--muted); }
+
+/* The numbered list under a diagram */
+.arrows { margin: 20px 0 0; padding: 0; list-style: none; counter-reset: none; }
+.arrows h3 { margin: 18px 0 8px; }
+.arrows ol { margin: 0; padding: 0; list-style: none; }
+.arrows li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; margin-bottom: 8px; }
+.arrows .n {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1.2px solid var(--text); background: var(--bg);
+  display: grid; place-items: center; font-weight: 700; font-size: 12px;
+}
+
+/* Landing page cards */
+.skills { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.skill {
+  display: block;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.skill:hover { border-color: var(--accent); }
+.skill h3 { font-family: var(--mono); font-size: 17px; color: var(--accent); }
+.skill p { margin: 6px 0 0; color: var(--muted); }
+
+footer { margin-top: 64px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }

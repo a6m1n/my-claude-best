@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill designs: how some Claude Code skills work inside</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Skill designs</h1>
+  <p class="tagline">Nine Claude Code skills, and how each one works inside: the problem it solves, when it is worth running, and its run drawn as a diagram with numbered arrows.</p>
+
+  <section>
+    <h2>Pick by the problem you have</h2>
+    <p class="lead">Each card names the pain first. Open one to see the steps, who does what, and when the skill is too much.</p>
+    <div class="skills">
+      <a class="skill" href="meta-thinking/index.html">
+        <h3>meta-thinking</h3>
+        <p><b>Large tasks go wrong halfway through.</b> One fresh agent thinks the task through before any work starts and asks you at most three questions.</p>
+      </a>
+      <a class="skill" href="grill-me-v2/index.html">
+        <h3>grill-me-v2</h3>
+        <p><b>A vague task gets built on guesses.</b> One question per message, each with options and a recommendation; facts are looked up, not asked.</p>
+      </a>
+      <a class="skill" href="create-ticket-v3/index.html">
+        <h3>create-ticket-v3</h3>
+        <p><b>Writing tickets takes longer than the work.</b> Short notes become a story, bug, task or epic, or a batch of them; you see every field before anything is created.</p>
+      </a>
+      <a class="skill" href="decompose-and-delegate/index.html">
+        <h3>decompose-and-delegate</h3>
+        <p><b>Your session fills up reading files.</b> A big question about the code is split into small ones, one agent each; only their answers come back.</p>
+      </a>
+      <a class="skill" href="settle/index.html">
+        <h3>settle</h3>
+        <p><b>A draft has open questions only you can answer.</b> One point per message, each with options, pros, cons and a recommendation; your answers are applied at the end.</p>
+      </a>
+      <a class="skill" href="debate-loop/index.html">
+        <h3>debate-loop</h3>
+        <p><b>One review pass misses things.</b> Reviewers with different focus, a separate fixer and a fresh checker, round after round, until the text does what you asked for or the round limit is reached.</p>
+      </a>
+      <a class="skill" href="test-driven-development/index.html">
+        <h3>test-driven-development</h3>
+        <p><b>Tests pass while the code is wrong.</b> Each new test is watched failing for the right reason before the smallest fix makes the suite green.</p>
+      </a>
+      <a class="skill" href="delegate-task/index.html">
+        <h3>delegate-task</h3>
+        <p><b>A long, decided task blocks your session.</b> One background agent runs it on its own branch; its report is checked against git before it counts.</p>
+      </a>
+      <a class="skill" href="pr-review-with-auto-fix/index.html">
+        <h3>pr-review-with-auto-fix</h3>
+        <p><b>AI review comments are hard to trust.</b> Every finding is checked at its line, every file has a reviewer who must say whether it read it, and fixes are proven by running the tests.</p>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>How they fit together</h2>
+    <p class="lead">One way to combine them, not a rule. Each also works alone.</p>
+    <ol class="flow">
+      <li class="step main"><div class="marker">1</div><div class="card"><div class="head"><h3>Think the task through</h3><span class="chip main">meta-thinking</span></div><p>Pick the route and settle the decisions that are yours.</p></div></li>
+      <li class="step you"><div class="marker">2</div><div class="card"><div class="head"><h3>Pin down the requirements</h3><span class="chip you">grill-me-v2</span></div><p>One question at a time; facts are looked up.</p></div></li>
+      <li class="step you"><div class="marker">3</div><div class="card"><div class="head"><h3>Write the ticket</h3><span class="chip you">create-ticket-v3</span></div><p>From your notes; you see every field before it is created.</p></div></li>
+      <li class="step agent"><div class="marker">4</div><div class="card"><div class="head"><h3>Learn how the code works today</h3><span class="chip agent">decompose-and-delegate</span></div><p>Answers with <code>file:line</code>, no changes.</p></div></li>
+      <li class="step you"><div class="marker">5</div><div class="card"><div class="head"><h3>Settle the open points of your draft plan</h3><span class="chip you">settle</span></div><p>One point at a time, with you.</p></div></li>
+      <li class="step check"><div class="marker">6</div><div class="card"><div class="head"><h3>Review the plan or draft</h3><span class="chip check">debate-loop</span></div><p>Rounds of reviewers, within a round limit, until the plan meets your ask.</p></div></li>
+      <li class="step agent"><div class="marker">7</div><div class="card"><div class="head"><h3>Build each change test first</h3><span class="chip agent">test-driven-development</span></div><p>A test that fails for the right reason, then the smallest fix.</p></div></li>
+      <li class="step agent"><div class="marker">8</div><div class="card"><div class="head"><h3>Run the build in the background</h3><span class="chip agent">delegate-task</span></div><p>One agent builds and commits on its own branch; the result is checked against git.</p></div></li>
+      <li class="step check"><div class="marker">9</div><div class="card"><div class="head"><h3>Review the pull request</h3><span class="chip check">pr-review-with-auto-fix</span></div><p>Narrow reviewers, checked findings, fixes proven by the tests. You decide the merge.</p></div></li>
+    </ol>
+  </section>
+
+  <footer>
+    The same content as text: <a href="README.md">README.md</a> and one README per folder. One of them is published as a skill in this repository: <a href="../skills/meta-thinking/README.md">meta-thinking</a>.
+  </footer>
+</main>
+</body>
+</html>

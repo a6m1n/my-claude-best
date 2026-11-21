@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>test-driven-development: how it works</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">&larr; All skill designs</a>
+  <h1>test-driven-development</h1>
+  <p class="tagline">Makes Claude write each test before the code, watch it fail for the right reason, and only then write the smallest code that makes the whole fast suite pass. The report shows the failing and passing lines as proof, not a "tests pass" claim.</p>
+  <p>In test-first terms, RED is the first run of a new test, failing as expected, and GREEN is the run where that test and the whole fast suite pass.</p>
+  <span class="command">/test-driven-development add a --dry-run flag: classify every file, publish nothing</span>
+
+  <nav class="toc">
+    <a href="#problem">The problem</a>
+    <a href="#fit">When to use it</a>
+    <a href="#run">How a run goes</a>
+    <a href="#units">Which units earn a test</a>
+    <a href="#honest">An honest test</a>
+    <a href="#asked">What you are asked</a>
+    <a href="#roles">Who does what</a>
+    <a href="#different">What makes it different</a>
+  </nav>
+
+  <section id="problem">
+    <h2>The problem it solves</h2>
+    <p class="lead">You ask Claude to add a feature "with tests". The code and the tests come back together, and everything is green. You cannot tell whether a single one of those tests would ever catch a bug. The skill is built against six ways such tests can go wrong.</p>
+    <div class="pairs">
+      <div class="pair">
+        <div class="without"><span class="label">Code and tests together</span><b>The test copies the code's bugs.</b> The skill's premise: a test written with buggy code in view tends to expect what the code does, not what the spec says.</div>
+        <div class="with"><span class="label">test-driven-development</span>The test list and each test are written from the spec, before the code exists.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Code and tests together</span><b>Nobody saw the test fail.</b> It may test nothing, check the wrong thing, or only check the mock.</div>
+        <div class="with"><span class="label">test-driven-development</span>Every test is watched failing first, and only a fired assertion with the expected message counts.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Code and tests together</span><b>The test is bent until it passes.</b> Weaker assertion, new expected value, or a skipped test.</div>
+        <div class="with"><span class="label">test-driven-development</span>Once its RED is verified the test is locked. Only a second look, which never sees the code, can say it is wrong.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Code and tests together</span><b>Old behavior breaks quietly.</b> The new tests cover the new feature; nothing guards what already worked.</div>
+        <div class="with"><span class="label">test-driven-development</span>Must-not-change tests pass before the change and are broken once on purpose, to show they can catch the loss.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Code and tests together</span><b>Many tests, little protection.</b> Getters, config values, log lines, five tests for one break.</div>
+        <div class="with"><span class="label">test-driven-development</span>Only units with a break worth catching earn a test, and two items with one break are merged.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Code and tests together</span><b>"Tests pass" with nothing to check.</b> Nothing shows what failed first or what ran.</div>
+        <div class="with"><span class="label">test-driven-development</span>The report carries the failing and passing lines of every cycle and the break each test catches.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fit">
+    <h2>When to use it, and when not</h2>
+    <div class="fit">
+      <div class="yes">
+        <h3>Use it for</h3>
+        <ul>
+          <li>A new feature, a change of behavior, or a bug fix: any change where a test can say what should happen before the code exists.</li>
+          <li>A bug fix, when you want the reported failure reproduced first and proven fixed.</li>
+          <li>Code that another agent or a build loop writes for you, when you want proof in its report. The skill also runs as the build step inside such a loop.</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>Not for</h3>
+        <ul>
+          <li>A pure refactor: behavior stays the same.<span class="instead">Keep the existing suite green and add no test.</span></li>
+          <li>Docs, comments or other prose.<span class="instead">Nothing to test. Read it, or review it with <a href="../debate-loop/index.html">debate-loop</a>.</span></li>
+          <li>A config-only change.<span class="instead">Nothing behavioral to test. If the config is the behavior and a test pins it, the change is behavioral and the skill applies.</span></li>
+          <li>A throwaway spike to learn something.<span class="instead">Say it is a spike first, keep it out of the change, delete it after.</span></li>
+          <li>Behavior no fast, predictable test can pin.<span class="instead">A manual run or a probe against the real system, with your OK.</span></li>
+          <li>A review of code that is already written.<span class="instead">A review loop such as <a href="../debate-loop/index.html">debate-loop</a>. It does not replace a watched RED and GREEN.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>How a run goes</h2>
+    <p class="lead">You run <code>/test-driven-development add a --dry-run flag: classify every file, publish nothing</code>. Each box is coloured by who does the step, and each arrow has a number: the list under the diagram says what happens on it.</p>
+    <div class="legend">
+      <span class="chip you">You</span>
+      <span class="chip main">Whoever runs the loop (your session, or an agent)</span>
+      <span class="chip agent">Agent, fresh context</span>
+      <span class="chip check">Check with evidence</span>
+      <span class="chip stop">Stop</span>
+      <span class="chip" style="color: var(--accent)">Orange arrow: back into the loop</span>
+    </div>
+    <div class="diagram">
+<svg viewBox="0 0 1215 1506" role="img" aria-labelledby="td-title"><title id="td-title">How a test-driven-development run goes, arrow by arrow</title>
+<defs><marker id="td-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="td-ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow loop" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<path class="dg-edge " d="M510,72 L510,98" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M340,140 L270,140" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M680,140 L790,140" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M905,172 L905,242 L680,242" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M510,182 L510,214" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M510,270 L510,302" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M340,334 L270,334" marker-start="url(#td-ah)" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M510,366 L510,400" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M340,432 L270,432" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M510,464 L510,500" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M510,552 L510,596" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M340,640 L270,640" marker-start="url(#td-ah)" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M680,640 L790,640" marker-end="url(#td-ah)"/>
+<path class="dg-edge loop" d="M850,618 L850,526 L680,526" marker-end="url(#td-ahl)"/>
+<path class="dg-edge " d="M905,598 L905,456" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M1020,640 L1050,640 L1050,1160 L660,1160" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M510,684 L510,716" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M510,772 L510,806" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M340,822 L270,822" marker-end="url(#td-ah)"/>
+<path class="dg-edge loop" d="M270,850 L340,850" marker-end="url(#td-ahl)"/>
+<path class="dg-edge loop" d="M150,800 L150,744 L340,744" marker-end="url(#td-ahl)"/>
+<path class="dg-edge " d="M150,868 L150,930" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M510,862 L510,916" marker-end="url(#td-ah)"/>
+<path class="dg-edge loop" d="M600,939 L600,862" marker-end="url(#td-ahl)"/>
+<path class="dg-edge " d="M335,960 L270,960" marker-end="url(#td-ah)"/>
+<path class="dg-edge loop" d="M685,960 L720,960 L720,1132 L555,1132" marker-end="url(#td-ahl)"/>
+<path class="dg-edge " d="M510,1004 L510,1040" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M510,1092 L510,1120" marker-end="url(#td-ah)"/>
+<path class="dg-edge loop" d="M360,1160 L12,1160 L12,526 L340,526" marker-end="url(#td-ahl)"/>
+<path class="dg-edge " d="M510,1200 L510,1236" marker-end="url(#td-ah)"/>
+<path class="dg-edge loop" d="M680,1266 L1075,1266 L1075,538 L680,538" marker-end="url(#td-ahl)"/>
+<path class="dg-edge " d="M510,1296 L510,1330" marker-end="url(#td-ah)"/>
+<path class="dg-edge " d="M340,1360 L270,1360" marker-end="url(#td-ah)"/>
+<path class="dg-edge loop" d="M680,1360 L1110,1360 L1110,547 L680,547" marker-end="url(#td-ahl)"/>
+<path class="dg-edge " d="M510,1390 L510,1426" marker-end="url(#td-ah)"/>
+<g class="dg-node you"><rect x="340" y="20" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="43">You start the run</text><text class="dg-sub" x="510.0" y="59">/test-driven-development add a --dry-run flag</text></g>
+<g class="dg-node main"><polygon points="510.0,98 680,140.0 510.0,182 340,140.0"/><text class="dg-title" x="510.0" y="137">Does it add or change behavior</text><text class="dg-sub" x="510.0" y="153">a test can state first?</text></g>
+<g class="dg-node stop"><rect x="30" y="110" width="240" height="60" rx="9"/><text class="dg-title" x="150.0" y="129">Not this skill</text><text class="dg-sub" x="150.0" y="145">pure refactor, docs, config,</text><text class="dg-sub" x="150.0" y="161">or a throwaway spike</text></g>
+<g class="dg-node you"><rect x="790" y="108" width="230" height="64" rx="9"/><text class="dg-title" x="905.0" y="129">You approve another check?</text><text class="dg-sub" x="905.0" y="145">no fast, predictable test fits;</text><text class="dg-sub" x="905.0" y="161">a manual run or a real-system check</text></g>
+<g class="dg-node main"><rect x="340" y="214" width="340" height="56" rx="9"/><text class="dg-title" x="510.0" y="239">Sort the code it touches</text><text class="dg-sub" x="510.0" y="255">which functions and classes need a test?</text></g>
+<g class="dg-node main"><rect x="340" y="302" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="323">Write the test list</text><text class="dg-sub" x="510.0" y="339">one line per case, each with the bug it catches,</text><text class="dg-sub" x="510.0" y="355">plus a whole-path test per entry point</text></g>
+<g class="dg-node you"><rect x="30" y="304" width="240" height="60" rx="9"/><text class="dg-title" x="150.0" y="323">You answer</text><text class="dg-sub" x="150.0" y="339">an item needs a behavior</text><text class="dg-sub" x="150.0" y="355">nobody has stated</text></g>
+<g class="dg-node check"><rect x="340" y="400" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="421">Baseline: run the fast tests first</text><text class="dg-sub" x="510.0" y="437">all must pass before any change; tests for</text><text class="dg-sub" x="510.0" y="453">what must not change pass, then are broken once</text></g>
+<g class="dg-node stop"><rect x="30" y="406" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="429">Stop · you decide</text><text class="dg-sub" x="150.0" y="445">the suite was red before any change</text></g>
+<g class="dg-node stop"><rect x="790" y="396" width="230" height="60" rx="9"/><text class="dg-title" x="905.0" y="415">Stop · say so</text><text class="dg-sub" x="905.0" y="431">the behavior already existed</text><text class="dg-sub" x="905.0" y="447">before this change</text></g>
+<g class="dg-node main"><rect x="340" y="500" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="523">Write one test</text><text class="dg-sub" x="510.0" y="539">one item, one behavior, real code over mocks</text></g>
+<g class="dg-node main"><polygon points="510.0,596 680,640.0 510.0,684 340,640.0"/><text class="dg-title" x="510.0" y="637">Run the new test: what happened?</text><text class="dg-sub" x="510.0" y="653">it must fail on its assertion (RED)</text></g>
+<g class="dg-node main"><rect x="30" y="610" width="240" height="60" rx="9"/><text class="dg-title" x="150.0" y="629">Fix the setup</text><text class="dg-sub" x="150.0" y="645">stub the module; make the setup</text><text class="dg-sub" x="150.0" y="661">really build the state</text></g>
+<g class="dg-node main"><polygon points="905.0,598 1020,640.0 905.0,682 790,640.0"/><text class="dg-title" x="905.0" y="637">It passed at once:</text><text class="dg-sub" x="905.0" y="653">why?</text></g>
+<g class="dg-node check"><rect x="340" y="716" width="340" height="56" rx="9"/><text class="dg-title" x="510.0" y="741">RED verified · test locked</text><text class="dg-sub" x="510.0" y="757">keep the failure line; now change code, not the test</text></g>
+<g class="dg-node main"><rect x="340" y="806" width="340" height="56" rx="9"/><text class="dg-title" x="510.0" y="831">GREEN: make it pass</text><text class="dg-sub" x="510.0" y="847">write only the code the test asks for</text></g>
+<g class="dg-node agent"><rect x="30" y="800" width="240" height="68" rx="9"/><text class="dg-title" x="150.0" y="823">Second look at the test</text><text class="dg-sub" x="150.0" y="839">a fresh agent compares it with</text><text class="dg-sub" x="150.0" y="855">the requirement, never the code</text></g>
+<g class="dg-node main"><polygon points="510.0,916 685,960.0 510.0,1004 335,960.0"/><text class="dg-title" x="510.0" y="957">Do all fast tests pass,</text><text class="dg-sub" x="510.0" y="973">with no new warnings?</text></g>
+<g class="dg-node stop"><rect x="30" y="930" width="240" height="60" rx="9"/><text class="dg-title" x="150.0" y="949">Stop · you decide</text><text class="dg-sub" x="150.0" y="965">three failed tries, or the</text><text class="dg-sub" x="150.0" y="981">second look cannot settle it</text></g>
+<g class="dg-node main"><rect x="340" y="1040" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="1063">Refactor while tests pass</text><text class="dg-sub" x="510.0" y="1079">names, duplication; tests keep passing</text></g>
+<g class="dg-node main"><polygon points="510.0,1120 660,1160.0 510.0,1200 360,1160.0"/><text class="dg-title" x="510.0" y="1165">Items left on the list?</text></g>
+<g class="dg-node main"><rect x="340" y="1236" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="1255">Check the list again</text><text class="dg-sub" x="510.0" y="1271">is a case missing: an input, a limit,</text><text class="dg-sub" x="510.0" y="1287">a change of state?</text></g>
+<g class="dg-node check"><rect x="340" y="1330" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="1349">End of change</text><text class="dg-sub" x="510.0" y="1365">run the slow tests once, then put small</text><text class="dg-sub" x="510.0" y="1381">bugs in on purpose: does a test fail?</text></g>
+<g class="dg-node stop"><rect x="30" y="1334" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="1357">Stop · you decide</text><text class="dg-sub" x="150.0" y="1373">slow tests failed; no automatic fix</text></g>
+<g class="dg-node done"><rect x="340" y="1426" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="1445">Done · report with proof</text><text class="dg-sub" x="510.0" y="1461">the failing and passing test lines,</text><text class="dg-sub" x="510.0" y="1477">each case and the bug it catches</text></g>
+<g class="dg-badge"><circle cx="510" cy="85" r="10"/><text x="510" y="85">1</text></g>
+<text class="dg-label" x="318" y="130">no</text>
+<g class="dg-badge"><circle cx="300" cy="140" r="10"/><text x="300" y="140">2</text></g>
+<text class="dg-label" x="690" y="114">yes, but no</text><text class="dg-label" x="690" y="128">reliable test fits</text>
+<g class="dg-badge"><circle cx="735" cy="140" r="10"/><text x="735" y="140">3</text></g>
+<text class="dg-label" x="918" y="214">your OK</text>
+<g class="dg-badge"><circle cx="905" cy="210" r="10"/><text x="905" y="210">4</text></g>
+<text class="dg-label" x="526" y="202">yes</text>
+<g class="dg-badge"><circle cx="510" cy="198" r="10"/><text x="510" y="198">5</text></g>
+<g class="dg-badge"><circle cx="510" cy="286" r="10"/><text x="510" y="286">6</text></g>
+<g class="dg-badge"><circle cx="305" cy="334" r="10"/><text x="305" y="334">7</text></g>
+<g class="dg-badge"><circle cx="510" cy="383" r="10"/><text x="510" y="383">8</text></g>
+<text class="dg-label" x="298" y="420">fails</text>
+<g class="dg-badge"><circle cx="305" cy="432" r="10"/><text x="305" y="432">9</text></g>
+<text class="dg-label" x="526" y="486">all pass</text>
+<g class="dg-badge"><circle cx="510" cy="482" r="10"/><text x="510" y="482">10</text></g>
+<g class="dg-badge"><circle cx="510" cy="574" r="10"/><text x="510" y="574">11</text></g>
+<text class="dg-label" x="36" y="692">failed before its assertion</text>
+<g class="dg-badge"><circle cx="305" cy="640" r="10"/><text x="305" y="640">12</text></g>
+<text class="dg-label" x="690" y="630">passed</text>
+<g class="dg-badge"><circle cx="762" cy="640" r="10"/><text x="762" y="640">13</text></g>
+<text class="dg-label" x="690" y="516">weak test, or code came first</text>
+<g class="dg-badge"><circle cx="850" cy="570" r="10"/><text x="850" y="570">14</text></g>
+<text class="dg-label" x="918" y="500">existed already</text>
+<g class="dg-badge"><circle cx="905" cy="527" r="10"/><text x="905" y="527">15</text></g>
+<text class="dg-label" x="730" y="1152">already covered, or a test with the feature off</text>
+<g class="dg-badge"><circle cx="1050" cy="900" r="10"/><text x="1050" y="900">16</text></g>
+<text class="dg-label" x="526" y="704">the assertion fired</text>
+<g class="dg-badge"><circle cx="510" cy="700" r="10"/><text x="510" y="700">17</text></g>
+<g class="dg-badge"><circle cx="510" cy="789" r="10"/><text x="510" y="789">18</text></g>
+<text class="dg-label" x="276" y="800">test looks wrong</text>
+<g class="dg-badge"><circle cx="305" cy="822" r="10"/><text x="305" y="822">19</text></g>
+<text class="dg-label" x="278" y="876">test is right</text>
+<g class="dg-badge"><circle cx="305" cy="850" r="10"/><text x="305" y="850">20</text></g>
+<text class="dg-label" x="162" y="736">test is wrong</text>
+<g class="dg-badge"><circle cx="150" cy="772" r="10"/><text x="150" y="772">21</text></g>
+<text class="dg-label" x="162" y="904">cannot tell</text>
+<g class="dg-badge"><circle cx="150" cy="899" r="10"/><text x="150" y="899">22</text></g>
+<g class="dg-badge"><circle cx="510" cy="889" r="10"/><text x="510" y="889">23</text></g>
+<text class="dg-label" x="614" y="904">not yet: try again</text>
+<g class="dg-badge"><circle cx="600" cy="900" r="10"/><text x="600" y="900">24</text></g>
+<text class="dg-label" x="276" y="984">3rd failed try</text>
+<g class="dg-badge"><circle cx="300" cy="960" r="10"/><text x="300" y="960">25</text></g>
+<text class="dg-label" x="732" y="1000">breaks earlier tests</text>
+<g class="dg-badge"><circle cx="720" cy="1046" r="10"/><text x="720" y="1046">26</text></g>
+<text class="dg-label" x="526" y="1026">yes</text>
+<g class="dg-badge"><circle cx="510" cy="1022" r="10"/><text x="510" y="1022">27</text></g>
+<g class="dg-badge"><circle cx="510" cy="1106" r="10"/><text x="510" y="1106">28</text></g>
+<text class="dg-label" x="318" y="1150">yes</text>
+<g class="dg-badge"><circle cx="12" cy="850" r="10"/><text x="12" y="850">29</text></g>
+<text class="dg-label" x="526" y="1222">no</text>
+<g class="dg-badge"><circle cx="510" cy="1218" r="10"/><text x="510" y="1218">30</text></g>
+<text class="dg-label" x="700" y="1256">a scenario is missing</text>
+<g class="dg-badge"><circle cx="1075" cy="800" r="10"/><text x="1075" y="800">31</text></g>
+<text class="dg-label" x="526" y="1317">none missing</text>
+<g class="dg-badge"><circle cx="510" cy="1313" r="10"/><text x="510" y="1313">32</text></g>
+<text class="dg-label" x="274" y="1334">slow tests</text><text class="dg-label" x="274" y="1346">fail</text>
+<g class="dg-badge"><circle cx="305" cy="1360" r="10"/><text x="305" y="1360">33</text></g>
+<text class="dg-label" x="700" y="1350">a bug no test catches</text>
+<g class="dg-badge"><circle cx="1110" cy="1000" r="10"/><text x="1110" y="1000">34</text></g>
+<text class="dg-label" x="526" y="1412">every small bug caught</text>
+<g class="dg-badge"><circle cx="510" cy="1408" r="10"/><text x="510" y="1408">35</text></g>
+</svg>
+    </div>
+<div class="arrows">
+<h3>Start</h3><ol>
+<li value="1"><span class="n">1</span><span>You name the change. The skill is for new behavior, changed behavior and bug fixes: the cases where a test can say what should happen before the code exists. It reads the project's test facts first (the test command, which tests form the fast suite, the project's own test rules) and never guesses them.</span></li>
+<li value="2"><span class="n">2</span><span>There is nothing behavioral to check: a pure refactor (behavior unchanged, the existing tests stay green, no test is added), docs, comments, a config-only edit, or a throwaway spike you declared before writing it. The skill does not run. A spike stays out of the change and is deleted after; what it taught you comes back in through the loop.</span></li>
+<li value="3"><span class="n">3</span><span>Yes, but no reliable test fits: the behavior is real, but no fast, predictable test can pin it: drawing on a screen, an outside call that answers differently each time, or behavior that only shows up in the whole running system with no place to plug a test in. The skill does not build a pile of mocks to fake a test. It names which condition fails and proposes another check, such as a manual run or a check against the real running system.</span></li>
+<li value="4"><span class="n">4</span><span>That exception is your call, and the skill waits for your OK. Then that part gets the other check, and the rest of the change goes through the loop. When the skill runs inside another agent's work, nobody can be asked there: the exception goes back in that agent's report.</span></li>
+<li value="5"><span class="n">5</span><span>Yes: the loop starts.</span></li>
+</ol>
+<h3>The list and the baseline</h3><ol>
+<li value="6"><span class="n">6</span><span>Each unit the change touches (a function, a class, a module) is sorted into one of four kinds by two questions: does it hold logic you could get wrong, and does it reach outside the process (a database, a file, the network)? Logic (logic, stays inside) earns unit tests; Glue (no logic, reaches outside) earns one or a few tests through its entry point; Trivial (neither, such as a getter) earns nothing; Tangled (both) is split first (see "Which units earn a test" below). A unit that earns nothing is still named in the report, with its kind.</span></li>
+<li value="7"><span class="n">7</span><span>The test list comes before any code: the normal case, each limit as three values (just below, at, just above), the error cases, and the behavior that must not change. Each item is one line that names the break it catches: the bug, a code change that would make it fail. For each entry point the change touches (a CLI command, an HTTP app), the list also gets one test of the whole path through it, to check that the parts are wired together. When an item needs a behavior nobody has stated ("with <code>--dry-run</code> and an empty folder, print 'nothing to do' or stay silent?"), the skill asks you and waits instead of guessing. Inside another agent's work it stops at that item and sends the question up.</span></li>
+<li value="8"><span class="n">8</span><span>Two items that one code change would break are one item, so they are merged. For a bug fix the first item reproduces the reported failure itself, and that reproduction is the first RED (a test that fails for the right reason). Then the whole fast suite (the quick tests that run on every change; slow or live tests wait for the end) runs once, before anything changes. This first run is the baseline.</span></li>
+<li value="9"><span class="n">9</span><span>A test already fails: the skill reports it and waits for you; it never works around it quietly. If you let the change go on, that test stays exactly as it is (never skipped or edited), and "the whole suite passes" from then on means every other test.</span></li>
+<li value="10"><span class="n">10</span><span>Green. Now the must-not-change tests are written and run while the behavior they protect is still untouched, and each must pass. Then each one is proven: the protected behavior is broken on purpose, the test must fail on its assertion, the break is undone by hand and the suite runs again. A test written after the code changed could only confirm the change. When no unit earns a new test and there is no bug to reproduce, there is no cycle: the run goes straight to the end of the change, and no RED or GREEN lines are owed.</span></li>
+</ol>
+<h3>RED: one test, watched failing</h3><ol>
+<li value="11"><span class="n">11</span><span>One item, one test: one behavior, a name that says it, real code over mocks. Then it runs. The goal is RED: the test fails, and it fails on its own assertion.</span></li>
+<li value="12"><span class="n">12</span><span>The test never reached its assertion: an import error, a missing name or fixture, or a setup that quietly built nothing. That is not RED. Fix the setup (stub the module, add an empty function, check the setup really builds the state) and run again, until the assertion itself fails. A compile error alone does not count, because only a fired assertion shows that the test can catch the break.</span></li>
+<li value="13"><span class="n">13</span><span>The test passed on its first run, though it was meant to drive new behavior. The skill must say why before it goes on.</span></li>
+<li value="14"><span class="n">14</span><span>The assertion is too weak to ever fail, or the code was written before the test: repair whichever it is and run the test again.</span></li>
+<li value="15"><span class="n">15</span><span>The behavior already existed before this change: the skill stops and says so.</span></li>
+<li value="16"><span class="n">16</span><span>One case is not a stop: a test of the new feature switched off (a run without <code>--dry-run</code>) that matches the old behavior. That test becomes a must-not-change test, gets the break-on-purpose check, and the run goes to the next item. An earlier test already covers the case (one code change would fail both): the new item is dropped. Or the code of an earlier cycle covers it: the test stays, the report says it passed without a RED, and it gets the same break-on-purpose check as a must-not-change test. Either way the run goes to the next item. A must-not-change test, or a declared learning test that pins how a library behaves, is meant to pass at once, so a first pass is fine for those.</span></li>
+<li value="17"><span class="n">17</span><span>The assertion fired, with the expected message: RED is verified, and from now on the test is locked (arrow 18 says what that means). The skill writes one line on why it failed and keeps the failing line as evidence, for example <code>AssertionError: assert ['a.json'] == []</code>: the publish step ignores the flag. For a bug that throws an error, the error escaping the test is the RED; the test is never rewritten to expect that error, because that would lock the bug in.</span></li>
+</ol>
+<h3>GREEN, and the locked test</h3><ol>
+<li value="18"><span class="n">18</span><span>From here on the test is the contract. Weakening its assertion, shaping the code around the test's exact values, or editing, skipping or deleting the test to get green counts as failing the task. Write the obvious code when it is clear, and only what the test asks for: no extra parameters, no "might need it" branches. A hard-coded value is allowed only as a step that a later item, or the tidy-up after green, has to remove before the change is done.</span></li>
+<li value="19"><span class="n">19</span><span>While going for green, the test looks wrong, or the loop wants to change what it expects. All edits stop at that item, and a second look starts. Inside another agent's work, that agent does not start the second look itself: it stops and asks the agent above it to run it.</span></li>
+<li value="20"><span class="n">20</span><span>The second look is one fresh agent. It gets the requirement in its original words, the test and the latest failure, all as text; it opens no file and never sees the code. It answers in one line with one word, <code>matches</code>, <code>contradicts</code> or <code>unsettled</code>, and quotes the requirement words it used. "matches": the test is right, so fix the code, not the test.</span></li>
+<li value="21"><span class="n">21</span><span>"contradicts": the test is wrong. Change only the one line the answer names, to what the quoted words say, and leave every other line. Then the test must fail again before it is locked; when its code is already written, it gets the break-on-purpose check instead. If a project rule blocks that edit, the rule wins: the edit goes to you as a question, and the test stays as it is, red, until you answer.</span></li>
+<li value="22"><span class="n">22</span><span>"unsettled", or no clear answer: the second look cannot tell, because the requirement does not decide it. The test stays as it is, red, until you answer. If your answer keeps what the test expects, the code is fixed as after "matches"; if it changes it, the one-line edit of "contradicts" follows, with your words as the quote. Every answer goes into the report word for word.</span></li>
+<li value="23"><span class="n">23</span><span>The new test runs, then the whole fast suite.</span></li>
+<li value="24"><span class="n">24</span><span>Not green yet: try again. A must-not-change test that turns red has caught a regression: fix the code, not the test, unless whoever runs the loop believes the change of behavior was meant; then the second look decides (arrow 19).</span></li>
+<li value="25"><span class="n">25</span><span>Three failed tries on one test: stop. The design or the test is wrong, and the skill names which and why before it touches the code again; it reports the problem if it cannot solve it.</span></li>
+<li value="26"><span class="n">26</span><span>The new test breaks what earlier tests drove: go back to the last green state (the last commit, or your own edits undone file by file, never a blanket reset), reorder the rest of the list and restart from a different item.</span></li>
+<li value="27"><span class="n">27</span><span>Green means three things: the new test passes, the whole fast suite passes, and the output is clean (no new warnings, no newly skipped tests). The passing line is kept as evidence, for example <code>218 passed in 9.92s</code>. A slow or live suite is not part of a cycle.</span></li>
+</ol>
+<h3>Refactor and the next item</h3><ol>
+<li value="28"><span class="n">28</span><span>Tidy names, duplication and structure, only in what this cycle touched, with the suite green the whole time, and stop when it reads clean. Where the loop makes the commits, tidy-ups and behavior changes never share one.</span></li>
+<li value="29"><span class="n">29</span><span>Items are left: back to "Write one test". Cycles stay small and alike: one scenario, minutes, not hours. A cycle that keeps growing means the item is too big, so split it.</span></li>
+<li value="30"><span class="n">30</span><span>The list is empty, but before calling it empty the skill walks it again.</span></li>
+<li value="31"><span class="n">31</span><span>The walk goes over every input, each limit with its three values and each change of state, against the finished behavior. A missing scenario goes on the list through the same merge check, never straight into code. The walk itself goes into the report; a bare "none missing" is not a walk. The baseline does not run again: the next cycle takes the new item.</span></li>
+<li value="32"><span class="n">32</span><span>Nothing is missing.</span></li>
+</ol>
+<h3>End of change</h3><ol>
+<li value="33"><span class="n">33</span><span>The slow or live suite (tests that are slow or call real outside services), where the project has one, runs once here. If it fails, the run stops and you decide; it is never fixed automatically. Then the mutation check runs: small bugs are put into the code on purpose, one at a time, and at least one test must fail for each. The project's tool does it where there is one (such as mutmut or Stryker); otherwise a pass by hand asks whether some test fails for each small break (a wrong constant, the wrong branch, a side effect removed, an empty return, a missing input check).</span></li>
+<li value="34"><span class="n">34</span><span>The mutation check finds a small bug that no test catches: that behavior has no protection, or a test can never fail. Fix whichever it is through a new list item that goes through RED, before the change is called done. The new item is added to the list and the next cycle takes it; the baseline does not run again.</span></li>
+<li value="35"><span class="n">35</span><span>Every small bug fails at least one test. Then the report with its proof: the baseline, one line per unit with its kind, the test list with each item's break, and the RED and GREEN lines of every cycle. "Tests pass" without those lines is a claim, not evidence.</span></li>
+</ol>
+</div>
+  </section>
+
+  <section id="units">
+    <h2>Which units earn a test</h2>
+    <p class="lead">A unit is the smallest named piece of code the change adds or edits: a function, a method, a class, a module. It earns a test when you can name a code change to it that would break behavior you own, and someone would be upset to lose that behavior. Two questions sort every unit into one of four kinds.</p>
+    <table>
+      <thead><tr><th>Kind</th><th>Logic you could get wrong?</th><th>Reaches outside the process?</th><th>What it earns</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>Logic</td><td>yes</td><td>no</td><td>Unit tests, one per case the spec treats differently</td><td>A discount rule: 10% off above 100</td></tr>
+        <tr><td>Trivial</td><td>no</td><td>no</td><td>Nothing</td><td>A getter, or a constructor that only stores its values</td></tr>
+        <tr><td>Glue</td><td>no</td><td>yes</td><td>One or a few tests through the public entry point, with the real database or folder where the project can run it</td><td>A function that saves a record</td></tr>
+        <tr><td>Tangled</td><td>yes</td><td>yes</td><td>Split it first: move the logic out, then test the parts</td><td>A function that computes a price and also calls the payment service</td></tr>
+      </tbody>
+    </table>
+    <div class="branches" style="margin-top: 14px">
+      <div class="branch go"><div class="then">Always earns a test</div><p>The reproduction of a reported bug, a must-not-change test, and the path where your code catches an error from a dependency and carries on. A getter that starts to check, clean up, default or derive a value has logic and earns one too.</p></div>
+      <div class="branch stop"><div class="then">Never earns one</div><p>A library's own inner workings (test the call your code makes), a log line nobody downstream reads, a config value on its own (test what it changes). Code you do not own is checked once for real; after that, tests check what your code sends to it.</p></div>
+      <div class="branch again"><div class="then">One flow item per entry point</div><p>One test that runs the longest normal path through the real wiring, with only what leaves the machine replaced.</p><div class="example">A normal run publishes one record per file and moves each file to done/.</div></div>
+    </div>
+    <p>The sorting never removes a test that already exists. An old test that looks useless stays, unless a stronger test fully covers it.</p>
+  </section>
+
+  <section id="honest">
+    <h2>What an honest test looks like</h2>
+    <table>
+      <thead><tr><th>Rule</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td>It names its break</td><td>You can say which code change would make it fail. If only a deliberate decision would fail it (a constant's value, the exact wording of a message), it is a change detector: it fails on every redesign and misses real bugs.</td></tr>
+        <tr><td>Expected values come from you</td><td>Write the expected value by hand. A value computed by the code under test passes whatever the code does.</td></tr>
+        <tr><td>It tests the real thing</td><td>An assertion that only reads back what the test itself faked proves nothing. Fake only the slow or outside layer, and keep everything above it real.</td></tr>
+        <tr><td>Deterministic, isolated, fast</td><td>No clock, randomness, network or sleep unless frozen or injected. It passes alone and in any order. A test that passes only on a re-run is a failing test.</td></tr>
+        <tr><td>One break, one test</td><td>Two tests that fail on the same code change are one test: keep the one on the more realistic path.</td></tr>
+      </tbody>
+    </table>
+    <div class="pairs" style="margin-top: 14px">
+      <div class="pair">
+        <div class="without"><span class="label">Bad</span><b>"The setting for the retry limit is 5."</b> It fails only when someone decides to change the number, and stays green when the retry loop is broken.</div>
+        <div class="with"><span class="label">Good</span><b>"A failing call is tried again 5 times, and a 6th try never happens."</b> It fails when the loop stops early, runs once too often, or never retries.</div>
+      </div>
+    </div>
+    <p>Before the change is called done, a mutation check asks the same question from the other side: for each small break in the code (a wrong constant, the wrong branch, a missing side effect, an empty return, a missing input check), does at least one test fail? A break nothing catches marks behavior with no protection. In a Python project that uses pytest, the skill also sets the shape of a test file: one class per unit, tables of inputs, slow tests kept in their own tier out of the fast run.</p>
+  </section>
+
+  <section id="asked">
+    <h2>What you are asked</h2>
+    <p class="lead">Only when a decision is yours, and then the skill waits. Inside another agent's work, each question goes up in that agent's report instead, and the agent stops.</p>
+    <div class="branches">
+      <div class="branch ask"><div class="then">A check other than a test</div><p>No reliable test can pin the behavior.</p><div class="example">The chart drawing has no predictable output to test. Check it with a manual run instead?</div></div>
+      <div class="branch ask"><div class="then">A behavior nobody stated</div><p>A test-list item cannot be written without a choice.</p><div class="example">With --dry-run and an empty folder, print "nothing to do" or stay silent?</div></div>
+      <div class="branch ask"><div class="then">A red suite before any change</div><p>A test already fails before anything is touched.</p><div class="example">test_export_names already fails. Go on and leave it as it is?</div></div>
+      <div class="branch ask"><div class="then">A test the second look cannot settle</div><p>The requirement does not decide what the test should expect.</p><div class="example">The test expects 2 for 2.5, and the spec only says "round the amounts". Round half up, or half to even?</div></div>
+      <div class="branch stop"><div class="then">It is stuck</div><p>Three failed tries on one test, or the slow suite failed at the end. When a behavior already existed before the change, it says so and stops.</p></div>
+    </div>
+  </section>
+
+  <section id="roles">
+    <h2>Who does what</h2>
+    <p class="lead">The one who writes the code never judges whether a locked test is wrong.</p>
+    <table>
+      <thead><tr><th>Role</th><th>What it does</th><th>What it may not do</th></tr></thead>
+      <tbody>
+        <tr><td>Loop runner</td><td>Your session, or an agent a build loop gave the work to. Writes the list, the tests and the code, and the evidence report</td><td>Edit, weaken, skip or delete a locked test to get green; decide an exception alone</td></tr>
+        <tr><td>Second-look agent</td><td>Judges whether one test says what the requirement says. Answers in one line: matches, contradicts or unsettled, with the requirement words it used</td><td>Open any file in the repository or see the code</td></tr>
+        <tr><td>The agent above (when the loop runs inside a build loop)</td><td>Runs the second look and takes questions to you</td><td>Settle an "unsettled" test itself: that one goes to you</td></tr>
+        <tr><td>You</td><td>Exceptions, unstated behavior, an unsettled test, a red suite before the change</td><td>Nothing: you make the calls only you can make</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="different">
+    <h2>What makes it different</h2>
+    <div class="choices">
+      <div class="choice"><h3>The test comes from the spec, before the code</h3><p>The skill's premise: a test written with buggy code in view takes on its bugs, and before RED nobody knows the code is correct.</p></div>
+      <div class="choice"><h3>Only a fired assertion counts as RED</h3><p>A test you never watched fail proves nothing. An import or compile error shows only that the setup failed.</p></div>
+      <div class="choice"><h3>A verified test is locked</h3><p>Changing the test to reach green is failing the task. Only a second look can say the test is wrong.</p></div>
+      <div class="choice"><h3>The second look never sees the code</h3><p>An agent that reads the code would judge the test against the code, which is the thing under test.</p></div>
+      <div class="choice"><h3>Each item names its break</h3><p>A test that names no break protects nothing; two tests that fail on one edit are one test.</p></div>
+      <div class="choice"><h3>Not every unit earns a test</h3><p>The skill's budget: test as little as possible for a given confidence. The skill's premise: a bigger suite is not by itself more protection.</p></div>
+      <div class="choice"><h3>Must-not-change tests come first and are broken once</h3><p>Written after the change, they can only confirm it. Breaking them once shows they can catch the loss.</p></div>
+      <div class="choice"><h3>Small cycles of similar size</h3><p>The skill's premise: small, even cycles matter more than test-first order on its own.</p></div>
+      <div class="choice"><h3>Evidence is lines from the output</h3><p>A reviewer checks the failing and passing lines and the list of breaks, not the words "tests pass".</p></div>
+      <div class="choice"><h3>It admits it cannot enforce itself</h3><p>Where the project has real gates (a hook that runs the suite, a rule that protects test files), the gates win; the skill is the way to pass them honestly.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    The same content as text: <a href="README.md">README.md</a>. The skill itself is not published in this repository; this page describes its design.
+  </footer>
+</main>
+</body>
+</html>

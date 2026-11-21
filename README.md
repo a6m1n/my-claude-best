@@ -172,6 +172,7 @@ my-claude-best/
 │   ├── settings-local/    # a project settings.local.json and its .env hook, field by field
 │   └── theme/             # Eos and Nyx: two themes, the copy Claude Code shows, the hook script, two pictures
 ├── skills/                # skills to read and copy into a .claude/skills/ folder
+├── skill-designs/         # how some skills work inside, one folder each, with a diagram
 ├── CLAUDE.local.md        # an example practices section for a project CLAUDE.md
 ├── CONTRIBUTING.md
 ├── SECURITY.md

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>decompose-and-delegate: how it works</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">&larr; All skill designs</a>
+  <h1>decompose-and-delegate</h1>
+  <p class="tagline">Splits a big question about the code into small questions, gives each one to its own agent, and keeps only their answers in your conversation.</p>
+  <span class="command">/decompose-and-delegate how does a request reach the database?</span>
+
+  <nav class="toc">
+    <a href="#problem">The problem</a>
+    <a href="#fit">When to use it</a>
+    <a href="#run">How a run goes</a>
+    <a href="#brief">What each agent gets</a>
+    <a href="#asked">What you are asked</a>
+    <a href="#different">What makes it different</a>
+  </nav>
+
+  <section id="problem">
+    <h2>The problem it solves</h2>
+    <p class="lead">You ask "how does a request get from the API route to the database?" and Claude starts opening files.</p>
+    <div class="pairs">
+      <div class="pair">
+        <div class="without"><span class="label">Read everything here</span><b>The conversation fills up with code.</b> Twenty files later it is full of code Claude read once, and the answer is somewhere in the middle.</div>
+        <div class="with"><span class="label">decompose-and-delegate</span>The reading happens in agents. Only their answers come back, each with the <code>file:line</code> it rests on.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Read everything here</span><b>The next question lands in a crowded session.</b> You still have it to ask in the same session, now full.</div>
+        <div class="with"><span class="label">decompose-and-delegate</span>Your conversation's context is treated as a shared budget that gets worse as it fills. The skill spends it on answers, not on reading.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fit">
+    <h2>When to use it, and when not</h2>
+    <div class="fit">
+      <div class="yes">
+        <h3>Use it for</h3>
+        <ul>
+          <li>"How does this feature work end to end?" or "where is this behaviour wired?" in code you have not mapped yet.</li>
+          <li>"What breaks if I change this?" before you plan a change.</li>
+          <li>Before a feature that spans several layers, to learn how each layer works today.</li>
+          <li>A large, unclear task where you first need facts from several parts of the code.</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>Not for</h3>
+        <ul>
+          <li>One fact, a file you know, a question one search answers.<span class="instead">Search directly.</span></li>
+          <li>A small edit.<span class="instead">Make it.</span></li>
+          <li>You said "just do it".<span class="instead">Do it in the conversation.</span></li>
+          <li>A question about an outside library, API or version.<span class="instead">Look it up in the official docs.</span></li>
+          <li>You want a written plan, not findings.<span class="instead">Map the code first, then plan. The skill itself stops at findings.</span></li>
+          <li>The work itself has to run in the background and end as commits.<span class="instead"><a href="../delegate-task/index.html">delegate-task</a>: one decided task to one agent that builds and commits.</span></li>
+          <li>The route of a large task is still open.<span class="instead"><a href="../meta-thinking/index.html">meta-thinking</a> first; it decides whether mapping the code is a step at all.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>How a run goes</h2>
+    <p class="lead">You run <code>/decompose-and-delegate how does a request reach the database?</code>, or Claude starts it on asks like "how does X work end to end". The diagram follows the skill's own steps (0 to 4). Each box is coloured by who does the step, and each arrow has a number: the list under the diagram says what happens on it.</p>
+    <div class="legend">
+      <span class="chip you">You</span>
+      <span class="chip main">Main session (your conversation)</span>
+      <span class="chip agent">Agent, fresh context</span>
+      <span class="chip agent">End of the run (thick green border)</span>
+      <span class="chip" style="color: var(--accent)">Orange arrow: back into the loop</span>
+    </div>
+    <div class="diagram">
+<svg viewBox="0 0 1060 1225" role="img" aria-labelledby="dd-title"><title id="dd-title">How a decompose-and-delegate run goes, arrow by arrow</title>
+<defs><marker id="dd-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="dd-ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow loop" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<path class="dg-edge " d="M510,72 L510,96" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M325,136 L270,136" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M695,136 L790,136" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M510,176 L510,214" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M680,250 L790,250" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M905,276 L905,356 L675,356" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M510,286 L510,318" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M345,356 L270,356" marker-end="url(#dd-ah)"/>
+<path class="dg-edge loop" d="M150,382 L150,404 L420,404 L420,375" marker-end="url(#dd-ahl)"/>
+<path class="dg-edge " d="M510,394 L510,422" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M675,460 L740,460 L740,658 L680,658" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M510,498 L510,528" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M510,592 L510,626" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M510,690 L510,728" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M680,760 L790,760" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M510,792 L510,836" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M905,792 L905,868 L680,868" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M510,900 L510,920" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M325,956 L270,956" marker-end="url(#dd-ah)"/>
+<path class="dg-edge loop" d="M150,924 L150,868 L340,868" marker-end="url(#dd-ahl)"/>
+<path class="dg-edge " d="M510,992 L510,1028" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M675,1066 L790,1066" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M905,1098 L905,1172 L680,1172" marker-end="url(#dd-ah)"/>
+<path class="dg-edge " d="M510,1104 L510,1140" marker-end="url(#dd-ah)"/>
+<g class="dg-node you"><rect x="340" y="20" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="43">You ask a question about the code</text><text class="dg-sub" x="510.0" y="59">/decompose-and-delegate how does a request …</text></g>
+<g class="dg-node main"><polygon points="510.0,96 695,136.0 510.0,176 325,136.0"/><text class="dg-title" x="510.0" y="133">Step 0: what kind of ask?</text><text class="dg-sub" x="510.0" y="149">one fact, a narrow ask, or a bigger task</text></g>
+<g class="dg-node done"><rect x="30" y="110" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="133">Answer it directly</text><text class="dg-sub" x="150.0" y="149">one fact, a known file; no agents</text></g>
+<g class="dg-node done"><rect x="790" y="110" width="230" height="52" rx="9"/><text class="dg-title" x="905.0" y="133">Answer exactly that</text><text class="dg-sub" x="905.0" y="149">a precise ask; no wider search</text></g>
+<g class="dg-node main"><polygon points="510.0,214 680,250.0 510.0,286 340,250.0"/><text class="dg-title" x="510.0" y="247">Project&#x27;s own binding file?</text><text class="dg-sub" x="510.0" y="263">extra repo facts for this skill</text></g>
+<g class="dg-node main"><rect x="790" y="224" width="230" height="52" rx="9"/><text class="dg-title" x="905.0" y="247">Read the binding file</text><text class="dg-sub" x="905.0" y="263">it wins where the two disagree</text></g>
+<g class="dg-node main"><polygon points="510.0,318 675,356.0 510.0,394 345,356.0"/><text class="dg-title" x="510.0" y="353">Step 1: is the ask unclear?</text><text class="dg-sub" x="510.0" y="369">goal, limits or answer form</text></g>
+<g class="dg-node you"><rect x="30" y="330" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="353">You answer a question</text><text class="dg-sub" x="150.0" y="369">only one that changes the next step</text></g>
+<g class="dg-node main"><polygon points="510.0,422 675,460.0 510.0,498 345,460.0"/><text class="dg-title" x="510.0" y="457">Files known already?</text><text class="dg-sub" x="510.0" y="473">named, or already opened here</text></g>
+<g class="dg-node main"><rect x="340" y="528" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="549">Quick search · step 1.5</text><text class="dg-sub" x="510.0" y="565">one grep and ls pass, no file reading;</text><text class="dg-sub" x="510.0" y="581">where the hits cluster become the parts</text></g>
+<g class="dg-node main"><rect x="340" y="626" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="647">Split into threads · step 2</text><text class="dg-sub" x="510.0" y="663">one question per thread (one agent each);</text><text class="dg-sub" x="510.0" y="679">each runs now or waits for another&#x27;s answer</text></g>
+<g class="dg-node agent"><rect x="340" y="728" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="749">Parallel threads · step 3</text><text class="dg-sub" x="510.0" y="765">one agent each, all sent at once;</text><text class="dg-sub" x="510.0" y="781">returns: the answer + file:line, not files</text></g>
+<g class="dg-node agent"><rect x="790" y="728" width="230" height="64" rx="9"/><text class="dg-title" x="905.0" y="749">Dependent thread</text><text class="dg-sub" x="905.0" y="765">sent once the answer</text><text class="dg-sub" x="905.0" y="781">it needs is back</text></g>
+<g class="dg-node main"><rect x="340" y="836" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="865">Join the answers · step 4</text><text class="dg-sub" x="510.0" y="881">keep only what the next step needs</text></g>
+<g class="dg-node main"><polygon points="510.0,920 695,956.0 510.0,992 325,956.0"/><text class="dg-title" x="510.0" y="953">Is an answer too thin,</text><text class="dg-sub" x="510.0" y="969">or did an agent paste whole files?</text></g>
+<g class="dg-node agent"><rect x="30" y="924" width="240" height="64" rx="9"/><text class="dg-title" x="150.0" y="945">Ask a sharper question</text><text class="dg-sub" x="150.0" y="961">same agent, or a fresh one when the</text><text class="dg-sub" x="150.0" y="977">old one has read too much to resume</text></g>
+<g class="dg-node main"><polygon points="510.0,1028 675,1066.0 510.0,1104 345,1066.0"/><text class="dg-title" x="510.0" y="1063">Still only a guess?</text><text class="dg-sub" x="510.0" y="1079">a likely cause, not a proven fact</text></g>
+<g class="dg-node agent"><rect x="790" y="1034" width="230" height="64" rx="9"/><text class="dg-title" x="905.0" y="1055">Check each guess</text><text class="dg-sub" x="905.0" y="1071">one agent per guess proves it right</text><text class="dg-sub" x="905.0" y="1087">or wrong with file:line</text></g>
+<g class="dg-node done"><rect x="340" y="1140" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="1161">Stop · findings to you</text><text class="dg-sub" x="510.0" y="1177">no building, no tests;</text><text class="dg-sub" x="510.0" y="1193">waits for your next instruction</text></g>
+<g class="dg-badge"><circle cx="510" cy="84" r="10"/><text x="510" y="84">1</text></g>
+<text class="dg-label" x="300" y="123">one fact</text>
+<g class="dg-badge"><circle cx="300" cy="136" r="10"/><text x="300" y="136">2</text></g>
+<text class="dg-label" x="684" y="123">narrow ask</text>
+<g class="dg-badge"><circle cx="772" cy="136" r="10"/><text x="772" y="136">3</text></g>
+<text class="dg-label" x="526" y="200">multi-part or unclear</text>
+<g class="dg-badge"><circle cx="510" cy="195" r="10"/><text x="510" y="195">4</text></g>
+<text class="dg-label" x="694" y="240">yes</text>
+<g class="dg-badge"><circle cx="745" cy="250" r="10"/><text x="745" y="250">5</text></g>
+<g class="dg-badge"><circle cx="905" cy="316" r="10"/><text x="905" y="316">6</text></g>
+<text class="dg-label" x="526" y="307">no: use the project&#x27;s docs</text>
+<g class="dg-badge"><circle cx="510" cy="302" r="10"/><text x="510" y="302">7</text></g>
+<text class="dg-label" x="312" y="346">yes</text>
+<g class="dg-badge"><circle cx="300" cy="356" r="10"/><text x="300" y="356">8</text></g>
+<g class="dg-badge"><circle cx="285" cy="404" r="10"/><text x="285" y="404">9</text></g>
+<text class="dg-label" x="526" y="413">no: state an assumption</text>
+<g class="dg-badge"><circle cx="510" cy="408" r="10"/><text x="510" y="408">10</text></g>
+<text class="dg-label" x="752" y="565">yes: skip the search</text>
+<g class="dg-badge"><circle cx="740" cy="560" r="10"/><text x="740" y="560">11</text></g>
+<text class="dg-label" x="526" y="518">no</text>
+<g class="dg-badge"><circle cx="510" cy="513" r="10"/><text x="510" y="513">12</text></g>
+<g class="dg-badge"><circle cx="510" cy="609" r="10"/><text x="510" y="609">13</text></g>
+<g class="dg-badge"><circle cx="510" cy="709" r="10"/><text x="510" y="709">14</text></g>
+<g class="dg-badge"><circle cx="735" cy="760" r="10"/><text x="735" y="760">15</text></g>
+<g class="dg-badge"><circle cx="510" cy="814" r="10"/><text x="510" y="814">16</text></g>
+<g class="dg-badge"><circle cx="905" cy="830" r="10"/><text x="905" y="830">17</text></g>
+<g class="dg-badge"><circle cx="510" cy="910" r="10"/><text x="510" y="910">18</text></g>
+<text class="dg-label" x="312" y="946">yes</text>
+<g class="dg-badge"><circle cx="300" cy="956" r="10"/><text x="300" y="956">19</text></g>
+<g class="dg-badge"><circle cx="150" cy="896" r="10"/><text x="150" y="896">20</text></g>
+<text class="dg-label" x="526" y="1015">no</text>
+<g class="dg-badge"><circle cx="510" cy="1010" r="10"/><text x="510" y="1010">21</text></g>
+<text class="dg-label" x="690" y="1056">yes</text>
+<g class="dg-badge"><circle cx="735" cy="1066" r="10"/><text x="735" y="1066">22</text></g>
+<text class="dg-label" x="800" y="1162">confirmed only</text>
+<g class="dg-badge"><circle cx="905" cy="1135" r="10"/><text x="905" y="1135">23</text></g>
+<text class="dg-label" x="526" y="1127">no</text>
+<g class="dg-badge"><circle cx="510" cy="1122" r="10"/><text x="510" y="1122">24</text></g>
+</svg>
+    </div>
+<div class="arrows">
+<h3>Step 0: is it worth splitting?</h3><ol>
+<li value="1"><span class="n">1</span><span>Your question goes to a first check (step 0): is the task worth splitting into parts for agents at all? The skill tries three kinds of task in order and takes the first that fits: a quick fact, a narrow ask, or a bigger task.</span></li>
+<li value="2"><span class="n">2</span><span>A single fact, a file you already know, a one-line edit, a plain chat answer, or you said "just do it": the main session (your own Claude Code conversation) searches or reads directly and answers. No agent is started; an agent for one search costs a round trip and saves nothing.</span></li>
+<li value="3"><span class="n">3</span><span>A precise, narrow ask you already scoped: the skill answers exactly that and never widens it into an investigation.</span></li>
+<li value="4"><span class="n">4</span><span>The task has several parts, spans several files or layers, is unclear, or asks "understand how X works": the skill goes on.</span></li>
+</ol>
+<h3>Setup and clarify</h3><ol>
+<li value="5"><span class="n">5</span><span>A project can add a binding file for this skill: a file in the project's <code>.claude/skills/decompose-and-delegate/</code> folder that adds facts about that repository. When it exists, the skill reads it once.</span></li>
+<li value="6"><span class="n">6</span><span>The binding holds facts about the repository only: a route through the code (which layer to read first, then next), the project's own test and build commands for the "do not run" list, and example threads. Where it disagrees with the skill, the binding wins.</span></li>
+<li value="7"><span class="n">7</span><span>With no binding, the skill takes the starting points from the project's own instruction files and architecture docs as it goes.</span></li>
+<li value="8"><span class="n">8</span><span>The goal, the scope (what is in and out) or the shape of the answer is really unclear, and your answer would change what happens next: the skill asks you. It asks only that, and does not interrogate. Example: "By 'request' do you mean the public API or the internal job queue?"</span></li>
+<li value="9"><span class="n">9</span><span>Your answer goes back to the same check. Clarifying stops once each part can be written as one question that has an answer.</span></li>
+<li value="10"><span class="n">10</span><span>Nothing important is unclear: the skill writes down its assumption (the one reading of the question it follows, how deep to go) and goes on without asking.</span></li>
+</ol>
+<h3>Search and split</h3><ol>
+<li value="11"><span class="n">11</span><span>You already opened these files in this conversation, or you named them: the skill skips the search and splits straight away.</span></li>
+<li value="12"><span class="n">12</span><span>Otherwise it does one quick search first, so the parts come from the code and not from a guess.</span></li>
+<li value="13"><span class="n">13</span><span>The search is one <code>grep -ril &lt;term&gt;</code> across the repository and <code>ls</code> on the likely folders, for example <code>routes/</code>, <code>services/</code>, <code>db/</code>. The folders where the hits cluster become the parts, and the hit list becomes each agent's scope: the exact folders and files it may look in. The search only looks: the moment the skill wants to read a file, that reading becomes a question for an agent.</span></li>
+<li value="14"><span class="n">14</span><span>Each part becomes a thread: one question that can be answered without the others, and later one agent. For example "Which middleware checks the token?" or "Where is the SQL query built?". A question that needs two answers is two questions. Each thread is marked parallel (it needs nothing from the others, so it runs now) or dependent (it needs another thread's answer before it can even be asked).</span></li>
+</ol>
+<h3>One agent per thread</h3><ol>
+<li value="15"><span class="n">15</span><span>All parallel threads go out in one message, so their agents run at the same time. A dependent thread waits: its agent starts only when the answer it needs is back. A part about an outside library, API or version does not get an agent: the main session looks it up itself with web research.</span></li>
+<li value="16"><span class="n">16</span><span>The skill assumes each agent starts knowing nothing about your conversation, so the brief (the prompt the agent gets) holds everything it needs: the goal, the scope, where to start, how to look (find the starting point, read only that part, find who calls it, read them, repeat; never read everything first) and what not to do (edit, fix, leave the scope, run tests or builds). It returns only the answer, the <code>file:line</code> behind it, any surprise and what is still unknown, never whole files. Example: "<code>auth/middleware.py:42</code> rejects it with 401".</span></li>
+<li value="17"><span class="n">17</span><span>The dependent agent returns its answer in the same form.</span></li>
+</ol>
+<h3>Synthesize</h3><ol>
+<li value="18"><span class="n">18</span><span>The main session joins the answers and keeps only what the next step needs. It does not re-read files an agent already summarised; it opens a file itself only when it has to edit it.</span></li>
+<li value="19"><span class="n">19</span><span>An answer is too thin, or an agent pasted whole files back: the skill does not redo the search itself. It sends a sharper question to the same agent. Continuing an agent sends its whole history again, so there is a size limit past which an agent is not continued. The skill first checks how long that agent's conversation already is (its token count), since an agent that read too much is the one most likely past that limit; past it, a fresh agent, briefed with what came back, takes the sharper question.</span></li>
+<li value="20"><span class="n">20</span><span>The new answer joins the others.</span></li>
+<li value="21"><span class="n">21</span><span>All answers are solid: one more check before you see anything. Is the joined answer a proven fact, or still a guess?</span></li>
+<li value="22"><span class="n">22</span><span>The joined answer is still a guess, for example "the bug is probably in the reconnect code". A guess does not reach you as a fact: one agent per guess checks it against the code and confirms or refutes it with <code>file:line</code>.</span></li>
+<li value="23"><span class="n">23</span><span>Only what the check confirmed goes into the findings.</span></li>
+<li value="24"><span class="n">24</span><span>The answer rests on cited facts: the run stops. You get the findings. The skill does not start building and does not run the tests, linters or build unless you ask; it waits for your next instruction. When you asked for a plan, the findings are the input for writing one, as a separate step that stops at the plan; no code is written.</span></li>
+</ol>
+</div>
+  </section>
+
+  <section id="brief">
+    <h2>What each agent gets</h2>
+    <p class="lead">The skill assumes each agent starts knowing nothing about your conversation, so its brief holds everything it needs.</p>
+    <table>
+      <thead><tr><th>Part</th><th>What it holds</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>Goal</td><td>The one question it answers</td><td>Which middleware rejects a request with no token?</td></tr>
+        <tr><td>Scope</td><td>Where to look, and where not</td><td><code>src/api/</code>, <code>src/auth/</code>; not the tests</td></tr>
+        <tr><td>Start</td><td>Where to begin</td><td>The route <code>POST /orders</code></td></tr>
+        <tr><td>How to look</td><td>Find the starting point, read only that part, find who calls it, read them, repeat until answered. Never read everything first.</td><td></td></tr>
+        <tr><td>What to return</td><td>The answer, the <code>file:line</code> behind it, any surprise, what is still unknown</td><td>"<code>auth/middleware.py:42</code> rejects it with 401"</td></tr>
+        <tr><td>Do not</td><td>Edit, fix what it finds, leave the scope, paste whole files, run tests or builds</td><td></td></tr>
+      </tbody>
+    </table>
+    <p class="lead" style="margin-top: 14px">A project can add its own route through the code (which layer to read first, then next) and the skill gives it to every agent that searches.</p>
+  </section>
+
+  <section id="asked">
+    <h2>What you are asked</h2>
+    <p class="lead">Only when the goal, the scope or the kind of answer you want is unclear, and the answer would change what happens next. For anything else the skill states its assumption and goes on.</p>
+    <div class="branches">
+      <div class="branch ask">
+        <div class="then">The goal, scope or kind of answer is unclear</div>
+        <p>And the answer would change what happens next.</p>
+        <div class="example">By "request" do you mean the public API or the internal job queue?</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="different">
+    <h2>What makes it different</h2>
+    <div class="choices">
+      <div class="choice"><h3>One agent per part of the question, not per search</h3><p>An agent for one search costs a round trip and saves nothing. An agent pays off only when its reading would otherwise land in your conversation.</p></div>
+      <div class="choice"><h3>The question is made clear before it is split</h3><p>A wrong split wastes every agent that runs on it.</p></div>
+      <div class="choice"><h3>A quick look before splitting</h3><p>Parts cut from the question alone may name code that does not exist.</p></div>
+      <div class="choice"><h3>Answers with <code>file:line</code>, never whole files</h3><p>An agent that pastes code back fills the conversation the skill exists to keep clean.</p></div>
+      <div class="choice"><h3>Independent questions go out at the same time</h3><p>Running them one after another only adds waiting.</p></div>
+      <div class="choice"><h3>No re-reading of what an agent already summarised</h3><p>The main session opens a file itself only when it has to edit it.</p></div>
+      <div class="choice"><h3>A guess is checked before it reaches you</h3><p>"Probably" in a summary is a guess; one more agent checks it against the code.</p></div>
+      <div class="choice"><h3>It runs in your conversation, not as a background task</h3><p>The joined answer is the point, and it has to land where you make the next decision. The skill assumes a background run could not be steered and would leave its answer outside your conversation.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    The same content as text: <a href="README.md">README.md</a>. The skill itself is not published in this repository; this page describes its design, so you can build the same habit into your own sessions or skills.
+  </footer>
+</main>
+</body>
+</html>

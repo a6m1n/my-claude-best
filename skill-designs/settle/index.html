@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>settle: how it works</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">&larr; All skill designs</a>
+  <h1>settle</h1>
+  <p class="tagline">Goes through an existing plan, ticket or doc with you, one open point at a time. Each point comes with options, pros and cons and a recommendation; your answers are recorded and applied to the text at the end.</p>
+  <span class="command">/settle plans/export-v2.md webhook delivery</span>
+
+  <nav class="toc">
+    <a href="#problem">The problem</a>
+    <a href="#fit">When to use it</a>
+    <a href="#run">How a run goes</a>
+    <a href="#points">Where the points come from</a>
+    <a href="#point">What a point looks like</a>
+    <a href="#asked">What you are asked</a>
+    <a href="#roles">Who does what</a>
+    <a href="#different">What makes it different</a>
+  </nav>
+
+  <section id="problem">
+    <h2>The problem it solves</h2>
+    <p class="lead">You have a plan draft with open questions in it, and you ask Claude to "go through the plan and resolve the open points". A tidier plan comes back. Some of the choices in it were yours to make, and you never saw them. The skill is built against six ways such a pass can go wrong.</p>
+    <div class="pairs">
+      <div class="pair">
+        <div class="without"><span class="label">Resolve it in one pass</span><b>It decides for you.</b> The session picks an option for each open question and edits the plan.</div>
+        <div class="with"><span class="label">settle</span>Every point comes to you with options and a recommendation. Nothing is decided until you answer.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Resolve it in one pass</span><b>It agrees with whoever spoke last.</b> It follows the plan's wording or your lean, not the code.</div>
+        <div class="with"><span class="label">settle</span>It reads the code before it recommends, pushes back on the text and on you, and changes its view only on evidence.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Resolve it in one pass</span><b>It sees only the questions the plan lists.</b> A part built for no one, or one far too thin, stays in.</div>
+        <div class="with"><span class="label">settle</span>An audit adds points for what is over-built and for what is too thin where the risk is real.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Resolve it in one pass</span><b>Ten points arrive in one message.</b> You answer three and skim the rest.</div>
+        <div class="with"><span class="label">settle</span>One point per message, none skipped. The next one comes only after you answer.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Resolve it in one pass</span><b>It solves the wrong problem well.</b> Careful answers to a plan aimed at the wrong problem.</div>
+        <div class="with"><span class="label">settle</span>It checks the framing first and asks you "Is this the actual problem you want solved?"</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Resolve it in one pass</span><b>The decisions stay in the chat.</b> The plan still shows the old options as open.</div>
+        <div class="with"><span class="label">settle</span>A Decisions Summary, then the decisions are written into the text, or saved as a file.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fit">
+    <h2>When to use it, and when not</h2>
+    <div class="fit">
+      <div class="yes">
+        <h3>Use it for</h3>
+        <ul>
+          <li>A plan, ticket, doc or config with open points that only you can decide.</li>
+          <li>A draft that Claude or a colleague wrote, before anyone builds it: the audit finds what it builds for no one and what it leaves too thin.</li>
+          <li>Open questions that piled up in the current chat ("walk me through the open points").</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>Not for</h3>
+        <ul>
+          <li>Nothing is written yet; you need the requirements first.<span class="instead">A requirements interview, one question per message.</span></li>
+          <li>Agents should critique and fix the text without you deciding each point.<span class="instead"><a href="../debate-loop/index.html">debate-loop</a>. Its reviewers are agents; here the decisions are yours.</span></li>
+          <li>You need the plan written, not reviewed.<span class="instead">Write the implementation plan first, then settle it.</span></li>
+          <li>You need the reviewed change built.<span class="instead">A build loop that runs the project's tests.</span></li>
+          <li>Can it be broken or abused?<span class="instead">An adversarial (red team) review.</span></li>
+          <li>You want a one-shot review of written code.<span class="instead">The project's own code review command, where it has one.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>How a run goes</h2>
+    <p class="lead">You run <code>/settle plans/export-v2.md webhook delivery</code>: the file is the subject, the words after it are the focus. The diagram follows the skill's own steps (1 to 6). Each box is coloured by who does the step, and each arrow has a number: the list under the diagram says what happens on it.</p>
+    <div class="legend">
+      <span class="chip you">You</span>
+      <span class="chip main">Main session (your conversation)</span>
+      <span class="chip stop">Stop</span>
+      <span class="chip agent">Done</span>
+      <span class="chip" style="color: var(--accent)">Orange arrow: back into the loop</span>
+    </div>
+    <div class="diagram">
+<svg viewBox="0 0 1090 1270" role="img" aria-labelledby="st-title"><title id="st-title">How a settle run goes, arrow by arrow</title>
+<defs><marker id="st-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="st-ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow loop" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<path class="dg-edge " d="M510,72 L510,100" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M340,118 L270,118" marker-end="url(#st-ah)"/>
+<path class="dg-edge loop" d="M270,146 L340,146" marker-end="url(#st-ahl)"/>
+<path class="dg-edge " d="M510,160 L510,192" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M670,228 L790,228" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M510,264 L510,292" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M510,352 L510,380" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M510,432 L510,462" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M660,498 L800,498" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M360,498 L270,498" marker-end="url(#st-ah)"/>
+<path class="dg-edge loop" d="M150,472 L150,406 L340,406" marker-end="url(#st-ahl)"/>
+<path class="dg-edge " d="M510,534 L510,570" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M510,642 L510,670" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M640,702 L790,702" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M510,734 L510,770" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M510,842 L510,870" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M340,884 L270,884" marker-start="url(#st-ah)" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M340,914 L305,914 L305,966 L270,966" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M270,996 L340,996" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M680,898 L790,898" marker-start="url(#st-ah)" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M510,926 L510,980" marker-end="url(#st-ah)"/>
+<path class="dg-edge loop" d="M680,1010 L1045,1010 L1045,806 L680,806" marker-end="url(#st-ahl)"/>
+<path class="dg-edge " d="M510,1040 L510,1076" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M420,1136 L420,1162 L150,1162 L150,1188" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M510,1136 L510,1188" marker-end="url(#st-ah)"/>
+<path class="dg-edge " d="M600,1136 L600,1162 L905,1162 L905,1188" marker-end="url(#st-ah)"/>
+<g class="dg-node you"><rect x="340" y="20" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="43">You start the run</text><text class="dg-sub" x="510.0" y="59">/settle plans/export-v2.md webhook delivery</text></g>
+<g class="dg-node main"><rect x="340" y="100" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="119">Find what to review · step 1</text><text class="dg-sub" x="510.0" y="135">a file, folder, ticket, pasted text or the chat;</text><text class="dg-sub" x="510.0" y="151">your focus (what to look at) said back in one line</text></g>
+<g class="dg-node you"><rect x="30" y="100" width="240" height="60" rx="9"/><text class="dg-title" x="150.0" y="119">You: which text to review?</text><text class="dg-sub" x="150.0" y="135">several match, or none does;</text><text class="dg-sub" x="150.0" y="151">a ticket it cannot open: paste it</text></g>
+<g class="dg-node main"><rect x="340" y="292" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="311">Is it the right problem? · step 2</text><text class="dg-sub" x="510.0" y="327">it writes &quot;My read: this solves X by Y&quot;</text><text class="dg-sub" x="510.0" y="343">and checks that read in the code and docs</text></g>
+<g class="dg-node main"><polygon points="510.0,192 670,228.0 510.0,264 350,228.0"/><text class="dg-title" x="510.0" y="225">Is it a plan with no</text><text class="dg-sub" x="510.0" y="241">problem statement?</text></g>
+<g class="dg-node stop"><rect x="790" y="202" width="230" height="52" rx="9"/><text class="dg-title" x="905.0" y="225">Stop · no problem stated</text><text class="dg-sub" x="905.0" y="241">whoever wrote the plan adds it</text></g>
+<g class="dg-node you"><rect x="340" y="380" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="403">You: is this the real problem?</text><text class="dg-sub" x="510.0" y="419">confirm, correct it, or say you are unsure</text></g>
+<g class="dg-node main"><polygon points="510.0,462 660,498.0 510.0,534 360,498.0"/><text class="dg-title" x="510.0" y="503">What did you answer?</text></g>
+<g class="dg-node stop"><rect x="800" y="468" width="230" height="60" rx="9"/><text class="dg-title" x="915.0" y="487">Stop · back to planning</text><text class="dg-sub" x="915.0" y="503">the review does not rewrite</text><text class="dg-sub" x="915.0" y="519">the problem a plan solves</text></g>
+<g class="dg-node you"><rect x="30" y="472" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="495">You answer one question</text><text class="dg-sub" x="150.0" y="511">the skill asks one; you answer it</text></g>
+<g class="dg-node main"><rect x="340" y="570" width="340" height="72" rx="9"/><text class="dg-title" x="510.0" y="587">Collect the points in one queue · step 3</text><text class="dg-sub" x="510.0" y="603">listed in the text: open questions, choices,</text><text class="dg-sub" x="510.0" y="619">assumptions, risks, what it leaves out;</text><text class="dg-sub" x="510.0" y="635">found by its own check: built for nobody, too thin</text></g>
+<g class="dg-node main"><polygon points="510.0,670 640,702.0 510.0,734 380,702.0"/><text class="dg-title" x="510.0" y="707">Any points to decide?</text></g>
+<g class="dg-node done"><rect x="790" y="676" width="230" height="52" rx="9"/><text class="dg-title" x="905.0" y="699">Done · nothing to settle</text><text class="dg-sub" x="905.0" y="715">a plan: &quot;ready for implementation&quot;</text></g>
+<g class="dg-node main"><rect x="340" y="770" width="340" height="72" rx="9"/><text class="dg-title" x="510.0" y="787">One point per message · step 4</text><text class="dg-sub" x="510.0" y="803">the problem, &quot;is this needed now?&quot;, options</text><text class="dg-sub" x="510.0" y="819">with pros and cons, a recommendation;</text><text class="dg-sub" x="510.0" y="835">then it waits for you</text></g>
+<g class="dg-node you"><rect x="340" y="870" width="340" height="56" rx="9"/><text class="dg-title" x="510.0" y="895">You answer</text><text class="dg-sub" x="510.0" y="911">pick an option, argue, skip, or raise a new point</text></g>
+<g class="dg-node main"><rect x="30" y="850" width="240" height="56" rx="9"/><text class="dg-title" x="150.0" y="867">Debate with evidence</text><text class="dg-sub" x="150.0" y="883">it answers with facts; if you are</text><text class="dg-sub" x="150.0" y="899">right, it changes its advice</text></g>
+<g class="dg-node main"><rect x="30" y="950" width="240" height="60" rx="9"/><text class="dg-title" x="150.0" y="969">One follow-up question</text><text class="dg-sub" x="150.0" y="985">still unclear: its recommendation</text><text class="dg-sub" x="150.0" y="1001">is recorded as a default</text></g>
+<g class="dg-node main"><rect x="790" y="868" width="230" height="60" rx="9"/><text class="dg-title" x="905.0" y="887">Add it to the queue</text><text class="dg-sub" x="905.0" y="903">the new total is announced;</text><text class="dg-sub" x="905.0" y="919">the current point comes first</text></g>
+<g class="dg-node main"><rect x="340" y="980" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="999">Record · step 5</text><text class="dg-sub" x="510.0" y="1015">your choice, and whether it follows its advice;</text><text class="dg-sub" x="510.0" y="1031">a running count: &quot;3 of 7 settled&quot;</text></g>
+<g class="dg-node main"><rect x="340" y="1076" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="1095">Decisions Summary · step 6</text><text class="dg-sub" x="510.0" y="1111">one table: point, decision, notes;</text><text class="dg-sub" x="510.0" y="1127">then the decisions go into the text</text></g>
+<g class="dg-node done"><rect x="30" y="1188" width="240" height="60" rx="9"/><text class="dg-title" x="150.0" y="1207">Done · plan updated</text><text class="dg-sub" x="150.0" y="1223">open questions closed, rejected</text><text class="dg-sub" x="150.0" y="1239">options kept with their reasons</text></g>
+<g class="dg-node done"><rect x="340" y="1188" width="340" height="60" rx="9"/><text class="dg-title" x="510.0" y="1215">Done · file edited</text><text class="dg-sub" x="510.0" y="1231">only what the decisions change</text></g>
+<g class="dg-node done"><rect x="790" y="1188" width="230" height="60" rx="9"/><text class="dg-title" x="905.0" y="1207">Done · summary saved</text><text class="dg-sub" x="905.0" y="1223">as a file in the project&#x27;s</text><text class="dg-sub" x="905.0" y="1239">working folder</text></g>
+<g class="dg-badge"><circle cx="510" cy="86" r="10"/><text x="510" y="86">1</text></g>
+<text class="dg-label" x="36" y="94">several match, or none</text>
+<g class="dg-badge"><circle cx="305" cy="118" r="10"/><text x="305" y="118">2</text></g>
+<g class="dg-badge"><circle cx="305" cy="146" r="10"/><text x="305" y="146">3</text></g>
+<g class="dg-badge"><circle cx="510" cy="176" r="10"/><text x="510" y="176">4</text></g>
+<text class="dg-label" x="690" y="218">yes</text>
+<g class="dg-badge"><circle cx="730" cy="228" r="10"/><text x="730" y="228">5</text></g>
+<text class="dg-label" x="526" y="282">no</text>
+<g class="dg-badge"><circle cx="510" cy="278" r="10"/><text x="510" y="278">6</text></g>
+<g class="dg-badge"><circle cx="510" cy="366" r="10"/><text x="510" y="366">7</text></g>
+<g class="dg-badge"><circle cx="510" cy="447" r="10"/><text x="510" y="447">8</text></g>
+<text class="dg-label" x="664" y="524">you corrected a plan</text>
+<g class="dg-badge"><circle cx="715" cy="498" r="10"/><text x="715" y="498">9</text></g>
+<text class="dg-label" x="278" y="530">unsure</text>
+<text class="dg-label" x="278" y="546">(first time)</text>
+<g class="dg-badge"><circle cx="340" cy="498" r="10"/><text x="340" y="498">10</text></g>
+<g class="dg-badge"><circle cx="150" cy="440" r="10"/><text x="150" y="440">11</text></g>
+<text class="dg-label" x="526" y="546">you agree, correct a text that is not a plan,</text>
+<text class="dg-label" x="526" y="563">or are still unsure after one question</text>
+<g class="dg-badge"><circle cx="510" cy="552" r="10"/><text x="510" y="552">12</text></g>
+<g class="dg-badge"><circle cx="510" cy="656" r="10"/><text x="510" y="656">13</text></g>
+<text class="dg-label" x="652" y="692">none</text>
+<g class="dg-badge"><circle cx="715" cy="702" r="10"/><text x="715" y="702">14</text></g>
+<text class="dg-label" x="526" y="757">yes</text>
+<g class="dg-badge"><circle cx="510" cy="752" r="10"/><text x="510" y="752">15</text></g>
+<g class="dg-badge"><circle cx="510" cy="856" r="10"/><text x="510" y="856">16</text></g>
+<text class="dg-label" x="36" y="844">you argue</text>
+<g class="dg-badge"><circle cx="305" cy="884" r="10"/><text x="305" y="884">17</text></g>
+<text class="dg-label" x="244" y="940">unclear</text>
+<g class="dg-badge"><circle cx="305" cy="940" r="10"/><text x="305" y="940">18</text></g>
+<g class="dg-badge"><circle cx="305" cy="996" r="10"/><text x="305" y="996">19</text></g>
+<text class="dg-label" x="796" y="862">you raise a new point</text>
+<g class="dg-badge"><circle cx="735" cy="898" r="10"/><text x="735" y="898">20</text></g>
+<text class="dg-label" x="526" y="958">a pick or a skip</text>
+<g class="dg-badge"><circle cx="510" cy="953" r="10"/><text x="510" y="953">21</text></g>
+<text class="dg-label" x="930" y="1026">points left</text>
+<g class="dg-badge"><circle cx="1045" cy="908" r="10"/><text x="1045" y="908">22</text></g>
+<text class="dg-label" x="526" y="1063">all settled</text>
+<g class="dg-badge"><circle cx="510" cy="1058" r="10"/><text x="510" y="1058">23</text></g>
+<text class="dg-label" x="250" y="1155">a plan</text>
+<g class="dg-badge"><circle cx="150" cy="1175" r="10"/><text x="150" y="1175">24</text></g>
+<text class="dg-label" x="526" y="1180">another file</text>
+<g class="dg-badge"><circle cx="510" cy="1162" r="10"/><text x="510" y="1162">25</text></g>
+<text class="dg-label" x="730" y="1155">not a file</text>
+<g class="dg-badge"><circle cx="905" cy="1175" r="10"/><text x="905" y="1175">26</text></g>
+</svg>
+    </div>
+<div class="arrows">
+<h3>Find the subject</h3><ol>
+<li value="1"><span class="n">1</span><span>You start the run with the subject (the text to review) and, if you want, a focus (the part of it to look at). A path, a folder, a ticket key or quoted text is the subject; the rest of your words are the focus. With no subject named, the subject is whatever the chat was just about, and all your words are the focus. The skill first reads a settings file the project may keep for this skill (where plans live, which docs count as the authority); without one, it reads the project's instruction files, such as <code>CLAUDE.md</code>.</span></li>
+<li value="2"><span class="n">2</span><span>Several plans match, nothing matches, or the ticket system cannot be reached: the skill asks you once, in the chat, never in a pop-up choice dialog. For a missing ticket it asks you to paste the ticket text.</span></li>
+<li value="3"><span class="n">3</span><span>Your answer names the subject. For a folder (one text split into several files), the skill reads every file in it, not only the index file that lists them.</span></li>
+<li value="4"><span class="n">4</span><span>The subject is found. The skill restates the focus in one sentence, so you can correct it. The focus narrows the review; it never moves it somewhere else.</span></li>
+</ol>
+<h3>Check the framing</h3><ol>
+<li value="5"><span class="n">5</span><span>Before any single point, the skill checks the framing: that the text solves the right problem, because a good answer to the wrong question is worse than an open one. First, a plan has to open with a problem statement: the current state, the problem, the end state and why it matters. Without one the review stops and names what is missing; the plan's writer (a skill that writes implementation plans, or the person) adds it first.</span></li>
+<li value="6"><span class="n">6</span><span>Not a plan, or a plan with its problem statement. Any other text with no stated goal is not a stop: the missing goal becomes Point 1.</span></li>
+<li value="7"><span class="n">7</span><span>The skill writes its reading ("My read: this adds CSV and JSON export by a new export job, aiming at reports users can download") and checks the claims in it: "there is no X today" gets a search of the code, a clash with a documented rule gets cited. If it finds nothing, it says what it checked.</span></li>
+<li value="8"><span class="n">8</span><span>The skill asks you: "Is this the actual problem you want solved?" and waits.</span></li>
+<li value="9"><span class="n">9</span><span>You correct the framing of a plan: the review stops, sums up the mismatch and sends the plan back to be planned again.</span></li>
+<li value="10"><span class="n">10</span><span>You are not sure, for the first time: the skill asks one focused question.</span></li>
+<li value="11"><span class="n">11</span><span>You answer it, and your answer goes through the same choice again.</span></li>
+<li value="12"><span class="n">12</span><span>You confirm; or you correct the framing of a text that is not a plan, and the corrected framing becomes the new subject statement; or you are still unsure after one question, and the unclear part becomes Point 1, with later points marked as maybe needing a second look. If the skill still thinks the framing is wrong after you confirm, it says so with evidence and you decide.</span></li>
+</ol>
+<h3>Collect the points</h3><ol>
+<li value="13"><span class="n">13</span><span>The skill reads the whole subject and collects two kinds of points. Listed points are the text's own open questions, the choices it made, its assumptions, the risks it accepts and what it leaves out. Audit points are what the text did not flag: parts built for no current user, a setting for a path with one implementation, a wrapper that only passes calls on, a feature "for later", and the opposite, a part too thin where the risk is real (error handling, data integrity, migration order). With a focus, only points tied to it stay; a point outside it stays only if it is critical (data loss, security, a broken architecture rule). If the focus names a list already in the chat, that list is the queue as it is, and the audit is skipped unless you ask. Everything goes into one numbered queue, with the total and where each point came from.</span></li>
+<li value="14"><span class="n">14</span><span>The queue is empty: the skill says "ready for implementation" for a plan, otherwise "no open decision points found", and stops.</span></li>
+<li value="15"><span class="n">15</span><span>There are points: the loop starts at Point 1.</span></li>
+</ol>
+<h3>One point at a time</h3><ol>
+<li value="16"><span class="n">16</span><span>One point per message, never several, never skipped. Each point has its source, the problem in words you understand without the text open, "Is this needed now?", two or more real options with pros and cons (or, when only one answer makes sense, a request to confirm it), and the skill's recommendation with its reason. When the answer to "Is this needed now?" is no or partly, "Defer with marker" is one of the options: nothing is built now, and a <code># FUTURE:</code> comment is left where a later builder would look, saying what would make the need real, where the fix goes and how. Then the skill stops and waits. See <a href="#point">What a point looks like</a>.</span></li>
+<li value="17"><span class="n">17</span><span>You argue against the recommendation. The skill answers with concrete counter-evidence (an edge case, a project rule, a pattern in the code) and does not give in on the first push. If you show something it missed, it says so and revises: "You're right, I missed X. Revised recommendation: B." After one or two rounds of argument, both positions are stated and you make the call.</span></li>
+<li value="18"><span class="n">18</span><span>Your answer is unclear: the skill asks one focused follow-up.</span></li>
+<li value="19"><span class="n">19</span><span>A clear answer is recorded. Still unclear: the skill's recommendation stands and is recorded as a default, not as your choice.</span></li>
+<li value="20"><span class="n">20</span><span>A new concern comes up mid-review: it goes to the end of the queue, the new total is announced, and the current point is finished first.</span></li>
+<li value="21"><span class="n">21</span><span>You pick an option, or say "skip". A skip is recorded as "Skipped by user", with no more arguing. A point deferred with a marker gets its marker confirmed before the loop moves on: the trigger, the place in the code, the approach.</span></li>
+<li value="22"><span class="n">22</span><span>The skill confirms in one sentence and keeps a running count: "Resolved: Option B, over my recommendation A (3 of 7)." It records the option, who recommended it, and whether a debate changed anything. Points remain: the next one comes straight away.</span></li>
+</ol>
+<h3>Apply</h3><ol>
+<li value="23"><span class="n">23</span><span>Every point is settled: the skill shows the Decisions Summary, one row per point with the decision and a note (followed the recommendation, you overrode it and why, deferred with a marker and where, or skipped).</span></li>
+<li value="24"><span class="n">24</span><span>A plan is updated by an agent that updates plans, if the project has one, else by the session, with small, exact edits: each open question is closed, rejected over-building is removed with every mention of it, options are marked Selected or Rejected alternative (the rejected ones keep their cons, because they explain why), thin parts are expanded, each deferral goes into a "Future Hooks / Deferred Features" section, and every section that mentions a changed part is updated. Untouched sections stay word for word. The skill then lists the markers the builder must place.</span></li>
+<li value="25"><span class="n">25</span><span>Any other file gets the same careful edits.</span></li>
+<li value="26"><span class="n">26</span><span>The subject is not a file (a ticket, pasted text or the chat's own open questions): the Decisions Summary is saved as a file in the project's folder for working notes (a scratch folder when there is none), so the record outlives the session.</span></li>
+</ol>
+</div>
+  </section>
+
+  <section id="points">
+    <h2>Where the points come from</h2>
+    <p class="lead">The skill reads the whole subject and puts two kinds of points into one numbered queue. It says which came from the text and which from its audit.</p>
+    <table>
+      <thead><tr><th>Kind</th><th>What it looks for</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>Listed</td><td>The text's own open questions</td><td>"Open question: CSV only, or JSON too?"</td></tr>
+        <tr><td>Listed</td><td>Choices it made between approaches</td><td>The plan picked a nightly job over an on-demand export. You still confirm it.</td></tr>
+        <tr><td>Listed</td><td>Assumptions that could be wrong</td><td>"Reports never exceed 10,000 rows."</td></tr>
+        <tr><td>Listed</td><td>Risks it accepts, and what it leaves out</td><td>"No export for archived reports."</td></tr>
+        <tr><td>Audit: over-built</td><td>A class, interface or registry with no current user; a structure with one entry; a setting for a path with one implementation; a wrapper that only passes calls on; a feature "for later"; a shared helper bent with flags to fit one case</td><td>A persistent retry queue whose only consumer already retries once.</td></tr>
+        <tr><td>Audit: too thin</td><td>Error handling, concurrency, data integrity, migration order or backward compatibility left vague where the risk is real</td><td>"Migrate the table" with no word on what runs while the old and new columns both exist.</td></tr>
+      </tbody>
+    </table>
+    <p>An audit point comes with ready options: remove it, keep the simple version now and defer the rest with a marker, expand it (for a thin part), or keep it as it is if it passes the project's own rules on abstractions.</p>
+  </section>
+
+  <section id="point">
+    <h2>What a point looks like</h2>
+    <p class="lead">Every point is one chat message with the same parts, in this order.</p>
+    <table>
+      <thead><tr><th>Part</th><th>What it holds</th></tr></thead>
+      <tbody>
+        <tr><td>Source</td><td>Where the point came from: the text's own open question, a design choice, an assumption, or an audit finding (over-engineering or under-specification).</td></tr>
+        <tr><td>Problem</td><td>The decision in words you can follow without the text open, with the file, function and line it is about.</td></tr>
+        <tr><td>Is this needed now?</td><td>Yes, no or partly, with a reason in one or two sentences.</td></tr>
+        <tr><td>Options</td><td>Two or more real options, each with concrete pros and cons. "Defer with marker" must be one of them when the answer above is no or partly. A point with only one sensible answer is put to you as a question to confirm, with no invented options.</td></tr>
+        <tr><td>My recommendation</td><td>One option, with a reason tied to this project's code and rules. When the evidence is missing, the skill says what it would need instead of guessing.</td></tr>
+      </tbody>
+    </table>
+    <h3>An example (the plan, paths and numbers are invented)</h3>
+    <div class="card">
+      <div class="head"><h3>Point 2 of 4: Retry queue for the export webhook</h3></div>
+      <p><b>Source:</b> Audit finding, speculative feature</p>
+      <p><b>Problem:</b> The plan <code>plans/export-v2.md</code> adds a persistent retry queue to <code>exports/webhook.py:deliver</code>, with its own table and a worker. The only consumer is the nightly report job, and its caller already retries once and logs a failure (<code>reports/nightly.py:112</code>). No requirement asks for at-least-once delivery.</p>
+      <p><b>Is this needed now?</b> No. The report job runs again the next night, and the log shows a failed send.</p>
+      <p><b>Option A: Build the queue.</b> A retry table, a worker that drains it every minute, a dead-letter state after five tries. Pros: a delivery survives a crash. Cons: a second delivery path and a new worker for no current consumer; the plan grows by about a third.</p>
+      <p><b>Option B: Keep the single retry and log the loss.</b> Pros: no new parts; the loss shows in the log. Cons: a crash between the two tries loses that night's webhook.</p>
+      <p><b>Option C: Defer with marker.</b> Keep B now and leave a marker in <code>exports/webhook.py:deliver</code>. Pros: no dead code now; the pickup is cheap when the trigger fires. Cons: the marker helps only if someone reads it.</p>
+      <p><b>My recommendation:</b> Option C. B's loss costs one night's report, which runs again anyway, and the plan's own principle is "no machinery without a current caller".</p>
+    </div>
+    <p>The marker in option C is a comment at the place a future builder would look:</p>
+    <div class="card">
+      <p><code># FUTURE: persistent retry queue for webhook delivery</code><br>
+      <code># Trigger: a second consumer appears, or a requirement asks for at-least-once delivery</code><br>
+      <code># Fix location: exports/webhook.py:deliver</code><br>
+      <code># Approach: an outbox row per delivery, drained by the existing worker; keep deliver() idempotent</code></p>
+    </div>
+    <p>After your answer the skill confirms in one line: "Resolved: Option C, following my recommendation (2 of 4)." At the end the same point is one row of the Decisions Summary:</p>
+    <table>
+      <thead><tr><th>#</th><th>Point</th><th>Decision</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>2</td><td>Retry queue for the export webhook</td><td>Deferred with marker</td><td>Marker at <code>exports/webhook.py:deliver</code>; trigger: a second consumer or an at-least-once requirement</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="asked">
+    <h2>What you are asked</h2>
+    <p class="lead">Every question is a normal chat message you read in full, never a pop-up dialog with short option labels: those labels cannot hold the problem, the pros and cons and the recommendation.</p>
+    <div class="branches">
+      <div class="branch ask"><div class="then">Which subject</div><p>When several match or none does.</p><div class="example">Two plans match: the export plan and the import plan. Which one?</div></div>
+      <div class="branch ask"><div class="then">Whether the framing is right</div><p>Once, before any point.</p><div class="example">My read: this adds CSV and JSON export by a new export job, aiming at reports users can download. Is this the actual problem you want solved?</div></div>
+      <div class="branch ask"><div class="then">Each point</div><p>One per message. You can pick, argue, skip, or raise a new concern.</p></div>
+      <div class="branch ask"><div class="then">One follow-up</div><p>When your answer is unclear. Still unclear: the recommendation is recorded as a default.</p></div>
+      <div class="branch ask"><div class="then">The marker's content</div><p>When you choose to defer: the trigger, the place and the approach.</p></div>
+      <div class="branch stop"><div class="then">The final call</div><p>When you and the skill still disagree after one or two rounds of argument. Your choice is recorded next to its recommendation.</p></div>
+    </div>
+  </section>
+
+  <section id="roles">
+    <h2>Who does what</h2>
+    <p class="lead">The main session does the work; every decision is yours.</p>
+    <table>
+      <thead><tr><th>Role</th><th>What it does</th><th>What it may not do</th></tr></thead>
+      <tbody>
+        <tr><td>Main session</td><td>Finds the subject, checks the framing, reads the code to check every claim, presents the points, argues, records, writes the summary and applies the decisions</td><td>Decide a point for you, skip a point, put several points in one message, or agree just to avoid friction</td></tr>
+        <tr><td>An agent that updates plans (only if the project has one)</td><td>Applies the decisions to a plan, given the path, the decisions and the update rules</td><td>Change sections the decisions do not touch</td></tr>
+        <tr><td>You</td><td>Confirm the framing, decide every point, make the final call in a disagreement</td><td>Nothing: every decision is yours</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="different">
+    <h2>What makes it different</h2>
+    <div class="choices">
+      <div class="choice"><h3>The framing comes first</h3><p>A well-executed answer to the wrong question is worse than an open one.</p></div>
+      <div class="choice"><h3>An audit adds points</h3><p>The text can be wrong in either direction: built for needs nobody has, or too thin where the risk is real.</p></div>
+      <div class="choice"><h3>It pushes back both ways</h3><p>Silent agreement is the failure mode. The skill changes its view only on evidence, and says so when it does.</p></div>
+      <div class="choice"><h3>Code before a recommendation</h3><p>A persuasive summary is not evidence. "We have no X today" gets a search, not a nod.</p></div>
+      <div class="choice"><h3>"I need X to recommend"</h3><p>A clear statement of what is missing is stronger than a guessed option.</p></div>
+      <div class="choice"><h3>One point per message</h3><p>Every point gets a real look, and no ambiguity is left unresolved.</p></div>
+      <div class="choice"><h3>Questions in the chat</h3><p>A dialog's short option labels cannot hold the problem, the pros and cons and the recommendation.</p></div>
+      <div class="choice"><h3>Defer with marker</h3><p>A full option: no dead code now, and the pickup is cheap when the trigger fires.</p></div>
+      <div class="choice"><h3>Rejected options keep their cons</h3><p>They explain why the choice was made, for the next reader.</p></div>
+      <div class="choice"><h3>Decisions are written back</h3><p>Into the text, or saved as a file. The record must not die with the session.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    The same content as text: <a href="README.md">README.md</a>. The skill itself is not published in this repository; this page describes its design.
+  </footer>
+</main>
+</body>
+</html>

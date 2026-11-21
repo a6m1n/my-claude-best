@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>grill-me-v2: how it works</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<main>
+  <a class="back" href="../index.html">&larr; All skill designs</a>
+  <h1>grill-me-v2</h1>
+  <p class="tagline">Pins down the requirements for a feature, change or idea before anything is planned or built. One question per message, each with options and a recommendation; every fact is looked up instead of asked; it ends with a Decisions Summary you confirm.</p>
+  <span class="command">/grill-me-v2 CSV export for the reports page</span>
+
+  <nav class="toc">
+    <a href="#problem">The problem</a>
+    <a href="#fit">When to use it</a>
+    <a href="#run">How a run goes</a>
+    <a href="#question">What a question looks like</a>
+    <a href="#asked">What you are asked</a>
+    <a href="#different">What makes it different</a>
+  </nav>
+
+  <section id="problem">
+    <h2>The problem it solves</h2>
+    <p class="lead">You ask Claude for "a CSV export on the reports page". It starts building at once and guesses the columns, the filters and what happens with 200,000 rows. Or it asks first, but sends ten questions in one message, half of them about things the code already shows. The skill is built against five ways such a requirements talk can go wrong.</p>
+    <div class="pairs">
+      <div class="pair">
+        <div class="without"><span class="label">Without the skill</span><b>Guesses become the spec.</b> Open decisions are filled in silently, and nobody sees which ones were guessed.</div>
+        <div class="with"><span class="label">grill-me-v2</span>Every open decision goes to you, even one with a safe default. Nothing is planned or built before you confirm the summary.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Without the skill</span><b>A wall of questions.</b> Ten at once: you answer some, skip others, and the order is lost.</div>
+        <div class="with"><span class="label">grill-me-v2</span>One question per message, in the order the decisions depend on each other. The tree is updated after every answer.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Without the skill</span><b>Questions the code could answer.</b> "Which database do you use?"</div>
+        <div class="with"><span class="label">grill-me-v2</span>Anything the code, docs or web can settle is looked up and noted with <code>file:line</code> or a link, never asked.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Without the skill</span><b>A question with no recommendation.</b> "A or B?" leaves the analysis to you.</div>
+        <div class="with"><span class="label">grill-me-v2</span>Each question has two or more options that are really different, with pros and cons for this project, and a recommendation with its reason.</div>
+      </div>
+      <div class="pair">
+        <div class="without"><span class="label">Without the skill</span><b>Silent agreement.</b> Your first idea is taken as it is, even when the code shows a problem with it.</div>
+        <div class="with"><span class="label">grill-me-v2</span>It pushes back with evidence. After one or two rounds you decide, and your override is recorded with your reason.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="fit">
+    <h2>When to use it, and when not</h2>
+    <div class="fit">
+      <div class="yes">
+        <h3>Use it for</h3>
+        <ul>
+          <li>A feature, change or idea that is still vague, where a wrong guess would be expensive.</li>
+          <li>Collecting or sharpening the requirements before any plan or code exists.</li>
+          <li>Stress-testing an idea: every open decision named, with options and their costs.</li>
+        </ul>
+      </div>
+      <div class="no">
+        <h3>Not for</h3>
+        <ul>
+          <li>A plan, ticket or doc that already exists and has open points.<span class="instead">Go through its points one at a time with <a href="../settle/index.html">settle</a>; it uses the same question format for a review.</span></li>
+          <li>A written diff to review.<span class="instead">A code review. This skill asks what to build, not about code already written.</span></li>
+          <li>Getting the change built, not only specified.<span class="instead">A build loop from decision to commit. Its first step runs this same interview, but skips decisions with a safe default.</span></li>
+          <li>A large task where the route itself is still open.<span class="instead">Think the route through first with <a href="../meta-thinking/index.html">meta-thinking</a>, then interview on the chosen route.</span></li>
+          <li>A clear task with nothing left to decide.<span class="instead">Go straight to planning or building; the interview would have nothing to ask.</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>How a run goes</h2>
+    <p class="lead">You run <code>/grill-me-v2 CSV export for the reports page</code>. The diagram follows the skill's own order: read what is already there first, build a tree of open decisions, walk it one question at a time, then confirm. Each box is coloured by who does the step, and each arrow has a number: the list under the diagram says what happens on it.</p>
+    <div class="legend">
+      <span class="chip you">You</span>
+      <span class="chip main">Main session (your conversation)</span>
+      <span class="chip agent">End of the run (thick green border)</span>
+      <span class="chip" style="color: var(--accent)">Orange arrow: back into the loop</span>
+    </div>
+    <div class="diagram">
+<svg viewBox="0 0 1100 1310" role="img" aria-labelledby="gm-title"><title id="gm-title">How a grill-me-v2 run goes, arrow by arrow</title>
+<defs><marker id="gm-ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow" d="M0,0 L10,5 L0,10 z"/></marker>
+<marker id="gm-ahl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="dg-arrow loop" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<path class="dg-edge " d="M510,72 L510,96" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M345,136 L270,136" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M150,162 L150,242 L340,242" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M510,176 L510,210" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M510,274 L510,302" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M510,366 L510,400" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M710,440 L790,440" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M1020,440 L1050,440 L1050,856 L680,856" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M510,480 L510,512" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M510,576 L510,606" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M510,658 L510,690" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M360,730 L270,730" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M150,762 L150,842 L340,842" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M660,730 L790,730" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M905,762 L905,834 L680,834" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M510,770 L510,810" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M510,874 L510,904" marker-end="url(#gm-ah)"/>
+<path class="dg-edge loop" d="M375,940 L12,940 L12,440 L310,440" marker-end="url(#gm-ahl)"/>
+<path class="dg-edge " d="M510,976 L510,1006" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M510,1070 L510,1100" marker-end="url(#gm-ah)"/>
+<path class="dg-edge loop" d="M675,1140 L1080,1140 L1080,334 L680,334" marker-end="url(#gm-ahl)"/>
+<path class="dg-edge " d="M510,1180 L510,1212" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M345,1250 L270,1250" marker-end="url(#gm-ah)"/>
+<path class="dg-edge " d="M675,1250 L790,1250" marker-end="url(#gm-ah)"/>
+<g class="dg-node you"><rect x="340" y="20" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="43">You start the interview</text><text class="dg-sub" x="510.0" y="59">/grill-me-v2 CSV export for the reports page</text></g>
+<g class="dg-node main"><polygon points="510.0,96 675,136.0 510.0,176 345,136.0"/><text class="dg-title" x="510.0" y="133">Is the topic clear?</text><text class="dg-sub" x="510.0" y="149">from your words or the chat so far</text></g>
+<g class="dg-node you"><rect x="30" y="110" width="240" height="52" rx="9"/><text class="dg-title" x="150.0" y="133">You name the topic</text><text class="dg-sub" x="150.0" y="149">asked once, only if it is missing</text></g>
+<g class="dg-node main"><rect x="340" y="210" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="231">Read what is there first</text><text class="dg-sub" x="510.0" y="247">the code, the project&#x27;s rules and docs,</text><text class="dg-sub" x="510.0" y="263">a linked ticket; a fact found here is never asked</text></g>
+<g class="dg-node main"><rect x="340" y="302" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="323">Build the decision tree</text><text class="dg-sub" x="510.0" y="339">the open decisions, in the order they</text><text class="dg-sub" x="510.0" y="355">depend on each other; a count: &quot;0 of 6&quot;</text></g>
+<g class="dg-node main"><polygon points="510.0,400 710,440.0 510.0,480 310,440.0"/><text class="dg-title" x="510.0" y="437">Next open point:</text><text class="dg-sub" x="510.0" y="453">a fact the code, docs or web can settle?</text></g>
+<g class="dg-node main"><rect x="790" y="414" width="230" height="52" rx="9"/><text class="dg-title" x="905.0" y="437">Look it up, never ask</text><text class="dg-sub" x="905.0" y="453">note it with file:line or a link</text></g>
+<g class="dg-node main"><rect x="340" y="512" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="533">One question · &quot;Point 2 of 6&quot;</text><text class="dg-sub" x="510.0" y="549">the problem, two or more options that are really</text><text class="dg-sub" x="510.0" y="565">different, with pros and cons, a recommendation</text></g>
+<g class="dg-node you"><rect x="340" y="606" width="340" height="52" rx="9"/><text class="dg-title" x="510.0" y="629">You answer</text><text class="dg-sub" x="510.0" y="645">pick, push back, skip, unsure, &quot;you decide&quot;</text></g>
+<g class="dg-node main"><polygon points="510.0,690 660,730.0 510.0,770 360,730.0"/><text class="dg-title" x="510.0" y="735">What kind of answer?</text></g>
+<g class="dg-node main"><rect x="30" y="698" width="240" height="64" rx="9"/><text class="dg-title" x="150.0" y="719">Debate with evidence</text><text class="dg-sub" x="150.0" y="735">revise if you show what it missed;</text><text class="dg-sub" x="150.0" y="751">after 1–2 rounds, you decide</text></g>
+<g class="dg-node main"><rect x="790" y="698" width="230" height="64" rx="9"/><text class="dg-title" x="905.0" y="719">Unclear or &quot;you decide&quot;</text><text class="dg-sub" x="905.0" y="735">one follow-up if unclear, then its</text><text class="dg-sub" x="905.0" y="751">advice, marked as not your pick</text></g>
+<g class="dg-node main"><rect x="340" y="810" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="831">Record and update the tree</text><text class="dg-sub" x="510.0" y="847">&quot;B, over my recommendation A (3 of 5)&quot;;</text><text class="dg-sub" x="510.0" y="863">then add, drop or re-order open decisions</text></g>
+<g class="dg-node main"><polygon points="510.0,904 645,940.0 510.0,976 375,940.0"/><text class="dg-title" x="510.0" y="945">Any open decision left?</text></g>
+<g class="dg-node main"><rect x="340" y="1006" width="340" height="64" rx="9"/><text class="dg-title" x="510.0" y="1027">Decisions Summary</text><text class="dg-sub" x="510.0" y="1043">a table: question · decision · notes,</text><text class="dg-sub" x="510.0" y="1059">then &quot;My read: we want X so that Y&quot;</text></g>
+<g class="dg-node you"><polygon points="510.0,1100 675,1140.0 510.0,1180 345,1140.0"/><text class="dg-title" x="510.0" y="1137">Do you confirm the</text><text class="dg-sub" x="510.0" y="1153">shared understanding?</text></g>
+<g class="dg-node main"><polygon points="510.0,1212 675,1250.0 510.0,1288 345,1250.0"/><text class="dg-title" x="510.0" y="1255">How was the run started?</text></g>
+<g class="dg-node done"><rect x="30" y="1218" width="240" height="64" rx="9"/><text class="dg-title" x="150.0" y="1239">Stop · next steps offered</text><text class="dg-sub" x="150.0" y="1255">a plan, the build loop, a ticket</text><text class="dg-sub" x="150.0" y="1271">or a saved file: you pick</text></g>
+<g class="dg-node done"><rect x="790" y="1218" width="230" height="64" rx="9"/><text class="dg-title" x="905.0" y="1239">The build loop goes on</text><text class="dg-sub" x="905.0" y="1255">(a skill that builds the change);</text><text class="dg-sub" x="905.0" y="1271">your yes lets it go on</text></g>
+<g class="dg-badge"><circle cx="510" cy="84" r="10"/><text x="510" y="84">1</text></g>
+<text class="dg-label" x="316" y="126">no</text>
+<g class="dg-badge"><circle cx="300" cy="136" r="10"/><text x="300" y="136">2</text></g>
+<g class="dg-badge"><circle cx="150" cy="202" r="10"/><text x="150" y="202">3</text></g>
+<text class="dg-label" x="526" y="198">yes</text>
+<g class="dg-badge"><circle cx="510" cy="193" r="10"/><text x="510" y="193">4</text></g>
+<g class="dg-badge"><circle cx="510" cy="288" r="10"/><text x="510" y="288">5</text></g>
+<g class="dg-badge"><circle cx="510" cy="383" r="10"/><text x="510" y="383">6</text></g>
+<text class="dg-label" x="716" y="424">yes: a fact</text>
+<g class="dg-badge"><circle cx="750" cy="440" r="10"/><text x="750" y="440">7</text></g>
+<g class="dg-badge"><circle cx="1050" cy="640" r="10"/><text x="1050" y="640">8</text></g>
+<text class="dg-label" x="526" y="501">no: a decision</text>
+<g class="dg-badge"><circle cx="510" cy="496" r="10"/><text x="510" y="496">9</text></g>
+<g class="dg-badge"><circle cx="510" cy="591" r="10"/><text x="510" y="591">10</text></g>
+<g class="dg-badge"><circle cx="510" cy="674" r="10"/><text x="510" y="674">11</text></g>
+<text class="dg-label" x="282" y="718">push back</text>
+<g class="dg-badge"><circle cx="300" cy="730" r="10"/><text x="300" y="730">12</text></g>
+<g class="dg-badge"><circle cx="150" cy="802" r="10"/><text x="150" y="802">13</text></g>
+<text class="dg-label" x="666" y="686">unsure, unclear</text>
+<text class="dg-label" x="666" y="703">or &quot;you decide&quot;</text>
+<g class="dg-badge"><circle cx="712" cy="730" r="10"/><text x="712" y="730">14</text></g>
+<g class="dg-badge"><circle cx="905" cy="798" r="10"/><text x="905" y="798">15</text></g>
+<text class="dg-label" x="526" y="795">a pick or &quot;skip&quot;</text>
+<g class="dg-badge"><circle cx="510" cy="790" r="10"/><text x="510" y="790">16</text></g>
+<g class="dg-badge"><circle cx="510" cy="889" r="10"/><text x="510" y="889">17</text></g>
+<text class="dg-label" x="24" y="930">yes: the next decision</text>
+<g class="dg-badge"><circle cx="12" cy="690" r="10"/><text x="12" y="690">18</text></g>
+<text class="dg-label" x="526" y="996">no</text>
+<g class="dg-badge"><circle cx="510" cy="991" r="10"/><text x="510" y="991">19</text></g>
+<g class="dg-badge"><circle cx="510" cy="1085" r="10"/><text x="510" y="1085">20</text></g>
+<text class="dg-label" x="694" y="1130">not yet: what is off becomes new decisions</text>
+<g class="dg-badge"><circle cx="1080" cy="1000" r="10"/><text x="1080" y="1000">21</text></g>
+<text class="dg-label" x="526" y="1201">yes</text>
+<g class="dg-badge"><circle cx="510" cy="1196" r="10"/><text x="510" y="1196">22</text></g>
+<text class="dg-label" x="282" y="1238">on its own</text>
+<g class="dg-badge"><circle cx="300" cy="1250" r="10"/><text x="300" y="1250">23</text></g>
+<text class="dg-label" x="626" y="1280">inside a build loop</text>
+<g class="dg-badge"><circle cx="705" cy="1250" r="10"/><text x="705" y="1250">24</text></g>
+</svg>
+    </div>
+<div class="arrows">
+<h3>Start and read what is there</h3><ol>
+<li value="1"><span class="n">1</span><span>You start the run with a topic: a feature, a change or an idea. You can add a file or a ticket for the skill to start from.</span></li>
+<li value="2"><span class="n">2</span><span>The topic is really missing, both from your words and from the chat so far: the skill asks you once what to gather requirements for.</span></li>
+<li value="3"><span class="n">3</span><span>With the topic named, the skill goes on to read what is already there.</span></li>
+<li value="4"><span class="n">4</span><span>The topic is clear: the skill starts reading what is already there straight away.</span></li>
+<li value="5"><span class="n">5</span><span>Before the first question, the skill takes a quick pass over what is already there: the project's code, its instruction files and rules, its architecture docs (it keeps in mind any note that says a doc is out of date), a ticket you linked. This makes the questions and the options concrete, with <code>file:line</code> where the code matters. A fact settled here never becomes a question. What is still open becomes a decision tree. Decisions depend on each other: whether the export runs in the browser or on the server decides whether file size is a question at all. The skill keeps the open decisions as a queue in that order and shows the count, such as "0 of 6".</span></li>
+<li value="6"><span class="n">6</span><span>It takes the next open point in the tree and first asks itself: is this a fact or a decision?</span></li>
+</ol>
+<h3>One branch at a time</h3><ol>
+<li value="7"><span class="n">7</span><span>A fact is anything the environment can settle: the files, the code, the docs, the web. Example: "Which CSV library does the project already use?" The skill looks it up and never asks you.</span></li>
+<li value="8"><span class="n">8</span><span>The fact is noted with its <code>file:line</code> or link and shapes the questions that follow; it is not counted as one of your answers.</span></li>
+<li value="9"><span class="n">9</span><span>A decision is yours: product judgment, scope, taste, priority, how much risk you accept. The skill puts every one to you, even one it could settle with a default, because you asked to be questioned. (When the same interview runs as the first step of a build loop (a skill that takes one change from decision to commit), the loop skips the decisions that have a safe default.)</span></li>
+<li value="10"><span class="n">10</span><span>One point per message, never a list. The point has a title with "Point N of M", a problem you can follow with no earlier context, two or more options that are really different, each with pros and cons for this project, and a recommendation with its reason. When only one answer makes sense, the skill says so and asks you to confirm it. When "take a default now and come back later" is a real option, it is listed with what would reopen it. When the skill has no evidence for a recommendation, it says what it would need instead of forcing a pick. Then it stops and waits.</span></li>
+<li value="11"><span class="n">11</span><span>Your answer goes to one check: what kind of answer is it?</span></li>
+</ol>
+<h3>Your answer</h3><ol>
+<li value="12"><span class="n">12</span><span>You disagree. The skill acts as an independent consultant, not as someone who agrees with everything. It answers with specific evidence and does not give in at the first push back. When you show something it missed, it says so and changes its recommendation.</span></li>
+<li value="13"><span class="n">13</span><span>If you still disagree after one or two rounds of real argument, it states both positions and you decide. The record says so: "You chose X over my recommendation Y, because …".</span></li>
+<li value="14"><span class="n">14</span><span>Your answer is unclear, or you say "you decide".</span></li>
+<li value="15"><span class="n">15</span><span>Unclear: the skill asks one focused follow-up question. If that does not settle it, the recommendation becomes the decision and is recorded as a default. "You decide": the recommendation becomes the decision, and the notes say you handed it over. Either way the Decisions Summary shows the decision was not your own pick.</span></li>
+<li value="16"><span class="n">16</span><span>You pick an option, or you say "skip". A skip is recorded, and the run moves on.</span></li>
+</ol>
+<h3>Next branch</h3><ol>
+<li value="17"><span class="n">17</span><span>The skill confirms the answer in one sentence: whether you followed or overrode its recommendation, or whether it revised the recommendation after your argument, with the count. Example: "Resolved: Option B, over my recommendation A (3 of 5)." Then it updates the tree: an answer can open new branches, make others unneeded, or change the order, and the skill announces the new total. A new concern you raise along the way joins the queue too; the current point is finished first.</span></li>
+<li value="18"><span class="n">18</span><span>Decisions are still open: the next point comes at once, in the next message.</span></li>
+<li value="19"><span class="n">19</span><span>Every queued question is answered: the skill writes the result.</span></li>
+</ol>
+<h3>Confirm and hand over</h3><ol>
+<li value="20"><span class="n">20</span><span>The Decisions Summary is a table with one row per question: number, question, decision, notes. The notes hold what came out of a debate, your overrides, defaults taken on an unclear answer, and decisions you handed over. Under it comes one paragraph: "My read: we want [what] so that [end state], under [the decided constraints]." The skill asks you to confirm this shared understanding.</span></li>
+<li value="21"><span class="n">21</span><span>You do not confirm: nothing is planned or built yet. The interview runs until you and the skill understand the task the same way, not until the questions run out, so what is off goes back into the tree as new decisions.</span></li>
+<li value="22"><span class="n">22</span><span>You confirm. Where the run goes now depends on how it was started.</span></li>
+<li value="23"><span class="n">23</span><span>Started on its own: the skill offers the next steps and starts none of them itself. You pick one: a planning step that drafts a plan; the build loop (the loop that takes one change from decision to commit), with these answers passed in as decisions already made, so its own questions have nothing left to ask; a ticket; or a requirements file, saved in a dated folder where the project keeps its working notes, or in a temporary folder when it has none.</span></li>
+<li value="24"><span class="n">24</span><span>Started as the requirements step inside a build loop: the loop waits for your yes, and then goes on to its next stage. No next steps are offered.</span></li>
+</ol>
+</div>
+  </section>
+
+  <section id="question">
+    <h2>What a question looks like</h2>
+    <p class="lead">Every question comes in one message, in the same parts. Then the skill stops and waits for your answer.</p>
+    <table>
+      <thead><tr><th>Part</th><th>What it holds</th></tr></thead>
+      <tbody>
+        <tr><td>Point N of M</td><td>Where you are in the queue; M changes when an answer opens or closes branches</td></tr>
+        <tr><td>Problem</td><td>What is still open, why it matters, and how the options differ, readable with no earlier context; <code>file:line</code> where the code is part of it</td></tr>
+        <tr><td>Options</td><td>Two or more that are really different, each with what it means, pros and cons for this project. One sensible answer: the skill says so and asks you to confirm</td></tr>
+        <tr><td>My recommendation</td><td>The option it would pick and why, based on this project's code and docs. No evidence: it says what it would need</td></tr>
+      </tbody>
+    </table>
+    <div class="branches" style="margin-top: 14px">
+      <div class="branch ask"><div class="then">Point 2 of 6: Where the export runs</div><p><b>Problem:</b> the reports page can show up to 200,000 rows, but it loads them from the server 500 at a time (<code>reports/api.py:88</code>). Where the CSV is built decides whether file size and timeouts are questions at all.</p><p><b>Option A: in the browser.</b> Build the file from the rows the page already has. Pros: no new endpoint; done in a day. Cons: it exports only the 500 loaded rows; a large export can freeze the tab.</p><p><b>Option B: on the server.</b> A new endpoint writes the CSV and the browser downloads it. Pros: any size; the same filters as the page. Cons: one more endpoint to secure and test.</p><p><b>My recommendation:</b> Option B, because the page already gets its data from the server in pages, so a browser export would quietly miss most rows.</p></div>
+    </div>
+  </section>
+
+  <section id="asked">
+    <h2>What you are asked</h2>
+    <p class="lead">The skill stops for you in four cases.</p>
+    <div class="branches">
+      <div class="branch ask"><div class="then">Each open decision</div><p>Scope, product judgment, taste, priority, how much risk you accept. One per message, in the format above. You can pick, push back, skip, or say "you decide".</p></div>
+      <div class="branch ask"><div class="then">The topic, once</div><p>Only when neither your words nor the chat say what to gather requirements for.</p></div>
+      <div class="branch ask"><div class="then">When you disagree</div><p>It answers with evidence. After one or two rounds of real argument it states both positions and you decide.</p><div class="example">You want Option A to ship this week; I still recommend B because A drops rows. Your call: A or B?</div></div>
+      <div class="branch go"><div class="then">The confirmation</div><p>You see the Decisions Summary and its "My read" paragraph, and confirm the shared understanding or say what is off. Run on its own, the skill then asks which next step you want and starts none by itself.</p></div>
+    </div>
+  </section>
+
+  <section id="different">
+    <h2>What makes it different</h2>
+    <div class="choices">
+      <div class="choice"><h3>One question per message</h3><p>Several at once confuse you and lose the order in which decisions depend on each other.</p></div>
+      <div class="choice"><h3>Questions follow the decision tree</h3><p>An early answer changes which questions come next, so the tree is updated after every answer.</p></div>
+      <div class="choice"><h3>Every question has a recommendation</h3><p>A question without one is half the work pushed onto you.</p></div>
+      <div class="choice"><h3>Facts are looked up, never asked</h3><p>Only decisions are yours. What the code, docs or web can settle is settled there.</p></div>
+      <div class="choice"><h3>Even safe defaults go to you</h3><p>You asked to be questioned. A build loop that uses the same interview skips those defaults; this skill does not.</p></div>
+      <div class="choice"><h3>Only real options</h3><p>Padding hides the real choice. With one sensible answer, the skill asks you to confirm it.</p></div>
+      <div class="choice"><h3>No forced recommendation</h3><p>Without evidence it says what it would need, instead of guessing with confidence.</p></div>
+      <div class="choice"><h3>It pushes back with evidence</h3><p>Silent agreement is the failure the skill is built against; your override is recorded with your reason.</p></div>
+      <div class="choice"><h3>Ends on your confirmation</h3><p>The goal is a shared understanding, not an empty queue, so nothing is planned or built before you confirm it.</p></div>
+      <div class="choice"><h3>Offers the next step, never starts it</h3><p>What comes next (a plan, a build, a ticket, a saved file) is your choice.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    The same content as text: <a href="README.md">README.md</a>. The skill itself is not published in this repository; this page describes its design. Its interview technique builds on the public <code>grilling</code> skill in Matt Pocock's skills repository <a href="https://github.com/mattpocock/skills/tree/main/skills/productivity/grilling">[1]</a>, put into a format of one question per message, each with options and a recommendation.
+  </footer>
+</main>
+</body>
+</html>
